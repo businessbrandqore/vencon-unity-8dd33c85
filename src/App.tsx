@@ -31,6 +31,8 @@ import TLTeam from "./pages/dashboard/TLTeam";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
+import ChatPage from "./pages/dashboard/ChatPage";
+import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
