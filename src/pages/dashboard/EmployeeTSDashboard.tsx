@@ -509,8 +509,8 @@ export default function EmployeeTSDashboard() {
           className="w-full rounded-md border border-orange-500/50 bg-orange-500/10 p-6 text-center hover:bg-orange-500/20 transition-colors"
         >
           <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-orange-400" />
-          <p className="font-heading text-lg text-orange-300">⚠️ আজকের ডেস্ক এবং ফোন রিপোর্ট এখনো দেওয়া হয়নি!</p>
-          <p className="text-sm text-muted-foreground mt-1">রিপোর্ট দিতে ক্লিক করুন</p>
+           <p className="font-heading text-lg text-orange-300">{t("desk_report_pending")}</p>
+           <p className="text-sm text-muted-foreground mt-1">{t("click_to_report")}</p>
         </button>
 
         {/* Desk Report Modal */}
