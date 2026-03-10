@@ -1,12 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,113 +16,189 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { order_id, recipient_name, recipient_phone, recipient_address, cod_amount, note, sent_by } = await req.json();
+    const { order_id } = await req.json();
 
-    // Get SteadFast API keys from app_settings
-    const { data: sfSettings } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "steadfast_api")
-      .single();
-
-    const apiKey = sfSettings?.value?.api_key;
-    const secretKey = sfSettings?.value?.secret_key;
-
-    if (!apiKey || !secretKey) {
-      // Mark as failed
-      await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", order_id);
-      return new Response(JSON.stringify({ success: false, error: "SteadFast API keys not configured" }), {
+    if (!order_id) {
+      return new Response(JSON.stringify({ success: false, error: "order_id required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Retry up to 3 times
-    let lastError = "";
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const response = await fetch("https://portal.steadfast.com.bd/api/v1/create_order", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Api-Key": apiKey,
-            "Secret-Key": secretKey,
-          },
-          body: JSON.stringify({
-            invoice: order_id,
-            recipient_name,
-            recipient_phone,
-            recipient_address,
-            cod_amount: cod_amount || 0,
-            note: note || "",
-          }),
+    // 1. Fetch order details
+    const { data: order, error: orderErr } = await supabase
+      .from("orders")
+      .select("id, customer_name, phone, address, price, product, quantity, tl_id, agent_id, warehouse_sent_by")
+      .eq("id", order_id)
+      .single();
+
+    if (orderErr || !order) {
+      return new Response(JSON.stringify({ success: false, error: "Order not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Fetch SteadFast API credentials from secrets
+    const sfApiKey = Deno.env.get("STEADFAST_API_KEY");
+    const sfSecretKey = Deno.env.get("STEADFAST_SECRET_KEY");
+
+    if (!sfApiKey || !sfSecretKey) {
+      // Fallback: try app_settings
+      const { data: sfSettings } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "steadfast_api")
+        .single();
+
+      const settingsKey = (sfSettings?.value as Record<string, string>)?.api_key;
+      const settingsSecret = (sfSettings?.value as Record<string, string>)?.secret_key;
+
+      if (!settingsKey || !settingsSecret) {
+        await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", order_id);
+        return new Response(JSON.stringify({ success: false, error: "SteadFast API keys not configured" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-
-        const data = await response.json();
-
-        if (response.ok && data.status === 200) {
-          const consignmentId = data.consignment?.consignment_id || data.consignment_id || `SF-${Date.now()}`;
-
-          // Update order to dispatched
-          await supabase.from("orders").update({
-            steadfast_consignment_id: consignmentId,
-            status: "dispatched",
-            delivery_status: "pending",
-            warehouse_sent_by: sent_by,
-            warehouse_sent_at: new Date().toISOString(),
-            steadfast_send_failed: false,
-          }).eq("id", order_id);
-
-          return new Response(JSON.stringify({ success: true, consignment_id: consignmentId }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        lastError = JSON.stringify(data);
-      } catch (e) {
-        lastError = e.message;
       }
 
-      // Wait 1 second before retry
-      if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
+      // Use settings keys
+      return await processDispatch(supabase, order, settingsKey, settingsSecret, corsHeaders);
     }
 
-    // All retries failed
-    await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", order_id);
-
-    // Log failure
-    await supabase.from("audit_logs").insert({
-      action: "steadfast_send_failed",
-      target_table: "orders",
-      target_id: order_id,
-      actor_id: sent_by,
-      details: { error: lastError, attempts: 3 },
-    });
-
-    // Notify SA and HR
-    const { data: admins } = await supabase
-      .from("users")
-      .select("id")
-      .in("panel", ["sa", "hr"]);
-
-    if (admins) {
-      const notifications = admins.map((a: { id: string }) => ({
-        user_id: a.id,
-        title: `SteadFast send failed — Order ${order_id.slice(0, 8)}`,
-        message: `SteadFast-এ অর্ডার পাঠাতে ব্যর্থ হয়েছে। Error: ${lastError}`,
-        type: "error",
-      }));
-      await supabase.from("notifications").insert(notifications);
-    }
-
-    return new Response(JSON.stringify({ success: false, error: lastError }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return await processDispatch(supabase, order, sfApiKey, sfSecretKey, corsHeaders);
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: err.message }), {
+    return new Response(JSON.stringify({ success: false, error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
+async function processDispatch(
+  supabase: ReturnType<typeof createClient>,
+  order: Record<string, unknown>,
+  apiKey: string,
+  secretKey: string,
+  corsHeaders: Record<string, string>
+) {
+  const orderId = order.id as string;
+  const orderShort = orderId.slice(0, 8);
+
+  // 3. Retry up to 3 times
+  let lastError = "";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch("https://portal.steadfast.com.bd/api/v1/create_order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Api-Key": apiKey,
+          "Secret-Key": secretKey,
+        },
+        body: JSON.stringify({
+          invoice: orderId,
+          recipient_name: order.customer_name || "N/A",
+          recipient_phone: order.phone || "",
+          recipient_address: order.address || "",
+          cod_amount: (order.price as number) || 0,
+          note: `Vencon Order ${orderId}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      // 4. On success
+      if (response.ok && (data.status === 200 || response.status === 200)) {
+        const consignmentId =
+          data.consignment?.consignment_id || data.consignment_id || `SF-${Date.now()}`;
+
+        // Update order
+        await supabase
+          .from("orders")
+          .update({
+            steadfast_consignment_id: consignmentId,
+            status: "dispatched",
+            delivery_status: "pending",
+            warehouse_sent_at: new Date().toISOString(),
+            steadfast_send_failed: false,
+          })
+          .eq("id", orderId);
+
+        // Notify Delivery Coordinator
+        const { data: dcUsers } = await supabase
+          .from("users")
+          .select("id")
+          .eq("role", "delivery_coordinator")
+          .eq("is_active", true);
+
+        if (dcUsers?.length) {
+          await supabase.from("notifications").insert(
+            dcUsers.map((u: { id: string }) => ({
+              user_id: u.id,
+              title: "নতুন dispatch",
+              message: `Consignment: ${consignmentId} — Order #${orderShort}`,
+              type: "info",
+            }))
+          );
+        }
+
+        // Log success
+        await supabase.from("audit_logs").insert({
+          action: "steadfast_dispatch_success",
+          target_table: "orders",
+          target_id: orderId,
+          actor_id: order.warehouse_sent_by as string || null,
+          details: { consignment_id: consignmentId, attempts: attempt },
+        });
+
+        return new Response(
+          JSON.stringify({ success: true, consignment_id: consignmentId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      lastError = JSON.stringify(data);
+    } catch (e) {
+      lastError = (e as Error).message;
+    }
+
+    // Wait 1 second before retry
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
+  }
+
+  // 5. All 3 retries failed
+  await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", orderId);
+
+  // Notify SA and HR
+  const { data: admins } = await supabase
+    .from("users")
+    .select("id")
+    .in("panel", ["sa", "hr"])
+    .eq("is_active", true);
+
+  if (admins?.length) {
+    await supabase.from("notifications").insert(
+      admins.map((a: { id: string }) => ({
+        user_id: a.id,
+        title: `⚠️ SteadFast send failed — Order ${orderShort}`,
+        message: `SteadFast-এ অর্ডার পাঠাতে ব্যর্থ হয়েছে। 3 বার retry করা হয়েছে। Error: ${lastError}`,
+        type: "error",
+      }))
+    );
+  }
+
+  // Log failure
+  await supabase.from("audit_logs").insert({
+    action: "steadfast_send_failed",
+    target_table: "orders",
+    target_id: orderId,
+    actor_id: order.warehouse_sent_by as string || null,
+    details: { error: lastError, attempts: 3 },
+  });
+
+  return new Response(
+    JSON.stringify({ success: false, error: lastError }),
+    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
