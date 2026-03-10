@@ -668,7 +668,7 @@ export default function EmployeeTSDashboard() {
     <div className="space-y-4 pb-24">
       {/* Clock Out button */}
       <div className="flex justify-between items-center">
-        <h1 className="font-heading text-xl">Lead Sheet</h1>
+        <h1 className="font-heading text-xl">{t("lead_sheet")}</h1>
         <Button
           variant="outline"
           onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }}
