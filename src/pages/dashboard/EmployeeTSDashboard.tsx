@@ -739,7 +739,7 @@ export default function EmployeeTSDashboard() {
       {/* ── Pre-Order Modal ── */}
       <Dialog open={showPreOrderModal} onOpenChange={setShowPreOrderModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Pre-Order তৈরি করুন</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("pre_order_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Customer</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
             <div><Label>Phone</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
