@@ -725,8 +725,8 @@ export default function EmployeeTSDashboard() {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Quantity</Label><Input type="number" min={1} value={orderQty} onChange={(e) => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
-              <div><Label>Price</Label><Input type="number" value={orderPrice} onChange={(e) => setOrderPrice(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={(e) => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>{t("price")}</Label><Input type="number" value={orderPrice} onChange={(e) => setOrderPrice(Number(e.target.value))} className="mt-1" /></div>
             </div>
             <div><Label>Agent's Note</Label><Textarea value={orderNote} onChange={(e) => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
