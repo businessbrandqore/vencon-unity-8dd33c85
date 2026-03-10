@@ -9,6 +9,10 @@ import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import SADashboard from "./pages/dashboard/SADashboard";
+import SAAnalytics from "./pages/dashboard/SAAnalytics";
+import SAWarehouse from "./pages/dashboard/SAWarehouse";
+import SABudget from "./pages/dashboard/SABudget";
+import SASettings from "./pages/dashboard/SASettings";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -29,11 +33,11 @@ const App = () => (
             <Route element={<DashboardLayout panel="sa" />}>
               <Route path="/sa/dashboard" element={<SADashboard />} />
               <Route path="/sa/approvals" element={<PlaceholderPage titleKey="approvals" />} />
-              <Route path="/sa/analytics" element={<PlaceholderPage titleKey="analytics" />} />
-              <Route path="/sa/warehouse" element={<PlaceholderPage titleKey="warehouse" />} />
-              <Route path="/sa/budget" element={<PlaceholderPage titleKey="budget" />} />
+              <Route path="/sa/analytics" element={<SAAnalytics />} />
+              <Route path="/sa/warehouse" element={<SAWarehouse />} />
+              <Route path="/sa/budget" element={<SABudget />} />
               <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
-              <Route path="/sa/settings" element={<PlaceholderPage titleKey="settings" />} />
+              <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
