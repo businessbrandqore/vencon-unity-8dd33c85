@@ -974,9 +974,17 @@ export type Database = {
           department: string | null
           designation: string | null
           email: string
+          father_name: string | null
+          father_phone: string | null
+          gps_location: string | null
+          guardian_type: string | null
           id: string
           is_active: boolean | null
+          mother_name: string | null
+          mother_phone: string | null
+          must_change_password: boolean | null
           name: string
+          off_days: string[] | null
           panel: Database["public"]["Enums"]["app_panel"]
           phone: string | null
           role: string
@@ -991,9 +999,17 @@ export type Database = {
           department?: string | null
           designation?: string | null
           email: string
+          father_name?: string | null
+          father_phone?: string | null
+          gps_location?: string | null
+          guardian_type?: string | null
           id?: string
           is_active?: boolean | null
+          mother_name?: string | null
+          mother_phone?: string | null
+          must_change_password?: boolean | null
           name: string
+          off_days?: string[] | null
           panel: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
           role: string
@@ -1008,9 +1024,17 @@ export type Database = {
           department?: string | null
           designation?: string | null
           email?: string
+          father_name?: string | null
+          father_phone?: string | null
+          gps_location?: string | null
+          guardian_type?: string | null
           id?: string
           is_active?: boolean | null
+          mother_name?: string | null
+          mother_phone?: string | null
+          must_change_password?: boolean | null
           name?: string
+          off_days?: string[] | null
           panel?: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
           role?: string
