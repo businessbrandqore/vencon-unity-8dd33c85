@@ -791,7 +791,7 @@ export default function EmployeeTSDashboard() {
           </div>
           <DialogFooter>
             <Button onClick={handleClockOut} disabled={!clockOutMood} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">
-              Clock Out নিশ্চিত করুন
+              {t("confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
