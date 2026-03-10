@@ -30,6 +30,7 @@ import TLLeads from "./pages/dashboard/TLLeads";
 import TLTeam from "./pages/dashboard/TLTeam";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
+import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
