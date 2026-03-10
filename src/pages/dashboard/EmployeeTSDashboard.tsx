@@ -731,7 +731,7 @@ export default function EmployeeTSDashboard() {
             <div><Label>Agent's Note</Label><Textarea value={orderNote} onChange={(e) => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">অর্ডার নিশ্চিত করুন</Button>
+            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
