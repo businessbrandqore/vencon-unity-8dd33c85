@@ -681,8 +681,8 @@ export default function EmployeeTSDashboard() {
       {/* Lead Tabs */}
       <Tabs defaultValue="bronze">
         <TabsList>
-          <TabsTrigger value="bronze">Bronze Leads ({bronzeLeads.length})</TabsTrigger>
-          <TabsTrigger value="silver">Silver Leads ({silverLeads.length})</TabsTrigger>
+          <TabsTrigger value="bronze">{t("bronze_leads")} ({n(bronzeLeads.length)})</TabsTrigger>
+          <TabsTrigger value="silver">{t("silver_leads")} ({n(silverLeads.length)})</TabsTrigger>
         </TabsList>
         <TabsContent value="bronze">{renderLeadTable(bronzeLeads)}</TabsContent>
         <TabsContent value="silver">{renderLeadTable(silverLeads)}</TabsContent>
