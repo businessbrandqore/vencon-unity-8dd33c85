@@ -109,10 +109,10 @@ const SAAnalytics = () => {
         orderQuery({ delivery_status: "returned" }),
       ]);
 
-      const confirmed = (confirmRes as any).count || 0;
-      const delivered = (deliveredRes as any).count || 0;
-      const cancelled = (cancelledRes as any).count || 0;
-      const returned = (returnedRes as any).count || 0;
+      const confirmed = confirmRes.count || 0;
+      const delivered = deliveredRes.count || 0;
+      const cancelled = cancelledRes.count || 0;
+      const returned = returnedRes.count || 0;
 
       setOrderConfirm(confirmed);
       setReceiveCount(delivered);
