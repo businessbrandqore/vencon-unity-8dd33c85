@@ -768,7 +768,7 @@ export default function EmployeeTSDashboard() {
       {/* ── Clock Out Modal ── */}
       <Dialog open={showClockOutModal} onOpenChange={setShowClockOutModal}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Clock Out — Mood Check-Out</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("clock_out")} — {t("mood_select")}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
