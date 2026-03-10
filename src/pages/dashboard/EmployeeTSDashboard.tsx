@@ -527,7 +527,7 @@ export default function EmployeeTSDashboard() {
                 </RadioGroup>
               </div>
               <div>
-                <Label>ফোনে বাকি মিনিট</Label>
+                <Label>{t("phone_minutes")}</Label>
                 <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
               </div>
             </div>
