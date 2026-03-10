@@ -287,7 +287,7 @@ const HRPayroll = () => {
         role: editRole,
         threshold: Number(editThreshold),
         tiers: editTiers,
-      },
+      } as any,
     });
 
     // Notify SA

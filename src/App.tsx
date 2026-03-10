@@ -18,6 +18,10 @@ import HRCampaigns from "./pages/dashboard/HRCampaigns";
 import HREmployees from "./pages/dashboard/HREmployees";
 import HREmployeeNew from "./pages/dashboard/HREmployeeNew";
 import HREmployeeProfile from "./pages/dashboard/HREmployeeProfile";
+import HRPayroll from "./pages/dashboard/HRPayroll";
+import HRAttendance from "./pages/dashboard/HRAttendance";
+import HRLeaves from "./pages/dashboard/HRLeaves";
+import HRSettings from "./pages/dashboard/HRSettings";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -53,11 +57,11 @@ const App = () => (
               <Route path="/hr/employees" element={<HREmployees />} />
               <Route path="/hr/employees/new" element={<HREmployeeNew />} />
               <Route path="/hr/employees/:id" element={<HREmployeeProfile />} />
-              <Route path="/hr/payroll" element={<PlaceholderPage titleKey="payroll" />} />
-              <Route path="/hr/attendance" element={<PlaceholderPage titleKey="attendance" />} />
-              <Route path="/hr/leaves" element={<PlaceholderPage titleKey="leaves" />} />
+              <Route path="/hr/payroll" element={<HRPayroll />} />
+              <Route path="/hr/attendance" element={<HRAttendance />} />
+              <Route path="/hr/leaves" element={<HRLeaves />} />
               <Route path="/hr/chat" element={<PlaceholderPage titleKey="chat" />} />
-              <Route path="/hr/settings" element={<PlaceholderPage titleKey="settings" />} />
+              <Route path="/hr/settings" element={<HRSettings />} />
               <Route path="/hr/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
