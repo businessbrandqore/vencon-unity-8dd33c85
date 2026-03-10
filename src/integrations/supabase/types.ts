@@ -14,16 +14,1025 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance: {
+        Row: {
+          clock_in: string | null
+          clock_out: string | null
+          date: string
+          deduction_amount: number | null
+          desk_condition: string | null
+          id: string
+          is_early_out: boolean | null
+          is_late: boolean | null
+          mood_in: string | null
+          mood_note: string | null
+          mood_out: string | null
+          phone_minutes_remaining: number | null
+          user_id: string | null
+        }
+        Insert: {
+          clock_in?: string | null
+          clock_out?: string | null
+          date: string
+          deduction_amount?: number | null
+          desk_condition?: string | null
+          id?: string
+          is_early_out?: boolean | null
+          is_late?: boolean | null
+          mood_in?: string | null
+          mood_note?: string | null
+          mood_out?: string | null
+          phone_minutes_remaining?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          clock_in?: string | null
+          clock_out?: string | null
+          date?: string
+          deduction_amount?: number | null
+          desk_condition?: string | null
+          id?: string
+          is_early_out?: boolean | null
+          is_late?: boolean | null
+          mood_in?: string | null
+          mood_note?: string | null
+          mood_out?: string | null
+          phone_minutes_remaining?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_appeals: {
+        Row: {
+          attendance_id: string | null
+          created_at: string | null
+          decided_by: string | null
+          explanation: string
+          id: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attendance_id?: string | null
+          created_at?: string | null
+          decided_by?: string | null
+          explanation: string
+          id?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attendance_id?: string | null
+          created_at?: string | null
+          decided_by?: string | null
+          explanation?: string
+          id?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_appeals_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_appeals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_appeals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_id: string | null
+          target_table: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          approved_by: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          reactions: Json | null
+          read_by: string[] | null
+          reply_to_id: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          reactions?: Json | null
+          read_by?: string[] | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          reactions?: Json | null
+          read_by?: string[] | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          agent_id: string
+          group_leader_id: string
+        }
+        Insert: {
+          agent_id: string
+          group_leader_id: string
+        }
+        Update: {
+          agent_id?: string
+          group_leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_group_leader_id_fkey"
+            columns: ["group_leader_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incentive_config: {
+        Row: {
+          amount_per_order: number | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          max_ratio: number | null
+          min_ratio: number | null
+          minimum_threshold: number | null
+          role: string
+          status: string | null
+        }
+        Insert: {
+          amount_per_order?: number | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          max_ratio?: number | null
+          min_ratio?: number | null
+          minimum_threshold?: number | null
+          role: string
+          status?: string | null
+        }
+        Update: {
+          amount_per_order?: number | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          max_ratio?: number | null
+          min_ratio?: number | null
+          minimum_threshold?: number | null
+          role?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incentive_config_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incentive_config_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory: {
+        Row: {
+          damaged: number | null
+          dispatched: number | null
+          id: string
+          low_stock_threshold: number | null
+          product_name: string
+          returned: number | null
+          stock_in: number | null
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          damaged?: number | null
+          dispatched?: number | null
+          id?: string
+          low_stock_threshold?: number | null
+          product_name: string
+          returned?: number | null
+          stock_in?: number | null
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          damaged?: number | null
+          dispatched?: number | null
+          id?: string
+          low_stock_threshold?: number | null
+          product_name?: string
+          returned?: number | null
+          stock_in?: number | null
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          address: string | null
+          agent_type: string | null
+          assigned_to: string | null
+          called_date: string | null
+          called_time: number | null
+          campaign_id: string | null
+          created_at: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          requeue_at: string | null
+          requeue_count: number | null
+          sms_status: string | null
+          source: string | null
+          special_note: string | null
+          status: string | null
+          tl_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          agent_type?: string | null
+          assigned_to?: string | null
+          called_date?: string | null
+          called_time?: number | null
+          campaign_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          requeue_at?: string | null
+          requeue_count?: number | null
+          sms_status?: string | null
+          source?: string | null
+          special_note?: string | null
+          status?: string | null
+          tl_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          agent_type?: string | null
+          assigned_to?: string | null
+          called_date?: string | null
+          called_time?: number | null
+          campaign_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          requeue_at?: string | null
+          requeue_count?: number | null
+          sms_status?: string | null
+          source?: string | null
+          special_note?: string | null
+          status?: string | null
+          tl_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_requests: {
+        Row: {
+          created_at: string | null
+          decided_by: string | null
+          end_date: string
+          id: string
+          reason: string | null
+          start_date: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          decided_by?: string | null
+          end_date: string
+          id?: string
+          reason?: string | null
+          start_date: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          decided_by?: string | null
+          end_date?: string
+          id?: string
+          reason?: string | null
+          start_date?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_budget: {
+        Row: {
+          allocated_by: string | null
+          amount: number | null
+          created_at: string | null
+          id: string
+          note: string | null
+        }
+        Insert: {
+          allocated_by?: string | null
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          allocated_by?: string | null
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_budget_allocated_by_fkey"
+            columns: ["allocated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_expenses: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          description: string
+          expense_date: string | null
+          id: string
+          officer_id: string | null
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          description: string
+          expense_date?: string | null
+          id?: string
+          officer_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          description?: string
+          expense_date?: string | null
+          id?: string
+          officer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_expenses_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          title: string
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          title: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          address: string | null
+          agent_id: string | null
+          created_at: string | null
+          cs_call_done_at: string | null
+          cs_id: string | null
+          cs_note: string | null
+          cs_rating: string | null
+          cso_approved_at: string | null
+          cso_id: string | null
+          customer_name: string | null
+          delivery_status: string | null
+          id: string
+          lead_id: string | null
+          phone: string | null
+          price: number | null
+          product: string | null
+          quantity: number | null
+          status: string | null
+          steadfast_consignment_id: string | null
+          steadfast_send_failed: boolean | null
+          tl_id: string | null
+          warehouse_sent_at: string | null
+          warehouse_sent_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          agent_id?: string | null
+          created_at?: string | null
+          cs_call_done_at?: string | null
+          cs_id?: string | null
+          cs_note?: string | null
+          cs_rating?: string | null
+          cso_approved_at?: string | null
+          cso_id?: string | null
+          customer_name?: string | null
+          delivery_status?: string | null
+          id?: string
+          lead_id?: string | null
+          phone?: string | null
+          price?: number | null
+          product?: string | null
+          quantity?: number | null
+          status?: string | null
+          steadfast_consignment_id?: string | null
+          steadfast_send_failed?: boolean | null
+          tl_id?: string | null
+          warehouse_sent_at?: string | null
+          warehouse_sent_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          agent_id?: string | null
+          created_at?: string | null
+          cs_call_done_at?: string | null
+          cs_id?: string | null
+          cs_note?: string | null
+          cs_rating?: string | null
+          cso_approved_at?: string | null
+          cso_id?: string | null
+          customer_name?: string | null
+          delivery_status?: string | null
+          id?: string
+          lead_id?: string | null
+          phone?: string | null
+          price?: number | null
+          product?: string | null
+          quantity?: number | null
+          status?: string | null
+          steadfast_consignment_id?: string | null
+          steadfast_send_failed?: boolean | null
+          tl_id?: string | null
+          warehouse_sent_at?: string | null
+          warehouse_sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_cs_id_fkey"
+            columns: ["cs_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_cso_id_fkey"
+            columns: ["cso_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_warehouse_sent_by_fkey"
+            columns: ["warehouse_sent_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_orders: {
+        Row: {
+          agent_id: string | null
+          created_at: string | null
+          id: string
+          lead_id: string | null
+          note: string | null
+          scheduled_date: string | null
+          status: string | null
+          tl_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string | null
+          id?: string
+          lead_id?: string | null
+          note?: string | null
+          scheduled_date?: string | null
+          status?: string | null
+          tl_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string | null
+          id?: string
+          lead_id?: string | null
+          note?: string | null
+          scheduled_date?: string | null
+          status?: string | null
+          tl_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_orders_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_orders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_orders_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profit_share_config: {
+        Row: {
+          approved_by: string | null
+          created_by: string | null
+          id: string
+          percentage: number
+          role: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          created_by?: string | null
+          id?: string
+          percentage: number
+          role: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          created_by?: string | null
+          id?: string
+          percentage?: number
+          role?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profit_share_config_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profit_share_config_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sa_approvals: {
+        Row: {
+          created_at: string | null
+          decided_by: string | null
+          details: Json | null
+          id: string
+          rejection_reason: string | null
+          requested_by: string | null
+          status: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          decided_by?: string | null
+          details?: Json | null
+          id?: string
+          rejection_reason?: string | null
+          requested_by?: string | null
+          status?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          decided_by?: string | null
+          details?: Json | null
+          id?: string
+          rejection_reason?: string | null
+          requested_by?: string | null
+          status?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sa_approvals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sa_approvals_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          panel: Database["public"]["Enums"]["app_panel"]
+          role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          panel: Database["public"]["Enums"]["app_panel"]
+          role: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          panel?: Database["public"]["Enums"]["app_panel"]
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          auth_id: string | null
+          created_at: string | null
+          department: string | null
+          designation: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          panel: Database["public"]["Enums"]["app_panel"]
+          phone: string | null
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          auth_id?: string | null
+          created_at?: string | null
+          department?: string | null
+          designation?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          panel: Database["public"]["Enums"]["app_panel"]
+          phone?: string | null
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          auth_id?: string | null
+          created_at?: string | null
+          department?: string | null
+          designation?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          panel?: Database["public"]["Enums"]["app_panel"]
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_id: { Args: { _auth_id: string }; Returns: string }
+      get_user_panel: {
+        Args: { _auth_id: string }
+        Returns: Database["public"]["Enums"]["app_panel"]
+      }
+      has_panel: {
+        Args: {
+          _auth_id: string
+          _panel: Database["public"]["Enums"]["app_panel"]
+        }
+        Returns: boolean
+      }
+      is_hr: { Args: { _auth_id: string }; Returns: boolean }
+      is_sa: { Args: { _auth_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_panel: "sa" | "hr" | "tl" | "employee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +1159,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_panel: ["sa", "hr", "tl", "employee"],
+    },
   },
 } as const
