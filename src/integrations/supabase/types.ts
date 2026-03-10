@@ -1177,6 +1177,33 @@ export type Database = {
       }
       is_hr: { Args: { _auth_id: string }; Returns: boolean }
       is_sa: { Args: { _auth_id: string }; Returns: boolean }
+      notify_panel: {
+        Args: {
+          _message: string
+          _panel: Database["public"]["Enums"]["app_panel"]
+          _title: string
+          _type?: string
+        }
+        Returns: undefined
+      }
+      notify_role: {
+        Args: {
+          _message: string
+          _role: string
+          _title: string
+          _type?: string
+        }
+        Returns: undefined
+      }
+      notify_user: {
+        Args: {
+          _message: string
+          _title: string
+          _type?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_panel: "sa" | "hr" | "tl" | "employee"

@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.send-to-steadfast]
 verify_jwt = false
+
+[functions.process-requeue]
+verify_jwt = false
+
+[functions.sync-steadfast-status]
+verify_jwt = false
