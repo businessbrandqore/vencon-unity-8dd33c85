@@ -84,6 +84,7 @@ const App = () => (
               <Route path="/tl/my-team" element={<TLTeam />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
