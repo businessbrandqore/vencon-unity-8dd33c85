@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Volume2 } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDistanceToNow } from "date-fns";
-import { bn } from "date-fns/locale";
+import { bn as bnLocale } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 interface Notification {
   id: string;
@@ -22,7 +24,6 @@ const TYPE_ICONS: Record<string, string> = {
   error: "❌",
 };
 
-// Generate a short chime using Web Audio API
 const playNotificationSound = (volume: number) => {
   try {
     const ctx = new AudioContext();
@@ -44,6 +45,7 @@ const playNotificationSound = (volume: number) => {
 
 const NotificationBell = () => {
   const { user } = useAuth();
+  const { t, n, lang } = useLanguage();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -52,10 +54,8 @@ const NotificationBell = () => {
   const ref = useRef<HTMLDivElement>(null);
   const initialLoadDone = useRef(false);
 
-  // Fetch initial notifications
   useEffect(() => {
     if (!user) return;
-
     const fetch = async () => {
       const { data } = await supabase
         .from("notifications")
@@ -63,7 +63,6 @@ const NotificationBell = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
-
       if (data) {
         setNotifications(data);
         setUnreadCount(data.filter((n) => !n.is_read).length);
@@ -71,8 +70,6 @@ const NotificationBell = () => {
       initialLoadDone.current = true;
     };
     fetch();
-
-    // Fetch user volume preference
     const fetchVol = async () => {
       const { data } = await supabase
         .from("users")
@@ -84,39 +81,25 @@ const NotificationBell = () => {
     fetchVol();
   }, [user]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!user) return;
-
     const channel = supabase
       .channel(`notifications-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          setNotifications((prev) => [newNotif, ...prev].slice(0, 10));
-          setUnreadCount((c) => c + 1);
-
-          // Play sound only after initial load
-          if (initialLoadDone.current) {
-            playNotificationSound(volume);
-          }
-        }
-      )
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const newNotif = payload.new as Notification;
+        setNotifications((prev) => [newNotif, ...prev].slice(0, 10));
+        setUnreadCount((c) => c + 1);
+        if (initialLoadDone.current) playNotificationSound(volume);
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user, volume]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -136,94 +119,67 @@ const NotificationBell = () => {
 
   const markOneRead = async (id: string) => {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
   if (!user) return null;
 
+  const locale = lang === "bn" ? bnLocale : enUS;
+
   return (
     <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="relative p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-      >
+      <button onClick={() => setOpen(!open)} className="relative p-1.5 text-muted-foreground hover:text-foreground transition-colors">
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 text-[10px] font-bold flex items-center justify-center px-1 bg-destructive text-destructive-foreground rounded-full">
-            {unreadCount > 99 ? "99+" : unreadCount}
+            {n(unreadCount > 99 ? 99 : unreadCount)}{unreadCount > 99 ? "+" : ""}
           </span>
         )}
       </button>
 
       {open && (
         <div className="absolute right-0 top-10 w-80 bg-card border border-border z-50 shadow-lg rounded-md overflow-hidden">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-            <span className="font-heading text-sm font-semibold text-foreground">Notifications</span>
+            <span className="font-heading text-sm font-semibold text-foreground">{t("notifications")}</span>
             {unreadCount > 0 && (
-              <button
-                onClick={markAllRead}
-                className="flex items-center gap-1 text-[11px] text-primary hover:underline"
-              >
+              <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] text-primary hover:underline">
                 <Check className="h-3 w-3" />
-                সব পড়া হিসেবে চিহ্নিত করুন
+                {t("mark_all_read")}
               </button>
             )}
           </div>
 
-          {/* List */}
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="p-6 text-xs text-muted-foreground text-center">
-                কোনো notification নেই
-              </p>
+              <p className="p-6 text-xs text-muted-foreground text-center">{t("no_notifications")}</p>
             ) : (
-              notifications.map((n) => (
+              notifications.map((ntf) => (
                 <button
-                  key={n.id}
-                  onClick={() => {
-                    if (!n.is_read) markOneRead(n.id);
-                    setOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors flex gap-3 ${
-                    !n.is_read ? "bg-primary/5" : ""
-                  }`}
+                  key={ntf.id}
+                  onClick={() => { if (!ntf.is_read) markOneRead(ntf.id); setOpen(false); }}
+                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors flex gap-3 ${!ntf.is_read ? "bg-primary/5" : ""}`}
                 >
-                  <span className="text-sm mt-0.5 shrink-0">
-                    {TYPE_ICONS[n.type || "info"] || "ℹ️"}
-                  </span>
+                  <span className="text-sm mt-0.5 shrink-0">{TYPE_ICONS[ntf.type || "info"] || "ℹ️"}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{n.title}</p>
-                    {n.message && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
-                        {n.message}
-                      </p>
-                    )}
+                    <p className="text-xs font-medium text-foreground truncate">{ntf.title}</p>
+                    {ntf.message && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{ntf.message}</p>}
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: bn })}
+                      {formatDistanceToNow(new Date(ntf.created_at), { addSuffix: true, locale })}
                     </p>
                   </div>
-                  {!n.is_read && (
-                    <span className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
-                  )}
+                  {!ntf.is_read && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />}
                 </button>
               ))
             )}
           </div>
 
-          {/* Footer */}
           <div className="border-t border-border px-4 py-2.5">
             <button
-              onClick={() => {
-                setOpen(false);
-                navigate(`/${user.panel}/notifications`);
-              }}
+              onClick={() => { setOpen(false); navigate(`/${user.panel}/notifications`); }}
               className="text-[11px] text-primary hover:underline"
             >
-              সব notification দেখুন →
+              {t("view_all_notifications")}
             </button>
           </div>
         </div>

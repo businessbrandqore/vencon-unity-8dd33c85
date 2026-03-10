@@ -1198,6 +1198,7 @@ export type Database = {
           off_days: string[] | null
           panel: Database["public"]["Enums"]["app_panel"]
           phone: string | null
+          preferred_language: string | null
           role: string
           shift_end: string | null
           shift_start: string | null
@@ -1224,6 +1225,7 @@ export type Database = {
           off_days?: string[] | null
           panel: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
+          preferred_language?: string | null
           role: string
           shift_end?: string | null
           shift_start?: string | null
@@ -1250,6 +1252,7 @@ export type Database = {
           off_days?: string[] | null
           panel?: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
+          preferred_language?: string | null
           role?: string
           shift_end?: string | null
           shift_start?: string | null

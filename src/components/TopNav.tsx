@@ -13,7 +13,7 @@ interface TopNavProps {
 
 const TopNav = ({ onToggleSidebar }: TopNavProps) => {
   const { user, signOut } = useAuth();
-  const { t, lang, toggleLang } = useLanguage();
+  const { t, lang, toggleLang, roleName } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const panelConfig = user ? getPanelByType(user.panel) : null;
@@ -95,7 +95,7 @@ const TopNav = ({ onToggleSidebar }: TopNavProps) => {
               <div className="px-4 py-3 border-b border-border">
                 <p className="font-heading text-sm text-foreground">{user.name}</p>
                 <p className="font-body text-[11px] text-muted-foreground mt-0.5">
-                  {user.role.replace(/_/g, " ")}
+                  {roleName(user.role)}
                 </p>
               </div>
               <button

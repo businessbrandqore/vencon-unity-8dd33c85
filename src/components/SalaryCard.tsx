@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SalaryData {
   basic_salary: number;
@@ -14,6 +15,7 @@ interface SalaryData {
 
 export default function SalaryCard() {
   const { user } = useAuth();
+  const { t, n, lang } = useLanguage();
   const [salary, setSalary] = useState<SalaryData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +37,6 @@ export default function SalaryCard() {
     fetchSalary();
   }, [user]);
 
-  // Realtime: re-fetch on order/attendance changes
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -59,21 +60,21 @@ export default function SalaryCard() {
 
   if (!salary) return null;
 
-  const fmt = (n: number) => `৳${Math.round(n).toLocaleString("en-IN")}`;
+  const fmt = (num: number) => `৳${n(num)}`;
 
   return (
     <div className="border border-border bg-card p-5">
       <h3 className="font-heading text-sm font-bold text-foreground mb-4">
-        এই মাসের বেতন (চলতি)
+        {t("this_month_salary")}
       </h3>
       <div className="space-y-2 font-body text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">মূল বেতন</span>
+          <span className="text-muted-foreground">{t("basic_salary")}</span>
           <span className="text-foreground">{fmt(salary.basic_salary)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">
-            {salary.receive_ratio > 0 ? "ইনসেন্টিভ" : "প্রফিট শেয়ার"}
+            {salary.receive_ratio > 0 ? t("incentive") : t("profit_share")}
           </span>
           <span className="text-green-500">
             {salary.incentive > 0 ? `+${fmt(salary.incentive)}` : "—"}
@@ -81,19 +82,19 @@ export default function SalaryCard() {
         </div>
         {salary.receive_ratio > 0 && (
           <div className="flex justify-between">
-            <span className="text-muted-foreground">রিসিভ রেশিও</span>
-            <span className="text-foreground">{salary.receive_ratio}%</span>
+            <span className="text-muted-foreground">{t("receive_ratio")}</span>
+            <span className="text-foreground">{n(salary.receive_ratio)}%</span>
           </div>
         )}
         <div className="flex justify-between">
-          <span className="text-muted-foreground">কর্তন (বিলম্ব + ছুটি)</span>
+          <span className="text-muted-foreground">{t("deductions_late_leave")}</span>
           <span className="text-destructive">
             {salary.total_deductions > 0 ? `-${fmt(salary.total_deductions)}` : "—"}
           </span>
         </div>
         <div className="h-px bg-border my-1" />
         <div className="flex justify-between font-bold">
-          <span className="text-foreground">নিট বেতন</span>
+          <span className="text-foreground">{t("net_salary")}</span>
           <span className="text-primary">{fmt(salary.net_salary)}</span>
         </div>
       </div>

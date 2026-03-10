@@ -1,79 +1,101 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-
-type Language = "bn" | "en";
-
-interface Translations {
-  [key: string]: { bn: string; en: string };
-}
-
-const translations: Translations = {
-  vencon: { bn: "VENCON", en: "VENCON" },
-  tagline: { bn: "কোম্পানি অপারেশন ম্যানেজমেন্ট সিস্টেম", en: "Company Operations Management System" },
-  login: { bn: "Login করুন", en: "Login" },
-  email: { bn: "ইমেইল", en: "Email" },
-  password: { bn: "পাসওয়ার্ড", en: "Password" },
-  sa_panel: { bn: "সুপার অ্যাডমিন প্যানেল", en: "Super Admin Panel" },
-  hr_panel: { bn: "এইচআর প্যানেল", en: "HR Panel" },
-  tl_panel: { bn: "টিম লিডার প্যানেল", en: "Team Leader Panel" },
-  employee_panel: { bn: "এমপ্লয়ী প্যানেল", en: "Employee Panel" },
-  sa_desc: { bn: "ম্যানেজিং ডিরেক্টর, অপারেশন ম্যানেজার, ওয়্যারহাউস ডিরেক্টর", en: "MD, Operations Manager, Warehouse Director" },
-  hr_desc: { bn: "এইচআর ম্যানেজার", en: "HR Manager" },
-  tl_desc: { bn: "টিম লিডার, সহকারী টিএল, বিজনেস ডেভ ম্যানেজার", en: "Team Leader, Assistant TL, Business Dev Manager" },
-  employee_desc: { bn: "টেলিসেলস, ওয়্যারহাউস, কাস্টমার সার্ভিস ইত্যাদি", en: "Telesales, Warehouse, CS, etc." },
-  locked_msg: { bn: "অনেক বেশি ভুল চেষ্টা। অনুগ্রহ করে অপেক্ষা করুন:", en: "Too many failed attempts. Please wait:" },
-  invalid_creds: { bn: "ইমেইল বা পাসওয়ার্ড ভুল", en: "Invalid email or password" },
-  dashboard: { bn: "ড্যাশবোর্ড", en: "Dashboard" },
-  welcome: { bn: "স্বাগতম", en: "Welcome" },
-  logout: { bn: "লগ আউট", en: "Logout" },
-  select_panel: { bn: "আপনার প্যানেল নির্বাচন করুন", en: "Select Your Panel" },
-  no_panel_access: { bn: "এই panel-এ আপনার access নেই", en: "You don't have access to this panel" },
-  checking_access: { bn: "অ্যাক্সেস যাচাই করা হচ্ছে...", en: "Checking access..." },
-  profile: { bn: "প্রোফাইল", en: "Profile" },
-  notifications: { bn: "বিজ্ঞপ্তি", en: "Notifications" },
-  no_notifications: { bn: "কোনো বিজ্ঞপ্তি নেই", en: "No notifications" },
-  // SA sidebar
-  approvals: { bn: "অনুমোদন", en: "Approvals" },
-  analytics: { bn: "অ্যানালিটিক্স", en: "Analytics" },
-  warehouse: { bn: "ওয়্যারহাউস", en: "Warehouse" },
-  budget: { bn: "বাজেট", en: "Budget" },
-  audit_logs: { bn: "অডিট লগ", en: "Audit Logs" },
-  settings: { bn: "সেটিংস", en: "Settings" },
-  // HR sidebar
-  campaigns: { bn: "ক্যাম্পেইন", en: "Campaigns" },
-  employees: { bn: "কর্মচারী", en: "Employees" },
-  payroll: { bn: "পে-রোল", en: "Payroll" },
-  attendance: { bn: "উপস্থিতি", en: "Attendance" },
-  leaves: { bn: "ছুটি", en: "Leaves" },
-  chat: { bn: "চ্যাট", en: "Chat" },
-  // TL sidebar
-  leads: { bn: "লিডস", en: "Leads" },
-  my_team: { bn: "আমার টিম", en: "My Team" },
-  pre_orders: { bn: "প্রি-অর্ডার", en: "Pre-Orders" },
-  delete_sheet: { bn: "ডিলিট শিট", en: "Delete Sheet" },
-  // Employee sidebar
-  my_leads: { bn: "আমার লিডস", en: "My Leads" },
-  salary: { bn: "বেতন", en: "Salary" },
-};
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { translations, Language, toBengaliNum, formatDateBn, formatNumLocale, getRoleName, getStatusName } from "@/i18n/translations";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LanguageContextType {
   lang: Language;
   toggleLang: () => void;
   t: (key: string) => string;
+  n: (num: number) => string;
+  d: (date: Date) => string;
+  roleName: (roleKey: string) => string;
+  statusName: (statusKey: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [lang, setLang] = useState<Language>("bn");
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem("vencon_lang");
+    return (saved === "en" || saved === "bn") ? saved : "bn";
+  });
 
-  const toggleLang = () => setLang((prev) => (prev === "bn" ? "en" : "bn"));
+  // Persist to localStorage on change
+  useEffect(() => {
+    localStorage.setItem("vencon_lang", lang);
+  }, [lang]);
 
-  const t = (key: string) => {
+  // Persist to DB when user is logged in (fire-and-forget)
+  const persistLangToDb = useCallback(async (newLang: Language) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      // Get user id from users table
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", session.user.id)
+        .single();
+      if (userData) {
+        await supabase
+          .from("users")
+          .update({ preferred_language: newLang } as any)
+          .eq("id", userData.id);
+      }
+    }
+  }, []);
+
+  // Load preference from DB on mount (when session exists)
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data } = await supabase
+          .from("users")
+          .select("preferred_language")
+          .eq("auth_id", session.user.id)
+          .single();
+        if (data && (data as any).preferred_language) {
+          const dbLang = (data as any).preferred_language as Language;
+          if (dbLang === "bn" || dbLang === "en") {
+            setLang(dbLang);
+            localStorage.setItem("vencon_lang", dbLang);
+          }
+        }
+      }
+    })();
+  }, []);
+
+  const toggleLang = useCallback(() => {
+    setLang((prev) => {
+      const next = prev === "bn" ? "en" : "bn";
+      persistLangToDb(next);
+      return next;
+    });
+  }, [persistLangToDb]);
+
+  const t = useCallback((key: string) => {
     return translations[key]?.[lang] || key;
-  };
+  }, [lang]);
+
+  const n = useCallback((num: number) => {
+    return formatNumLocale(num, lang);
+  }, [lang]);
+
+  const d = useCallback((date: Date) => {
+    if (lang === "bn") return formatDateBn(date);
+    return date.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" });
+  }, [lang]);
+
+  const roleName = useCallback((roleKey: string) => {
+    return getRoleName(roleKey, lang);
+  }, [lang]);
+
+  const statusName = useCallback((statusKey: string) => {
+    return getStatusName(statusKey, lang);
+  }, [lang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, toggleLang, t }}>
+    <LanguageContext.Provider value={{ lang, toggleLang, t, n, d, roleName, statusName }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import SalaryCard from "@/components/SalaryCard";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,12 +68,12 @@ interface InventoryItem {
 
 /* ───── constants ───── */
 const MOODS = [
-  { value: "happy", emoji: "😊", label: "Happy" },
-  { value: "sad", emoji: "😢", label: "Sad" },
-  { value: "excited", emoji: "🎉", label: "Excited" },
-  { value: "tired", emoji: "😴", label: "Tired" },
-  { value: "neutral", emoji: "😐", label: "Neutral" },
-  { value: "angry", emoji: "😠", label: "Angry" },
+  { value: "happy", emoji: "😊", labelKey: "mood_happy" },
+  { value: "sad", emoji: "😢", labelKey: "mood_sad" },
+  { value: "excited", emoji: "🎉", labelKey: "mood_excited" },
+  { value: "tired", emoji: "😴", labelKey: "mood_tired" },
+  { value: "neutral", emoji: "😐", labelKey: "mood_neutral" },
+  { value: "angry", emoji: "😠", labelKey: "mood_angry" },
 ];
 
 const LEAD_STATUSES = [
@@ -112,6 +113,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 /* ═══════════════════════════════════════════ */
 export default function EmployeeTSDashboard() {
   const { user } = useAuth();
+  const { t, n, lang, statusName } = useLanguage();
 
   /* user profile with shift info */
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -479,7 +481,7 @@ export default function EmployeeTSDashboard() {
 
   /* ───── loading ───── */
   if (!profile || isWithinShift === null || attendanceLoading) {
-    return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+    return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
   }
 
   /* ───── OUTSIDE SHIFT ───── */
@@ -489,8 +491,8 @@ export default function EmployeeTSDashboard() {
         <Card className="border-[hsl(var(--panel-employee))]">
           <CardContent className="py-8 text-center">
             <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <h2 className="font-heading text-xl mb-2">আপনার shift এখন নেই।</h2>
-            <p className="text-muted-foreground">শুধুমাত্র ব্যক্তিগত তথ্য দেখা যাচ্ছে।</p>
+            <h2 className="font-heading text-xl mb-2">{t("outside_shift")}</h2>
+            <p className="text-muted-foreground">{t("personal_info_only")}</p>
           </CardContent>
         </Card>
         <SalaryCard />
@@ -507,30 +509,30 @@ export default function EmployeeTSDashboard() {
           className="w-full rounded-md border border-orange-500/50 bg-orange-500/10 p-6 text-center hover:bg-orange-500/20 transition-colors"
         >
           <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-orange-400" />
-          <p className="font-heading text-lg text-orange-300">⚠️ আজকের ডেস্ক এবং ফোন রিপোর্ট এখনো দেওয়া হয়নি!</p>
-          <p className="text-sm text-muted-foreground mt-1">রিপোর্ট দিতে ক্লিক করুন</p>
+           <p className="font-heading text-lg text-orange-300">{t("desk_report_pending")}</p>
+           <p className="text-sm text-muted-foreground mt-1">{t("click_to_report")}</p>
         </button>
 
         {/* Desk Report Modal */}
         <Dialog open={showDeskModal} onOpenChange={setShowDeskModal}>
           <DialogContent>
-            <DialogHeader><DialogTitle>ডেস্ক ও ফোন রিপোর্ট</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("desk_report")}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>ডেস্কের অবস্থা</Label>
+                <Label>{t("desk_condition")}</Label>
                 <RadioGroup value={deskCondition} onValueChange={setDeskCondition} className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2"><RadioGroupItem value="good" id="good" /><Label htmlFor="good">ভালো</Label></div>
-                  <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="acceptable" /><Label htmlFor="acceptable">গ্রহণযোগ্য</Label></div>
-                  <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="needs_repair" /><Label htmlFor="needs_repair">মেরামত দরকার</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="good" id="good" /><Label htmlFor="good">{t("desk_good")}</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="acceptable" /><Label htmlFor="acceptable">{t("desk_acceptable")}</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="needs_repair" /><Label htmlFor="needs_repair">{t("desk_needs_repair")}</Label></div>
                 </RadioGroup>
               </div>
               <div>
-                <Label>ফোনে বাকি মিনিট</Label>
+                <Label>{t("phone_minutes")}</Label>
                 <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleDeskReportSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)]">সংরক্ষণ করুন</Button>
+              <Button onClick={handleDeskReportSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)]">{t("save")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -543,7 +545,7 @@ export default function EmployeeTSDashboard() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardHeader><CardTitle className="font-heading">আজকের মুড চেক-ইন</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-heading">{t("mood_select")}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
@@ -558,12 +560,12 @@ export default function EmployeeTSDashboard() {
                   )}
                 >
                   <span className="text-3xl mb-1">{m.emoji}</span>
-                  <span className="text-xs text-muted-foreground">{m.label}</span>
+                  <span className="text-xs text-muted-foreground">{t(m.labelKey)}</span>
                 </button>
               ))}
             </div>
             <div>
-              <Label>আজকের অনুভূতি সম্পর্কে লিখুন (optional)</Label>
+              <Label>{t("mood_write")}</Label>
               <Textarea value={moodNote} onChange={(e) => setMoodNote(e.target.value)} className="mt-1" rows={2} />
             </div>
             <Button
@@ -571,7 +573,7 @@ export default function EmployeeTSDashboard() {
               disabled={!selectedMood}
               className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white"
             >
-              Clock In করুন
+              {t("clock_in")}
             </Button>
           </CardContent>
         </Card>
@@ -666,21 +668,21 @@ export default function EmployeeTSDashboard() {
     <div className="space-y-4 pb-24">
       {/* Clock Out button */}
       <div className="flex justify-between items-center">
-        <h1 className="font-heading text-xl">Lead Sheet</h1>
+        <h1 className="font-heading text-xl">{t("lead_sheet")}</h1>
         <Button
           variant="outline"
           onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }}
           className="border-destructive text-destructive hover:bg-destructive/10"
         >
-          <LogOut className="h-4 w-4 mr-2" />Clock Out করুন
+          <LogOut className="h-4 w-4 mr-2" />{t("clock_out")}
         </Button>
       </div>
 
       {/* Lead Tabs */}
       <Tabs defaultValue="bronze">
         <TabsList>
-          <TabsTrigger value="bronze">Bronze Leads ({bronzeLeads.length})</TabsTrigger>
-          <TabsTrigger value="silver">Silver Leads ({silverLeads.length})</TabsTrigger>
+          <TabsTrigger value="bronze">{t("bronze_leads")} ({n(bronzeLeads.length)})</TabsTrigger>
+          <TabsTrigger value="silver">{t("silver_leads")} ({n(silverLeads.length)})</TabsTrigger>
         </TabsList>
         <TabsContent value="bronze">{renderLeadTable(bronzeLeads)}</TabsContent>
         <TabsContent value="silver">{renderLeadTable(silverLeads)}</TabsContent>
@@ -690,13 +692,13 @@ export default function EmployeeTSDashboard() {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3 max-w-screen-xl mx-auto text-xs">
           <div className="flex gap-4">
-            <span>Sales: <strong>{salesRatio}%</strong></span>
-            <span>Receive: <strong>{receiveRatio}%</strong></span>
-            <span>Cancel: <strong className="text-destructive">{cancelRatio}%</strong></span>
-            <span>Return: <strong className="text-orange-400">{returnRatio}%</strong></span>
+            <span>{t("sales_ratio")}: <strong>{n(Number(salesRatio))}%</strong></span>
+            <span>{t("receive_ratio")}: <strong>{n(Number(receiveRatio))}%</strong></span>
+            <span>{t("cancel_ratio")}: <strong className="text-destructive">{n(Number(cancelRatio))}%</strong></span>
+            <span>{t("return_ratio")}: <strong className="text-orange-400">{n(Number(returnRatio))}%</strong></span>
           </div>
           <div>
-            Net Salary: <strong>৳{basicSalary.toLocaleString()} - ৳{monthDeductions.toLocaleString()} = <span className="text-[hsl(var(--panel-employee))]">৳{netSalary.toLocaleString()}</span></strong>
+            {t("net_salary")}: <strong>৳{n(basicSalary)} - ৳{n(monthDeductions)} = <span className="text-[hsl(var(--panel-employee))]">৳{n(netSalary)}</span></strong>
           </div>
         </div>
       </div>
@@ -704,32 +706,32 @@ export default function EmployeeTSDashboard() {
       {/* ── Order Confirm Modal ── */}
       <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>অর্ডার নিশ্চিত করুন</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Customer Name</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>Phone</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>Delivery Address</Label><Input value={orderAddress} onChange={(e) => setOrderAddress(e.target.value)} className="mt-1" /></div>
+            <div><Label>{t("customer_name")}</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("phone")}</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("address")}</Label><Input value={orderAddress} onChange={(e) => setOrderAddress(e.target.value)} className="mt-1" /></div>
             <div>
-              <Label>Product</Label>
+              <Label>{t("product")}</Label>
               <Select value={orderProduct} onValueChange={(v) => {
                 setOrderProduct(v);
                 const p = products.find((pr) => pr.product_name === v);
                 if (p) setOrderPrice(p.unit_price || 0);
               }}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Product নির্বাচন" /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product")} /></SelectTrigger>
                 <SelectContent>
                   {products.map((p) => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Quantity</Label><Input type="number" min={1} value={orderQty} onChange={(e) => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
-              <div><Label>Price</Label><Input type="number" value={orderPrice} onChange={(e) => setOrderPrice(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={(e) => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>{t("price")}</Label><Input type="number" value={orderPrice} onChange={(e) => setOrderPrice(Number(e.target.value))} className="mt-1" /></div>
             </div>
             <div><Label>Agent's Note</Label><Textarea value={orderNote} onChange={(e) => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">অর্ডার নিশ্চিত করুন</Button>
+            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -737,7 +739,7 @@ export default function EmployeeTSDashboard() {
       {/* ── Pre-Order Modal ── */}
       <Dialog open={showPreOrderModal} onOpenChange={setShowPreOrderModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Pre-Order তৈরি করুন</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("pre_order_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Customer</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
             <div><Label>Phone</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
@@ -747,7 +749,7 @@ export default function EmployeeTSDashboard() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preOrderDate ? format(preOrderDate, "PPP") : "তারিখ নির্বাচন করুন"}
+                    {preOrderDate ? format(preOrderDate, "PPP") : t("select_date")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -758,7 +760,7 @@ export default function EmployeeTSDashboard() {
             <div><Label>Note</Label><Textarea value={preOrderNote} onChange={(e) => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">Submit</Button>
+            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("submit")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -766,7 +768,7 @@ export default function EmployeeTSDashboard() {
       {/* ── Clock Out Modal ── */}
       <Dialog open={showClockOutModal} onOpenChange={setShowClockOutModal}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Clock Out — Mood Check-Out</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("clock_out")} — {t("mood_select")}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
@@ -781,7 +783,7 @@ export default function EmployeeTSDashboard() {
                   )}
                 >
                   <span className="text-2xl mb-1">{m.emoji}</span>
-                  <span className="text-xs">{m.label}</span>
+                  <span className="text-xs">{t(m.labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -789,7 +791,7 @@ export default function EmployeeTSDashboard() {
           </div>
           <DialogFooter>
             <Button onClick={handleClockOut} disabled={!clockOutMood} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">
-              Clock Out নিশ্চিত করুন
+              {t("confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

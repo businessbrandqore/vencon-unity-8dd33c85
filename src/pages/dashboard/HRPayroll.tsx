@@ -62,9 +62,9 @@ const INCENTIVE_ROLES = [
 
 const HRPayroll = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, n, lang } = useLanguage();
   const { toast } = useToast();
-  const isBn = t("vencon") === "VENCON";
+  const isBn = lang === "bn";
 
   // Incentive state
   const [incentives, setIncentives] = useState<IncentiveConfig[]>([]);
