@@ -87,17 +87,19 @@ const SAAnalytics = () => {
       }
 
       // Orders query helper
-      const orderQuery = (additionalFilter?: Record<string, string>) => {
-        let q = supabase.from("orders").select("id", { count: "exact", head: true }).gte("created_at", start).lt("created_at", end);
+      const orderQuery = async (additionalFilter?: Record<string, string>): Promise<{ count: number }> => {
+        if (leadIdsForOrders !== null && leadIdsForOrders.length === 0) {
+          return { count: 0 };
+        }
+        let q = supabase.from("orders").select("id", { count: "exact", head: true }).gte("created_at", start).lt("created_at", end) as any;
         if (leadIdsForOrders !== null && leadIdsForOrders.length > 0) {
           q = q.in("lead_id", leadIdsForOrders);
-        } else if (leadIdsForOrders !== null && leadIdsForOrders.length === 0) {
-          return Promise.resolve({ count: 0 });
         }
         if (additionalFilter) {
           Object.entries(additionalFilter).forEach(([k, v]) => { q = q.eq(k, v); });
         }
-        return q;
+        const res = await q;
+        return { count: res.count || 0 };
       };
 
       const [confirmRes, deliveredRes, cancelledRes, returnedRes] = await Promise.all([
