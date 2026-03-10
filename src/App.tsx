@@ -71,7 +71,8 @@ const App = () => (
               <Route path="/hr/payroll" element={<HRPayroll />} />
               <Route path="/hr/attendance" element={<HRAttendance />} />
               <Route path="/hr/leaves" element={<HRLeaves />} />
-              <Route path="/hr/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/hr/chat" element={<ChatPage />} />
+              <Route path="/hr/chat-admin" element={<HRChatAdmin />} />
               <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
               <Route path="/hr/leads/import" element={<HRLeadImport />} />
               <Route path="/hr/settings" element={<HRSettings />} />
