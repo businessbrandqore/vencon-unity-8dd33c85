@@ -545,7 +545,7 @@ export default function EmployeeTSDashboard() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardHeader><CardTitle className="font-heading">আজকের মুড চেক-ইন</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-heading">{t("mood_select")}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
