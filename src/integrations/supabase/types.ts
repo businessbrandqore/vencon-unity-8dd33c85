@@ -198,6 +198,88 @@ export type Database = {
           },
         ]
       }
+      campaign_agent_roles: {
+        Row: {
+          agent_id: string
+          campaign_id: string
+          created_at: string | null
+          id: string
+          is_bronze: boolean
+          is_silver: boolean
+          tl_id: string
+        }
+        Insert: {
+          agent_id: string
+          campaign_id: string
+          created_at?: string | null
+          id?: string
+          is_bronze?: boolean
+          is_silver?: boolean
+          tl_id: string
+        }
+        Update: {
+          agent_id?: string
+          campaign_id?: string
+          created_at?: string | null
+          id?: string
+          is_bronze?: boolean
+          is_silver?: boolean
+          tl_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_agent_roles_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_agent_roles_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_agent_roles_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_tls: {
+        Row: {
+          campaign_id: string
+          tl_id: string
+        }
+        Insert: {
+          campaign_id: string
+          tl_id: string
+        }
+        Update: {
+          campaign_id?: string
+          tl_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_tls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_tls_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           approved_by: string | null
