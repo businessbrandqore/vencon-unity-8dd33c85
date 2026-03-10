@@ -68,12 +68,12 @@ interface InventoryItem {
 
 /* ───── constants ───── */
 const MOODS = [
-  { value: "happy", emoji: "😊", label: "Happy" },
-  { value: "sad", emoji: "😢", label: "Sad" },
-  { value: "excited", emoji: "🎉", label: "Excited" },
-  { value: "tired", emoji: "😴", label: "Tired" },
-  { value: "neutral", emoji: "😐", label: "Neutral" },
-  { value: "angry", emoji: "😠", label: "Angry" },
+  { value: "happy", emoji: "😊", labelKey: "mood_happy" },
+  { value: "sad", emoji: "😢", labelKey: "mood_sad" },
+  { value: "excited", emoji: "🎉", labelKey: "mood_excited" },
+  { value: "tired", emoji: "😴", labelKey: "mood_tired" },
+  { value: "neutral", emoji: "😐", labelKey: "mood_neutral" },
+  { value: "angry", emoji: "😠", labelKey: "mood_angry" },
 ];
 
 const LEAD_STATUSES = [
