@@ -519,11 +519,11 @@ export default function EmployeeTSDashboard() {
             <DialogHeader><DialogTitle>{t("desk_report")}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>ডেস্কের অবস্থা</Label>
+                <Label>{t("desk_condition")}</Label>
                 <RadioGroup value={deskCondition} onValueChange={setDeskCondition} className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2"><RadioGroupItem value="good" id="good" /><Label htmlFor="good">ভালো</Label></div>
-                  <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="acceptable" /><Label htmlFor="acceptable">গ্রহণযোগ্য</Label></div>
-                  <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="needs_repair" /><Label htmlFor="needs_repair">মেরামত দরকার</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="good" id="good" /><Label htmlFor="good">{t("desk_good")}</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="acceptable" /><Label htmlFor="acceptable">{t("desk_acceptable")}</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="needs_repair" /><Label htmlFor="needs_repair">{t("desk_needs_repair")}</Label></div>
                 </RadioGroup>
               </div>
               <div>
