@@ -674,7 +674,7 @@ export default function EmployeeTSDashboard() {
           onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }}
           className="border-destructive text-destructive hover:bg-destructive/10"
         >
-          <LogOut className="h-4 w-4 mr-2" />Clock Out করুন
+          <LogOut className="h-4 w-4 mr-2" />{t("clock_out")}
         </Button>
       </div>
 
