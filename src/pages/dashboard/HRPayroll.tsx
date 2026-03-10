@@ -125,10 +125,8 @@ const HRPayroll = () => {
   const fetchSalaryPreview = async () => {
     setLoadingSalary(true);
     const [year, month] = selectedMonth.split("-").map(Number);
-    const monthStart = new Date(year, month - 1, 1).toISOString();
-    const monthEnd = new Date(year, month, 0, 23, 59, 59).toISOString();
 
-    // Get all active employees
+    // Get all active employees (excluding SA)
     const { data: employees } = await supabase
       .from("users")
       .select("id, name, role, basic_salary")
@@ -140,74 +138,29 @@ const HRPayroll = () => {
       return;
     }
 
-    // Get deductions for the month
-    const { data: attendanceData } = await supabase
-      .from("attendance")
-      .select("user_id, deduction_amount")
-      .gte("date", `${selectedMonth}-01`)
-      .lte("date", `${selectedMonth}-31`);
-
-    const deductionMap: Record<string, number> = {};
-    (attendanceData || []).forEach((a) => {
-      if (a.user_id && a.deduction_amount) {
-        deductionMap[a.user_id] = (deductionMap[a.user_id] || 0) + Number(a.deduction_amount);
+    // Calculate salary for each employee using DB function
+    const results: EmployeeSalary[] = [];
+    for (const emp of employees) {
+      const { data } = await supabase.rpc("calculate_salary", {
+        _user_id: emp.id,
+        _year: year,
+        _month: month,
+      });
+      if (data) {
+        const d = data as Record<string, unknown>;
+        results.push({
+          id: emp.id,
+          name: String(d.name || emp.name),
+          role: String(d.role || emp.role),
+          basic_salary: Number(d.basic_salary) || 0,
+          incentive: Number(d.incentive) || 0,
+          deductions: Number(d.total_deductions) || 0,
+          net: Number(d.net_salary) || 0,
+        });
       }
-    });
+    }
 
-    // Get orders for incentive calculation
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("agent_id, delivery_status")
-      .gte("created_at", monthStart)
-      .lte("created_at", monthEnd);
-
-    const deliveredByAgent: Record<string, number> = {};
-    const totalByAgent: Record<string, number> = {};
-    (orders || []).forEach((o) => {
-      if (o.agent_id) {
-        totalByAgent[o.agent_id] = (totalByAgent[o.agent_id] || 0) + 1;
-        if (o.delivery_status === "delivered") {
-          deliveredByAgent[o.agent_id] = (deliveredByAgent[o.agent_id] || 0) + 1;
-        }
-      }
-    });
-
-    // Calculate
-    const result: EmployeeSalary[] = employees.map((emp) => {
-      const basic = Number(emp.basic_salary) || 0;
-      const deductions = deductionMap[emp.id] || 0;
-      let incentive = 0;
-
-      if (INCENTIVE_ROLES.includes(emp.role)) {
-        const delivered = deliveredByAgent[emp.id] || 0;
-        const total = totalByAgent[emp.id] || 0;
-        const ratio = total > 0 ? (delivered / total) * 100 : 0;
-
-        const matchingTiers = incentives.filter(
-          (ic) =>
-            ic.role === emp.role &&
-            ic.status === "approved" &&
-            ratio >= (ic.min_ratio || 0) &&
-            ratio <= (ic.max_ratio || 100)
-        );
-
-        if (matchingTiers.length > 0) {
-          incentive = delivered * (Number(matchingTiers[0].amount_per_order) || 0);
-        }
-      }
-
-      return {
-        id: emp.id,
-        name: emp.name,
-        role: emp.role,
-        basic_salary: basic,
-        incentive,
-        deductions,
-        net: basic + incentive - deductions,
-      };
-    });
-
-    setSalaries(result.sort((a, b) => b.net - a.net));
+    setSalaries(results.sort((a, b) => b.net - a.net));
     setLoadingSalary(false);
   };
 
