@@ -706,7 +706,7 @@ export default function EmployeeTSDashboard() {
       {/* ── Order Confirm Modal ── */}
       <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>অর্ডার নিশ্চিত করুন</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Customer Name</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
             <div><Label>Phone</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
