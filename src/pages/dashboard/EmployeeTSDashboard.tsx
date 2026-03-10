@@ -565,7 +565,7 @@ export default function EmployeeTSDashboard() {
               ))}
             </div>
             <div>
-              <Label>আজকের অনুভূতি সম্পর্কে লিখুন (optional)</Label>
+              <Label>{t("mood_write")}</Label>
               <Textarea value={moodNote} onChange={(e) => setMoodNote(e.target.value)} className="mt-1" rows={2} />
             </div>
             <Button
