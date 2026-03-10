@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
+import EmployeeTSDashboard from "./pages/dashboard/EmployeeTSDashboard";
 import SADashboard from "./pages/dashboard/SADashboard";
 import SAAnalytics from "./pages/dashboard/SAAnalytics";
 import SAWarehouse from "./pages/dashboard/SAWarehouse";
