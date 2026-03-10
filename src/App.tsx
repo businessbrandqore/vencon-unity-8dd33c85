@@ -30,6 +30,7 @@ import TLLeads from "./pages/dashboard/TLLeads";
 import TLTeam from "./pages/dashboard/TLTeam";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
+import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/sa/budget" element={<SABudget />} />
               <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
               <Route path="/sa/settings" element={<SASettings />} />
+              <Route path="/sa/notifications" element={<NotificationsPage />} />
               <Route path="/sa/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
@@ -71,6 +73,7 @@ const App = () => (
               <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
               <Route path="/hr/leads/import" element={<HRLeadImport />} />
               <Route path="/hr/settings" element={<HRSettings />} />
+              <Route path="/hr/notifications" element={<NotificationsPage />} />
               <Route path="/hr/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
@@ -81,6 +84,7 @@ const App = () => (
               <Route path="/tl/my-team" element={<TLTeam />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
@@ -91,6 +95,7 @@ const App = () => (
               <Route path="/employee/attendance" element={<PlaceholderPage titleKey="attendance" />} />
               <Route path="/employee/salary" element={<PlaceholderPage titleKey="salary" />} />
               <Route path="/employee/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/employee/notifications" element={<NotificationsPage />} />
               <Route path="/employee/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 

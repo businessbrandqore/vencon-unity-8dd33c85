@@ -1158,6 +1158,7 @@ export type Database = {
           mother_phone: string | null
           must_change_password: boolean | null
           name: string
+          notification_volume: number | null
           off_days: string[] | null
           panel: Database["public"]["Enums"]["app_panel"]
           phone: string | null
@@ -1183,6 +1184,7 @@ export type Database = {
           mother_phone?: string | null
           must_change_password?: boolean | null
           name: string
+          notification_volume?: number | null
           off_days?: string[] | null
           panel: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
@@ -1208,6 +1210,7 @@ export type Database = {
           mother_phone?: string | null
           must_change_password?: boolean | null
           name?: string
+          notification_volume?: number | null
           off_days?: string[] | null
           panel?: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
