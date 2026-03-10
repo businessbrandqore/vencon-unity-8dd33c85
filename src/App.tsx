@@ -55,6 +55,7 @@ const App = () => (
               <Route path="/sa/budget" element={<SABudget />} />
               <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
               <Route path="/sa/settings" element={<SASettings />} />
+              <Route path="/sa/notifications" element={<NotificationsPage />} />
               <Route path="/sa/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
