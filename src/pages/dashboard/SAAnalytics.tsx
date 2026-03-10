@@ -130,8 +130,8 @@ const SAAnalytics = () => {
         { name: isBn ? "ডেলিভারড" : "Delivered", value: delivered },
         { name: isBn ? "রিটার্নড" : "Returned", value: returned },
         { name: isBn ? "ক্যান্সেলড" : "Cancelled", value: cancelled },
-        { name: isBn ? "ইন ট্রানজিট" : "In Transit", value: (inTransitRes as any).count || 0 },
-        { name: isBn ? "পেন্ডিং" : "Pending", value: (pendingRes as any).count || 0 },
+        { name: isBn ? "ইন ট্রানজিট" : "In Transit", value: inTransitRes.count || 0 },
+        { name: isBn ? "পেন্ডিং" : "Pending", value: pendingRes.count || 0 },
       ]);
 
       // Daily orders (last 30 days)
