@@ -516,7 +516,7 @@ export default function EmployeeTSDashboard() {
         {/* Desk Report Modal */}
         <Dialog open={showDeskModal} onOpenChange={setShowDeskModal}>
           <DialogContent>
-            <DialogHeader><DialogTitle>ডেস্ক ও ফোন রিপোর্ট</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("desk_report")}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>ডেস্কের অবস্থা</Label>
