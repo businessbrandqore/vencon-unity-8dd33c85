@@ -749,7 +749,7 @@ export default function EmployeeTSDashboard() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preOrderDate ? format(preOrderDate, "PPP") : "তারিখ নির্বাচন করুন"}
+                    {preOrderDate ? format(preOrderDate, "PPP") : t("select_date")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
