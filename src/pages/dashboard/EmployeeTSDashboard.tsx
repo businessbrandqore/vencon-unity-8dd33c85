@@ -760,7 +760,7 @@ export default function EmployeeTSDashboard() {
             <div><Label>Note</Label><Textarea value={preOrderNote} onChange={(e) => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">Submit</Button>
+            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("submit")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
