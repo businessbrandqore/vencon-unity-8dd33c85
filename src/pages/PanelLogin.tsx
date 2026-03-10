@@ -204,7 +204,6 @@ const PanelLogin = () => {
               disabled={isLocked || loading}
               onMouseDown={() => setIsPressed(true)}
               onMouseUp={() => setIsPressed(false)}
-              onMouseLeave={() => setIsPressed(false)}
               className="w-full py-4 font-heading text-sm tracking-[0.15em] uppercase transition-all duration-200 disabled:opacity-30"
               style={{
                 backgroundColor: isPressed ? panelConfig.color : "transparent",
@@ -215,14 +214,14 @@ const PanelLogin = () => {
               }}
               onMouseEnter={(e) => {
                 if (!isPressed) {
-                  (e.currentTarget as HTMLElement).style.boxShadow = `inset 0 0 0 1px ${panelConfig.color}`;
-                  (e.currentTarget as HTMLElement).style.border = `1px solid ${panelConfig.color}`;
+                  e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${panelConfig.color}`;
+                  e.currentTarget.style.border = `1px solid ${panelConfig.color}`;
                 }
               }}
               onMouseLeave={(e) => {
                 setIsPressed(false);
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-                (e.currentTarget as HTMLElement).style.border = "1px solid hsl(var(--border))";
+                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.border = "1px solid hsl(var(--border))";
               }}
             >
               {loading ? "..." : t("login")}
