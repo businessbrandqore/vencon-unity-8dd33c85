@@ -13,6 +13,8 @@ import SAAnalytics from "./pages/dashboard/SAAnalytics";
 import SAWarehouse from "./pages/dashboard/SAWarehouse";
 import SABudget from "./pages/dashboard/SABudget";
 import SASettings from "./pages/dashboard/SASettings";
+import HRDashboard from "./pages/dashboard/HRDashboard";
+import HRCampaigns from "./pages/dashboard/HRCampaigns";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -43,8 +45,8 @@ const App = () => (
 
             {/* HR Panel Routes */}
             <Route element={<DashboardLayout panel="hr" />}>
-              <Route path="/hr/dashboard" element={<DashboardHome />} />
-              <Route path="/hr/campaigns" element={<PlaceholderPage titleKey="campaigns" />} />
+              <Route path="/hr/dashboard" element={<HRDashboard />} />
+              <Route path="/hr/campaigns" element={<HRCampaigns />} />
               <Route path="/hr/employees" element={<PlaceholderPage titleKey="employees" />} />
               <Route path="/hr/payroll" element={<PlaceholderPage titleKey="payroll" />} />
               <Route path="/hr/attendance" element={<PlaceholderPage titleKey="attendance" />} />
