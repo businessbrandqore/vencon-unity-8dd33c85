@@ -62,3 +62,25 @@
     font-family: var(--font-heading);
   }
 }
+
+/* Responsive utilities */
+@layer utilities {
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+
+  .modal-fullscreen-mobile {
+    @apply max-w-[100vw] max-h-[100vh] sm:max-w-lg;
+  }
+}
+
+/* Mobile full-screen dialog */
+@media (max-width: 639px) {
+  [data-fullscreen-mobile] [role="dialog"] {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
+}

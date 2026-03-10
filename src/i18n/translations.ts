@@ -342,6 +342,23 @@ export const translations: TranslationMap = {
   group_average: { bn: "গ্রুপ গড়", en: "Group Average" },
   agent_performance: { bn: "এজেন্ট পারফরম্যান্স", en: "Agent Performance" },
 
+  // ─── Load More / Pagination ───
+  load_more: { bn: "আরো দেখুন", en: "Load More" },
+  showing_n_of_total: { bn: "দেখাচ্ছে", en: "Showing" },
+
+  // ─── Confirmation Messages ───
+  confirm_delete_lead: { bn: "এই lead delete করতে চান? এটি undo করা যাবে না।", en: "Are you sure you want to delete this lead? This cannot be undone." },
+  confirm_reject_hire: { bn: "এই hire request reject করতে চান?", en: "Are you sure you want to reject this hire request?" },
+  confirm_delete_title: { bn: "নিশ্চিত করুন", en: "Confirm" },
+
+  // ─── Success Toasts ───
+  toast_lead_assigned: { bn: "Lead assign করা হয়েছে ✓", en: "Lead assigned ✓" },
+  toast_order_confirmed: { bn: "Order confirm হয়েছে ✓", en: "Order confirmed ✓" },
+  toast_saved: { bn: "সংরক্ষণ হয়েছে ✓", en: "Saved ✓" },
+
+  // ─── Error States ───
+  error_loading_data: { bn: "ডেটা লোড করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।", en: "Failed to load data. Please try again." },
+  
   // ─── Misc ───
   of: { bn: "এর", en: "of" },
   selected: { bn: "নির্বাচিত", en: "selected" },
