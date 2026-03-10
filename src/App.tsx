@@ -22,6 +22,10 @@ import HRPayroll from "./pages/dashboard/HRPayroll";
 import HRAttendance from "./pages/dashboard/HRAttendance";
 import HRLeaves from "./pages/dashboard/HRLeaves";
 import HRSettings from "./pages/dashboard/HRSettings";
+import TLDashboard from "./pages/dashboard/TLDashboard";
+import TLLeads from "./pages/dashboard/TLLeads";
+import TLTeam from "./pages/dashboard/TLTeam";
+import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -67,12 +71,10 @@ const App = () => (
 
             {/* TL Panel Routes */}
             <Route element={<DashboardLayout panel="tl" />}>
-              <Route path="/tl/dashboard" element={<DashboardHome />} />
-              <Route path="/tl/leads" element={<PlaceholderPage titleKey="leads" />} />
-              <Route path="/tl/my-team" element={<PlaceholderPage titleKey="my_team" />} />
-              <Route path="/tl/pre-orders" element={<PlaceholderPage titleKey="pre_orders" />} />
-              <Route path="/tl/delete-sheet" element={<PlaceholderPage titleKey="delete_sheet" />} />
-              <Route path="/tl/analytics" element={<PlaceholderPage titleKey="analytics" />} />
+              <Route path="/tl/dashboard" element={<TLDashboard />} />
+              <Route path="/tl/leads" element={<TLLeads />} />
+              <Route path="/tl/my-team" element={<TLTeam />} />
+              <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<PlaceholderPage titleKey="chat" />} />
               <Route path="/tl/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
