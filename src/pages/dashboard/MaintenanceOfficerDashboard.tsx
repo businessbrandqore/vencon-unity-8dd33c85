@@ -136,6 +136,7 @@ export default function MaintenanceOfficerDashboard() {
 
   return (
     <div className="space-y-6">
+      <SalaryCard />
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <Wrench className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> Maintenance Officer
