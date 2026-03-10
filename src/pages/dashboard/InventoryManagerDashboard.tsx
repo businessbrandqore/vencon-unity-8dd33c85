@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import SalaryCard from "@/components/SalaryCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ export default function InventoryManagerDashboard() {
 
   return (
     <div className="space-y-6">
+      <SalaryCard />
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <Package className="h-5 w-5 text-[hsl(var(--panel-employee))]" />

@@ -33,6 +33,7 @@ import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
+import SAPayroll from "./pages/dashboard/SAPayroll";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/sa/analytics" element={<SAAnalytics />} />
               <Route path="/sa/warehouse" element={<SAWarehouse />} />
               <Route path="/sa/budget" element={<SABudget />} />
+              <Route path="/sa/payroll" element={<SAPayroll />} />
               <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
               <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/notifications" element={<NotificationsPage />} />

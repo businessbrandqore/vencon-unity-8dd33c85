@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import SalaryCard from "@/components/SalaryCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -492,14 +493,7 @@ export default function EmployeeTSDashboard() {
             <p className="text-muted-foreground">শুধুমাত্র ব্যক্তিগত তথ্য দেখা যাচ্ছে।</p>
           </CardContent>
         </Card>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card><CardHeader><CardTitle className="text-sm">Basic Salary</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-heading">৳{basicSalary.toLocaleString()}</span></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Deductions (এই মাস)</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-heading text-destructive">৳{monthDeductions.toLocaleString()}</span></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Net Salary</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-heading">৳{netSalary.toLocaleString()}</span></CardContent></Card>
-        </div>
+        <SalaryCard />
       </div>
     );
   }

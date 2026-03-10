@@ -1262,6 +1262,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_salary: {
+        Args: { _month: number; _user_id: string; _year: number }
+        Returns: Json
+      }
       get_user_id: { Args: { _auth_id: string }; Returns: string }
       get_user_panel: {
         Args: { _auth_id: string }
