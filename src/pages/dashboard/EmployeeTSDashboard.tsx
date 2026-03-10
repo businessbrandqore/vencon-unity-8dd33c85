@@ -708,11 +708,11 @@ export default function EmployeeTSDashboard() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{t("order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Customer Name</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>Phone</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>Delivery Address</Label><Input value={orderAddress} onChange={(e) => setOrderAddress(e.target.value)} className="mt-1" /></div>
+            <div><Label>{t("customer_name")}</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("phone")}</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("address")}</Label><Input value={orderAddress} onChange={(e) => setOrderAddress(e.target.value)} className="mt-1" /></div>
             <div>
-              <Label>Product</Label>
+              <Label>{t("product")}</Label>
               <Select value={orderProduct} onValueChange={(v) => {
                 setOrderProduct(v);
                 const p = products.find((pr) => pr.product_name === v);
