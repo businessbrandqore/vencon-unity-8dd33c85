@@ -532,7 +532,7 @@ export default function EmployeeTSDashboard() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleDeskReportSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)]">সংরক্ষণ করুন</Button>
+              <Button onClick={handleDeskReportSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)]">{t("save")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
