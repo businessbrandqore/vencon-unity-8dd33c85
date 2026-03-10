@@ -424,6 +424,42 @@ export type Database = {
           },
         ]
       }
+      chat_participants: {
+        Row: {
+          conversation_id: string
+          is_admin: boolean | null
+          joined_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          is_admin?: boolean | null
+          joined_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          is_admin?: boolean | null
+          joined_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           agent_id: string
