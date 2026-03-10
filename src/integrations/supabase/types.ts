@@ -292,6 +292,7 @@ export type Database = {
           start_date: string | null
           status: string | null
           updated_at: string | null
+          webhook_secret: string | null
         }
         Insert: {
           approved_by?: string | null
@@ -304,6 +305,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
+          webhook_secret?: string | null
         }
         Update: {
           approved_by?: string | null
@@ -316,6 +318,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
+          webhook_secret?: string | null
         }
         Relationships: [
           {
@@ -541,6 +544,60 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_import_logs: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          duplicates_skipped: number
+          error_message: string | null
+          id: string
+          imported_by: string | null
+          leads_imported: number
+          source: string
+          status: string
+          total_received: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          duplicates_skipped?: number
+          error_message?: string | null
+          id?: string
+          imported_by?: string | null
+          leads_imported?: number
+          source?: string
+          status?: string
+          total_received?: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          duplicates_skipped?: number
+          error_message?: string | null
+          id?: string
+          imported_by?: string | null
+          leads_imported?: number
+          source?: string
+          status?: string
+          total_received?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_import_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_import_logs_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           address: string | null
@@ -551,6 +608,7 @@ export type Database = {
           campaign_id: string | null
           created_at: string | null
           id: string
+          import_source: string | null
           name: string | null
           phone: string | null
           requeue_at: string | null
@@ -571,6 +629,7 @@ export type Database = {
           campaign_id?: string | null
           created_at?: string | null
           id?: string
+          import_source?: string | null
           name?: string | null
           phone?: string | null
           requeue_at?: string | null
@@ -591,6 +650,7 @@ export type Database = {
           campaign_id?: string | null
           created_at?: string | null
           id?: string
+          import_source?: string | null
           name?: string | null
           phone?: string | null
           requeue_at?: string | null
