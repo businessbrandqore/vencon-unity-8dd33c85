@@ -783,7 +783,7 @@ export default function EmployeeTSDashboard() {
                   )}
                 >
                   <span className="text-2xl mb-1">{m.emoji}</span>
-                  <span className="text-xs">{m.label}</span>
+                  <span className="text-xs">{t(m.labelKey)}</span>
                 </button>
               ))}
             </div>
