@@ -27,7 +27,7 @@ const App = () => (
 
             {/* SA Panel Routes */}
             <Route element={<DashboardLayout panel="sa" />}>
-              <Route path="/sa/dashboard" element={<DashboardHome />} />
+              <Route path="/sa/dashboard" element={<SADashboard />} />
               <Route path="/sa/approvals" element={<PlaceholderPage titleKey="approvals" />} />
               <Route path="/sa/analytics" element={<PlaceholderPage titleKey="analytics" />} />
               <Route path="/sa/warehouse" element={<PlaceholderPage titleKey="warehouse" />} />
