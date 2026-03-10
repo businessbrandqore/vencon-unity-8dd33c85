@@ -573,7 +573,7 @@ export default function EmployeeTSDashboard() {
               disabled={!selectedMood}
               className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white"
             >
-              Clock In করুন
+              {t("clock_in")}
             </Button>
           </CardContent>
         </Card>
