@@ -718,7 +718,7 @@ export default function EmployeeTSDashboard() {
                 const p = products.find((pr) => pr.product_name === v);
                 if (p) setOrderPrice(p.unit_price || 0);
               }}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Product নির্বাচন" /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product")} /></SelectTrigger>
                 <SelectContent>
                   {products.map((p) => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}
                 </SelectContent>
