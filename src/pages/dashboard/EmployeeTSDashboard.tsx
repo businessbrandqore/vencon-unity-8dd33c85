@@ -112,6 +112,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 /* ═══════════════════════════════════════════ */
 export default function EmployeeTSDashboard() {
   const { user } = useAuth();
+  const { t, n, lang, statusName } = useLanguage();
 
   /* user profile with shift info */
   const [profile, setProfile] = useState<UserProfile | null>(null);
