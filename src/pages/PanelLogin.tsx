@@ -215,13 +215,14 @@ const PanelLogin = () => {
               }}
               onMouseEnter={(e) => {
                 if (!isPressed) {
-                  (e.target as HTMLElement).style.boxShadow = `inset 0 0 0 1px ${panelConfig.color}`;
-                  (e.target as HTMLElement).style.border = `1px solid ${panelConfig.color}`;
+                  (e.currentTarget as HTMLElement).style.boxShadow = `inset 0 0 0 1px ${panelConfig.color}`;
+                  (e.currentTarget as HTMLElement).style.border = `1px solid ${panelConfig.color}`;
                 }
               }}
-              onMouseLeave2={(e) => {
-                (e.target as HTMLElement).style.boxShadow = "none";
-                (e.target as HTMLElement).style.border = "1px solid hsl(var(--border))";
+              onMouseLeave={(e) => {
+                setIsPressed(false);
+                (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                (e.currentTarget as HTMLElement).style.border = "1px solid hsl(var(--border))";
               }}
             >
               {loading ? "..." : t("login")}
