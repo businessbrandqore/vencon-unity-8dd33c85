@@ -24,10 +24,35 @@ const translations: Translations = {
   invalid_creds: { bn: "ইমেইল বা পাসওয়ার্ড ভুল", en: "Invalid email or password" },
   dashboard: { bn: "ড্যাশবোর্ড", en: "Dashboard" },
   welcome: { bn: "স্বাগতম", en: "Welcome" },
-  logout: { bn: "লগআউট", en: "Logout" },
+  logout: { bn: "লগ আউট", en: "Logout" },
   select_panel: { bn: "আপনার প্যানেল নির্বাচন করুন", en: "Select Your Panel" },
   no_panel_access: { bn: "এই panel-এ আপনার access নেই", en: "You don't have access to this panel" },
   checking_access: { bn: "অ্যাক্সেস যাচাই করা হচ্ছে...", en: "Checking access..." },
+  profile: { bn: "প্রোফাইল", en: "Profile" },
+  notifications: { bn: "বিজ্ঞপ্তি", en: "Notifications" },
+  no_notifications: { bn: "কোনো বিজ্ঞপ্তি নেই", en: "No notifications" },
+  // SA sidebar
+  approvals: { bn: "অনুমোদন", en: "Approvals" },
+  analytics: { bn: "অ্যানালিটিক্স", en: "Analytics" },
+  warehouse: { bn: "ওয়্যারহাউস", en: "Warehouse" },
+  budget: { bn: "বাজেট", en: "Budget" },
+  audit_logs: { bn: "অডিট লগ", en: "Audit Logs" },
+  settings: { bn: "সেটিংস", en: "Settings" },
+  // HR sidebar
+  campaigns: { bn: "ক্যাম্পেইন", en: "Campaigns" },
+  employees: { bn: "কর্মচারী", en: "Employees" },
+  payroll: { bn: "পে-রোল", en: "Payroll" },
+  attendance: { bn: "উপস্থিতি", en: "Attendance" },
+  leaves: { bn: "ছুটি", en: "Leaves" },
+  chat: { bn: "চ্যাট", en: "Chat" },
+  // TL sidebar
+  leads: { bn: "লিডস", en: "Leads" },
+  my_team: { bn: "আমার টিম", en: "My Team" },
+  pre_orders: { bn: "প্রি-অর্ডার", en: "Pre-Orders" },
+  delete_sheet: { bn: "ডিলিট শিট", en: "Delete Sheet" },
+  // Employee sidebar
+  my_leads: { bn: "আমার লিডস", en: "My Leads" },
+  salary: { bn: "বেতন", en: "Salary" },
 };
 
 interface LanguageContextType {

@@ -6,7 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
-import PanelDashboard from "./pages/PanelDashboard";
+import DashboardLayout from "./layouts/DashboardLayout";
+import DashboardHome from "./pages/dashboard/DashboardHome";
+import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,7 +23,54 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/:panel/login" element={<PanelLogin />} />
-            <Route path="/:panel/dashboard" element={<PanelDashboard />} />
+
+            {/* SA Panel Routes */}
+            <Route element={<DashboardLayout panel="sa" />}>
+              <Route path="/sa/dashboard" element={<DashboardHome />} />
+              <Route path="/sa/approvals" element={<PlaceholderPage titleKey="approvals" />} />
+              <Route path="/sa/analytics" element={<PlaceholderPage titleKey="analytics" />} />
+              <Route path="/sa/warehouse" element={<PlaceholderPage titleKey="warehouse" />} />
+              <Route path="/sa/budget" element={<PlaceholderPage titleKey="budget" />} />
+              <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
+              <Route path="/sa/settings" element={<PlaceholderPage titleKey="settings" />} />
+              <Route path="/sa/profile" element={<PlaceholderPage titleKey="profile" />} />
+            </Route>
+
+            {/* HR Panel Routes */}
+            <Route element={<DashboardLayout panel="hr" />}>
+              <Route path="/hr/dashboard" element={<DashboardHome />} />
+              <Route path="/hr/campaigns" element={<PlaceholderPage titleKey="campaigns" />} />
+              <Route path="/hr/employees" element={<PlaceholderPage titleKey="employees" />} />
+              <Route path="/hr/payroll" element={<PlaceholderPage titleKey="payroll" />} />
+              <Route path="/hr/attendance" element={<PlaceholderPage titleKey="attendance" />} />
+              <Route path="/hr/leaves" element={<PlaceholderPage titleKey="leaves" />} />
+              <Route path="/hr/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/hr/settings" element={<PlaceholderPage titleKey="settings" />} />
+              <Route path="/hr/profile" element={<PlaceholderPage titleKey="profile" />} />
+            </Route>
+
+            {/* TL Panel Routes */}
+            <Route element={<DashboardLayout panel="tl" />}>
+              <Route path="/tl/dashboard" element={<DashboardHome />} />
+              <Route path="/tl/leads" element={<PlaceholderPage titleKey="leads" />} />
+              <Route path="/tl/my-team" element={<PlaceholderPage titleKey="my_team" />} />
+              <Route path="/tl/pre-orders" element={<PlaceholderPage titleKey="pre_orders" />} />
+              <Route path="/tl/delete-sheet" element={<PlaceholderPage titleKey="delete_sheet" />} />
+              <Route path="/tl/analytics" element={<PlaceholderPage titleKey="analytics" />} />
+              <Route path="/tl/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/tl/profile" element={<PlaceholderPage titleKey="profile" />} />
+            </Route>
+
+            {/* Employee Panel Routes */}
+            <Route element={<DashboardLayout panel="employee" />}>
+              <Route path="/employee/dashboard" element={<DashboardHome />} />
+              <Route path="/employee/my-leads" element={<PlaceholderPage titleKey="my_leads" />} />
+              <Route path="/employee/attendance" element={<PlaceholderPage titleKey="attendance" />} />
+              <Route path="/employee/salary" element={<PlaceholderPage titleKey="salary" />} />
+              <Route path="/employee/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/employee/profile" element={<PlaceholderPage titleKey="profile" />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
