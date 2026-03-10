@@ -23,6 +23,8 @@ import HRPayroll from "./pages/dashboard/HRPayroll";
 import HRAttendance from "./pages/dashboard/HRAttendance";
 import HRLeaves from "./pages/dashboard/HRLeaves";
 import HRSettings from "./pages/dashboard/HRSettings";
+import HRCampaignIntegration from "./pages/dashboard/HRCampaignIntegration";
+import HRLeadImport from "./pages/dashboard/HRLeadImport";
 import TLDashboard from "./pages/dashboard/TLDashboard";
 import TLLeads from "./pages/dashboard/TLLeads";
 import TLTeam from "./pages/dashboard/TLTeam";
