@@ -26,6 +26,8 @@ const translations: Translations = {
   welcome: { bn: "স্বাগতম", en: "Welcome" },
   logout: { bn: "লগআউট", en: "Logout" },
   select_panel: { bn: "আপনার প্যানেল নির্বাচন করুন", en: "Select Your Panel" },
+  no_panel_access: { bn: "এই panel-এ আপনার access নেই", en: "You don't have access to this panel" },
+  checking_access: { bn: "অ্যাক্সেস যাচাই করা হচ্ছে...", en: "Checking access..." },
 };
 
 interface LanguageContextType {

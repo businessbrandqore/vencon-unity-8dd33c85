@@ -76,7 +76,7 @@ const PanelLogin = () => {
     setLoading(true);
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -96,6 +96,36 @@ const PanelLogin = () => {
 
         setError(t("invalid_creds"));
         setLoading(false);
+        return;
+      }
+
+      // Check panel access — query users table for this auth user's panel
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("panel")
+        .eq("auth_id", authData.user.id)
+        .single();
+
+      if (userError || !userData) {
+        await supabase.auth.signOut();
+        setError(t("invalid_creds"));
+        setLoading(false);
+        return;
+      }
+
+      // Enforce panel isolation
+      if (userData.panel !== panel) {
+        await supabase.auth.signOut();
+        // Find the correct panel login path
+        const correctPanel = getPanelByType(userData.panel as PanelType);
+        setError(t("no_panel_access"));
+        setLoading(false);
+        // Redirect to correct panel after a brief delay
+        if (correctPanel) {
+          setTimeout(() => {
+            navigate(correctPanel.loginPath);
+          }, 2000);
+        }
         return;
       }
 

@@ -969,6 +969,7 @@ export type Database = {
       users: {
         Row: {
           auth_id: string | null
+          basic_salary: number | null
           created_at: string | null
           department: string | null
           designation: string | null
@@ -979,10 +980,13 @@ export type Database = {
           panel: Database["public"]["Enums"]["app_panel"]
           phone: string | null
           role: string
+          shift_end: string | null
+          shift_start: string | null
           updated_at: string | null
         }
         Insert: {
           auth_id?: string | null
+          basic_salary?: number | null
           created_at?: string | null
           department?: string | null
           designation?: string | null
@@ -993,10 +997,13 @@ export type Database = {
           panel: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
           role: string
+          shift_end?: string | null
+          shift_start?: string | null
           updated_at?: string | null
         }
         Update: {
           auth_id?: string | null
+          basic_salary?: number | null
           created_at?: string | null
           department?: string | null
           designation?: string | null
@@ -1007,6 +1014,8 @@ export type Database = {
           panel?: Database["public"]["Enums"]["app_panel"]
           phone?: string | null
           role?: string
+          shift_end?: string | null
+          shift_start?: string | null
           updated_at?: string | null
         }
         Relationships: []

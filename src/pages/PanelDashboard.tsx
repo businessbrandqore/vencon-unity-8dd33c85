@@ -11,17 +11,47 @@ const PanelDashboard = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [userEmail, setUserEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndPanel = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate(panelConfig?.loginPath || "/");
         return;
       }
-      setUserEmail(session.user.email || "");
+
+      // Verify this user belongs to this panel
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("panel, name, email")
+        .eq("auth_id", session.user.id)
+        .single();
+
+      if (userError || !userData) {
+        await supabase.auth.signOut();
+        navigate(panelConfig?.loginPath || "/");
+        return;
+      }
+
+      // Panel mismatch — redirect to correct panel
+      if (userData.panel !== panel) {
+        const correctPanel = getPanelByType(userData.panel as PanelType);
+        if (correctPanel) {
+          navigate(correctPanel.loginPath);
+        } else {
+          navigate("/");
+        }
+        return;
+      }
+
+      setUserEmail(userData.email);
+      setUserName(userData.name);
+      setChecking(false);
     };
-    checkAuth();
+
+    checkAuthAndPanel();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
@@ -30,7 +60,7 @@ const PanelDashboard = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, panelConfig]);
+  }, [navigate, panelConfig, panel]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -40,6 +70,14 @@ const PanelDashboard = () => {
   if (!panelConfig) {
     navigate("/");
     return null;
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="font-body text-sm text-muted-foreground">{t("checking_access")}</p>
+      </div>
+    );
   }
 
   return (
@@ -62,7 +100,9 @@ const PanelDashboard = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            <span className="font-body text-xs text-muted-foreground">{userEmail}</span>
+            <span className="font-body text-xs text-muted-foreground">
+              {userName} ({userEmail})
+            </span>
             <button
               onClick={handleLogout}
               className="font-heading text-xs tracking-wider text-muted-foreground hover:text-foreground transition-colors"
@@ -79,7 +119,7 @@ const PanelDashboard = () => {
           {t("dashboard")}
         </h2>
         <p className="font-body text-sm text-muted-foreground">
-          {t("welcome")}
+          {t("welcome")}, {userName}
         </p>
 
         {/* Accent line */}
