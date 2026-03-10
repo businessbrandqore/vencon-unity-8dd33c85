@@ -13,7 +13,7 @@ interface TopNavProps {
 
 const TopNav = ({ onToggleSidebar }: TopNavProps) => {
   const { user, signOut } = useAuth();
-  const { t, lang, toggleLang } = useLanguage();
+  const { t, lang, toggleLang, roleName } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const panelConfig = user ? getPanelByType(user.panel) : null;
