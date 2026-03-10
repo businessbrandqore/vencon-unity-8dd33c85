@@ -15,7 +15,6 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
   const { user, loading } = useAuth();
   const { t } = useLanguage();
 
-  // Sidebar state persisted per user
   const storageKey = `vencon_sidebar_${panel}`;
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const saved = localStorage.getItem(storageKey);
@@ -27,6 +26,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
   }, [sidebarOpen, storageKey]);
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setSidebarOpen(false);
 
   if (loading) {
     return (
@@ -42,8 +42,8 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
     <div className="min-h-screen bg-background flex flex-col">
       <TopNav onToggleSidebar={toggleSidebar} />
       <div className="flex flex-1 overflow-hidden">
-        <PanelSidebar open={sidebarOpen} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <PanelSidebar open={sidebarOpen} onClose={closeSidebar} />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </div>
