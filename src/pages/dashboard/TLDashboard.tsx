@@ -1,0 +1,177 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Target, ShoppingCart, Phone, Trash2, CheckCircle, TrendingUp } from "lucide-react";
+
+interface CampaignOption {
+  id: string;
+  name: string;
+}
+
+const TLDashboard = () => {
+  const { user } = useAuth();
+  const { t } = useLanguage();
+  const isBn = t("vencon") === "VENCON";
+
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [stats, setStats] = useState({
+    newLeads: 0,
+    confirmedOrders: 0,
+    callDoneQueue: 0,
+    preOrders: 0,
+    deleteSheet: 0,
+    receiveRatio: 0,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCampaigns = async () => {
+      const { data } = await supabase
+        .from("campaign_tls")
+        .select("campaign_id, campaigns(id, name)")
+        .eq("tl_id", user.id);
+      if (data) {
+        const list = data
+          .map((d: any) => d.campaigns)
+          .filter(Boolean)
+          .map((c: any) => ({ id: c.id, name: c.name }));
+        setCampaigns(list);
+        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+      }
+    };
+    fetchCampaigns();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !selectedCampaign) return;
+    const fetchStats = async () => {
+      // New leads (fresh, unassigned in this campaign)
+      const { count: newLeads } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign)
+        .eq("tl_id", user.id)
+        .is("assigned_to", null)
+        .eq("status", "fresh");
+
+      // Confirmed orders (pending CSO)
+      const { count: confirmedOrders } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("tl_id", user.id)
+        .eq("status", "pending_cso");
+
+      // Call done queue (CS called, ready for silver assignment)
+      const { count: callDoneQueue } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("tl_id", user.id)
+        .eq("status", "call_done");
+
+      // Pre-orders
+      const { count: preOrders } = await supabase
+        .from("pre_orders")
+        .select("*", { count: "exact", head: true })
+        .eq("tl_id", user.id)
+        .eq("status", "pending");
+
+      // Delete sheet (requeue_count >= 5)
+      const { count: deleteSheet } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign)
+        .eq("tl_id", user.id)
+        .gte("requeue_count", 5);
+
+      // Receive ratio this month
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { count: totalOrders } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("tl_id", user.id)
+        .gte("created_at", startOfMonth.toISOString());
+
+      const { count: deliveredOrders } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("tl_id", user.id)
+        .eq("delivery_status", "delivered")
+        .gte("created_at", startOfMonth.toISOString());
+
+      const ratio = totalOrders && totalOrders > 0
+        ? Math.round(((deliveredOrders || 0) / totalOrders) * 100)
+        : 0;
+
+      setStats({
+        newLeads: newLeads || 0,
+        confirmedOrders: confirmedOrders || 0,
+        callDoneQueue: callDoneQueue || 0,
+        preOrders: preOrders || 0,
+        deleteSheet: deleteSheet || 0,
+        receiveRatio: ratio,
+      });
+    };
+    fetchStats();
+  }, [user, selectedCampaign]);
+
+  if (!user) return null;
+
+  const statCards = [
+    { label: isBn ? "নতুন Leads" : "New Leads", value: stats.newLeads, icon: Target, color: "text-green-400" },
+    { label: isBn ? "Confirmed Orders" : "Confirmed Orders", value: stats.confirmedOrders, icon: CheckCircle, color: "text-yellow-400" },
+    { label: isBn ? "Call Done Queue" : "Call Done Queue", value: stats.callDoneQueue, icon: Phone, color: "text-blue-400" },
+    { label: isBn ? "Pre-Orders" : "Pre-Orders", value: stats.preOrders, icon: ShoppingCart, color: "text-purple-400" },
+    { label: isBn ? "Delete Sheet" : "Delete Sheet", value: stats.deleteSheet, icon: Trash2, color: "text-red-400" },
+    { label: isBn ? "Receive Ratio %" : "Receive Ratio %", value: `${stats.receiveRatio}%`, icon: TrendingUp, color: "text-emerald-400" },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="font-heading text-2xl font-bold text-foreground">
+            {isBn ? "TL ড্যাশবোর্ড" : "TL Dashboard"}
+          </h2>
+          <p className="font-body text-sm text-muted-foreground mt-1">
+            {isBn ? "স্বাগতম" : "Welcome"}, {user.name}
+          </p>
+        </div>
+        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+          <SelectTrigger className="w-64 border-[hsl(var(--panel-tl))] bg-secondary">
+            <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
+          </SelectTrigger>
+          <SelectContent>
+            {campaigns.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {statCards.map((s) => (
+          <Card key={s.label} className="bg-card border-border">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`p-3 rounded-lg bg-secondary ${s.color}`}>
+                <s.icon className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-body">{s.label}</p>
+                <p className="text-2xl font-bold font-heading text-foreground">{s.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default TLDashboard;
