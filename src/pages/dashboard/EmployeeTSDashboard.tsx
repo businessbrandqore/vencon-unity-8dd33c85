@@ -560,7 +560,7 @@ export default function EmployeeTSDashboard() {
                   )}
                 >
                   <span className="text-3xl mb-1">{m.emoji}</span>
-                  <span className="text-xs text-muted-foreground">{m.label}</span>
+                  <span className="text-xs text-muted-foreground">{t(m.labelKey)}</span>
                 </button>
               ))}
             </div>
