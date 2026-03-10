@@ -692,13 +692,13 @@ export default function EmployeeTSDashboard() {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3 max-w-screen-xl mx-auto text-xs">
           <div className="flex gap-4">
-            <span>Sales: <strong>{salesRatio}%</strong></span>
-            <span>Receive: <strong>{receiveRatio}%</strong></span>
-            <span>Cancel: <strong className="text-destructive">{cancelRatio}%</strong></span>
-            <span>Return: <strong className="text-orange-400">{returnRatio}%</strong></span>
+            <span>{t("sales_ratio")}: <strong>{n(Number(salesRatio))}%</strong></span>
+            <span>{t("receive_ratio")}: <strong>{n(Number(receiveRatio))}%</strong></span>
+            <span>{t("cancel_ratio")}: <strong className="text-destructive">{n(Number(cancelRatio))}%</strong></span>
+            <span>{t("return_ratio")}: <strong className="text-orange-400">{n(Number(returnRatio))}%</strong></span>
           </div>
           <div>
-            Net Salary: <strong>৳{basicSalary.toLocaleString()} - ৳{monthDeductions.toLocaleString()} = <span className="text-[hsl(var(--panel-employee))]">৳{netSalary.toLocaleString()}</span></strong>
+            {t("net_salary")}: <strong>৳{n(basicSalary)} - ৳{n(monthDeductions)} = <span className="text-[hsl(var(--panel-employee))]">৳{n(netSalary)}</span></strong>
           </div>
         </div>
       </div>
