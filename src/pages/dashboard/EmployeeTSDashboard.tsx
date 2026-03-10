@@ -491,8 +491,8 @@ export default function EmployeeTSDashboard() {
         <Card className="border-[hsl(var(--panel-employee))]">
           <CardContent className="py-8 text-center">
             <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <h2 className="font-heading text-xl mb-2">আপনার shift এখন নেই।</h2>
-            <p className="text-muted-foreground">শুধুমাত্র ব্যক্তিগত তথ্য দেখা যাচ্ছে।</p>
+            <h2 className="font-heading text-xl mb-2">{t("outside_shift")}</h2>
+            <p className="text-muted-foreground">{t("personal_info_only")}</p>
           </CardContent>
         </Card>
         <SalaryCard />
