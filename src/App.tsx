@@ -8,7 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
-import EmployeeTSDashboard from "./pages/dashboard/EmployeeTSDashboard";
+import EmployeeDashboardRouter from "./pages/dashboard/EmployeeDashboardRouter";
 import SADashboard from "./pages/dashboard/SADashboard";
 import SAAnalytics from "./pages/dashboard/SAAnalytics";
 import SAWarehouse from "./pages/dashboard/SAWarehouse";
@@ -82,7 +82,7 @@ const App = () => (
 
             {/* Employee Panel Routes */}
             <Route element={<DashboardLayout panel="employee" />}>
-              <Route path="/employee/dashboard" element={<EmployeeTSDashboard />} />
+              <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
               <Route path="/employee/my-leads" element={<PlaceholderPage titleKey="my_leads" />} />
               <Route path="/employee/attendance" element={<PlaceholderPage titleKey="attendance" />} />
               <Route path="/employee/salary" element={<PlaceholderPage titleKey="salary" />} />
