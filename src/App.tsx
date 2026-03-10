@@ -82,7 +82,7 @@ const App = () => (
 
             {/* Employee Panel Routes */}
             <Route element={<DashboardLayout panel="employee" />}>
-              <Route path="/employee/dashboard" element={<DashboardHome />} />
+              <Route path="/employee/dashboard" element={<EmployeeTSDashboard />} />
               <Route path="/employee/my-leads" element={<PlaceholderPage titleKey="my_leads" />} />
               <Route path="/employee/attendance" element={<PlaceholderPage titleKey="attendance" />} />
               <Route path="/employee/salary" element={<PlaceholderPage titleKey="salary" />} />
