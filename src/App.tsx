@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
+import SADashboard from "./pages/dashboard/SADashboard";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -26,7 +27,7 @@ const App = () => (
 
             {/* SA Panel Routes */}
             <Route element={<DashboardLayout panel="sa" />}>
-              <Route path="/sa/dashboard" element={<DashboardHome />} />
+              <Route path="/sa/dashboard" element={<SADashboard />} />
               <Route path="/sa/approvals" element={<PlaceholderPage titleKey="approvals" />} />
               <Route path="/sa/analytics" element={<PlaceholderPage titleKey="analytics" />} />
               <Route path="/sa/warehouse" element={<PlaceholderPage titleKey="warehouse" />} />
