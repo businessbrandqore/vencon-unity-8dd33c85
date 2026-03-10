@@ -55,6 +55,7 @@ const App = () => (
               <Route path="/sa/analytics" element={<SAAnalytics />} />
               <Route path="/sa/warehouse" element={<SAWarehouse />} />
               <Route path="/sa/budget" element={<SABudget />} />
+              <Route path="/sa/payroll" element={<SAPayroll />} />
               <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
               <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/notifications" element={<NotificationsPage />} />
