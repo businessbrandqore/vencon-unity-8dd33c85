@@ -95,6 +95,7 @@ const App = () => (
               <Route path="/employee/attendance" element={<PlaceholderPage titleKey="attendance" />} />
               <Route path="/employee/salary" element={<PlaceholderPage titleKey="salary" />} />
               <Route path="/employee/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/employee/notifications" element={<NotificationsPage />} />
               <Route path="/employee/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
 
