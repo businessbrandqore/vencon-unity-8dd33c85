@@ -23,6 +23,8 @@ import HRPayroll from "./pages/dashboard/HRPayroll";
 import HRAttendance from "./pages/dashboard/HRAttendance";
 import HRLeaves from "./pages/dashboard/HRLeaves";
 import HRSettings from "./pages/dashboard/HRSettings";
+import HRCampaignIntegration from "./pages/dashboard/HRCampaignIntegration";
+import HRLeadImport from "./pages/dashboard/HRLeadImport";
 import TLDashboard from "./pages/dashboard/TLDashboard";
 import TLLeads from "./pages/dashboard/TLLeads";
 import TLTeam from "./pages/dashboard/TLTeam";
@@ -66,6 +68,8 @@ const App = () => (
               <Route path="/hr/attendance" element={<HRAttendance />} />
               <Route path="/hr/leaves" element={<HRLeaves />} />
               <Route path="/hr/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
+              <Route path="/hr/leads/import" element={<HRLeadImport />} />
               <Route path="/hr/settings" element={<HRSettings />} />
               <Route path="/hr/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
