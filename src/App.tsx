@@ -31,6 +31,8 @@ import TLTeam from "./pages/dashboard/TLTeam";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import PlaceholderPage from "./pages/dashboard/PlaceholderPage";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
+import ChatPage from "./pages/dashboard/ChatPage";
+import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,7 +71,8 @@ const App = () => (
               <Route path="/hr/payroll" element={<HRPayroll />} />
               <Route path="/hr/attendance" element={<HRAttendance />} />
               <Route path="/hr/leaves" element={<HRLeaves />} />
-              <Route path="/hr/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/hr/chat" element={<ChatPage />} />
+              <Route path="/hr/chat-admin" element={<HRChatAdmin />} />
               <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
               <Route path="/hr/leads/import" element={<HRLeadImport />} />
               <Route path="/hr/settings" element={<HRSettings />} />
@@ -83,7 +86,7 @@ const App = () => (
               <Route path="/tl/leads" element={<TLLeads />} />
               <Route path="/tl/my-team" element={<TLTeam />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
-              <Route path="/tl/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>
@@ -94,7 +97,7 @@ const App = () => (
               <Route path="/employee/my-leads" element={<PlaceholderPage titleKey="my_leads" />} />
               <Route path="/employee/attendance" element={<PlaceholderPage titleKey="attendance" />} />
               <Route path="/employee/salary" element={<PlaceholderPage titleKey="salary" />} />
-              <Route path="/employee/chat" element={<PlaceholderPage titleKey="chat" />} />
+              <Route path="/employee/chat" element={<ChatPage />} />
               <Route path="/employee/notifications" element={<NotificationsPage />} />
               <Route path="/employee/profile" element={<PlaceholderPage titleKey="profile" />} />
             </Route>

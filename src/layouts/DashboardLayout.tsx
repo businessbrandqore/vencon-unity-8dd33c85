@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { PanelType } from "@/lib/panelConfig";
 import TopNav from "@/components/TopNav";
 import PanelSidebar from "@/components/PanelSidebar";
+import AIChatWidget from "@/components/AIChatWidget";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
@@ -46,6 +47,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
           <Outlet />
         </main>
       </div>
+      <AIChatWidget />
     </div>
   );
 };
