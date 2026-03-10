@@ -47,6 +47,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
           <Outlet />
         </main>
       </div>
+      <AIChatWidget />
     </div>
   );
 };
