@@ -347,7 +347,7 @@ const HRPayroll = () => {
       type: "profit_share_config",
       requested_by: user.id,
       status: "pending",
-      details: { shares: psEdits },
+      details: { shares: psEdits } as any,
     });
 
     const { data: saUsers } = await supabase
