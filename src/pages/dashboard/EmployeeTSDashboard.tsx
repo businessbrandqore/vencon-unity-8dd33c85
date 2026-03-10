@@ -481,7 +481,7 @@ export default function EmployeeTSDashboard() {
 
   /* ───── loading ───── */
   if (!profile || isWithinShift === null || attendanceLoading) {
-    return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+    return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
   }
 
   /* ───── OUTSIDE SHIFT ───── */
