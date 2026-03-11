@@ -186,7 +186,7 @@ export default function ManagerAttendance() {
         </h1>
         <Badge variant="outline" className="text-xs border-primary/30 text-primary">
           <MapPin className="h-3 w-3 mr-1" />
-          যেকোনো স্থান থেকে — কোনো কর্তন নেই
+          অফিসে উপস্থিত — কোনো কর্তন নেই
         </Badge>
       </div>
 
