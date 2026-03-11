@@ -323,7 +323,9 @@ export default function EmployeeTSDashboard() {
       await supabase.from("attendance").update({
         desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
-      }).eq("id", todayAttendance.id);
+        phone_number: phoneNumber || null,
+        desk_number: deskNumber || null,
+      } as any).eq("id", todayAttendance.id);
     } else {
       const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").insert({
@@ -331,7 +333,9 @@ export default function EmployeeTSDashboard() {
         date: todayStr(),
         desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
-      });
+        phone_number: phoneNumber || null,
+        desk_number: deskNumber || null,
+      } as any);
     }
     setShowDeskModal(false);
     setDeskReportDone(true);
