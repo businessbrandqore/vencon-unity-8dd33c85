@@ -299,7 +299,7 @@ export default function EmployeeTSDashboard() {
   /* ───── handlers ───── */
 
   const handleDeskReportSubmit = async () => {
-    if (!user || !deskCondition) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন"); return; }
+    if (!user || (!deskCondition && !deskNote)) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন বা লিখুন"); return; }
     // upsert attendance row for today
     if (todayAttendance) {
       await supabase.from("attendance").update({
