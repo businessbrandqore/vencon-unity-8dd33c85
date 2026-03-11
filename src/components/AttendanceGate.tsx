@@ -105,7 +105,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
     } else {
       await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), desk_condition: deskValue, phone_minutes_remaining: phoneMins, phone_number: phoneNumber || null, desk_number: deskNumber || null } as any);
     }
-    setDeskReportDone(true);
+    setShowDeskModal(false);
     setDeskReportDone(true);
     await loadAttendance();
     toast.success("ডেস্ক রিপোর্ট সংরক্ষণ করা হয়েছে");
