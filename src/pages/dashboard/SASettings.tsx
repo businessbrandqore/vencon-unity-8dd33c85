@@ -33,19 +33,7 @@ const SASettings = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
 
-  const [activeTab, setActiveTab] = useState<"company" | "shift" | "steadfast" | "reset">("company");
-
-  // Company Info
-  const [company, setCompany] = useState<CompanyInfo>({
-    company_name: "VENCON",
-    company_address: "",
-    company_phone: "",
-    company_email: "",
-    company_logo_url: "",
-  });
-
-  // Shift Config
-  const [shift, setShift] = useState<ShiftConfig>({
+  const [activeTab, setActiveTab] = useState<"company" | "steadfast" | "reset">("company");
     default_shift_start: "09:00",
     default_shift_end: "18:00",
     weekly_off_day: "friday",
