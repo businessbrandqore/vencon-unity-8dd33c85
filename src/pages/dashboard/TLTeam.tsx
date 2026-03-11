@@ -54,11 +54,12 @@ const TLTeam = () => {
   const loadTeam = useCallback(async () => {
     if (!user || !selectedCampaign) return;
 
-    const { data: roles } = await supabase
+    let rolesQ = supabase
       .from("campaign_agent_roles")
       .select("id, agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
-      .eq("campaign_id", selectedCampaign)
-      .eq("tl_id", user.id);
+      .eq("campaign_id", selectedCampaign);
+    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    const { data: roles } = await rolesQ;
 
     if (!roles) return;
 

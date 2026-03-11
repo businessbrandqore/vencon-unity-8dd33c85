@@ -69,11 +69,12 @@ const TLAnalytics = () => {
     });
 
     // Agent performance
-    const { data: roles } = await supabase
+    let rolesQ = supabase
       .from("campaign_agent_roles")
       .select("agent_id, users!campaign_agent_roles_agent_id_fkey(name)")
-      .eq("campaign_id", selectedCampaign)
-      .eq("tl_id", user.id);
+      .eq("campaign_id", selectedCampaign);
+    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    const { data: roles } = await rolesQ;
 
     if (roles) {
       const perf = roles.map((r: any) => {
