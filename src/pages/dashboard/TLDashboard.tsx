@@ -27,7 +27,7 @@ const TLDashboard = () => {
     receiveRatio: 0,
   });
 
-  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer";
+  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
   useEffect(() => {
     if (!user) return;
