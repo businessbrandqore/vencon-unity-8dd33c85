@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ['Arimo', 'sans-serif'],
-        body: ['Atkinson Hyperlegible', 'sans-serif'],
+        heading: ['"Hind Siliguri"', 'sans-serif'],
+        body: ['"Hind Siliguri"', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

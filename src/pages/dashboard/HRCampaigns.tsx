@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,11 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink } from "lucide-react";
+import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -352,42 +353,70 @@ const HRCampaigns = () => {
               </label>
               <p className="text-xs text-muted-foreground mb-2">
                 {isBn
-                  ? "👤 এই ক্যাম্পেইনে কোন টিম লিডার(দের) দায়িত্ব থাকবে তা সিলেক্ট করুন। একাধিক TL সিলেক্ট করা যাবে।"
-                  : "👤 Select which Team Leader(s) will manage this campaign. You can select multiple TLs."}
+                  ? "👤 ড্রপডাউন থেকে টিম লিডার সিলেক্ট করুন। একাধিক TL সিলেক্ট করা যাবে।"
+                  : "👤 Select Team Leader(s) from the dropdown. Multiple TLs can be selected."}
               </p>
-              {tlUsers.length === 0 ? (
-                <p className="p-3 text-xs text-muted-foreground border border-border rounded-lg bg-card">
-                  {isBn ? "কোনো টিম লিডার পাওয়া যায়নি। প্রথমে Employees থেকে TL যোগ করুন।" : "No Team Leaders found. Add TLs from Employees first."}
-                </p>
-              ) : (
-                <div className="border border-border rounded-lg bg-card divide-y divide-border max-h-48 overflow-y-auto">
-                  {tlUsers.map((tl) => {
-                    const isSelected = selectedTLs.includes(tl.id);
-                    return (
-                      <button
-                        key={tl.id}
-                        type="button"
-                        onClick={() => setSelectedTLs((prev) => prev.includes(tl.id) ? prev.filter((x) => x !== tl.id) : [...prev, tl.id])}
-                        className={`w-full flex items-center gap-3 p-3 text-left text-sm transition-colors ${
-                          isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-accent"
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                          isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                        }`}>
-                          {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
-                        </div>
-                        <span>{tl.name}</span>
-                      </button>
-                    );
+              {/* Selected TL badges */}
+              {selectedTLs.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedTLs.map((tlId) => {
+                    const tl = tlUsers.find((u) => u.id === tlId);
+                    return tl ? (
+                      <Badge key={tlId} variant="outline" className="border-primary/30 bg-primary/5 text-primary gap-1 pr-1">
+                        {tl.name}
+                        <button type="button" onClick={() => setSelectedTLs((prev) => prev.filter((x) => x !== tlId))}
+                          className="hover:bg-primary/20 rounded-full p-0.5">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
                   })}
                 </div>
               )}
-              {selectedTLs.length > 0 && (
-                <p className="text-xs text-primary mt-1.5">
-                  {isBn ? `${selectedTLs.length} জন TL সিলেক্ট করা হয়েছে` : `${selectedTLs.length} TL(s) selected`}
-                </p>
-              )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between font-normal text-sm h-10">
+                    <span className={selectedTLs.length === 0 ? "text-muted-foreground" : "text-foreground"}>
+                      {selectedTLs.length === 0
+                        ? (isBn ? "টিম লিডার সিলেক্ট করুন..." : "Select Team Leaders...")
+                        : (isBn ? `${selectedTLs.length} জন সিলেক্ট করা হয়েছে` : `${selectedTLs.length} selected`)}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  {tlUsers.length === 0 ? (
+                    <p className="p-3 text-xs text-muted-foreground text-center">
+                      {isBn ? "কোনো টিম লিডার পাওয়া যায়নি" : "No Team Leaders found"}
+                    </p>
+                  ) : (
+                    <div className="max-h-52 overflow-y-auto">
+                      {tlUsers.map((tl) => {
+                        const isSelected = selectedTLs.includes(tl.id);
+                        return (
+                          <button
+                            key={tl.id}
+                            type="button"
+                            onClick={() => setSelectedTLs((prev) =>
+                              prev.includes(tl.id) ? prev.filter((x) => x !== tl.id) : [...prev, tl.id]
+                            )}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
+                              isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-accent"
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                              isSelected ? "border-primary bg-primary" : "border-muted-foreground/50"
+                            }`}>
+                              {isSelected && <span className="text-primary-foreground text-[10px]">✓</span>}
+                            </div>
+                            {tl.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button onClick={handleCreate} disabled={!newName.trim() || submitting}
