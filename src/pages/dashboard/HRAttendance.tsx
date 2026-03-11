@@ -402,6 +402,91 @@ const HRAttendance = () => {
         )}
       </div>
 
+      {/* Monthly Holidays Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-lg font-bold text-foreground">
+            {isBn ? "মাসিক ছুটির দিন" : "Monthly Holidays"}
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHolidayForm(!showHolidayForm)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {isBn ? "ছুটি যোগ করুন" : "Add Holiday"}
+          </Button>
+        </div>
+
+        {showHolidayForm && (
+          <div className="border border-border p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "তারিখ *" : "Date *"}
+                </label>
+                <Input
+                  type="date"
+                  value={newHolidayDate}
+                  onChange={(e) => setNewHolidayDate(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "শিরোনাম" : "Title"}
+                </label>
+                <Input
+                  value={newHolidayTitle}
+                  onChange={(e) => setNewHolidayTitle(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                  placeholder={isBn ? "যেমন: সরকারি ছুটি" : "e.g. Public Holiday"}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={addHoliday} size="sm" style={{ backgroundColor: BLUE }} className="text-white">
+                  {isBn ? "যোগ করুন" : "Add"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {holidays.length === 0 ? (
+          <p className="text-xs text-muted-foreground font-body border border-border p-4 text-center">
+            {isBn ? "এই মাসে কোনো ছুটি নির্ধারণ করা হয়নি" : "No holidays set for this month"}
+          </p>
+        ) : (
+          <div className="border border-border">
+            <table className="w-full text-sm font-body">
+              <thead>
+                <tr className="bg-secondary text-muted-foreground text-[11px]">
+                  <th className="text-left p-3">{isBn ? "তারিখ" : "Date"}</th>
+                  <th className="text-left p-3">{isBn ? "শিরোনাম" : "Title"}</th>
+                  <th className="text-right p-3">{isBn ? "অ্যাকশন" : "Action"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {holidays.map((h) => (
+                  <tr key={h.id}>
+                    <td className="p-3 text-foreground">{h.holiday_date}</td>
+                    <td className="p-3 text-foreground">{h.title}</td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => removeHoliday(h.id)}
+                        className="text-destructive hover:text-destructive/80"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Date Detail Dialog */}
       <Dialog open={!!detailDate} onOpenChange={(o) => { if (!o) setDetailDate(null); }}>
         <DialogContent className="bg-card border-border max-w-3xl max-h-[80vh] overflow-y-auto">
