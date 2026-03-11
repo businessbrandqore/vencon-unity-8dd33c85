@@ -1,10 +1,9 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu, Globe } from "lucide-react";
+import { Menu, Globe, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getPanelByType } from "@/lib/panelConfig";
 import { useEffect, useState, useRef } from "react";
-import { sidebarMenus } from "@/lib/sidebarConfig";
 import NotificationBell from "@/components/NotificationBell";
 
 interface TopNavProps {
@@ -20,6 +19,18 @@ const TopNav = ({ onToggleSidebar }: TopNavProps) => {
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
+
+  // Theme state
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem("vencon_theme");
+    if (saved) return saved === "dark";
+    return true; // default dark
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("vencon_theme", dark ? "dark" : "light");
+  }, [dark]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -48,17 +59,26 @@ const TopNav = ({ onToggleSidebar }: TopNavProps) => {
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <NotificationBell />
 
-        {/* Language toggle with globe */}
+        {/* Theme toggle */}
+        <button
+          onClick={() => setDark((p) => !p)}
+          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          title={dark ? "Light Mode" : "Dark Mode"}
+        >
+          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+
+        {/* Language toggle */}
         <button
           onClick={toggleLang}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
         >
           <Globe className="h-4 w-4" />
           <span className="font-heading text-xs tracking-wider">
-            {lang === "bn" ? "বাংলা" : "English"}
+            {lang === "bn" ? "EN" : "বাং"}
           </span>
         </button>
 
@@ -69,8 +89,8 @@ const TopNav = ({ onToggleSidebar }: TopNavProps) => {
             className="flex items-center gap-2.5"
           >
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-heading font-bold transition-colors"
-              style={{ backgroundColor: panelConfig.color, color: "#0A0A0A" }}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-heading font-bold text-primary-foreground"
+              style={{ backgroundColor: panelConfig.color }}
             >
               {initials}
             </div>
