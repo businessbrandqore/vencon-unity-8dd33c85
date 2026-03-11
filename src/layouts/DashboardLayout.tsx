@@ -44,7 +44,9 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       <div className="flex flex-1 overflow-hidden">
         <PanelSidebar open={sidebarOpen} onClose={closeSidebar} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <Outlet />
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
       <AIChatWidget />
