@@ -1,17 +1,110 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Building2, Clock, Truck, RotateCcw } from "lucide-react";
+
+interface CompanyInfo {
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_email: string;
+  company_logo_url: string;
+}
+
+interface ShiftConfig {
+  default_shift_start: string;
+  default_shift_end: string;
+  weekly_off_day: string;
+  monthly_off_count: number;
+  late_deduction: number;
+  early_out_deduction: number;
+}
+
+interface SteadfastConfig {
+  api_key: string;
+  secret_key: string;
+  base_url: string;
+}
 
 const SASettings = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
 
+  const [activeTab, setActiveTab] = useState<"company" | "shift" | "steadfast" | "reset">("company");
+
+  // Company Info
+  const [company, setCompany] = useState<CompanyInfo>({
+    company_name: "VENCON",
+    company_address: "",
+    company_phone: "",
+    company_email: "",
+    company_logo_url: "",
+  });
+
+  // Shift Config
+  const [shift, setShift] = useState<ShiftConfig>({
+    default_shift_start: "09:00",
+    default_shift_end: "18:00",
+    weekly_off_day: "friday",
+    monthly_off_count: 3,
+    late_deduction: 50,
+    early_out_deduction: 50,
+  });
+
+  // Steadfast Config
+  const [steadfast, setSteadfast] = useState<SteadfastConfig>({
+    api_key: "",
+    secret_key: "",
+    base_url: "https://portal.steadfast.com.bd/api/v1",
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Factory Reset state
   const [confirmText, setConfirmText] = useState("");
   const [showFinalModal, setShowFinalModal] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .in("key", ["company_info", "shift_config", "steadfast_config"]);
+
+      if (data) {
+        for (const row of data) {
+          const val = row.value as Record<string, unknown> | null;
+          if (!val) continue;
+          if (row.key === "company_info") setCompany((p) => ({ ...p, ...val }));
+          if (row.key === "shift_config") setShift((p) => ({ ...p, ...val }));
+          if (row.key === "steadfast_config") setSteadfast((p) => ({ ...p, ...val }));
+        }
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const saveSetting = async (key: string, value: Record<string, unknown>) => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key, value: value as any, updated_by: user.id, updated_at: new Date().toISOString() }, { onConflict: "key" });
+
+    if (error) {
+      toast.error(isBn ? "সেভ করতে ব্যর্থ" : "Failed to save");
+    } else {
+      toast.success(isBn ? "সেভ হয়েছে" : "Saved successfully");
+    }
+    setSaving(false);
+  };
 
   const canProceed = confirmText === "FACTORY RESET";
 
@@ -23,61 +116,34 @@ const SASettings = () => {
   const handleFactoryReset = async () => {
     if (!user) return;
     setResetting(true);
-
-    // Delete in dependency order — preserve SA/HR users, audit_logs
-    // 1. Delete chat messages & conversations
     await supabase.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("chat_conversations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 2. Delete notifications
     await supabase.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 3. Delete pre_orders
     await supabase.from("pre_orders").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 4. Delete orders
     await supabase.from("orders").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 5. Delete leads
     await supabase.from("leads").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 6. Delete campaigns
+    await supabase.from("campaign_agent_roles").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("campaign_websites").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("campaign_tls").delete().neq("campaign_id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("campaigns").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 7. Delete attendance appeals, leave requests, attendance
     await supabase.from("attendance_appeals").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("leave_requests").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("attendance").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 8. Delete sa_approvals, incentive_config, profit_share_config
     await supabase.from("sa_approvals").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("incentive_config").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("profit_share_config").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 9. Delete maintenance data
     await supabase.from("maintenance_expenses").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("maintenance_budget").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 10. Delete inventory
     await supabase.from("inventory").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 11. Delete group_members
     await supabase.from("group_members").delete().neq("group_leader_id", "00000000-0000-0000-0000-000000000000");
 
-    // 12. Delete user_roles for non SA/HR
-    // 13. Delete non-SA/HR users
-    const { data: keepUsers } = await supabase
-      .from("users")
-      .select("id")
-      .in("panel", ["sa", "hr"]);
+    const { data: keepUsers } = await supabase.from("users").select("id").in("panel", ["sa", "hr"]);
     const keepIds = keepUsers?.map((u) => u.id) || [];
-
     if (keepIds.length > 0) {
       await supabase.from("user_roles").delete().not("user_id", "in", `(${keepIds.join(",")})`);
       await supabase.from("users").delete().not("id", "in", `(${keepIds.join(",")})`);
     }
 
-    // Log to audit_logs (permanent)
     await supabase.from("audit_logs").insert({
       actor_id: user.id,
       actor_role: user.role,
@@ -91,149 +157,231 @@ const SASettings = () => {
     setDone(true);
   };
 
+  const tabs = [
+    { key: "company" as const, label: isBn ? "কোম্পানি তথ্য" : "Company Info", icon: Building2 },
+    { key: "shift" as const, label: isBn ? "শিফট ও ছুটি" : "Shift & Leave", icon: Clock },
+    { key: "steadfast" as const, label: "Steadfast API", icon: Truck },
+    { key: "reset" as const, label: isBn ? "ফ্যাক্টরি রিসেট" : "Factory Reset", icon: RotateCcw },
+  ];
+
   const deletedItems = isBn
-    ? [
-        "সব লিড ও লিড হিস্ট্রি",
-        "সব অর্ডার",
-        "সব ক্যাম্পেইন",
-        "সব কর্মচারী (SA/HR ব্যতীত)",
-        "পে-রোল/উপস্থিতি/ছুটির রেকর্ড",
-        "অভ্যন্তরীণ চ্যাট হিস্ট্রি",
-        "বিজ্ঞপ্তি হিস্ট্রি",
-      ]
-    : [
-        "All Leads & Lead History",
-        "All Orders",
-        "All Campaigns",
-        "All Employees (except SA/HR)",
-        "Payroll/Attendance/Leave Records",
-        "Internal Chat History",
-        "Notification History",
-      ];
+    ? ["সব লিড ও লিড হিস্ট্রি", "সব অর্ডার", "সব ক্যাম্পেইন", "সব কর্মচারী (SA/HR ব্যতীত)", "পে-রোল/উপস্থিতি/ছুটির রেকর্ড", "অভ্যন্তরীণ চ্যাট হিস্ট্রি", "বিজ্ঞপ্তি হিস্ট্রি"]
+    : ["All Leads & Lead History", "All Orders", "All Campaigns", "All Employees (except SA/HR)", "Payroll/Attendance/Leave Records", "Internal Chat History", "Notification History"];
 
   const preservedItems = isBn
-    ? [
-        "SA/HR অ্যাকাউন্ট ও পাসওয়ার্ড",
-        "API ক্রেডেনশিয়ালস",
-        "UI ব্র্যান্ডিং সেটিংস",
-        "অডিট লগ (স্থায়ীভাবে সংরক্ষিত, মুছে ফেলা যায় না)",
-      ]
-    : [
-        "SA/HR Account & Password",
-        "API Credentials",
-        "UI Branding settings",
-        "Audit Logs (permanently retained, cannot be deleted)",
-      ];
+    ? ["SA/HR অ্যাকাউন্ট ও পাসওয়ার্ড", "API ক্রেডেনশিয়ালস", "UI ব্র্যান্ডিং সেটিংস", "অডিট লগ (স্থায়ীভাবে সংরক্ষিত)"]
+    : ["SA/HR Account & Password", "API Credentials", "UI Branding settings", "Audit Logs (permanently retained)"];
+
+  if (loading) return <div className="h-64 animate-pulse bg-card rounded-xl" />;
+
+  const inputClass = "w-full bg-transparent border border-border rounded-lg px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+  const labelClass = "font-body text-xs text-muted-foreground mb-1 block";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h2 className="font-heading text-2xl font-bold text-foreground">
         {isBn ? "সেটিংস" : "Settings"}
       </h2>
 
-      {/* Placeholder for other settings */}
-      <div className="border border-border p-6">
-        <p className="font-body text-sm text-muted-foreground">
-          {isBn ? "সাধারণ সেটিংস শীঘ্রই আসছে..." : "General settings coming soon..."}
-        </p>
-      </div>
-
-      {/* Factory Reset Warning */}
-      <div className="border-2 border-destructive p-6 space-y-6">
-        <h3 className="font-heading text-lg font-bold text-destructive">
-          ⚠️ Factory Reset — {isBn ? "সতর্কতার সাথে ব্যবহার করুন" : "Use with extreme caution"}
-        </h3>
-
-        {done ? (
-          <div className="p-4 border border-border">
-            <p className="font-body text-sm text-foreground" style={{ color: "#0D9488" }}>
-              ✓ {isBn ? "ফ্যাক্টরি রিসেট সম্পন্ন। অডিট লগে রেকর্ড করা হয়েছে।" : "Factory reset complete. Recorded in audit logs."}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* What will be deleted */}
-            <div className="space-y-2">
-              <p className="font-heading text-xs tracking-wider text-destructive uppercase">
-                ✗ {isBn ? "মুছে ফেলা হবে:" : "WILL BE DELETED:"}
-              </p>
-              <ul className="space-y-1">
-                {deletedItems.map((item) => (
-                  <li key={item} className="font-body text-xs text-foreground flex items-start gap-2">
-                    <span className="text-destructive mt-0.5">✗</span> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="h-[1px] bg-border" />
-
-            {/* What will be preserved */}
-            <div className="space-y-2">
-              <p className="font-heading text-xs tracking-wider uppercase" style={{ color: "#0D9488" }}>
-                ✓ {isBn ? "সংরক্ষিত থাকবে:" : "WILL BE PRESERVED:"}
-              </p>
-              <ul className="space-y-1">
-                {preservedItems.map((item) => (
-                  <li key={item} className="font-body text-xs text-foreground flex items-start gap-2">
-                    <span style={{ color: "#0D9488" }} className="mt-0.5">✓</span> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="h-[1px] bg-border" />
-
-            {/* Confirmation input */}
-            <div className="space-y-2">
-              <p className="font-body text-xs text-muted-foreground">
-                {isBn
-                  ? 'নিশ্চিত করতে নিচে "FACTORY RESET" টাইপ করুন:'
-                  : 'Type "FACTORY RESET" below to confirm:'}
-              </p>
-              <input
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="FACTORY RESET"
-                className="w-full max-w-sm bg-transparent border border-destructive px-3 py-2 font-heading text-sm text-foreground focus:outline-none tracking-widest"
-              />
-            </div>
-
+      {/* Tab Navigation */}
+      <div className="flex flex-wrap gap-1 border-b border-border">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
             <button
-              onClick={handleFirstConfirm}
-              disabled={!canProceed}
-              className="px-6 py-3 text-xs font-heading tracking-wider bg-destructive text-background disabled:opacity-30 transition-opacity"
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-heading tracking-wide border-b-2 transition-colors ${
+                activeTab === tab.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
             >
-              {isBn ? "ফ্যাক্টরি রিসেট শুরু করুন" : "Begin Factory Reset"}
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
             </button>
-          </>
-        )}
+          );
+        })}
       </div>
+
+      {/* Company Info */}
+      {activeTab === "company" && (
+        <div className="bg-card border border-border rounded-xl p-6 space-y-5 max-w-2xl">
+          <h3 className="font-heading text-sm font-bold text-foreground">
+            {isBn ? "কোম্পানি তথ্য" : "Company Information"}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>{isBn ? "কোম্পানির নাম" : "Company Name"}</label>
+              <input className={inputClass} value={company.company_name} onChange={(e) => setCompany({ ...company, company_name: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "ইমেইল" : "Email"}</label>
+              <input className={inputClass} value={company.company_email} onChange={(e) => setCompany({ ...company, company_email: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "ফোন" : "Phone"}</label>
+              <input className={inputClass} value={company.company_phone} onChange={(e) => setCompany({ ...company, company_phone: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "লোগো URL" : "Logo URL"}</label>
+              <input className={inputClass} value={company.company_logo_url} onChange={(e) => setCompany({ ...company, company_logo_url: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelClass}>{isBn ? "ঠিকানা" : "Address"}</label>
+              <textarea className={inputClass + " min-h-[60px]"} value={company.company_address} onChange={(e) => setCompany({ ...company, company_address: e.target.value })} />
+            </div>
+          </div>
+          <button onClick={() => saveSetting("company_info", company as any)} disabled={saving} className="px-5 py-2 text-xs font-heading bg-primary text-primary-foreground rounded-lg disabled:opacity-50">
+            {saving ? "..." : isBn ? "সেভ করুন" : "Save"}
+          </button>
+        </div>
+      )}
+
+      {/* Shift & Leave */}
+      {activeTab === "shift" && (
+        <div className="bg-card border border-border rounded-xl p-6 space-y-5 max-w-2xl">
+          <h3 className="font-heading text-sm font-bold text-foreground">
+            {isBn ? "শিফট ও ছুটি সেটিংস" : "Shift & Leave Settings"}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>{isBn ? "ডিফল্ট শিফট শুরু" : "Default Shift Start"}</label>
+              <input type="time" className={inputClass} value={shift.default_shift_start} onChange={(e) => setShift({ ...shift, default_shift_start: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "ডিফল্ট শিফট শেষ" : "Default Shift End"}</label>
+              <input type="time" className={inputClass} value={shift.default_shift_end} onChange={(e) => setShift({ ...shift, default_shift_end: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "সাপ্তাহিক ছুটির দিন" : "Weekly Off Day"}</label>
+              <select className={inputClass} value={shift.weekly_off_day} onChange={(e) => setShift({ ...shift, weekly_off_day: e.target.value })}>
+                {["friday", "saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"].map((d) => (
+                  <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "মাসিক ছুটি (সংখ্যা)" : "Monthly Offs (count)"}</label>
+              <input type="number" className={inputClass} value={shift.monthly_off_count} onChange={(e) => setShift({ ...shift, monthly_off_count: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "দেরিতে আসার কর্তন (৳)" : "Late Deduction (৳)"}</label>
+              <input type="number" className={inputClass} value={shift.late_deduction} onChange={(e) => setShift({ ...shift, late_deduction: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className={labelClass}>{isBn ? "আগে যাওয়ার কর্তন (৳)" : "Early Out Deduction (৳)"}</label>
+              <input type="number" className={inputClass} value={shift.early_out_deduction} onChange={(e) => setShift({ ...shift, early_out_deduction: Number(e.target.value) })} />
+            </div>
+          </div>
+          <button onClick={() => saveSetting("shift_config", shift as any)} disabled={saving} className="px-5 py-2 text-xs font-heading bg-primary text-primary-foreground rounded-lg disabled:opacity-50">
+            {saving ? "..." : isBn ? "সেভ করুন" : "Save"}
+          </button>
+        </div>
+      )}
+
+      {/* Steadfast API */}
+      {activeTab === "steadfast" && (
+        <div className="bg-card border border-border rounded-xl p-6 space-y-5 max-w-2xl">
+          <h3 className="font-heading text-sm font-bold text-foreground">Steadfast API Configuration</h3>
+          <p className="font-body text-xs text-muted-foreground">
+            {isBn ? "Steadfast Courier এর API তথ্য এখানে সেভ করুন। এটি অর্ডার dispatch-এ ব্যবহৃত হবে।" : "Save your Steadfast Courier API credentials here. Used for order dispatch."}
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>API Key</label>
+              <input className={inputClass} value={steadfast.api_key} onChange={(e) => setSteadfast({ ...steadfast, api_key: e.target.value })} placeholder="Enter API Key" />
+            </div>
+            <div>
+              <label className={labelClass}>Secret Key</label>
+              <input type="password" className={inputClass} value={steadfast.secret_key} onChange={(e) => setSteadfast({ ...steadfast, secret_key: e.target.value })} placeholder="Enter Secret Key" />
+            </div>
+            <div>
+              <label className={labelClass}>Base URL</label>
+              <input className={inputClass} value={steadfast.base_url} onChange={(e) => setSteadfast({ ...steadfast, base_url: e.target.value })} />
+            </div>
+          </div>
+          <button onClick={() => saveSetting("steadfast_config", steadfast as any)} disabled={saving} className="px-5 py-2 text-xs font-heading bg-primary text-primary-foreground rounded-lg disabled:opacity-50">
+            {saving ? "..." : isBn ? "সেভ করুন" : "Save"}
+          </button>
+        </div>
+      )}
+
+      {/* Factory Reset */}
+      {activeTab === "reset" && (
+        <div className="border-2 border-destructive rounded-xl p-6 space-y-6 max-w-2xl">
+          <h3 className="font-heading text-lg font-bold text-destructive">
+            ⚠️ Factory Reset — {isBn ? "সতর্কতার সাথে ব্যবহার করুন" : "Use with extreme caution"}
+          </h3>
+
+          {done ? (
+            <div className="p-4 border border-border rounded-lg">
+              <p className="font-body text-sm text-emerald-500">
+                ✓ {isBn ? "ফ্যাক্টরি রিসেট সম্পন্ন। অডিট লগে রেকর্ড করা হয়েছে।" : "Factory reset complete. Recorded in audit logs."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <p className="font-heading text-xs tracking-wider text-destructive uppercase">✗ {isBn ? "মুছে ফেলা হবে:" : "WILL BE DELETED:"}</p>
+                <ul className="space-y-1">
+                  {deletedItems.map((item) => (
+                    <li key={item} className="font-body text-xs text-foreground flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">✗</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="h-[1px] bg-border" />
+              <div className="space-y-2">
+                <p className="font-heading text-xs tracking-wider text-emerald-500 uppercase">✓ {isBn ? "সংরক্ষিত থাকবে:" : "WILL BE PRESERVED:"}</p>
+                <ul className="space-y-1">
+                  {preservedItems.map((item) => (
+                    <li key={item} className="font-body text-xs text-foreground flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">✓</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="h-[1px] bg-border" />
+              <div className="space-y-2">
+                <p className="font-body text-xs text-muted-foreground">
+                  {isBn ? 'নিশ্চিত করতে নিচে "FACTORY RESET" টাইপ করুন:' : 'Type "FACTORY RESET" below to confirm:'}
+                </p>
+                <input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="FACTORY RESET"
+                  className="w-full max-w-sm bg-transparent border border-destructive rounded-lg px-3 py-2 font-heading text-sm text-foreground focus:outline-none tracking-widest"
+                />
+              </div>
+              <button
+                onClick={handleFirstConfirm}
+                disabled={!canProceed}
+                className="px-6 py-3 text-xs font-heading tracking-wider bg-destructive text-destructive-foreground rounded-lg disabled:opacity-30 transition-opacity"
+              >
+                {isBn ? "ফ্যাক্টরি রিসেট শুরু করুন" : "Begin Factory Reset"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Final confirmation modal */}
       {showFinalModal && (
         <div className="fixed inset-0 bg-background/90 z-50 flex items-center justify-center p-4">
-          <div className="bg-card border-2 border-destructive w-full max-w-md p-6 space-y-6">
+          <div className="bg-card border-2 border-destructive w-full max-w-md p-6 space-y-6 rounded-xl">
             <h4 className="font-heading text-sm font-bold text-destructive text-center">
               ⚠️ {isBn ? "চূড়ান্ত নিশ্চিতকরণ" : "Final Confirmation"}
             </h4>
             <p className="font-body text-sm text-foreground text-center">
-              {isBn
-                ? "আপনি কি সম্পূর্ণ নিশ্চিত? এটি পূর্বাবস্থায় ফেরানো যাবে না।"
-                : "Are you absolutely sure? This cannot be undone."}
+              {isBn ? "আপনি কি সম্পূর্ণ নিশ্চিত? এটি পূর্বাবস্থায় ফেরানো যাবে না।" : "Are you absolutely sure? This cannot be undone."}
             </p>
             <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setShowFinalModal(false)}
-                className="px-6 py-2 text-xs font-heading border border-border text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={() => setShowFinalModal(false)} className="px-6 py-2 text-xs font-heading border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors">
                 {isBn ? "না, বাতিল করুন" : "No, Cancel"}
               </button>
-              <button
-                onClick={handleFactoryReset}
-                disabled={resetting}
-                className="px-6 py-2 text-xs font-heading tracking-wider bg-destructive text-background disabled:opacity-50"
-              >
+              <button onClick={handleFactoryReset} disabled={resetting} className="px-6 py-2 text-xs font-heading tracking-wider bg-destructive text-destructive-foreground rounded-lg disabled:opacity-50">
                 {resetting ? "..." : isBn ? "হ্যাঁ, মুছে ফেলুন" : "Yes, Delete Everything"}
               </button>
             </div>
