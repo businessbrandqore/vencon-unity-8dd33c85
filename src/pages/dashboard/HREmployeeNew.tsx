@@ -32,15 +32,6 @@ const ROLES = [
   "Maintenance Officer",
 ];
 
-const DAYS = [
-  { value: "sat", label: "Sat", bn: "শনি" },
-  { value: "sun", label: "Sun", bn: "রবি" },
-  { value: "mon", label: "Mon", bn: "সোম" },
-  { value: "tue", label: "Tue", bn: "মঙ্গল" },
-  { value: "wed", label: "Wed", bn: "বুধ" },
-  { value: "thu", label: "Thu", bn: "বৃহঃ" },
-  { value: "fri", label: "Fri", bn: "শুক্র" },
-];
 
 const GUARDIAN_TYPES = [
   { value: "father", bn: "পিতা", en: "Father" },
@@ -73,7 +64,6 @@ const HREmployeeNew = () => {
     password: "",
     role: "",
     basicSalary: "",
-    offDays: [] as string[],
     checkIn: "09:00",
     checkOut: "18:00",
     gpsLatitude: "",
@@ -83,14 +73,6 @@ const HREmployeeNew = () => {
 
   const set = (key: string, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
-
-  const toggleDay = (day: string) =>
-    setForm((prev) => ({
-      ...prev,
-      offDays: prev.offDays.includes(day)
-        ? prev.offDays.filter((d) => d !== day)
-        : [...prev.offDays, day],
-    }));
 
   const validate = () => {
     if (!form.name.trim()) return isBn ? "নাম আবশ্যক" : "Name required";
@@ -135,7 +117,7 @@ const HREmployeeNew = () => {
         mother_name: form.motherName.trim(),
         mother_phone: form.motherPhone.trim(),
         guardian_type: form.guardianType,
-        off_days: form.offDays,
+        off_days: [],
         gps_location: (form.gpsLatitude.trim() && form.gpsLongitude.trim()) ? `${form.gpsLatitude.trim()},${form.gpsLongitude.trim()}` : null,
         must_change_password: true,
       } as any)
@@ -349,28 +331,22 @@ const HREmployeeNew = () => {
               className={fieldClass}
               placeholder="e.g. 15000"
             />
-          </div>
-          <div>
-            <label className="font-body text-xs text-muted-foreground block mb-2">
-              {isBn ? "সাপ্তাহিক ছুটির দিন" : "Off Days"}
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {DAYS.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  onClick={() => toggleDay(d.value)}
-                  className={`px-3 py-1.5 text-xs font-body border transition-colors ${
-                    form.offDays.includes(d.value)
-                      ? "text-white border-transparent"
-                      : "text-foreground border-border hover:bg-secondary"
-                  }`}
-                  style={form.offDays.includes(d.value) ? { backgroundColor: BLUE } : {}}
-                >
-                  {isBn ? d.bn : d.label}
-                </button>
-              ))}
-            </div>
+            {form.basicSalary && Number(form.basicSalary) > 0 && (
+              <div className="mt-2 flex gap-4 text-xs text-muted-foreground font-body">
+                <span>
+                  {isBn ? "দৈনিক:" : "Daily:"}{" "}
+                  <span className="text-foreground font-bold">
+                    ৳{(Number(form.basicSalary) / 26).toFixed(0)}
+                  </span>
+                </span>
+                <span>
+                  {isBn ? "ঘন্টায়:" : "Hourly:"}{" "}
+                  <span className="text-foreground font-bold">
+                    ৳{(Number(form.basicSalary) / 26 / 9).toFixed(0)}
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

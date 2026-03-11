@@ -177,7 +177,7 @@ const HRSettings = () => {
   const fieldClass = "bg-background border-border text-foreground";
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <h2 className="font-heading text-2xl font-bold text-foreground">
         {isBn ? "সেটিংস" : "Settings"}
       </h2>
