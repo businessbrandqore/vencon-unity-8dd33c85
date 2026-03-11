@@ -229,6 +229,18 @@ export default function EmployeeTSDashboard() {
 
   useEffect(() => { loadAttendance(); }, [loadAttendance]);
 
+  /* ───── load phone instruction ───── */
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "phone_minutes_instruction")
+        .maybeSingle();
+      if (data?.value) setPhoneInstruction(String(data.value));
+    })();
+  }, []);
+
   /* ───── load leads ───── */
   const loadLeads = useCallback(async () => {
     if (!user) return;
