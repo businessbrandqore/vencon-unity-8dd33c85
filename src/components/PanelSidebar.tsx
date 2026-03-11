@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { sidebarMenus } from "@/lib/sidebarConfig";
+import { sidebarMenus, SidebarItem } from "@/lib/sidebarConfig";
 import { getPanelByType } from "@/lib/panelConfig";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
@@ -10,6 +10,14 @@ interface PanelSidebarProps {
   open: boolean;
   onClose?: () => void;
 }
+
+// Group items into sections
+const getSections = (items: SidebarItem[], panel: string) => {
+  const settingsKeys = ["settings"];
+  const main = items.filter((i) => !settingsKeys.includes(i.titleKey));
+  const settings = items.filter((i) => settingsKeys.includes(i.titleKey));
+  return { main, settings };
+};
 
 const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
   const { user } = useAuth();
@@ -24,6 +32,75 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
     if (!item.roles) return true;
     return item.roles.includes(user.role);
   });
+  const { main, settings } = getSections(items, user.panel);
+
+  const renderItem = (item: SidebarItem) => {
+    const isActive = location.pathname === item.path ||
+      (item.path !== `/${user.panel}/dashboard` && location.pathname.startsWith(item.path));
+    const Icon = item.icon;
+
+    return (
+      <button
+        key={item.path}
+        onClick={() => { navigate(item.path); onClose?.(); }}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 mx-2 rounded-lg text-left transition-colors duration-150",
+          isActive
+            ? "bg-secondary text-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        )}
+      >
+        <Icon
+          className="h-4 w-4 flex-shrink-0"
+          style={isActive && panelConfig ? { color: panelConfig.color } : undefined}
+        />
+        <span className="font-body text-sm tracking-wide whitespace-nowrap">
+          {t(item.titleKey)}
+        </span>
+      </button>
+    );
+  };
+
+  const logoSection = (
+    <div className="px-4 py-4 flex items-center gap-3">
+      <div
+        className="w-8 h-8 rounded-lg flex items-center justify-center font-heading text-sm font-bold"
+        style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
+      >
+        V
+      </div>
+      <div>
+        <span className="font-heading text-sm font-bold text-foreground tracking-wider">VENCON</span>
+        <p className="font-body text-[10px] text-muted-foreground">
+          {panelConfig ? t(panelConfig.nameKey) : ""}
+        </p>
+      </div>
+    </div>
+  );
+
+  const navContent = (
+    <>
+      {/* Main section */}
+      <div className="px-4 pt-2 pb-1">
+        <span className="font-body text-[10px] uppercase tracking-widest text-muted-foreground">{t("main_section") || "প্রধান"}</span>
+      </div>
+      <nav className="flex flex-col gap-0.5">
+        {main.map(renderItem)}
+      </nav>
+
+      {/* Settings section */}
+      {settings.length > 0 && (
+        <>
+          <div className="px-4 pt-4 pb-1">
+            <span className="font-body text-[10px] uppercase tracking-widest text-muted-foreground">{t("settings_section") || "সেটিংস"}</span>
+          </div>
+          <nav className="flex flex-col gap-0.5">
+            {settings.map(renderItem)}
+          </nav>
+        </>
+      )}
+    </>
+  );
 
   return (
     <>
@@ -35,93 +112,47 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
         />
       )}
 
+      {/* Desktop sidebar */}
       <aside
         className={cn(
-          "h-[calc(100vh-3.5rem)] border-r border-border bg-background transition-all duration-200 overflow-hidden flex-shrink-0 z-50",
-          // Desktop: normal sidebar
-          "hidden md:block",
-          open ? "md:w-56" : "md:w-12",
-          // Mobile: overlay slide-in
+          "h-[calc(100vh-3.5rem)] border-r border-border bg-background transition-all duration-200 overflow-y-auto overflow-x-hidden flex-shrink-0 z-50",
+          "hidden md:flex md:flex-col",
+          open ? "md:w-56" : "md:w-0"
         )}
       >
-        <nav className="flex flex-col py-2">
-          {items.map((item) => {
-            const isActive = location.pathname === item.path ||
-              (item.path !== `/${user.panel}/dashboard` && location.pathname.startsWith(item.path));
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); onClose?.(); }}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 group relative",
-                  isActive
-                    ? "text-foreground bg-secondary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                )}
-              >
-                <Icon
-                  className="h-4 w-4 flex-shrink-0"
-                  style={isActive && panelConfig ? { color: panelConfig.color } : undefined}
-                />
-                {open && (
-                  <span className="font-body text-xs tracking-wide whitespace-nowrap">
-                    {t(item.titleKey)}
-                  </span>
-                )}
-                {!open && (
-                  <span className="hidden md:block absolute left-12 bg-card border border-border px-2 py-1 font-body text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    {t(item.titleKey)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        {open && (
+          <>
+            {logoSection}
+            {navContent}
+            <div className="mt-auto px-4 py-3 border-t border-border">
+              <p className="font-body text-[10px] text-muted-foreground">© ২০২৬ ভেনকন</p>
+            </div>
+          </>
+        )}
       </aside>
 
       {/* Mobile sidebar */}
       <aside
         className={cn(
-          "fixed top-14 left-0 h-[calc(100vh-3.5rem)] w-64 border-r border-border bg-background z-50 transition-transform duration-200 md:hidden overflow-y-auto",
+          "fixed top-14 left-0 h-[calc(100vh-3.5rem)] w-64 border-r border-border bg-background z-50 transition-transform duration-200 md:hidden overflow-y-auto flex flex-col",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="font-heading text-sm font-bold text-foreground">VENCON</span>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center font-heading text-xs font-bold"
+              style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
+            >
+              V
+            </div>
+            <span className="font-heading text-sm font-bold text-foreground">VENCON</span>
+          </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <nav className="flex flex-col py-2">
-          {items.map((item) => {
-            const isActive = location.pathname === item.path ||
-              (item.path !== `/${user.panel}/dashboard` && location.pathname.startsWith(item.path));
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); onClose?.(); }}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 text-left transition-colors duration-150",
-                  isActive
-                    ? "text-foreground bg-secondary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                )}
-              >
-                <Icon
-                  className="h-4 w-4 flex-shrink-0"
-                  style={isActive && panelConfig ? { color: panelConfig.color } : undefined}
-                />
-                <span className="font-body text-sm tracking-wide">
-                  {t(item.titleKey)}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
+        {navContent}
       </aside>
     </>
   );

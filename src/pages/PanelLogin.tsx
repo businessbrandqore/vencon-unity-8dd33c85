@@ -4,9 +4,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getPanelByType, PanelType } from "@/lib/panelConfig";
 import { supabase } from "@/integrations/supabase/client";
 import LanguageToggle from "@/components/LanguageToggle";
+import { Shield, Eye, EyeOff } from "lucide-react";
 
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_DURATION = 15 * 60 * 1000;
 
 const PanelLogin = () => {
   const { panel } = useParams<{ panel: string }>();
@@ -16,17 +17,15 @@ const PanelLogin = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
   const [flashColor, setFlashColor] = useState(false);
 
-  // Lockout state
   const [attempts, setAttempts] = useState(0);
   const [lockoutEnd, setLockoutEnd] = useState<number | null>(null);
   const [countdown, setCountdown] = useState("");
 
-  // Load lockout state from localStorage
   useEffect(() => {
     if (!panel) return;
     const stored = localStorage.getItem(`vencon_lockout_${panel}`);
@@ -41,13 +40,8 @@ const PanelLogin = () => {
     }
   }, [panel]);
 
-  // Countdown timer
   useEffect(() => {
-    if (!lockoutEnd) {
-      setCountdown("");
-      return;
-    }
-
+    if (!lockoutEnd) { setCountdown(""); return; }
     const tick = () => {
       const remaining = lockoutEnd - Date.now();
       if (remaining <= 0) {
@@ -61,7 +55,6 @@ const PanelLogin = () => {
       const secs = Math.floor((remaining % 60000) / 1000);
       setCountdown(`${mins}:${secs.toString().padStart(2, "0")}`);
     };
-
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -71,192 +64,157 @@ const PanelLogin = () => {
     e.preventDefault();
     if (lockoutEnd && Date.now() < lockoutEnd) return;
     if (!panelConfig) return;
-
     setError("");
     setLoading(true);
-
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
-
         if (newAttempts >= MAX_ATTEMPTS) {
           const end = Date.now() + LOCKOUT_DURATION;
           setLockoutEnd(end);
-          localStorage.setItem(
-            `vencon_lockout_${panel}`,
-            JSON.stringify({ attempts: newAttempts, lockoutEnd: end })
-          );
+          localStorage.setItem(`vencon_lockout_${panel}`, JSON.stringify({ attempts: newAttempts, lockoutEnd: end }));
         }
-
         setError(t("invalid_creds"));
         setLoading(false);
         return;
       }
-
-      // Check panel access — query users table for this auth user's panel
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("panel")
-        .eq("auth_id", authData.user.id)
-        .single();
-
+      const { data: userData, error: userError } = await supabase.from("users").select("panel").eq("auth_id", authData.user.id).single();
       if (userError || !userData) {
         await supabase.auth.signOut();
         setError(t("invalid_creds"));
         setLoading(false);
         return;
       }
-
-      // Enforce panel isolation
       if (userData.panel !== panel) {
         await supabase.auth.signOut();
-        // Find the correct panel login path
         const correctPanel = getPanelByType(userData.panel as PanelType);
         setError(t("no_panel_access"));
         setLoading(false);
-        // Redirect to correct panel after a brief delay
-        if (correctPanel) {
-          setTimeout(() => {
-            navigate(correctPanel.loginPath);
-          }, 2000);
-        }
+        if (correctPanel) setTimeout(() => navigate(correctPanel.loginPath), 2000);
         return;
       }
-
-      // Success — flash accent color
       setFlashColor(true);
-      setTimeout(() => {
-        navigate(panelConfig.dashboardPath);
-      }, 250);
+      setTimeout(() => navigate(panelConfig.dashboardPath), 250);
     } catch {
       setError(t("invalid_creds"));
       setLoading(false);
     }
   }, [email, password, attempts, lockoutEnd, panel, panelConfig, navigate, t]);
 
-  if (!panelConfig) {
-    navigate("/");
-    return null;
-  }
-
+  if (!panelConfig) { navigate("/"); return null; }
   const isLocked = lockoutEnd !== null && Date.now() < lockoutEnd;
 
   return (
     <>
-      {/* Full screen flash on success */}
       {flashColor && (
-        <div
-          className="fixed inset-0 z-50 transition-opacity duration-200"
-          style={{ backgroundColor: panelConfig.color }}
-        />
+        <div className="fixed inset-0 z-50 transition-opacity duration-200" style={{ backgroundColor: panelConfig.color }} />
       )}
 
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex">
         <LanguageToggle />
 
-        <div className="w-full max-w-[400px] space-y-12">
-          {/* Logo */}
-          <div className="text-center space-y-3">
-            <h1 className="font-heading text-4xl font-bold tracking-[0.2em] text-foreground">
-              {t("vencon")}
-            </h1>
-            <p
-              className="font-heading text-sm tracking-wider"
-              style={{ color: panelConfig.color }}
-            >
-              {t(panelConfig.nameKey)}
-            </p>
+        {/* Left branding */}
+        <div className="hidden lg:flex flex-1 flex-col justify-end p-12">
+          <h1 className="font-heading text-6xl font-bold tracking-[0.25em] text-foreground">
+            VENCON
+          </h1>
+          <p className="mt-3 font-body text-base text-muted-foreground">
+            অপারেশন ম্যানেজমেন্ট
+          </p>
+          <div className="mt-auto pt-12">
+            <div className="w-20 h-1 rounded-full" style={{ backgroundColor: panelConfig.color }} />
+            <p className="mt-4 font-body text-xs text-muted-foreground">© ২০২৬ ভেনকন</p>
           </div>
+        </div>
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-1">
-              <label className="font-body text-xs text-muted-foreground tracking-wider uppercase">
-                {t("email")}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLocked}
-                required
-                className="w-full bg-transparent border border-border px-4 py-3 font-body text-foreground text-sm focus:outline-none transition-colors duration-200"
-                style={{
-                  borderColor: email ? panelConfig.color : undefined,
-                }}
-                onFocus={(e) => (e.target.style.borderColor = panelConfig.color)}
-                onBlur={(e) => {
-                  if (!email) e.target.style.borderColor = "";
-                }}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-body text-xs text-muted-foreground tracking-wider uppercase">
-                {t("password")}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLocked}
-                required
-                className="w-full bg-transparent border border-border px-4 py-3 font-body text-foreground text-sm focus:outline-none transition-colors duration-200"
-                style={{
-                  borderColor: password ? panelConfig.color : undefined,
-                }}
-                onFocus={(e) => (e.target.style.borderColor = panelConfig.color)}
-                onBlur={(e) => {
-                  if (!password) e.target.style.borderColor = "";
-                }}
-              />
-            </div>
-
-            {/* Error / Lockout message */}
-            {isLocked && (
-              <p className="font-body text-xs text-center" style={{ color: panelConfig.color }}>
-                {t("locked_msg")} {countdown}
-              </p>
-            )}
-            {error && !isLocked && (
-              <p className="font-body text-xs text-destructive text-center">{error}</p>
-            )}
-
-            {/* Login Button — Signature Moment */}
-            <button
-              type="submit"
-              disabled={isLocked || loading}
-              onMouseDown={() => setIsPressed(true)}
-              onMouseUp={() => setIsPressed(false)}
-              className="w-full py-4 font-heading text-sm tracking-[0.15em] uppercase transition-all duration-200 disabled:opacity-30"
-              style={{
-                backgroundColor: isPressed ? panelConfig.color : "transparent",
-                color: isPressed ? "#0A0A0A" : "hsl(var(--foreground))",
-                border: "1px solid hsl(var(--border))",
-                outline: "none",
-                boxShadow: "none",
-              }}
-              onMouseEnter={(e) => {
-                if (!isPressed) {
-                  e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${panelConfig.color}`;
-                  e.currentTarget.style.border = `1px solid ${panelConfig.color}`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                setIsPressed(false);
-                e.currentTarget.style.boxShadow = "none";
-                e.currentTarget.style.border = "1px solid hsl(var(--border))";
-              }}
+        {/* Right form */}
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 space-y-6">
+            {/* Icon */}
+            <div
+              className="w-14 h-14 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: panelConfig.color }}
             >
-              {loading ? "..." : t("login")}
-            </button>
-          </form>
+              <Shield className="h-6 w-6 text-background" />
+            </div>
+
+            <div>
+              <h2 className="font-heading text-xl font-bold text-foreground">
+                {t(panelConfig.nameKey)} Login
+              </h2>
+              <p className="font-body text-sm text-muted-foreground mt-1">
+                Access {t(panelConfig.nameKey).toLowerCase()} management
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="font-body text-sm font-medium text-foreground">
+                  {t("email")}
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLocked}
+                  required
+                  className="w-full bg-background border border-border rounded-lg px-4 py-3 font-body text-foreground text-sm focus:outline-none focus:ring-2 transition-all duration-200"
+                  style={{ "--tw-ring-color": panelConfig.color } as React.CSSProperties}
+                  onFocus={(e) => { e.target.style.borderColor = panelConfig.color; }}
+                  onBlur={(e) => { if (!email) e.target.style.borderColor = ""; }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-body text-sm font-medium text-foreground">
+                  {t("password")}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLocked}
+                    required
+                    className="w-full bg-background border border-border rounded-lg px-4 py-3 pr-10 font-body text-foreground text-sm focus:outline-none focus:ring-2 transition-all duration-200"
+                    style={{ "--tw-ring-color": panelConfig.color } as React.CSSProperties}
+                    onFocus={(e) => { e.target.style.borderColor = panelConfig.color; }}
+                    onBlur={(e) => { if (!password) e.target.style.borderColor = ""; }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {isLocked && (
+                <p className="font-body text-xs text-center" style={{ color: panelConfig.color }}>
+                  {t("locked_msg")} {countdown}
+                </p>
+              )}
+              {error && !isLocked && (
+                <p className="font-body text-xs text-destructive text-center">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLocked || loading}
+                className="w-full py-3.5 rounded-lg font-heading text-sm font-semibold tracking-wider transition-all duration-200 disabled:opacity-30"
+                style={{
+                  backgroundColor: panelConfig.color,
+                  color: "#0A0A0A",
+                }}
+              >
+                {loading ? "..." : t("login")}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </>

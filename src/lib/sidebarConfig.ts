@@ -15,10 +15,11 @@ import {
   MessageSquare,
   Target,
   UserCheck,
-  ShoppingCart,
-  Trash2,
   Phone,
   DollarSign,
+  Bell,
+  Gift,
+  Star,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
@@ -37,17 +38,21 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "analytics", icon: BarChart3, path: "/sa/analytics" },
     { titleKey: "warehouse", icon: Package, path: "/sa/warehouse" },
     { titleKey: "budget", icon: Wallet, path: "/sa/budget" },
+    { titleKey: "payroll", icon: CreditCard, path: "/sa/payroll" },
     { titleKey: "audit_logs", icon: ScrollText, path: "/sa/audit-logs" },
+    { titleKey: "notifications", icon: Bell, path: "/sa/notifications" },
     { titleKey: "settings", icon: Settings, path: "/sa/settings" },
   ],
   hr: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/hr/dashboard" },
     { titleKey: "campaigns", icon: Megaphone, path: "/hr/campaigns" },
     { titleKey: "employees", icon: Users, path: "/hr/employees" },
+    { titleKey: "warehouse", icon: Package, path: "/hr/warehouse" },
     { titleKey: "payroll", icon: CreditCard, path: "/hr/payroll" },
-    { titleKey: "attendance", icon: Clock, path: "/hr/attendance" },
-    { titleKey: "leaves", icon: CalendarOff, path: "/hr/leaves" },
+    { titleKey: "attendance_leaves", icon: Clock, path: "/hr/attendance" },
+    { titleKey: "customer_feedback", icon: Star, path: "/hr/feedback" },
     { titleKey: "chat", icon: MessageSquare, path: "/hr/chat" },
+    { titleKey: "notifications", icon: Bell, path: "/hr/notifications" },
     { titleKey: "settings", icon: Settings, path: "/hr/settings" },
   ],
   tl: [
@@ -56,6 +61,8 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team" },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics" },
     { titleKey: "chat", icon: MessageSquare, path: "/tl/chat" },
+    { titleKey: "notifications", icon: Bell, path: "/tl/notifications" },
+    { titleKey: "settings", icon: Settings, path: "/tl/settings" },
   ],
   employee: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
@@ -63,5 +70,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "attendance", icon: Clock, path: "/employee/attendance" },
     { titleKey: "salary", icon: DollarSign, path: "/employee/salary" },
     { titleKey: "chat", icon: MessageSquare, path: "/employee/chat" },
+    { titleKey: "notifications", icon: Bell, path: "/employee/notifications" },
+    { titleKey: "settings", icon: Settings, path: "/employee/settings" },
   ],
 };

@@ -44,6 +44,8 @@ export const translations: TranslationMap = {
   budget: { bn: "বাজেট", en: "Budget" },
   audit_logs: { bn: "অডিট লগ", en: "Audit Logs" },
   settings: { bn: "সেটিংস", en: "Settings" },
+  main_section: { bn: "প্রধান", en: "Main" },
+  settings_section: { bn: "সেটিংস", en: "Settings" },
   leaves: { bn: "ছুটি", en: "Leaves" },
   chat: { bn: "চ্যাট", en: "Chat" },
   my_team: { bn: "আমার টিম", en: "My Team" },
@@ -52,8 +54,10 @@ export const translations: TranslationMap = {
   my_leads: { bn: "আমার লিডস", en: "My Leads" },
   salary: { bn: "বেতন", en: "Salary" },
   profile: { bn: "প্রোফাইল", en: "Profile" },
-  notifications: { bn: "বিজ্ঞপ্তি", en: "Notifications" },
+  notifications: { bn: "নোটিফিকেশন", en: "Notifications" },
   chat_admin: { bn: "চ্যাট অ্যাডমিন", en: "Chat Admin" },
+  attendance_leaves: { bn: "উপস্থিতি ও ছুটি", en: "Attendance & Leaves" },
+  customer_feedback: { bn: "গ্রাহক প্রতিক্রিয়া", en: "Customer Feedback" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },

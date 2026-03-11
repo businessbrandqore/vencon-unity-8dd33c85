@@ -32,7 +32,7 @@
     --input: 0 0% 20%;
     --ring: 0 0% 96%;
 
-    --radius: 0px;
+    --radius: 0.75rem;
 
     /* Panel accent colors */
     --panel-sa: 174 84% 32%;
