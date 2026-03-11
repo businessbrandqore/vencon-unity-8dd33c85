@@ -144,8 +144,13 @@ export default function ManagerAttendance() {
       setShowCheckInModal(false);
       setCheckInMood("");
       setCheckInNote("");
-    await loadData();
-    toast.success("Check In সফল ✓");
+      await loadData();
+      toast.success("Check In সফল ✓");
+    } catch (err: any) {
+      setGpsError(err.message || "লোকেশন যাচাই ব্যর্থ");
+    } finally {
+      setGpsChecking(false);
+    }
   };
 
   // Check Out — NO deduction
