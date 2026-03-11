@@ -38,6 +38,11 @@ export default function MaintenanceOfficerDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Phone instruction
+  const [phoneInstruction, setPhoneInstruction] = useState("");
+  const [editingInstruction, setEditingInstruction] = useState(false);
+  const [instructionDraft, setInstructionDraft] = useState("");
+
   // Form
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState<number>(0);
