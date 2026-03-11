@@ -138,6 +138,8 @@ export default function EmployeeTSDashboard() {
   const [deskCondition, setDeskCondition] = useState("");
   const [deskNote, setDeskNote] = useState("");
   const [phoneMins, setPhoneMins] = useState<number>(0);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [deskNumber, setDeskNumber] = useState("");
   const [phoneInstruction, setPhoneInstruction] = useState("");
 
   /* mood */
