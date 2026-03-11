@@ -24,7 +24,7 @@ const TopNav = ({ onToggleSidebar }: TopNavProps) => {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem("vencon_theme");
     if (saved) return saved === "dark";
-    return true; // default dark
+    return false; // default light
   });
 
   useEffect(() => {
