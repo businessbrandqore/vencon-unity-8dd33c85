@@ -362,11 +362,77 @@ const HRPayroll = () => {
     "Maintenance Officer",
   ];
 
+  // Overview calculations
+  const totalBasic = salaries.reduce((s, e) => s + e.basic_salary, 0);
+  const totalIncentive = salaries.reduce((s, e) => s + e.incentive, 0);
+  const totalDeductions = salaries.reduce((s, e) => s + e.deductions, 0);
+  const totalNet = salaries.reduce((s, e) => s + e.net, 0);
+  const dailyNet = totalNet / 27;
+  const yearlyNet = totalNet * 12;
+
+  const [overviewMode, setOverviewMode] = useState<"daily" | "monthly" | "yearly">("monthly");
+
+  const overviewValue = overviewMode === "daily" ? dailyNet : overviewMode === "yearly" ? yearlyNet : totalNet;
+  const overviewBasic = overviewMode === "daily" ? totalBasic / 27 : overviewMode === "yearly" ? totalBasic * 12 : totalBasic;
+  const overviewIncentive = overviewMode === "daily" ? totalIncentive / 27 : overviewMode === "yearly" ? totalIncentive * 12 : totalIncentive;
+  const overviewDeduction = overviewMode === "daily" ? totalDeductions / 27 : overviewMode === "yearly" ? totalDeductions * 12 : totalDeductions;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <h2 className="font-heading text-2xl font-bold text-foreground">
         {isBn ? "পে-রোল ও ইনসেন্টিভ" : "Payroll & Incentives"}
       </h2>
+
+      {/* ── SALARY OVERVIEW ── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-lg font-bold text-foreground">
+            {isBn ? "বেতন ওভারভিউ" : "Salary Overview"}
+          </h3>
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            {(["daily", "monthly", "yearly"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setOverviewMode(mode)}
+                className={`px-3 py-1.5 text-xs font-heading rounded-md transition-colors ${
+                  overviewMode === mode
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "daily" ? (isBn ? "দৈনিক" : "Daily") :
+                 mode === "monthly" ? (isBn ? "মাসিক" : "Monthly") :
+                 (isBn ? "বাৎসরিক" : "Yearly")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <p className="text-xs text-muted-foreground mb-1">{isBn ? "মোট বেসিক" : "Total Basic"}</p>
+            <p className="text-xl font-heading font-bold text-foreground">৳{Math.round(overviewBasic).toLocaleString()}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{salaries.length} {isBn ? "জন কর্মচারী" : "employees"}</p>
+          </div>
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <p className="text-xs text-muted-foreground mb-1">{isBn ? "মোট ইনসেন্টিভ" : "Total Incentive"}</p>
+            <p className="text-xl font-heading font-bold text-green-500">+৳{Math.round(overviewIncentive).toLocaleString()}</p>
+          </div>
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <p className="text-xs text-muted-foreground mb-1">{isBn ? "মোট কর্তন" : "Total Deductions"}</p>
+            <p className="text-xl font-heading font-bold text-destructive">-৳{Math.round(overviewDeduction).toLocaleString()}</p>
+          </div>
+          <div className="border border-primary/30 rounded-xl p-4 bg-primary/5">
+            <p className="text-xs text-muted-foreground mb-1">{isBn ? "নেট বেতন" : "Net Salary"}</p>
+            <p className="text-xl font-heading font-bold text-primary">৳{Math.round(overviewValue).toLocaleString()}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {overviewMode === "daily" ? (isBn ? "÷ ২৭ কর্মদিবস" : "÷ 27 working days") :
+               overviewMode === "yearly" ? (isBn ? "× ১২ মাস" : "× 12 months") :
+               (isBn ? "এই মাসের মোট" : "This month total")}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* INCENTIVE TIERS */}
       <div className="space-y-4">
