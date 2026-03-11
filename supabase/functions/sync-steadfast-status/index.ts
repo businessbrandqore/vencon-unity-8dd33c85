@@ -78,10 +78,18 @@ Deno.serve(async (req) => {
 
         if (!newStatus || newStatus === order.delivery_status) continue;
 
-        // Update delivery status
+        // Extract rider info from Steadfast response
+        const riderName = data?.rider_name || data?.delivery_man?.name || null;
+        const riderPhone = data?.rider_phone || data?.delivery_man?.phone || null;
+
+        // Update delivery status and rider info
         await supabase
           .from("orders")
-          .update({ delivery_status: newStatus })
+          .update({
+            delivery_status: newStatus,
+            ...(riderName && { rider_name: riderName }),
+            ...(riderPhone && { rider_phone: riderPhone }),
+          })
           .eq("id", order.id);
 
         const orderShort = (order.id as string).slice(0, 8);

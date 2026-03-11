@@ -1027,6 +1027,8 @@ export type Database = {
           price: number | null
           product: string | null
           quantity: number | null
+          rider_name: string | null
+          rider_phone: string | null
           status: string | null
           steadfast_consignment_id: string | null
           steadfast_send_failed: boolean | null
@@ -1052,6 +1054,8 @@ export type Database = {
           price?: number | null
           product?: string | null
           quantity?: number | null
+          rider_name?: string | null
+          rider_phone?: string | null
           status?: string | null
           steadfast_consignment_id?: string | null
           steadfast_send_failed?: boolean | null
@@ -1077,6 +1081,8 @@ export type Database = {
           price?: number | null
           product?: string | null
           quantity?: number | null
+          rider_name?: string | null
+          rider_phone?: string | null
           status?: string | null
           steadfast_consignment_id?: string | null
           steadfast_send_failed?: boolean | null
