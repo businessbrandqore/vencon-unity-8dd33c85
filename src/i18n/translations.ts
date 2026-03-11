@@ -63,6 +63,7 @@ export const translations: TranslationMap = {
   chat_admin: { bn: "চ্যাট অ্যাডমিন", en: "Chat Admin" },
   attendance_leaves: { bn: "উপস্থিতি ও ছুটি", en: "Attendance & Leaves" },
   customer_feedback: { bn: "গ্রাহক প্রতিক্রিয়া", en: "Customer Feedback" },
+  my_attendance: { bn: "আমার উপস্থিতি", en: "My Attendance" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },

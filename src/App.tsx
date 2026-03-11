@@ -44,6 +44,7 @@ import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
 import DataTracker from "./pages/dashboard/DataTracker";
+import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/sa/audit-logs" element={<SAAuditLogs />} />
               <Route path="/sa/all-data" element={<SAAllData />} />
               <Route path="/sa/data-tracker" element={<DataTracker />} />
+              <Route path="/sa/attendance" element={<ManagerAttendance />} />
               <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/notifications" element={<NotificationsPage />} />
               <Route path="/sa/profile" element={<ProfileSettings />} />
@@ -95,6 +97,7 @@ const App = () => (
               <Route path="/hr/warehouse" element={<HRWarehouse />} />
               <Route path="/hr/data-monitor" element={<HRDataMonitor />} />
               <Route path="/hr/data-tracker" element={<DataTracker />} />
+              <Route path="/hr/my-attendance" element={<ManagerAttendance />} />
               <Route path="/hr/feedback" element={<HRFeedback />} />
               <Route path="/hr/documentation" element={<WebhookDocumentation />} />
               <Route path="/hr/settings" element={<HRSettings />} />
@@ -107,6 +110,7 @@ const App = () => (
               <Route path="/tl/dashboard" element={<TLDashboard />} />
               <Route path="/tl/leads" element={<TLLeads />} />
               <Route path="/tl/data-tracker" element={<DataTracker />} />
+              <Route path="/tl/attendance" element={<ManagerAttendance />} />
               <Route path="/tl/my-team" element={<TLTeam />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<ChatPage />} />
