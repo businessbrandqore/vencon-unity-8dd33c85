@@ -20,6 +20,7 @@ import {
   Bell,
   Gift,
   Star,
+  BookOpen,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
