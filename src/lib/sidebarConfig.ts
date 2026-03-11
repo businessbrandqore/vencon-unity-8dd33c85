@@ -68,6 +68,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker" },
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team" },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics" },
+    { titleKey: "attendance", icon: Clock, path: "/tl/attendance" },
     { titleKey: "chat", icon: MessageSquare, path: "/tl/chat" },
     { titleKey: "notifications", icon: Bell, path: "/tl/notifications" },
     { titleKey: "settings", icon: Settings, path: "/tl/settings" },
