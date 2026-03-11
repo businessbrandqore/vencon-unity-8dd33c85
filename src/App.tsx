@@ -34,6 +34,7 @@ import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import SAPayroll from "./pages/dashboard/SAPayroll";
+import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
