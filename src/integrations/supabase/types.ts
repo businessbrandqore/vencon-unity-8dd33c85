@@ -280,11 +280,50 @@ export type Database = {
           },
         ]
       }
+      campaign_websites: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          site_name: string
+          site_url: string
+          webhook_secret: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          site_name: string
+          site_url: string
+          webhook_secret?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          site_name?: string
+          site_url?: string
+          webhook_secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_websites_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           approved_by: string | null
           created_at: string | null
           created_by: string | null
+          data_mode: string
           description: string | null
           end_date: string | null
           id: string
@@ -298,6 +337,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_by?: string | null
+          data_mode?: string
           description?: string | null
           end_date?: string | null
           id?: string
@@ -311,6 +351,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_by?: string | null
+          data_mode?: string
           description?: string | null
           end_date?: string | null
           id?: string

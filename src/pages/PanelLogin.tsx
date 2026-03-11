@@ -124,20 +124,20 @@ const PanelLogin = () => {
             অপারেশন ম্যানেজমেন্ট
           </p>
           <div className="mt-auto pt-12">
-            <div className="w-20 h-1 rounded-full" style={{ backgroundColor: panelConfig.color }} />
+            <div className="w-20 h-1 rounded-full bg-primary" />
             <p className="mt-4 font-body text-xs text-muted-foreground">© ২০২৬ ভেনকন</p>
           </div>
         </div>
 
         {/* Right form */}
         <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
-          <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 space-y-6">
+          <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 space-y-6 shadow-sm">
             {/* Icon */}
             <div
               className="w-14 h-14 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: panelConfig.color }}
             >
-              <Shield className="h-6 w-6 text-background" />
+              <Shield className="h-6 w-6 text-white" />
             </div>
 
             <div>
@@ -160,10 +160,7 @@ const PanelLogin = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLocked}
                   required
-                  className="w-full bg-background border border-border rounded-lg px-4 py-3 font-body text-foreground text-sm focus:outline-none focus:ring-2 transition-all duration-200"
-                  style={{ "--tw-ring-color": panelConfig.color } as React.CSSProperties}
-                  onFocus={(e) => { e.target.style.borderColor = panelConfig.color; }}
-                  onBlur={(e) => { if (!email) e.target.style.borderColor = ""; }}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-3 font-body text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
                 />
               </div>
 
@@ -178,10 +175,7 @@ const PanelLogin = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLocked}
                     required
-                    className="w-full bg-background border border-border rounded-lg px-4 py-3 pr-10 font-body text-foreground text-sm focus:outline-none focus:ring-2 transition-all duration-200"
-                    style={{ "--tw-ring-color": panelConfig.color } as React.CSSProperties}
-                    onFocus={(e) => { e.target.style.borderColor = panelConfig.color; }}
-                    onBlur={(e) => { if (!password) e.target.style.borderColor = ""; }}
+                    className="w-full bg-background border border-border rounded-lg px-4 py-3 pr-10 font-body text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
                   />
                   <button
                     type="button"
@@ -194,7 +188,7 @@ const PanelLogin = () => {
               </div>
 
               {isLocked && (
-                <p className="font-body text-xs text-center" style={{ color: panelConfig.color }}>
+                <p className="font-body text-xs text-center text-primary">
                   {t("locked_msg")} {countdown}
                 </p>
               )}
@@ -205,11 +199,7 @@ const PanelLogin = () => {
               <button
                 type="submit"
                 disabled={isLocked || loading}
-                className="w-full py-3.5 rounded-lg font-heading text-sm font-semibold tracking-wider transition-all duration-200 disabled:opacity-30"
-                style={{
-                  backgroundColor: panelConfig.color,
-                  color: "#0A0A0A",
-                }}
+                className="w-full py-3.5 rounded-lg font-heading text-sm font-semibold tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 disabled:opacity-30"
               >
                 {loading ? "..." : t("login")}
               </button>

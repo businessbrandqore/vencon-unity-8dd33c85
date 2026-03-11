@@ -2,12 +2,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Apply saved theme on startup
-const savedTheme = localStorage.getItem("vencon_theme");
-if (savedTheme === "light") {
-  document.documentElement.classList.remove("dark");
-} else {
+// Apply saved theme (default: light)
+const saved = localStorage.getItem("vencon_theme");
+if (saved === "dark") {
   document.documentElement.classList.add("dark");
+} else {
+  document.documentElement.classList.remove("dark");
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

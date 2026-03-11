@@ -39,14 +39,13 @@ const Index = () => {
               <button
                 key={panel.type}
                 onClick={() => navigate(panel.loginPath)}
-                className="group bg-card border border-border rounded-xl p-7 text-left transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1"
+                className="group bg-card border border-border rounded-xl p-7 text-left transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
               >
-                {/* Icon */}
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                   style={{ backgroundColor: panel.color }}
                 >
-                  <Icon className="h-5 w-5 text-background" />
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
 
                 <h2 className="font-heading text-lg font-semibold text-foreground mb-2">
