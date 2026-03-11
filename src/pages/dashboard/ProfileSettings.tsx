@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { User, Volume2, Globe } from "lucide-react";
+import { User, Volume2, Globe, Camera, Loader2 } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -23,6 +24,7 @@ interface UserProfile {
   shift_end: string | null;
   department: string | null;
   designation: string | null;
+  avatar_url: string | null;
 }
 
 export default function ProfileSettings() {
@@ -31,10 +33,11 @@ export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState("bn");
   const [volume, setVolume] = useState(70);
-  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -68,15 +71,48 @@ export default function ProfileSettings() {
       toast.error("পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে");
     } else {
       toast.success("পাসওয়ার্ড পরিবর্তন হয়েছে ✓");
-      setOldPassword(""); setNewPassword(""); setConfirmPassword("");
-      // Clear must_change_password flag
+      setNewPassword(""); setConfirmPassword("");
       await supabase.from("users").update({ must_change_password: false }).eq("id", user!.id);
     }
     setChangingPassword(false);
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    if (file.size > 2 * 1024 * 1024) { toast.error("ফাইল ২MB এর বেশি হতে পারবে না"); return; }
+    if (!file.type.startsWith("image/")) { toast.error("শুধু ছবি আপলোড করুন"); return; }
+
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const filePath = `avatars/${user.id}.${ext}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from("app-assets")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error("ছবি আপলোড করতে সমস্যা হয়েছে");
+      setUploading(false);
+      return;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage.from("app-assets").getPublicUrl(filePath);
+    const avatarUrl = urlData.publicUrl + `?t=${Date.now()}`;
+
+    // Update user record
+    await supabase.from("users").update({ avatar_url: avatarUrl } as any).eq("id", user.id);
+    setProfile((p) => p ? { ...p, avatar_url: avatarUrl } : p);
+    setUploading(false);
+    toast.success("প্রোফাইল ছবি আপডেট হয়েছে ✓");
+  };
+
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
   if (!profile) return null;
+
+  const initials = profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div className="space-y-6">
@@ -84,38 +120,66 @@ export default function ProfileSettings() {
         <User className="h-5 w-5 text-primary" /> প্রোফাইল ও সেটিংস
       </h1>
 
-      {/* Profile Info */}
+      {/* Avatar & Profile Info */}
       <Card>
         <CardHeader><CardTitle className="text-sm font-heading">প্রোফাইল তথ্য</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-muted-foreground">নাম</Label>
-              <p className="font-medium mt-1">{profile.name}</p>
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* Avatar */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative group">
+                <Avatar className="h-24 w-24 border-2 border-border">
+                  {profile.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={profile.name} />
+                  ) : null}
+                  <AvatarFallback className="text-2xl font-heading bg-primary/10 text-primary">{initials}</AvatarFallback>
+                </Avatar>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {uploading ? <Loader2 className="h-6 w-6 text-white animate-spin" /> : <Camera className="h-6 w-6 text-white" />}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">ছবি পরিবর্তন করতে ক্লিক করুন</p>
             </div>
-            <div>
-              <Label className="text-muted-foreground">ইমেইল</Label>
-              <p className="font-medium mt-1">{profile.email}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">ফোন</Label>
-              <p className="font-medium mt-1">{profile.phone || "—"}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">পদবি</Label>
-              <p className="font-medium mt-1">{profile.designation || profile.role}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">বিভাগ</Label>
-              <p className="font-medium mt-1">{profile.department || "—"}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">শিফট</Label>
-              <p className="font-medium mt-1">
-                {profile.shift_start && profile.shift_end
-                  ? `${profile.shift_start} — ${profile.shift_end}`
-                  : "নির্ধারিত নয়"}
-              </p>
+
+            {/* Info Grid */}
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">নাম</Label>
+                <p className="font-medium mt-1">{profile.name}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">ইমেইল</Label>
+                <p className="font-medium mt-1">{profile.email}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">ফোন</Label>
+                <p className="font-medium mt-1">{profile.phone || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">পদবি</Label>
+                <p className="font-medium mt-1">{profile.designation || profile.role}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">বিভাগ</Label>
+                <p className="font-medium mt-1">{profile.department || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">শিফট</Label>
+                <p className="font-medium mt-1">
+                  {profile.shift_start && profile.shift_end ? `${profile.shift_start} — ${profile.shift_end}` : "নির্ধারিত নয়"}
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -138,7 +202,6 @@ export default function ProfileSettings() {
               </Select>
             </div>
           </div>
-
           <div className="flex items-center gap-4">
             <Volume2 className="h-5 w-5 text-muted-foreground" />
             <div className="flex-1">
@@ -146,10 +209,7 @@ export default function ProfileSettings() {
               <Slider value={[volume]} onValueChange={(v) => setVolume(v[0])} max={100} step={10} className="mt-2 w-[300px]" />
             </div>
           </div>
-
-          <Button onClick={savePreferences} className="bg-primary hover:bg-primary/80 text-primary-foreground">
-            সংরক্ষণ করুন
-          </Button>
+          <Button onClick={savePreferences} className="bg-primary hover:bg-primary/80 text-primary-foreground">সংরক্ষণ করুন</Button>
         </CardContent>
       </Card>
 
