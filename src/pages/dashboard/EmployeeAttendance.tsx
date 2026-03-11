@@ -97,6 +97,8 @@ export default function EmployeeAttendance() {
 
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
 
+  const todayRecord = attendance.find(a => a.date === new Date().toISOString().slice(0, 10));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -105,6 +107,53 @@ export default function EmployeeAttendance() {
         </h1>
         <Button onClick={() => setShowLeaveModal(true)} variant="outline">ছুটির আবেদন</Button>
       </div>
+
+      {/* Today's Status Card */}
+      <Card className="border-[hsl(var(--panel-employee)/0.3)]">
+        <CardContent className="pt-6">
+          <h3 className="font-heading text-sm mb-3 text-muted-foreground">আজকের স্ট্যাটাস</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1">Check In</p>
+              <p className="font-heading text-sm">
+                {todayRecord?.clock_in ? (
+                  <span className="text-green-500">{new Date(todayRecord.clock_in).toLocaleTimeString("bn-BD")}</span>
+                ) : (
+                  <span className="text-orange-400">করা হয়নি</span>
+                )}
+              </p>
+              {todayRecord?.is_late && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px] mt-1">Late</Badge>}
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1">Check Out</p>
+              <p className="font-heading text-sm">
+                {todayRecord?.clock_out ? (
+                  <span className="text-green-500">{new Date(todayRecord.clock_out).toLocaleTimeString("bn-BD")}</span>
+                ) : todayRecord?.clock_in ? (
+                  <span className="text-blue-400">চলমান</span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </p>
+              {todayRecord?.is_early_out && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px] mt-1">Early</Badge>}
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1">মুড</p>
+              <p className="text-xl">{todayRecord?.mood_in ? MOOD_EMOJIS[todayRecord.mood_in] || "—" : "—"}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1">আজকের কর্তন</p>
+              <p className="font-heading text-sm">
+                {Number(todayRecord?.deduction_amount) > 0 ? (
+                  <span className="text-destructive">৳{todayRecord?.deduction_amount}</span>
+                ) : (
+                  <span className="text-green-500">৳০</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

@@ -40,6 +40,7 @@ import TLTeam from "./pages/dashboard/TLTeam";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import EmployeeAttendance from "./pages/dashboard/EmployeeAttendance";
 import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
+import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
@@ -112,6 +113,7 @@ const App = () => (
             {/* Employee Panel Routes */}
             <Route element={<DashboardLayout panel="employee" />}>
               <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
+              <Route path="/employee/leads" element={<EmployeeLeads />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
               <Route path="/employee/chat" element={<ChatPage />} />
