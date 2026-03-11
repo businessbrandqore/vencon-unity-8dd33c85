@@ -38,7 +38,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
   const [deskReportDone, setDeskReportDone] = useState(false);
   const [clockedIn, setClockedIn] = useState(false);
 
-  const [showDeskModal, setShowDeskModal] = useState(false);
+  
   const [deskCondition, setDeskCondition] = useState("");
   const [deskNote, setDeskNote] = useState("");
   const [phoneMins, setPhoneMins] = useState(0);
