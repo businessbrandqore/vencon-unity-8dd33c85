@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Building2, Clock, Truck, RotateCcw } from "lucide-react";
+import { Building2, Truck, RotateCcw } from "lucide-react";
 
 interface CompanyInfo {
   company_name: string;
@@ -11,15 +11,6 @@ interface CompanyInfo {
   company_phone: string;
   company_email: string;
   company_logo_url: string;
-}
-
-interface ShiftConfig {
-  default_shift_start: string;
-  default_shift_end: string;
-  weekly_off_day: string;
-  monthly_off_count: number;
-  late_deduction: number;
-  early_out_deduction: number;
 }
 
 interface SteadfastConfig {
@@ -33,9 +24,8 @@ const SASettings = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
 
-  const [activeTab, setActiveTab] = useState<"company" | "shift" | "steadfast" | "reset">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "steadfast" | "reset">("company");
 
-  // Company Info
   const [company, setCompany] = useState<CompanyInfo>({
     company_name: "VENCON",
     company_address: "",
@@ -44,17 +34,6 @@ const SASettings = () => {
     company_logo_url: "",
   });
 
-  // Shift Config
-  const [shift, setShift] = useState<ShiftConfig>({
-    default_shift_start: "09:00",
-    default_shift_end: "18:00",
-    weekly_off_day: "friday",
-    monthly_off_count: 3,
-    late_deduction: 50,
-    early_out_deduction: 50,
-  });
-
-  // Steadfast Config
   const [steadfast, setSteadfast] = useState<SteadfastConfig>({
     api_key: "",
     secret_key: "",
@@ -63,8 +42,6 @@ const SASettings = () => {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Factory Reset state
   const [confirmText, setConfirmText] = useState("");
   const [showFinalModal, setShowFinalModal] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -75,14 +52,13 @@ const SASettings = () => {
       const { data } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["company_info", "shift_config", "steadfast_config"]);
+        .in("key", ["company_info", "steadfast_config"]);
 
       if (data) {
         for (const row of data) {
           const val = row.value as Record<string, unknown> | null;
           if (!val) continue;
           if (row.key === "company_info") setCompany((p) => ({ ...p, ...val }));
-          if (row.key === "shift_config") setShift((p) => ({ ...p, ...val }));
           if (row.key === "steadfast_config") setSteadfast((p) => ({ ...p, ...val }));
         }
       }
@@ -159,7 +135,6 @@ const SASettings = () => {
 
   const tabs = [
     { key: "company" as const, label: isBn ? "কোম্পানি তথ্য" : "Company Info", icon: Building2 },
-    { key: "shift" as const, label: isBn ? "শিফট ও ছুটি" : "Shift & Leave", icon: Clock },
     { key: "steadfast" as const, label: "Steadfast API", icon: Truck },
     { key: "reset" as const, label: isBn ? "ফ্যাক্টরি রিসেট" : "Factory Reset", icon: RotateCcw },
   ];
@@ -178,12 +153,11 @@ const SASettings = () => {
   const labelClass = "font-body text-xs text-muted-foreground mb-1 block";
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <h2 className="font-heading text-2xl font-bold text-foreground">
         {isBn ? "সেটিংস" : "Settings"}
       </h2>
 
-      {/* Tab Navigation */}
       <div className="flex flex-wrap gap-1 border-b border-border">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -204,9 +178,8 @@ const SASettings = () => {
         })}
       </div>
 
-      {/* Company Info */}
       {activeTab === "company" && (
-        <div className="bg-card border border-border rounded-xl p-6 space-y-5 max-w-2xl">
+        <div className="bg-card border border-border rounded-xl p-6 space-y-5">
           <h3 className="font-heading text-sm font-bold text-foreground">
             {isBn ? "কোম্পানি তথ্য" : "Company Information"}
           </h3>
@@ -238,51 +211,8 @@ const SASettings = () => {
         </div>
       )}
 
-      {/* Shift & Leave */}
-      {activeTab === "shift" && (
-        <div className="bg-card border border-border rounded-xl p-6 space-y-5 max-w-2xl">
-          <h3 className="font-heading text-sm font-bold text-foreground">
-            {isBn ? "শিফট ও ছুটি সেটিংস" : "Shift & Leave Settings"}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>{isBn ? "ডিফল্ট শিফট শুরু" : "Default Shift Start"}</label>
-              <input type="time" className={inputClass} value={shift.default_shift_start} onChange={(e) => setShift({ ...shift, default_shift_start: e.target.value })} />
-            </div>
-            <div>
-              <label className={labelClass}>{isBn ? "ডিফল্ট শিফট শেষ" : "Default Shift End"}</label>
-              <input type="time" className={inputClass} value={shift.default_shift_end} onChange={(e) => setShift({ ...shift, default_shift_end: e.target.value })} />
-            </div>
-            <div>
-              <label className={labelClass}>{isBn ? "সাপ্তাহিক ছুটির দিন" : "Weekly Off Day"}</label>
-              <select className={inputClass} value={shift.weekly_off_day} onChange={(e) => setShift({ ...shift, weekly_off_day: e.target.value })}>
-                {["friday", "saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"].map((d) => (
-                  <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>{isBn ? "মাসিক ছুটি (সংখ্যা)" : "Monthly Offs (count)"}</label>
-              <input type="number" className={inputClass} value={shift.monthly_off_count} onChange={(e) => setShift({ ...shift, monthly_off_count: Number(e.target.value) })} />
-            </div>
-            <div>
-              <label className={labelClass}>{isBn ? "দেরিতে আসার কর্তন (৳)" : "Late Deduction (৳)"}</label>
-              <input type="number" className={inputClass} value={shift.late_deduction} onChange={(e) => setShift({ ...shift, late_deduction: Number(e.target.value) })} />
-            </div>
-            <div>
-              <label className={labelClass}>{isBn ? "আগে যাওয়ার কর্তন (৳)" : "Early Out Deduction (৳)"}</label>
-              <input type="number" className={inputClass} value={shift.early_out_deduction} onChange={(e) => setShift({ ...shift, early_out_deduction: Number(e.target.value) })} />
-            </div>
-          </div>
-          <button onClick={() => saveSetting("shift_config", shift as any)} disabled={saving} className="px-5 py-2 text-xs font-heading bg-primary text-primary-foreground rounded-lg disabled:opacity-50">
-            {saving ? "..." : isBn ? "সেভ করুন" : "Save"}
-          </button>
-        </div>
-      )}
-
-      {/* Steadfast API */}
       {activeTab === "steadfast" && (
-        <div className="bg-card border border-border rounded-xl p-6 space-y-5 max-w-2xl">
+        <div className="bg-card border border-border rounded-xl p-6 space-y-5">
           <h3 className="font-heading text-sm font-bold text-foreground">Steadfast API Configuration</h3>
           <p className="font-body text-xs text-muted-foreground">
             {isBn ? "Steadfast Courier এর API তথ্য এখানে সেভ করুন। এটি অর্ডার dispatch-এ ব্যবহৃত হবে।" : "Save your Steadfast Courier API credentials here. Used for order dispatch."}
@@ -307,13 +237,11 @@ const SASettings = () => {
         </div>
       )}
 
-      {/* Factory Reset */}
       {activeTab === "reset" && (
-        <div className="border-2 border-destructive rounded-xl p-6 space-y-6 max-w-2xl">
+        <div className="border-2 border-destructive rounded-xl p-6 space-y-6">
           <h3 className="font-heading text-lg font-bold text-destructive">
             ⚠️ Factory Reset — {isBn ? "সতর্কতার সাথে ব্যবহার করুন" : "Use with extreme caution"}
           </h3>
-
           {done ? (
             <div className="p-4 border border-border rounded-lg">
               <p className="font-body text-sm text-emerald-500">
@@ -367,7 +295,6 @@ const SASettings = () => {
         </div>
       )}
 
-      {/* Final confirmation modal */}
       {showFinalModal && (
         <div className="fixed inset-0 bg-background/90 z-50 flex items-center justify-center p-4">
           <div className="bg-card border-2 border-destructive w-full max-w-md p-6 space-y-6 rounded-xl">
