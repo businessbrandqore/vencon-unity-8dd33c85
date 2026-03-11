@@ -74,9 +74,10 @@ const HREmployeeNew = () => {
     role: "",
     basicSalary: "",
     offDays: [] as string[],
-    clockIn: "09:00",
-    clockOut: "18:00",
-    gpsLocation: "",
+    checkIn: "09:00",
+    checkOut: "18:00",
+    gpsLatitude: "",
+    gpsLongitude: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
