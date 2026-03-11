@@ -338,7 +338,7 @@ export default function EmployeeTSDashboard() {
       } as any);
     }
     
-    setDeskReportDone(true);
+    setShowDeskModal(false);
     await loadAttendance();
     toast.success("ডেস্ক রিপোর্ট সংরক্ষণ করা হয়েছে");
   };
@@ -525,54 +525,61 @@ export default function EmployeeTSDashboard() {
     );
   }
 
-  /* ───── DESK REPORT (inline form, no modal) ───── */
+  /* ───── DESK REPORT BANNER ───── */
   if (!deskReportDone) {
     return (
       <div className="space-y-6">
-        <Card className="border-orange-500/30">
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-400" />
-              {t("desk_report")}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">{t("desk_report_pending")}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>{t("desk_condition")}</Label>
-              <RadioGroup value={deskCondition} onValueChange={setDeskCondition} className="mt-2 space-y-2">
-                <div className="flex items-center gap-2"><RadioGroupItem value="good" id="good" /><Label htmlFor="good">{t("desk_good")}</Label></div>
-                <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="acceptable" /><Label htmlFor="acceptable">{t("desk_acceptable")}</Label></div>
-                <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="needs_repair" /><Label htmlFor="needs_repair">{t("desk_needs_repair")}</Label></div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
-              <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => setShowDeskModal(true)}
+          className="w-full rounded-md border border-orange-500/50 bg-orange-500/10 p-6 text-center hover:bg-orange-500/20 transition-colors"
+        >
+          <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-orange-400" />
+          <p className="font-heading text-lg text-orange-300">{t("desk_report_pending")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("click_to_report")}</p>
+        </button>
+
+        <Dialog open={showDeskModal} onOpenChange={setShowDeskModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>{t("desk_report")}</DialogTitle></DialogHeader>
+            <div className="space-y-4">
               <div>
-                <Label>মোবাইল নাম্বার</Label>
-                <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" />
+                <Label>{t("desk_condition")}</Label>
+                <RadioGroup value={deskCondition} onValueChange={setDeskCondition} className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2"><RadioGroupItem value="good" id="good" /><Label htmlFor="good">{t("desk_good")}</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="acceptable" /><Label htmlFor="acceptable">{t("desk_acceptable")}</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="needs_repair" /><Label htmlFor="needs_repair">{t("desk_needs_repair")}</Label></div>
+                </RadioGroup>
               </div>
               <div>
-                <Label>ডেস্ক নাম্বার</Label>
-                <Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" />
+                <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
+                <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
               </div>
-            </div>
-            <div>
-              <Label>{t("phone_minutes")}</Label>
-              {phoneInstruction && (
-                <div className="mt-1 mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-300">
-                  <p className="font-medium mb-1">📱 মিনিট চেক করার নিয়ম:</p>
-                  <p className="whitespace-pre-wrap">{phoneInstruction}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>মোবাইল নাম্বার</Label>
+                  <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" />
                 </div>
-              )}
-              <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
+                <div>
+                  <Label>ডেস্ক নাম্বার</Label>
+                  <Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" />
+                </div>
+              </div>
+              <div>
+                <Label>{t("phone_minutes")}</Label>
+                {phoneInstruction && (
+                  <div className="mt-1 mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-300">
+                    <p className="font-medium mb-1">📱 মিনিট চেক করার নিয়ম:</p>
+                    <p className="whitespace-pre-wrap">{phoneInstruction}</p>
+                  </div>
+                )}
+                <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
+              </div>
             </div>
-            <Button onClick={handleDeskReportSubmit} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("save")}</Button>
-          </CardContent>
-        </Card>
+            <DialogFooter>
+              <Button onClick={handleDeskReportSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)]">{t("save")}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

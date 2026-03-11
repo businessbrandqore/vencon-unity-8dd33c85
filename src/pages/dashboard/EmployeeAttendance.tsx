@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut } from "lucide-react";
 
 interface AttendanceRow {
   id: string;
@@ -37,54 +39,159 @@ const MOOD_EMOJIS: Record<string, string> = {
   happy: "😊", sad: "😢", excited: "🎉", tired: "😴", neutral: "😐", angry: "😠",
 };
 
+const MOODS = [
+  { value: "happy", emoji: "😊", label: "খুশি" },
+  { value: "sad", emoji: "😢", label: "দুঃখিত" },
+  { value: "excited", emoji: "🎉", label: "উৎসাহিত" },
+  { value: "tired", emoji: "😴", label: "ক্লান্ত" },
+  { value: "neutral", emoji: "😐", label: "সাধারণ" },
+  { value: "angry", emoji: "😠", label: "রাগান্বিত" },
+];
+
+const LATE_DEDUCTION = 33;
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
 export default function EmployeeAttendance() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<{ shift_start: string | null; shift_end: string | null } | null>(null);
+
+  // Today's record
+  const [todayRecord, setTodayRecord] = useState<AttendanceRow | null>(null);
+
+  // Check In modal
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [checkInMood, setCheckInMood] = useState("");
+  const [checkInNote, setCheckInNote] = useState("");
+
+  // Check Out modal
+  const [showCheckOutModal, setShowCheckOutModal] = useState(false);
+  const [checkOutMood, setCheckOutMood] = useState("");
+  const [checkOutNote, setCheckOutNote] = useState("");
+
+  // Leave modal
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
 
+  // Load profile
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-
-      const [attRes, leaveRes] = await Promise.all([
-        supabase.from("attendance").select("*").eq("user_id", user.id)
-          .gte("date", monthStart.toISOString().slice(0, 10))
-          .order("date", { ascending: false }),
-        supabase.from("leave_requests").select("*").eq("user_id", user.id)
-          .order("created_at", { ascending: false }).limit(20),
-      ]);
-
-      if (attRes.data) setAttendance(attRes.data as AttendanceRow[]);
-      if (leaveRes.data) setLeaves(leaveRes.data as LeaveRequest[]);
-      setLoading(false);
+      const { data } = await supabase.from("users").select("shift_start, shift_end").eq("id", user.id).single();
+      if (data) setProfile(data);
     })();
   }, [user]);
+
+  const loadData = useCallback(async () => {
+    if (!user) return;
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [attRes, leaveRes] = await Promise.all([
+      supabase.from("attendance").select("*").eq("user_id", user.id)
+        .gte("date", monthStart.toISOString().slice(0, 10))
+        .order("date", { ascending: false }),
+      supabase.from("leave_requests").select("*").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(20),
+    ]);
+
+    if (attRes.data) {
+      const rows = attRes.data as AttendanceRow[];
+      setAttendance(rows);
+      setTodayRecord(rows.find(a => a.date === todayStr()) || null);
+    }
+    if (leaveRes.data) setLeaves(leaveRes.data as LeaveRequest[]);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const totalDeductions = attendance.reduce((s, a) => s + (Number(a.deduction_amount) || 0), 0);
   const lateDays = attendance.filter((a) => a.is_late).length;
   const earlyOuts = attendance.filter((a) => a.is_early_out).length;
   const presentDays = attendance.filter((a) => a.clock_in).length;
 
+  // Check In handler
+  const handleCheckIn = async () => {
+    if (!user || !checkInMood) { toast.error("মুড নির্বাচন করুন"); return; }
+    const now = new Date().toISOString();
+    let isLate = false;
+    if (profile?.shift_start) {
+      const parts = profile.shift_start.split(":");
+      const shiftDate = new Date();
+      shiftDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+      if (new Date() > shiftDate) isLate = true;
+    }
+
+    if (todayRecord) {
+      await supabase.from("attendance").update({
+        clock_in: now,
+        mood_in: checkInMood,
+        mood_note: checkInNote || null,
+        is_late: isLate,
+        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+      }).eq("id", todayRecord.id);
+    } else {
+      await supabase.from("attendance").insert({
+        user_id: user.id,
+        date: todayStr(),
+        clock_in: now,
+        mood_in: checkInMood,
+        mood_note: checkInNote || null,
+        is_late: isLate,
+        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+      });
+    }
+
+    setShowCheckInModal(false);
+    setCheckInMood("");
+    setCheckInNote("");
+    await loadData();
+    toast.success(isLate ? "Check In হয়েছে (Late — ৳33 কর্তন)" : "Check In সফল ✓");
+  };
+
+  // Check Out handler
+  const handleCheckOut = async () => {
+    if (!user || !checkOutMood) { toast.error("মুড নির্বাচন করুন"); return; }
+    const now = new Date();
+    let earlyOut = false;
+    let extraDeduction = 0;
+    if (profile?.shift_end) {
+      const parts = profile.shift_end.split(":");
+      const shiftEnd = new Date();
+      shiftEnd.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+      if (now < shiftEnd) { earlyOut = true; extraDeduction = LATE_DEDUCTION; }
+    }
+
+    if (todayRecord) {
+      await supabase.from("attendance").update({
+        clock_out: now.toISOString(),
+        mood_out: checkOutMood,
+        is_early_out: earlyOut,
+        deduction_amount: (Number(todayRecord.deduction_amount) || 0) + extraDeduction,
+      }).eq("id", todayRecord.id);
+    }
+
+    setShowCheckOutModal(false);
+    setCheckOutMood("");
+    setCheckOutNote("");
+    await loadData();
+    toast.success(earlyOut ? "Check Out হয়েছে (Early — ৳33 কর্তন)" : "Check Out সফল ✓");
+  };
+
   const handleLeaveSubmit = async () => {
     if (!user || !leaveStart || !leaveEnd) { toast.error("তারিখ দিন"); return; }
     await supabase.from("leave_requests").insert({
-      user_id: user.id,
-      start_date: leaveStart,
-      end_date: leaveEnd,
-      reason: leaveReason || null,
+      user_id: user.id, start_date: leaveStart, end_date: leaveEnd, reason: leaveReason || null,
     });
     toast.success("ছুটির আবেদন জমা হয়েছে ✓");
     setShowLeaveModal(false);
     setLeaveStart(""); setLeaveEnd(""); setLeaveReason("");
-    // Reload
     const { data } = await supabase.from("leave_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     if (data) setLeaves(data as LeaveRequest[]);
   };
@@ -97,7 +204,8 @@ export default function EmployeeAttendance() {
 
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
 
-  const todayRecord = attendance.find(a => a.date === new Date().toISOString().slice(0, 10));
+  const hasCheckedIn = !!todayRecord?.clock_in;
+  const hasCheckedOut = !!todayRecord?.clock_out;
 
   return (
     <div className="space-y-6">
@@ -108,48 +216,74 @@ export default function EmployeeAttendance() {
         <Button onClick={() => setShowLeaveModal(true)} variant="outline">ছুটির আবেদন</Button>
       </div>
 
-      {/* Today's Status Card */}
+      {/* Check In / Check Out Action Card */}
       <Card className="border-[hsl(var(--panel-employee)/0.3)]">
         <CardContent className="pt-6">
-          <h3 className="font-heading text-sm mb-3 text-muted-foreground">আজকের স্ট্যাটাস</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Check In</p>
-              <p className="font-heading text-sm">
-                {todayRecord?.clock_in ? (
-                  <span className="text-green-500">{new Date(todayRecord.clock_in).toLocaleTimeString("bn-BD")}</span>
-                ) : (
-                  <span className="text-orange-400">করা হয়নি</span>
-                )}
-              </p>
-              {todayRecord?.is_late && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px] mt-1">Late</Badge>}
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            {/* Today's status */}
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">Check In</p>
+                <p className="font-heading text-sm">
+                  {hasCheckedIn ? (
+                    <span className="text-green-500">{new Date(todayRecord!.clock_in!).toLocaleTimeString("bn-BD")}</span>
+                  ) : (
+                    <span className="text-orange-400">করা হয়নি</span>
+                  )}
+                </p>
+                {todayRecord?.is_late && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px] mt-1">Late</Badge>}
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">Check Out</p>
+                <p className="font-heading text-sm">
+                  {hasCheckedOut ? (
+                    <span className="text-green-500">{new Date(todayRecord!.clock_out!).toLocaleTimeString("bn-BD")}</span>
+                  ) : hasCheckedIn ? (
+                    <span className="text-blue-400">চলমান</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </p>
+                {todayRecord?.is_early_out && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px] mt-1">Early</Badge>}
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">মুড</p>
+                <p className="text-xl">{todayRecord?.mood_in ? MOOD_EMOJIS[todayRecord.mood_in] || "—" : "—"}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">আজকের কর্তন</p>
+                <p className="font-heading text-sm">
+                  {Number(todayRecord?.deduction_amount) > 0 ? (
+                    <span className="text-destructive">৳{todayRecord?.deduction_amount}</span>
+                  ) : (
+                    <span className="text-green-500">৳০</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Check Out</p>
-              <p className="font-heading text-sm">
-                {todayRecord?.clock_out ? (
-                  <span className="text-green-500">{new Date(todayRecord.clock_out).toLocaleTimeString("bn-BD")}</span>
-                ) : todayRecord?.clock_in ? (
-                  <span className="text-blue-400">চলমান</span>
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </p>
-              {todayRecord?.is_early_out && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px] mt-1">Early</Badge>}
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">মুড</p>
-              <p className="text-xl">{todayRecord?.mood_in ? MOOD_EMOJIS[todayRecord.mood_in] || "—" : "—"}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">আজকের কর্তন</p>
-              <p className="font-heading text-sm">
-                {Number(todayRecord?.deduction_amount) > 0 ? (
-                  <span className="text-destructive">৳{todayRecord?.deduction_amount}</span>
-                ) : (
-                  <span className="text-green-500">৳০</span>
-                )}
-              </p>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 sm:flex-col">
+              {!hasCheckedIn && (
+                <Button
+                  onClick={() => { setCheckInMood(""); setCheckInNote(""); setShowCheckInModal(true); }}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <LogIn className="h-4 w-4 mr-2" /> Check In
+                </Button>
+              )}
+              {hasCheckedIn && !hasCheckedOut && (
+                <Button
+                  onClick={() => { setCheckOutMood(""); setCheckOutNote(""); setShowCheckOutModal(true); }}
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-4 w-4 mr-2" /> Check Out
+                </Button>
+              )}
+              {hasCheckedIn && hasCheckedOut && (
+                <Badge variant="outline" className="text-green-500 border-green-600/50 px-4 py-2">✓ সম্পূর্ণ</Badge>
+              )}
             </div>
           </div>
         </CardContent>
@@ -251,6 +385,54 @@ export default function EmployeeAttendance() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Check In Modal */}
+      <Dialog open={showCheckInModal} onOpenChange={setShowCheckInModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Check In — মুড নির্বাচন</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {MOODS.map((m) => (
+                <button key={m.value} onClick={() => setCheckInMood(m.value)} className={cn("flex flex-col items-center rounded-md border p-3 transition-all", checkInMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border")}>
+                  <span className="text-2xl mb-1">{m.emoji}</span>
+                  <span className="text-xs">{m.label}</span>
+                </button>
+              ))}
+            </div>
+            <div>
+              <Label>মন্তব্য (ঐচ্ছিক)</Label>
+              <Textarea value={checkInNote} onChange={(e) => setCheckInNote(e.target.value)} className="mt-1" rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCheckIn} disabled={!checkInMood} className="bg-green-600 hover:bg-green-700 text-white">Check In নিশ্চিত করুন</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Check Out Modal */}
+      <Dialog open={showCheckOutModal} onOpenChange={setShowCheckOutModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Check Out — মুড নির্বাচন</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {MOODS.map((m) => (
+                <button key={m.value} onClick={() => setCheckOutMood(m.value)} className={cn("flex flex-col items-center rounded-md border p-3 transition-all", checkOutMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border")}>
+                  <span className="text-2xl mb-1">{m.emoji}</span>
+                  <span className="text-xs">{m.label}</span>
+                </button>
+              ))}
+            </div>
+            <div>
+              <Label>মন্তব্য (ঐচ্ছিক)</Label>
+              <Textarea value={checkOutNote} onChange={(e) => setCheckOutNote(e.target.value)} className="mt-1" rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCheckOut} disabled={!checkOutMood} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">Check Out নিশ্চিত করুন</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Leave Modal */}
       <Dialog open={showLeaveModal} onOpenChange={setShowLeaveModal}>
