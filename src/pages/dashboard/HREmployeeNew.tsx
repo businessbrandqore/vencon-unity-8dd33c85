@@ -336,13 +336,14 @@ const HREmployeeNew = () => {
                 <span>
                   {isBn ? "দৈনিক:" : "Daily:"}{" "}
                   <span className="text-foreground font-bold">
-                    ৳{(Number(form.basicSalary) / 26).toFixed(0)}
+                    ৳{(Number(form.basicSalary) / 27).toFixed(0)}
                   </span>
+                  <span className="text-muted-foreground text-[10px]">(৩০ − ৩ ছুটি = ২৭ দিন)</span>
                 </span>
                 <span>
                   {isBn ? "ঘন্টায়:" : "Hourly:"}{" "}
                   <span className="text-foreground font-bold">
-                    ৳{(Number(form.basicSalary) / 26 / 9).toFixed(0)}
+                    ৳{(Number(form.basicSalary) / 27 / 9).toFixed(0)}
                   </span>
                 </span>
               </div>

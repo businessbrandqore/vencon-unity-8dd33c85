@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
 
 const BLUE = "#1D4ED8";
@@ -77,10 +84,19 @@ const HRAttendance = () => {
   const [newHolidayTitle, setNewHolidayTitle] = useState("");
   const [showHolidayForm, setShowHolidayForm] = useState(false);
 
+  // Employee Individual Offs
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [empOffDate, setEmpOffDate] = useState("");
+  const [empOffs, setEmpOffs] = useState<{ id: string; user_id: string; user_name: string; off_date: string }[]>([]);
+  const [showEmpOffForm, setShowEmpOffForm] = useState(false);
+
   useEffect(() => {
     fetchMonthData();
     fetchAppeals();
     fetchHolidays();
+    fetchEmployees();
+    fetchEmpOffs();
   }, [selectedMonth]);
 
   const fetchMonthData = async () => {
@@ -199,6 +215,75 @@ const HRAttendance = () => {
   const removeHoliday = async (id: string) => {
     await supabase.from("monthly_holidays").delete().eq("id", id);
     fetchHolidays();
+  };
+
+  const fetchEmployees = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("id, name")
+      .eq("is_active", true)
+      .neq("panel", "sa")
+      .order("name");
+    setEmployees(data || []);
+  };
+
+  const fetchEmpOffs = async () => {
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+    const { data: offRows } = await supabase
+      .from("employee_monthly_offs")
+      .select("id, user_id, off_date")
+      .eq("year", yr)
+      .eq("month", mo)
+      .order("off_date") as any;
+
+    if (!offRows || offRows.length === 0) {
+      setEmpOffs([]);
+      return;
+    }
+
+    const userIds = [...new Set(offRows.map((r: any) => r.user_id))];
+    const { data: usersData } = await supabase.from("users").select("id, name").in("id", userIds as string[]);
+    const userMap: Record<string, string> = {};
+    (usersData || []).forEach((u) => { userMap[u.id] = u.name; });
+
+    setEmpOffs(offRows.map((r: any) => ({
+      id: r.id,
+      user_id: r.user_id,
+      user_name: userMap[r.user_id] || "Unknown",
+      off_date: r.off_date,
+    })));
+  };
+
+  const addEmpOff = async () => {
+    if (!selectedEmployee || !empOffDate || !user) return;
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+
+    // Check limit: max 3 per employee per month
+    const existing = empOffs.filter((o) => o.user_id === selectedEmployee);
+    if (existing.length >= 3) {
+      toast({ title: isBn ? "এই মাসে এই কর্মচারীর জন্য সর্বোচ্চ ৩ দিন ছুটি দেওয়া যায়" : "Max 3 off days per employee per month", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await (supabase.from("employee_monthly_offs") as any).insert({
+      user_id: selectedEmployee,
+      off_date: empOffDate,
+      month: mo,
+      year: yr,
+      assigned_by: user.id,
+    });
+    if (error) {
+      toast({ title: error.message, variant: "destructive" });
+      return;
+    }
+    setEmpOffDate("");
+    fetchEmpOffs();
+    toast({ title: isBn ? "ছুটি বরাদ্দ হয়েছে ✓" : "Off day assigned ✓" });
+  };
+
+  const removeEmpOff = async (id: string) => {
+    await (supabase.from("employee_monthly_offs") as any).delete().eq("id", id);
+    fetchEmpOffs();
   };
 
   const openDateDetail = async (date: string) => {
@@ -406,7 +491,7 @@ const HRAttendance = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-heading text-lg font-bold text-foreground">
-            {isBn ? "মাসিক ছুটির দিন" : "Monthly Holidays"}
+            {isBn ? "অতিরিক্ত ছুটি (সবার জন্য)" : "Extra Holidays (For All)"}
           </h3>
           <Button
             variant="outline"
@@ -487,6 +572,99 @@ const HRAttendance = () => {
         )}
       </div>
 
+      {/* Per-Employee Monthly Off Days */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-lg font-bold text-foreground">
+            {isBn ? "কর্মচারী ব্যক্তিগত ছুটি (প্রতি মাসে ৩ দিন)" : "Employee Individual Offs (3 per month)"}
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEmpOffForm(!showEmpOffForm)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {isBn ? "ছুটি বরাদ্দ করুন" : "Assign Off Day"}
+          </Button>
+        </div>
+
+        {showEmpOffForm && (
+          <div className="border border-border p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "কর্মচারী *" : "Employee *"}
+                </label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger className="bg-background border-border text-foreground w-full">
+                    <SelectValue placeholder={isBn ? "কর্মচারী নির্বাচন" : "Select employee"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-60">
+                    {employees.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "তারিখ *" : "Date *"}
+                </label>
+                <Input
+                  type="date"
+                  value={empOffDate}
+                  onChange={(e) => setEmpOffDate(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={addEmpOff} size="sm" style={{ backgroundColor: BLUE }} className="text-white">
+                  {isBn ? "বরাদ্দ করুন" : "Assign"}
+                </Button>
+              </div>
+            </div>
+            {selectedEmployee && (
+              <p className="text-xs text-muted-foreground font-body">
+                {isBn ? `এই মাসে বরাদ্দ: ${empOffs.filter(o => o.user_id === selectedEmployee).length}/৩ দিন` : `Assigned this month: ${empOffs.filter(o => o.user_id === selectedEmployee).length}/3 days`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {empOffs.length === 0 ? (
+          <p className="text-xs text-muted-foreground font-body border border-border p-4 text-center">
+            {isBn ? "এই মাসে কোনো ব্যক্তিগত ছুটি বরাদ্দ করা হয়নি" : "No individual offs assigned this month"}
+          </p>
+        ) : (
+          <div className="border border-border">
+            <table className="w-full text-sm font-body">
+              <thead>
+                <tr className="bg-secondary text-muted-foreground text-[11px]">
+                  <th className="text-left p-3">{isBn ? "কর্মচারী" : "Employee"}</th>
+                  <th className="text-left p-3">{isBn ? "তারিখ" : "Date"}</th>
+                  <th className="text-right p-3">{isBn ? "অ্যাকশন" : "Action"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {empOffs.map((o) => (
+                  <tr key={o.id}>
+                    <td className="p-3 text-foreground font-bold">{o.user_name}</td>
+                    <td className="p-3 text-foreground">{o.off_date}</td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => removeEmpOff(o.id)}
+                        className="text-destructive hover:text-destructive/80"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       {/* Date Detail Dialog */}
       <Dialog open={!!detailDate} onOpenChange={(o) => { if (!o) setDetailDate(null); }}>
         <DialogContent className="bg-card border-border max-w-3xl max-h-[80vh] overflow-y-auto">
