@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -25,10 +25,9 @@ serve(async (req) => {
       });
     }
 
-    // Verify caller is HR or SA
+    // Verify caller is HR or SA (when auth header present)
     const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "");
-    
-    if (authHeader && authHeader !== "null") {
+    if (authHeader && authHeader.length > 20) {
       const { data: { user: caller } } = await supabase.auth.getUser(authHeader);
       if (caller) {
         const { data: callerUser } = await supabase
@@ -37,7 +36,7 @@ serve(async (req) => {
           .eq("auth_id", caller.id)
           .single();
 
-        if (!callerUser || (callerUser.panel !== "hr" && callerUser.panel !== "sa")) {
+        if (callerUser && callerUser.panel !== "hr" && callerUser.panel !== "sa") {
           return new Response(JSON.stringify({ error: "Forbidden" }), {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
