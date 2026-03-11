@@ -94,6 +94,7 @@ const App = () => (
               <Route path="/hr/leads/import" element={<HRLeadImport />} />
               <Route path="/hr/warehouse" element={<HRWarehouse />} />
               <Route path="/hr/data-monitor" element={<HRDataMonitor />} />
+              <Route path="/hr/data-tracker" element={<DataTracker />} />
               <Route path="/hr/feedback" element={<HRFeedback />} />
               <Route path="/hr/documentation" element={<WebhookDocumentation />} />
               <Route path="/hr/settings" element={<HRSettings />} />
