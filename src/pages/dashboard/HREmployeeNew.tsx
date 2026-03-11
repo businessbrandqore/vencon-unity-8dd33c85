@@ -32,15 +32,6 @@ const ROLES = [
   "Maintenance Officer",
 ];
 
-const DAYS = [
-  { value: "sat", label: "Sat", bn: "শনি" },
-  { value: "sun", label: "Sun", bn: "রবি" },
-  { value: "mon", label: "Mon", bn: "সোম" },
-  { value: "tue", label: "Tue", bn: "মঙ্গল" },
-  { value: "wed", label: "Wed", bn: "বুধ" },
-  { value: "thu", label: "Thu", bn: "বৃহঃ" },
-  { value: "fri", label: "Fri", bn: "শুক্র" },
-];
 
 const GUARDIAN_TYPES = [
   { value: "father", bn: "পিতা", en: "Father" },
