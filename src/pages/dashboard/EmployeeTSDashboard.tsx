@@ -543,7 +543,17 @@ export default function EmployeeTSDashboard() {
                 </RadioGroup>
               </div>
               <div>
+                <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
+                <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
+              </div>
+              <div>
                 <Label>{t("phone_minutes")}</Label>
+                {phoneInstruction && (
+                  <div className="mt-1 mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-300">
+                    <p className="font-medium mb-1">📱 মিনিট চেক করার নিয়ম:</p>
+                    <p className="whitespace-pre-wrap">{phoneInstruction}</p>
+                  </div>
+                )}
                 <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
               </div>
             </div>
