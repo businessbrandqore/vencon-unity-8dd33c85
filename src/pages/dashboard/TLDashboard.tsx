@@ -166,7 +166,7 @@ const TLDashboard = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="font-heading text-2xl font-bold text-foreground">
-            {isBn ? "TL ড্যাশবোর্ড" : "TL Dashboard"}
+            {isBDO ? (isBn ? "BDO ড্যাশবোর্ড" : "BDO Dashboard") : (isBn ? "TL ড্যাশবোর্ড" : "TL Dashboard")}
           </h2>
           <p className="font-body text-sm text-muted-foreground mt-1">
             {isBn ? "স্বাগতম" : "Welcome"}, {user.name}

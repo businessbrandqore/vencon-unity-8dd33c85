@@ -24,6 +24,7 @@ export const translations: TranslationMap = {
   sa_panel: { bn: "সুপার অ্যাডমিন প্যানেল", en: "Super Admin Panel" },
   hr_panel: { bn: "এইচআর প্যানেল", en: "HR Panel" },
   tl_panel: { bn: "টিম লিডার প্যানেল", en: "Team Leader Panel" },
+  bdo_panel: { bn: "বিডিও প্যানেল", en: "BDO Panel" },
   employee_panel: { bn: "এমপ্লয়ী প্যানেল", en: "Employee Panel" },
   sa_desc: { bn: "ম্যানেজিং ডিরেক্টর, অপারেশন ম্যানেজার, ওয়্যারহাউস ডিরেক্টর", en: "MD, Operations Manager, Warehouse Director" },
   hr_desc: { bn: "এইচআর ম্যানেজার", en: "HR Manager" },

@@ -105,33 +105,45 @@ const TLLeads = () => {
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
 
-    const { data: fresh } = await supabase.from("leads").select("*")
-      .eq("campaign_id", selectedCampaign).eq("tl_id", user.id)
+    let freshQ = supabase.from("leads").select("*")
+      .eq("campaign_id", selectedCampaign)
       .is("assigned_to", null).eq("status", "fresh").order("created_at", { ascending: false });
+    if (!isBDO) freshQ = freshQ.eq("tl_id", user.id);
+    const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
 
-    const { data: cso } = await supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
-      .eq("tl_id", user.id).eq("status", "pending_cso").order("created_at", { ascending: false });
+    let csoQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
+      .eq("status", "pending_cso").order("created_at", { ascending: false });
+    if (!isBDO) csoQ = csoQ.eq("tl_id", user.id);
+    const { data: cso } = await csoQ;
     setCsoOrders(cso || []);
 
-    const { data: callDone } = await supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
-      .eq("tl_id", user.id).eq("status", "call_done").order("created_at", { ascending: false });
+    let callDoneQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
+      .eq("status", "call_done").order("created_at", { ascending: false });
+    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", user.id);
+    const { data: callDone } = await callDoneQ;
     setCallDoneOrders(callDone || []);
 
-    const { data: pre } = await supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
-      .eq("tl_id", user.id).eq("status", "pending").order("created_at", { ascending: false });
+    let preQ = supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
+      .eq("status", "pending").order("created_at", { ascending: false });
+    if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    const { data: pre } = await preQ;
     setPreOrders(pre || []);
 
-    const { data: del } = await supabase.from("leads").select("*")
-      .eq("campaign_id", selectedCampaign).eq("tl_id", user.id)
+    let delQ = supabase.from("leads").select("*")
+      .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5).order("updated_at", { ascending: false });
+    if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
-    // Processing leads (status = 'processing' or data_mode campaigns)
+    // Processing leads
     if (campaignMode === "processing") {
-      const { data: proc } = await supabase.from("leads").select("*")
-        .eq("campaign_id", selectedCampaign).eq("tl_id", user.id)
+      let procQ = supabase.from("leads").select("*")
+        .eq("campaign_id", selectedCampaign)
         .is("assigned_to", null).order("created_at", { ascending: false });
+      if (!isBDO) procQ = procQ.eq("tl_id", user.id);
+      const { data: proc } = await procQ;
       setProcessingLeads(proc || []);
     }
   }, [user, selectedCampaign, campaignMode]);
