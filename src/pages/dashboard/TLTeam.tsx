@@ -9,13 +9,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Search, Users, Target, CheckCircle, TrendingUp, RefreshCw, Filter } from "lucide-react";
+import { Search, Users, Target, CheckCircle, TrendingUp, RefreshCw, Filter, Shield, UserCheck } from "lucide-react";
 
-interface AgentRow {
-  id: string;
-  agentId: string;
-  agentName: string;
+interface TeamMember {
+  id: string; // user id or campaign_agent_roles id for agents
+  oderId: string; // original db row id for toggles
+  userId: string;
+  name: string;
+  role: string;
+  designation: string | null;
+  phone: string | null;
+  email: string;
+  isActive: boolean;
+  memberType: "tl" | "agent";
   isBronze: boolean;
   isSilver: boolean;
   todayLeads: number;
@@ -26,29 +34,29 @@ interface AgentRow {
   monthlyRatio: number;
 }
 
-type RoleFilter = "all" | "bronze" | "silver" | "both" | "none";
+type MemberFilter = "all" | "tl" | "bronze" | "silver" | "both" | "no_role";
 type SortField = "name" | "todayLeads" | "todayConfirmed" | "todayReceiveRatio" | "monthlyRatio";
 
 const TLTeam = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, roleName } = useLanguage();
   const isBn = t("vencon") === "VENCON";
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
-  const [agents, setAgents] = useState<AgentRow[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Search & filter state
+  // Search & filter
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [memberFilter, setMemberFilter] = useState<MemberFilter>("all");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortAsc, setSortAsc] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    const fetch = async () => {
+    const fetchCampaigns = async () => {
       if (isBDO) {
         const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
         if (data) {
@@ -65,21 +73,12 @@ const TLTeam = () => {
         }
       }
     };
-    fetch();
+    fetchCampaigns();
   }, [user]);
 
   const loadTeam = useCallback(async () => {
     if (!user || !selectedCampaign) return;
     setLoading(true);
-
-    let rolesQ = supabase
-      .from("campaign_agent_roles")
-      .select("id, agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
-      .eq("campaign_id", selectedCampaign);
-    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
-    const { data: roles } = await rolesQ;
-
-    if (!roles) { setLoading(false); return; }
 
     const today = new Date().toISOString().split("T")[0];
     const startOfDay = `${today}T00:00:00.000Z`;
@@ -87,42 +86,115 @@ const TLTeam = () => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const agentRows: AgentRow[] = [];
-    for (const r of roles as any[]) {
-      const agentId = r.users.id;
+    const allMembers: TeamMember[] = [];
 
-      const [
-        { count: todayLeads },
-        { count: todayConfirmed },
-        { count: todayDelivered },
-        { count: monthlyConfirmed },
-        { count: monthlyDelivered },
-      ] = await Promise.all([
-        supabase.from("leads").select("*", { count: "exact", head: true }).eq("assigned_to", agentId).gte("created_at", startOfDay),
-        supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", agentId).gte("created_at", startOfDay),
-        supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", agentId).eq("delivery_status", "delivered").gte("created_at", startOfDay),
-        supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", agentId).gte("created_at", startOfMonth.toISOString()),
-        supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", agentId).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
-      ]);
+    // 1. Fetch Team Leaders for this campaign
+    let tlQuery = supabase
+      .from("campaign_tls")
+      .select("tl_id, users!campaign_tls_tl_id_fkey(id, name, role, designation, phone, email, is_active)")
+      .eq("campaign_id", selectedCampaign);
+    if (!isBDO) tlQuery = tlQuery.eq("tl_id", user.id);
+    const { data: tlData } = await tlQuery;
 
-      const todayRatio = todayConfirmed && todayConfirmed > 0 ? Math.round(((todayDelivered || 0) / todayConfirmed) * 100) : 0;
-      const mRatio = monthlyConfirmed && monthlyConfirmed > 0 ? Math.round(((monthlyDelivered || 0) / monthlyConfirmed) * 100) : 0;
+    if (tlData) {
+      for (const tl of tlData as any[]) {
+        const u = tl.users;
+        if (!u) continue;
 
-      agentRows.push({
-        id: r.id,
-        agentId,
-        agentName: r.users.name,
-        isBronze: r.is_bronze,
-        isSilver: r.is_silver,
-        todayLeads: todayLeads || 0,
-        todayConfirmed: todayConfirmed || 0,
-        todayReceiveRatio: todayRatio,
-        monthlyConfirmed: monthlyConfirmed || 0,
-        monthlyDelivered: monthlyDelivered || 0,
-        monthlyRatio: mRatio,
-      });
+        const [
+          { count: todayLeads },
+          { count: todayConfirmed },
+          { count: todayDelivered },
+          { count: monthlyConfirmed },
+          { count: monthlyDelivered },
+        ] = await Promise.all([
+          supabase.from("leads").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfDay),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfDay),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfDay),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfMonth.toISOString()),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
+        ]);
+
+        const tRatio = todayConfirmed && todayConfirmed > 0 ? Math.round(((todayDelivered || 0) / todayConfirmed) * 100) : 0;
+        const mRatio = monthlyConfirmed && monthlyConfirmed > 0 ? Math.round(((monthlyDelivered || 0) / monthlyConfirmed) * 100) : 0;
+
+        allMembers.push({
+          id: `tl-${u.id}`,
+          oderId: "",
+          userId: u.id,
+          name: u.name,
+          role: u.role,
+          designation: u.designation,
+          phone: u.phone,
+          email: u.email,
+          isActive: u.is_active !== false,
+          memberType: "tl",
+          isBronze: false,
+          isSilver: false,
+          todayLeads: todayLeads || 0,
+          todayConfirmed: todayConfirmed || 0,
+          todayReceiveRatio: tRatio,
+          monthlyConfirmed: monthlyConfirmed || 0,
+          monthlyDelivered: monthlyDelivered || 0,
+          monthlyRatio: mRatio,
+        });
+      }
     }
-    setAgents(agentRows);
+
+    // 2. Fetch Agents for this campaign
+    let rolesQ = supabase
+      .from("campaign_agent_roles")
+      .select("id, agent_id, is_bronze, is_silver, tl_id, users!campaign_agent_roles_agent_id_fkey(id, name, role, designation, phone, email, is_active)")
+      .eq("campaign_id", selectedCampaign);
+    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    const { data: roles } = await rolesQ;
+
+    if (roles) {
+      for (const r of roles as any[]) {
+        const u = r.users;
+        if (!u) continue;
+
+        const [
+          { count: todayLeads },
+          { count: todayConfirmed },
+          { count: todayDelivered },
+          { count: monthlyConfirmed },
+          { count: monthlyDelivered },
+        ] = await Promise.all([
+          supabase.from("leads").select("*", { count: "exact", head: true }).eq("assigned_to", u.id).gte("created_at", startOfDay),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).gte("created_at", startOfDay),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfDay),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).gte("created_at", startOfMonth.toISOString()),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
+        ]);
+
+        const tRatio = todayConfirmed && todayConfirmed > 0 ? Math.round(((todayDelivered || 0) / todayConfirmed) * 100) : 0;
+        const mRatio = monthlyConfirmed && monthlyConfirmed > 0 ? Math.round(((monthlyDelivered || 0) / monthlyConfirmed) * 100) : 0;
+
+        allMembers.push({
+          id: r.id,
+          oderId: r.id,
+          userId: u.id,
+          name: u.name,
+          role: u.role,
+          designation: u.designation,
+          phone: u.phone,
+          email: u.email,
+          isActive: u.is_active !== false,
+          memberType: "agent",
+          isBronze: r.is_bronze,
+          isSilver: r.is_silver,
+          todayLeads: todayLeads || 0,
+          todayConfirmed: todayConfirmed || 0,
+          todayReceiveRatio: tRatio,
+          monthlyConfirmed: monthlyConfirmed || 0,
+          monthlyDelivered: monthlyDelivered || 0,
+          monthlyRatio: mRatio,
+        });
+      }
+    }
+
+    setMembers(allMembers);
     setLoading(false);
   }, [user, selectedCampaign]);
 
@@ -130,49 +202,116 @@ const TLTeam = () => {
 
   const toggleRole = async (roleId: string, field: "is_bronze" | "is_silver", value: boolean) => {
     await supabase.from("campaign_agent_roles").update({ [field]: value }).eq("id", roleId);
-    setAgents((prev) => prev.map((a) => a.id === roleId ? { ...a, [field === "is_bronze" ? "isBronze" : "isSilver"]: value } : a));
+    setMembers((prev) => prev.map((a) => a.oderId === roleId ? { ...a, [field === "is_bronze" ? "isBronze" : "isSilver"]: value } : a));
     toast.success(isBn ? "আপডেট হয়েছে" : "Updated");
   };
 
-  // Filtered & sorted agents
-  const filteredAgents = useMemo(() => {
-    let result = [...agents];
+  // Filtered & sorted
+  const filteredMembers = useMemo(() => {
+    let result = [...members];
 
-    // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((a) => a.agentName.toLowerCase().includes(q));
+      result = result.filter((m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.role.toLowerCase().includes(q) ||
+        (m.phone && m.phone.includes(q)) ||
+        m.email.toLowerCase().includes(q)
+      );
     }
 
-    // Role filter
-    if (roleFilter === "bronze") result = result.filter((a) => a.isBronze);
-    else if (roleFilter === "silver") result = result.filter((a) => a.isSilver);
-    else if (roleFilter === "both") result = result.filter((a) => a.isBronze && a.isSilver);
-    else if (roleFilter === "none") result = result.filter((a) => !a.isBronze && !a.isSilver);
+    if (memberFilter === "tl") result = result.filter((m) => m.memberType === "tl");
+    else if (memberFilter === "bronze") result = result.filter((m) => m.isBronze);
+    else if (memberFilter === "silver") result = result.filter((m) => m.isSilver);
+    else if (memberFilter === "both") result = result.filter((m) => m.isBronze && m.isSilver);
+    else if (memberFilter === "no_role") result = result.filter((m) => m.memberType === "agent" && !m.isBronze && !m.isSilver);
 
-    // Sort
     result.sort((a, b) => {
+      // TLs always on top
+      if (a.memberType !== b.memberType) return a.memberType === "tl" ? -1 : 1;
       let cmp = 0;
-      if (sortField === "name") cmp = a.agentName.localeCompare(b.agentName);
+      if (sortField === "name") cmp = a.name.localeCompare(b.name);
       else cmp = (a[sortField] as number) - (b[sortField] as number);
       return sortAsc ? cmp : -cmp;
     });
 
     return result;
-  }, [agents, searchQuery, roleFilter, sortField, sortAsc]);
+  }, [members, searchQuery, memberFilter, sortField, sortAsc]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortAsc(!sortAsc);
     else { setSortField(field); setSortAsc(field === "name"); }
   };
 
-  // Summary stats
-  const totalAgents = agents.length;
-  const bronzeCount = agents.filter((a) => a.isBronze).length;
-  const silverCount = agents.filter((a) => a.isSilver).length;
-  const avgRatio = agents.length > 0 ? Math.round(agents.reduce((s, a) => s + a.monthlyRatio, 0) / agents.length) : 0;
+  // Stats
+  const tlCount = members.filter((m) => m.memberType === "tl").length;
+  const agentCount = members.filter((m) => m.memberType === "agent").length;
+  const bronzeCount = members.filter((m) => m.isBronze).length;
+  const silverCount = members.filter((m) => m.isSilver).length;
+  const avgRatio = members.length > 0 ? Math.round(members.reduce((s, m) => s + m.monthlyRatio, 0) / members.length) : 0;
 
   if (!user) return null;
+
+  const renderMemberRow = (m: TeamMember) => (
+    <TableRow key={m.id} className={m.memberType === "tl" ? "bg-primary/5" : ""}>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {m.memberType === "tl" ? (
+            <Shield className="h-4 w-4 text-primary flex-shrink-0" />
+          ) : (
+            <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          )}
+          <div>
+            <p className="font-medium text-foreground">{m.name}</p>
+            <p className="text-[11px] text-muted-foreground">{roleName(m.role)}</p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-center">
+        <Badge variant={m.memberType === "tl" ? "default" : "secondary"} className="text-[10px]">
+          {m.memberType === "tl" ? (isBn ? "টিম লিডার" : "TL") : (isBn ? "এজেন্ট" : "Agent")}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-center">
+        {m.memberType === "agent" ? (
+          <div className="flex items-center justify-center gap-1">
+            {m.isBronze && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-500">B</Badge>}
+            {m.isSilver && <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">S</Badge>}
+            {!m.isBronze && !m.isSilver && <span className="text-muted-foreground text-xs">—</span>}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-center">
+        {m.memberType === "agent" ? (
+          <Switch checked={m.isBronze} onCheckedChange={(v) => toggleRole(m.oderId, "is_bronze", v)} disabled={isBDO} />
+        ) : null}
+      </TableCell>
+      <TableCell className="text-center">
+        {m.memberType === "agent" ? (
+          <Switch checked={m.isSilver} onCheckedChange={(v) => toggleRole(m.oderId, "is_silver", v)} disabled={isBDO} />
+        ) : null}
+      </TableCell>
+      <TableCell className="text-center font-mono">{m.todayLeads}</TableCell>
+      <TableCell className="text-center font-mono">{m.todayConfirmed}</TableCell>
+      <TableCell className="text-center">
+        <Badge variant={m.todayReceiveRatio >= 60 ? "default" : m.todayReceiveRatio >= 30 ? "secondary" : "destructive"} className="font-mono text-xs">
+          {m.todayReceiveRatio}%
+        </Badge>
+      </TableCell>
+      <TableCell className="text-center">
+        <Badge variant={m.monthlyRatio >= 60 ? "default" : m.monthlyRatio >= 30 ? "secondary" : "destructive"} className="font-mono text-xs">
+          {m.monthlyRatio}%
+        </Badge>
+      </TableCell>
+      <TableCell className="text-center">
+        <Badge variant={m.isActive ? "default" : "destructive"} className="text-[10px]">
+          {m.isActive ? (isBn ? "সক্রিয়" : "Active") : (isBn ? "নিষ্ক্রিয়" : "Inactive")}
+        </Badge>
+      </TableCell>
+    </TableRow>
+  );
 
   return (
     <div className="space-y-6">
@@ -197,12 +336,13 @@ const TLTeam = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
-          { label: isBn ? "মোট মেম্বার" : "Total Members", value: totalAgents, icon: Users, color: "text-primary" },
+          { label: isBn ? "টিম লিডার" : "Team Leaders", value: tlCount, icon: Shield, color: "text-primary" },
+          { label: isBn ? "মোট এজেন্ট" : "Total Agents", value: agentCount, icon: Users, color: "text-foreground" },
           { label: isBn ? "Bronze Agent" : "Bronze Agents", value: bronzeCount, icon: Target, color: "text-amber-500" },
-          { label: isBn ? "Silver Agent" : "Silver Agents", value: silverCount, icon: CheckCircle, color: "text-slate-400" },
-          { label: isBn ? "গড় Receive Ratio" : "Avg Receive Ratio", value: `${avgRatio}%`, icon: TrendingUp, color: "text-emerald-500" },
+          { label: isBn ? "Silver Agent" : "Silver Agents", value: silverCount, icon: CheckCircle, color: "text-muted-foreground" },
+          { label: isBn ? "গড় Ratio" : "Avg Ratio", value: `${avgRatio}%`, icon: TrendingUp, color: "text-emerald-500" },
         ].map((s) => (
           <Card key={s.label} className="bg-card border-border">
             <CardContent className="p-4 flex items-center gap-3">
@@ -216,14 +356,14 @@ const TLTeam = () => {
         ))}
       </div>
 
-      {/* Search & Filter Bar */}
+      {/* Search & Filter */}
       <Card className="bg-card border-border">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={isBn ? "নাম দিয়ে খুঁজুন..." : "Search by name..."}
+                placeholder={isBn ? "নাম, রোল, ফোন বা ইমেইল দিয়ে খুঁজুন..." : "Search by name, role, phone or email..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-secondary border-border"
@@ -231,33 +371,34 @@ const TLTeam = () => {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as RoleFilter)}>
-                <SelectTrigger className="w-40 bg-secondary border-border">
+              <Select value={memberFilter} onValueChange={(v) => setMemberFilter(v as MemberFilter)}>
+                <SelectTrigger className="w-44 bg-secondary border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{isBn ? "সব মেম্বার" : "All Members"}</SelectItem>
+                  <SelectItem value="tl">{isBn ? "শুধু টিম লিডার" : "Team Leaders Only"}</SelectItem>
                   <SelectItem value="bronze">{isBn ? "শুধু Bronze" : "Bronze Only"}</SelectItem>
                   <SelectItem value="silver">{isBn ? "শুধু Silver" : "Silver Only"}</SelectItem>
                   <SelectItem value="both">{isBn ? "Bronze + Silver" : "Both Roles"}</SelectItem>
-                  <SelectItem value="none">{isBn ? "কোনো রোল নেই" : "No Role"}</SelectItem>
+                  <SelectItem value="no_role">{isBn ? "কোনো রোল নেই" : "No Role"}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          {(searchQuery || roleFilter !== "all") && (
-            <div className="flex items-center gap-2 mt-3">
+          {(searchQuery || memberFilter !== "all") && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <span className="text-xs text-muted-foreground font-body">
-                {isBn ? `${filteredAgents.length}টি ফলাফল` : `${filteredAgents.length} results`}
+                {isBn ? `${filteredMembers.length}টি ফলাফল` : `${filteredMembers.length} results`}
               </span>
               {searchQuery && (
                 <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSearchQuery("")}>
                   "{searchQuery}" ✕
                 </Badge>
               )}
-              {roleFilter !== "all" && (
-                <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setRoleFilter("all")}>
-                  {roleFilter} ✕
+              {memberFilter !== "all" && (
+                <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setMemberFilter("all")}>
+                  {memberFilter === "tl" ? (isBn ? "টিম লিডার" : "TL") : memberFilter} ✕
                 </Badge>
               )}
             </div>
@@ -271,7 +412,7 @@ const TLTeam = () => {
           <CardTitle className="text-lg font-heading">
             {isBn ? "টিম মেম্বার" : "Team Members"}
             <span className="text-sm font-normal text-muted-foreground ml-2">
-              ({filteredAgents.length}/{agents.length})
+              ({filteredMembers.length}/{members.length})
             </span>
           </CardTitle>
         </CardHeader>
@@ -286,10 +427,11 @@ const TLTeam = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="cursor-pointer select-none" onClick={() => handleSort("name")}>
-                      {isBn ? "নাম" : "Name"} {sortField === "name" && (sortAsc ? "↑" : "↓")}
+                    <TableHead className="cursor-pointer select-none min-w-[180px]" onClick={() => handleSort("name")}>
+                      {isBn ? "নাম / রোল" : "Name / Role"} {sortField === "name" && (sortAsc ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead className="text-center">{isBn ? "রোল" : "Role"}</TableHead>
+                    <TableHead className="text-center">{isBn ? "টাইপ" : "Type"}</TableHead>
+                    <TableHead className="text-center">{isBn ? "ক্যাম্পেইন রোল" : "Campaign Role"}</TableHead>
                     <TableHead className="text-center">Bronze</TableHead>
                     <TableHead className="text-center">Silver</TableHead>
                     <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("todayLeads")}>
@@ -304,47 +446,19 @@ const TLTeam = () => {
                     <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("monthlyRatio")}>
                       {isBn ? "মাসিক Ratio" : "Monthly Ratio"} {sortField === "monthlyRatio" && (sortAsc ? "↑" : "↓")}
                     </TableHead>
+                    <TableHead className="text-center">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAgents.length === 0 ? (
+                  {filteredMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                         {searchQuery
                           ? (isBn ? `"${searchQuery}" এর জন্য কোনো মেম্বার পাওয়া যায়নি` : `No members found for "${searchQuery}"`)
-                          : (isBn ? "কোনো agent নেই" : "No agents")}
+                          : (isBn ? "কোনো মেম্বার নেই" : "No members")}
                       </TableCell>
                     </TableRow>
-                  ) : filteredAgents.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-medium">{a.agentName}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {a.isBronze && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-500">B</Badge>}
-                          {a.isSilver && <Badge variant="outline" className="text-[10px] border-slate-400/40 text-slate-400">S</Badge>}
-                          {!a.isBronze && !a.isSilver && <span className="text-muted-foreground text-xs">—</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={a.isBronze} onCheckedChange={(v) => toggleRole(a.id, "is_bronze", v)} disabled={isBDO} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={a.isSilver} onCheckedChange={(v) => toggleRole(a.id, "is_silver", v)} disabled={isBDO} />
-                      </TableCell>
-                      <TableCell className="text-center font-mono">{a.todayLeads}</TableCell>
-                      <TableCell className="text-center font-mono">{a.todayConfirmed}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={a.todayReceiveRatio >= 60 ? "default" : a.todayReceiveRatio >= 30 ? "secondary" : "destructive"} className="font-mono text-xs">
-                          {a.todayReceiveRatio}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={a.monthlyRatio >= 60 ? "default" : a.monthlyRatio >= 30 ? "secondary" : "destructive"} className="font-mono text-xs">
-                          {a.monthlyRatio}%
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  ) : filteredMembers.map(renderMemberRow)}
                 </TableBody>
               </Table>
             </div>
