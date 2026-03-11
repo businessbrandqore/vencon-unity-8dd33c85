@@ -36,6 +36,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   sa: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/sa/dashboard" },
     { titleKey: "all_data", icon: Target, path: "/sa/all-data" },
+    { titleKey: "data_tracker", icon: BarChart3, path: "/sa/data-tracker" },
     { titleKey: "approvals", icon: CheckSquare, path: "/sa/approvals" },
     { titleKey: "analytics", icon: BarChart3, path: "/sa/analytics" },
     { titleKey: "warehouse", icon: Package, path: "/sa/warehouse" },
@@ -51,6 +52,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "campaigns", icon: Megaphone, path: "/hr/campaigns" },
     { titleKey: "employees", icon: Users, path: "/hr/employees" },
     { titleKey: "data_monitor", icon: Target, path: "/hr/data-monitor" },
+    { titleKey: "data_tracker", icon: BarChart3, path: "/hr/data-tracker" },
     { titleKey: "warehouse", icon: Package, path: "/hr/warehouse" },
     { titleKey: "payroll", icon: CreditCard, path: "/hr/payroll" },
     { titleKey: "attendance_leaves", icon: Clock, path: "/hr/attendance" },
@@ -63,6 +65,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   tl: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/tl/dashboard" },
     { titleKey: "leads", icon: Target, path: "/tl/leads" },
+    { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker" },
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team" },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics" },
     { titleKey: "chat", icon: MessageSquare, path: "/tl/chat" },
