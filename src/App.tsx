@@ -68,6 +68,7 @@ const App = () => (
             {/* HR Panel Routes */}
             <Route element={<DashboardLayout panel="hr" />}>
               <Route path="/hr/dashboard" element={<HRDashboard />} />
+              <Route path="/hr/approvals" element={<HRApprovals />} />
               <Route path="/hr/campaigns" element={<HRCampaigns />} />
               <Route path="/hr/employees" element={<HREmployees />} />
               <Route path="/hr/employees/new" element={<HREmployeeNew />} />
