@@ -64,7 +64,6 @@ const HREmployeeNew = () => {
     password: "",
     role: "",
     basicSalary: "",
-    offDays: [] as string[],
     checkIn: "09:00",
     checkOut: "18:00",
     gpsLatitude: "",
@@ -74,14 +73,6 @@ const HREmployeeNew = () => {
 
   const set = (key: string, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
-
-  const toggleDay = (day: string) =>
-    setForm((prev) => ({
-      ...prev,
-      offDays: prev.offDays.includes(day)
-        ? prev.offDays.filter((d) => d !== day)
-        : [...prev.offDays, day],
-    }));
 
   const validate = () => {
     if (!form.name.trim()) return isBn ? "নাম আবশ্যক" : "Name required";
