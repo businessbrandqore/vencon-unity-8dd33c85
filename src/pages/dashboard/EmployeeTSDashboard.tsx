@@ -337,7 +337,7 @@ export default function EmployeeTSDashboard() {
         desk_number: deskNumber || null,
       } as any);
     }
-    setShowDeskModal(false);
+    
     setDeskReportDone(true);
     await loadAttendance();
     toast.success("ডেস্ক রিপোর্ট সংরক্ষণ করা হয়েছে");
