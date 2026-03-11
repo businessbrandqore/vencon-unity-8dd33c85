@@ -171,41 +171,44 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
   if (!deskReportDone) {
     return (
       <div className="space-y-6">
-        <Card className="border-orange-500/30">
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-400" />
-              ডেস্ক রিপোর্ট
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">কাজ শুরু করতে ডেস্ক রিপোর্ট দিতে হবে</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>ডেস্কের অবস্থা</Label>
-              <RadioGroup value={deskCondition} onValueChange={setDeskCondition} className="mt-2 space-y-2">
-                <div className="flex items-center gap-2"><RadioGroupItem value="good" id="g-good" /><Label htmlFor="g-good">ভালো</Label></div>
-                <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="g-acc" /><Label htmlFor="g-acc">গ্রহণযোগ্য</Label></div>
-                <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="g-rep" /><Label htmlFor="g-rep">মেরামত প্রয়োজন</Label></div>
-              </RadioGroup>
+        <button onClick={() => setShowDeskModal(true)} className="w-full rounded-md border border-orange-500/50 bg-orange-500/10 p-6 text-center hover:bg-orange-500/20 transition-colors">
+          <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-orange-400" />
+          <p className="font-heading text-lg text-orange-300">ডেস্ক ও ফোন রিপোর্ট দিন</p>
+          <p className="text-sm text-muted-foreground mt-1">কাজ শুরু করতে ডেস্ক রিপোর্ট দিতে হবে</p>
+        </button>
+        <Dialog open={showDeskModal} onOpenChange={setShowDeskModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>ডেস্ক রিপোর্ট</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>ডেস্কের অবস্থা</Label>
+                <RadioGroup value={deskCondition} onValueChange={setDeskCondition} className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2"><RadioGroupItem value="good" id="g-good" /><Label htmlFor="g-good">ভালো</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="acceptable" id="g-acc" /><Label htmlFor="g-acc">গ্রহণযোগ্য</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="needs_repair" id="g-rep" /><Label htmlFor="g-rep">মেরামত প্রয়োজন</Label></div>
+                </RadioGroup>
+              </div>
+              <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} rows={2} placeholder="বিস্তারিত (ঐচ্ছিক)" />
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>মোবাইল নাম্বার</Label><Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" /></div>
+                <div><Label>ডেস্ক নাম্বার</Label><Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" /></div>
+              </div>
+              <div>
+                <Label>অবশিষ্ট ফোন মিনিট</Label>
+                {phoneInstruction && (
+                  <div className="mt-1 mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-300">
+                    <p className="font-medium mb-1">📱 মিনিট চেক করার নিয়ম:</p>
+                    <p className="whitespace-pre-wrap">{phoneInstruction}</p>
+                  </div>
+                )}
+                <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
+              </div>
             </div>
-            <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} rows={2} placeholder="বিস্তারিত (ঐচ্ছিক)" />
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>মোবাইল নাম্বার</Label><Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" /></div>
-              <div><Label>ডেস্ক নাম্বার</Label><Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" /></div>
-            </div>
-            <div>
-              <Label>অবশিষ্ট ফোন মিনিট</Label>
-              {phoneInstruction && (
-                <div className="mt-1 mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-300">
-                  <p className="font-medium mb-1">📱 মিনিট চেক করার নিয়ম:</p>
-                  <p className="whitespace-pre-wrap">{phoneInstruction}</p>
-                </div>
-              )}
-              <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
-            </div>
-            <Button onClick={handleDeskReportSubmit} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">সংরক্ষণ</Button>
-          </CardContent>
-        </Card>
+            <DialogFooter>
+              <Button onClick={handleDeskReportSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)]">সংরক্ষণ</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
