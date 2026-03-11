@@ -75,7 +75,7 @@ const DataTracker = () => {
   const [bulkAgent, setBulkAgent] = useState("");
 
   const panel = user?.panel;
-  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer";
+  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
   const isTL = panel === "tl" && !isBDO; // BDO uses TL panel but gets global access
   const canAssign = panel === "tl" && !isBDO; // Only actual TL can assign raw data
 
