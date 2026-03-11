@@ -237,7 +237,10 @@ export default function EmployeeTSDashboard() {
         .select("value")
         .eq("key", "phone_minutes_instruction")
         .maybeSingle();
-      if (data?.value) setPhoneInstruction(String(data.value));
+      if (data?.value) {
+        const val = String(data.value).replace(/^"|"$/g, '');
+        setPhoneInstruction(val);
+      }
     })();
   }, []);
 
