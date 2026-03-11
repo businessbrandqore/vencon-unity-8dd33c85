@@ -136,7 +136,9 @@ export default function EmployeeTSDashboard() {
 
   /* desk report */
   const [deskCondition, setDeskCondition] = useState("");
+  const [deskNote, setDeskNote] = useState("");
   const [phoneMins, setPhoneMins] = useState<number>(0);
+  const [phoneInstruction, setPhoneInstruction] = useState("");
 
   /* mood */
   const [selectedMood, setSelectedMood] = useState("");
