@@ -85,6 +85,8 @@ const SAApprovalsTable = () => {
     if (!user) return;
     setProcessing(approvalId);
 
+    const approval = approvals.find((a) => a.id === approvalId);
+
     // Update approval status
     await supabase
       .from("sa_approvals")
@@ -95,8 +97,23 @@ const SAApprovalsTable = () => {
       })
       .eq("id", approvalId);
 
-    // Find the approval to get requested_by
-    const approval = approvals.find((a) => a.id === approvalId);
+    // If approved non_agent_hire, create auth account
+    if (action === "approved" && approval?.type === "non_agent_hire" && approval.details) {
+      const d = approval.details;
+      if (d.email && d.password && d.user_id) {
+        const res = await supabase.functions.invoke("create-auth-user", {
+          body: {
+            email: d.email,
+            password: d.password,
+            user_id: d.user_id,
+          },
+        });
+
+        if (res.error || res.data?.error) {
+          console.error("Auth creation failed:", res.error || res.data?.error);
+        }
+      }
+    }
 
     // Send notification to requester
     if (approval?.requested_by) {
