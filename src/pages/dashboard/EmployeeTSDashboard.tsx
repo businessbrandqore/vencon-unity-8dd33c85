@@ -374,7 +374,7 @@ export default function EmployeeTSDashboard() {
     }
     setShowClockOutModal(false);
     await loadAttendance();
-    toast.success(earlyOut ? "Clock Out হয়েছে (Early out — ৳33 কর্তন)" : "Clock Out সফল ✓");
+    toast.success(earlyOut ? "Check Out হয়েছে (Early out — ৳33 কর্তন)" : "Check Out সফল ✓");
   };
 
   const handleLeadSave = async (lead: LeadRow) => {
