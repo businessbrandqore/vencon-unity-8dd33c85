@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,13 +26,10 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 
 interface AttendanceGateProps {
   children: ReactNode;
-  /** If true, skip the attendance gate (e.g. TS dashboard handles its own) */
-  skip?: boolean;
 }
 
-export default function AttendanceGate({ children, skip }: AttendanceGateProps) {
+export default function AttendanceGate({ children }: AttendanceGateProps) {
   const { user } = useAuth();
-  const { t } = useLanguage();
 
   const [profile, setProfile] = useState<{ shift_start: string | null; shift_end: string | null } | null>(null);
   const [isWithinShift, setIsWithinShift] = useState<boolean | null>(null);
@@ -42,7 +38,6 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
   const [deskReportDone, setDeskReportDone] = useState(false);
   const [clockedIn, setClockedIn] = useState(false);
 
-  // Desk report
   const [showDeskModal, setShowDeskModal] = useState(false);
   const [deskCondition, setDeskCondition] = useState("");
   const [deskNote, setDeskNote] = useState("");
@@ -51,18 +46,13 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
   const [deskNumber, setDeskNumber] = useState("");
   const [phoneInstruction, setPhoneInstruction] = useState("");
 
-  // Mood check-in
   const [selectedMood, setSelectedMood] = useState("");
   const [moodNote, setMoodNote] = useState("");
 
-  // Clock out
   const [showClockOutModal, setShowClockOutModal] = useState(false);
   const [clockOutMood, setClockOutMood] = useState("");
   const [clockOutNote, setClockOutNote] = useState("");
 
-  if (skip) return <>{children}</>;
-
-  // Load profile
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -71,7 +61,6 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
     })();
   }, [user]);
 
-  // Check shift
   useEffect(() => {
     if (!profile) return;
     const now = new Date();
@@ -83,14 +72,10 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
     }
   }, [profile]);
 
-  // Load attendance
   const loadAttendance = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("attendance").select("*")
-      .eq("user_id", user.id).eq("date", todayStr())
-      .maybeSingle();
+    const { data } = await supabase.from("attendance").select("*").eq("user_id", user.id).eq("date", todayStr()).maybeSingle();
     if (data) {
       setTodayAttendance(data);
       setDeskReportDone(!!data.desk_condition);
@@ -105,7 +90,6 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
 
   useEffect(() => { loadAttendance(); }, [loadAttendance]);
 
-  // Load phone instruction
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("app_settings").select("value").eq("key", "phone_minutes_instruction").maybeSingle();
@@ -117,16 +101,9 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
     if (!user || (!deskCondition && !deskNote)) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন"); return; }
     const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
     if (todayAttendance) {
-      await supabase.from("attendance").update({
-        desk_condition: deskValue, phone_minutes_remaining: phoneMins,
-        phone_number: phoneNumber || null, desk_number: deskNumber || null,
-      } as any).eq("id", todayAttendance.id);
+      await supabase.from("attendance").update({ desk_condition: deskValue, phone_minutes_remaining: phoneMins, phone_number: phoneNumber || null, desk_number: deskNumber || null } as any).eq("id", todayAttendance.id);
     } else {
-      await supabase.from("attendance").insert({
-        user_id: user.id, date: todayStr(), desk_condition: deskValue,
-        phone_minutes_remaining: phoneMins, phone_number: phoneNumber || null,
-        desk_number: deskNumber || null,
-      } as any);
+      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), desk_condition: deskValue, phone_minutes_remaining: phoneMins, phone_number: phoneNumber || null, desk_number: deskNumber || null } as any);
     }
     setShowDeskModal(false);
     setDeskReportDone(true);
@@ -145,16 +122,9 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
       if (new Date() > shiftDate) isLate = true;
     }
     if (todayAttendance) {
-      await supabase.from("attendance").update({
-        clock_in: now, mood_in: selectedMood, mood_note: moodNote || null,
-        is_late: isLate, deduction_amount: isLate ? LATE_DEDUCTION : 0,
-      }).eq("id", todayAttendance.id);
+      await supabase.from("attendance").update({ clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? LATE_DEDUCTION : 0 }).eq("id", todayAttendance.id);
     } else {
-      await supabase.from("attendance").insert({
-        user_id: user.id, date: todayStr(), clock_in: now,
-        mood_in: selectedMood, mood_note: moodNote || null,
-        is_late: isLate, deduction_amount: isLate ? LATE_DEDUCTION : 0,
-      });
+      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? LATE_DEDUCTION : 0 });
     }
     setClockedIn(true);
     await loadAttendance();
@@ -173,11 +143,7 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
       if (now < shiftEnd) { earlyOut = true; extraDeduction = LATE_DEDUCTION; }
     }
     if (todayAttendance) {
-      await supabase.from("attendance").update({
-        clock_out: now.toISOString(), mood_out: clockOutMood,
-        is_early_out: earlyOut,
-        deduction_amount: (Number(todayAttendance.deduction_amount) || 0) + extraDeduction,
-      }).eq("id", todayAttendance.id);
+      await supabase.from("attendance").update({ clock_out: now.toISOString(), mood_out: clockOutMood, is_early_out: earlyOut, deduction_amount: (Number(todayAttendance.deduction_amount) || 0) + extraDeduction }).eq("id", todayAttendance.id);
     }
     setShowClockOutModal(false);
     await loadAttendance();
@@ -188,7 +154,6 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
     return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
   }
 
-  // Outside shift
   if (!isWithinShift) {
     return (
       <div className="space-y-6">
@@ -203,19 +168,14 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
     );
   }
 
-  // Desk report pending
   if (!deskReportDone) {
     return (
       <div className="space-y-6">
-        <button
-          onClick={() => setShowDeskModal(true)}
-          className="w-full rounded-md border border-orange-500/50 bg-orange-500/10 p-6 text-center hover:bg-orange-500/20 transition-colors"
-        >
+        <button onClick={() => setShowDeskModal(true)} className="w-full rounded-md border border-orange-500/50 bg-orange-500/10 p-6 text-center hover:bg-orange-500/20 transition-colors">
           <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-orange-400" />
           <p className="font-heading text-lg text-orange-300">ডেস্ক রিপোর্ট দিন</p>
           <p className="text-sm text-muted-foreground mt-1">কাজ শুরু করতে ডেস্ক রিপোর্ট দিতে হবে</p>
         </button>
-
         <Dialog open={showDeskModal} onOpenChange={setShowDeskModal}>
           <DialogContent>
             <DialogHeader><DialogTitle>ডেস্ক রিপোর্ট</DialogTitle></DialogHeader>
@@ -253,7 +213,6 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
     );
   }
 
-  // Mood check-in
   if (!clockedIn) {
     return (
       <div className="space-y-6">
@@ -262,66 +221,39 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
           <CardContent className="space-y-6">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setSelectedMood(m.value)}
-                  className={cn(
-                    "flex flex-col items-center rounded-md border p-4 transition-all hover:border-[hsl(var(--panel-employee))]",
-                    selectedMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border"
-                  )}
-                >
+                <button key={m.value} onClick={() => setSelectedMood(m.value)} className={cn("flex flex-col items-center rounded-md border p-4 transition-all hover:border-[hsl(var(--panel-employee))]", selectedMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border")}>
                   <span className="text-3xl mb-1">{m.emoji}</span>
                   <span className="text-xs text-muted-foreground">{m.label}</span>
                 </button>
               ))}
             </div>
             <Textarea value={moodNote} onChange={(e) => setMoodNote(e.target.value)} rows={2} placeholder="মন্তব্য (ঐচ্ছিক)" />
-            <Button onClick={handleClockIn} disabled={!selectedMood} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
-              Check In
-            </Button>
+            <Button onClick={handleClockIn} disabled={!selectedMood} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">Check In</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Clocked in — show children + clock out button
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        {!todayAttendance?.clock_out && (
-          <Button
-            variant="outline"
-            onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }}
-            className="border-destructive text-destructive hover:bg-destructive/10"
-          >
+        {!todayAttendance?.clock_out ? (
+          <Button variant="outline" onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }} className="border-destructive text-destructive hover:bg-destructive/10">
             <LogOut className="h-4 w-4 mr-2" />Check Out
           </Button>
-        )}
-        {todayAttendance?.clock_out && (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            ✓ Check Out হয়েছে {new Date(todayAttendance.clock_out).toLocaleTimeString("bn-BD")}
-          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground flex items-center gap-1">✓ Check Out: {new Date(todayAttendance.clock_out).toLocaleTimeString("bn-BD")}</span>
         )}
       </div>
-
       {children}
-
-      {/* Clock Out Modal */}
       <Dialog open={showClockOutModal} onOpenChange={setShowClockOutModal}>
         <DialogContent>
           <DialogHeader><DialogTitle>Check Out — মুড নির্বাচন</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setClockOutMood(m.value)}
-                  className={cn(
-                    "flex flex-col items-center rounded-md border p-3 transition-all",
-                    clockOutMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border"
-                  )}
-                >
+                <button key={m.value} onClick={() => setClockOutMood(m.value)} className={cn("flex flex-col items-center rounded-md border p-3 transition-all", clockOutMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border")}>
                   <span className="text-2xl mb-1">{m.emoji}</span>
                   <span className="text-xs">{m.label}</span>
                 </button>
@@ -330,9 +262,7 @@ export default function AttendanceGate({ children, skip }: AttendanceGateProps) 
             <Textarea value={clockOutNote} onChange={(e) => setClockOutNote(e.target.value)} placeholder="মন্তব্য (ঐচ্ছিক)" rows={2} />
           </div>
           <DialogFooter>
-            <Button onClick={handleClockOut} disabled={!clockOutMood} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">
-              Check Out নিশ্চিত করুন
-            </Button>
+            <Button onClick={handleClockOut} disabled={!clockOutMood} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">Check Out নিশ্চিত করুন</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
