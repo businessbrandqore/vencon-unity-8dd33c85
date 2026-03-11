@@ -201,7 +201,7 @@ const HRAttendance = () => {
     fetchHolidays();
   };
 
-
+  const openDateDetail = async (date: string) => {
     setDetailDate(date);
     setDetailLoading(true);
 
