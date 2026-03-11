@@ -55,6 +55,7 @@ export const translations: TranslationMap = {
   salary: { bn: "বেতন", en: "Salary" },
   profile: { bn: "প্রোফাইল", en: "Profile" },
   notifications: { bn: "নোটিফিকেশন", en: "Notifications" },
+  documentation: { bn: "ডকুমেন্টেশন", en: "Documentation" },
   chat_admin: { bn: "চ্যাট অ্যাডমিন", en: "Chat Admin" },
   attendance_leaves: { bn: "উপস্থিতি ও ছুটি", en: "Attendance & Leaves" },
   customer_feedback: { bn: "গ্রাহক প্রতিক্রিয়া", en: "Customer Feedback" },
