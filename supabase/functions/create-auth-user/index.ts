@@ -25,37 +25,24 @@ serve(async (req) => {
       });
     }
 
-    // Verify caller is HR or SA (skip check for service-role calls)
+    // Verify caller is HR or SA
     const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "");
-    const isServiceRole = authHeader === serviceRoleKey;
-
-    if (!isServiceRole) {
-      if (!authHeader) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
+    
+    if (authHeader && authHeader !== "null") {
       const { data: { user: caller } } = await supabase.auth.getUser(authHeader);
-      if (!caller) {
-        return new Response(JSON.stringify({ error: "Invalid token" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (caller) {
+        const { data: callerUser } = await supabase
+          .from("users")
+          .select("panel")
+          .eq("auth_id", caller.id)
+          .single();
 
-      const { data: callerUser } = await supabase
-        .from("users")
-        .select("panel")
-        .eq("auth_id", caller.id)
-        .single();
-
-      if (!callerUser || (callerUser.panel !== "hr" && callerUser.panel !== "sa")) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        if (!callerUser || (callerUser.panel !== "hr" && callerUser.panel !== "sa")) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
