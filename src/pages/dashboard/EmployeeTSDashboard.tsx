@@ -338,7 +338,7 @@ export default function EmployeeTSDashboard() {
       } as any);
     }
     
-    setDeskReportDone(true);
+    setShowDeskModal(false);
     await loadAttendance();
     toast.success("ডেস্ক রিপোর্ট সংরক্ষণ করা হয়েছে");
   };
