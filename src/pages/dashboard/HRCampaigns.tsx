@@ -241,54 +241,24 @@ const HRCampaigns = () => {
               {isBn ? "নতুন Campaign তৈরি করুন" : "Create New Campaign"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-5">
-            {/* Name */}
+          <div className="space-y-6">
+            {/* Campaign Name */}
             <div>
-              <label className="font-body text-sm font-medium text-foreground block mb-1.5">
+              <label className="font-body text-sm font-medium text-foreground block mb-1">
                 {isBn ? "ক্যাম্পেইন নাম *" : "Campaign Name *"}
               </label>
+              <p className="text-xs text-muted-foreground mb-2">
+                {isBn
+                  ? "📝 এমন একটি নাম দিন যা দেখে সবাই বুঝতে পারবে কোন প্রোডাক্ট বা প্রজেক্টের জন্য — যেমন: \"স্মার্টওয়াচ সেল Q1\", \"হেলথ ড্রিংক ক্যাম্পেইন\""
+                  : "📝 Give a clear name so everyone knows the product/project — e.g. \"Smartwatch Sale Q1\", \"Health Drink Campaign\""}
+              </p>
               <Input value={newName} onChange={(e) => setNewName(e.target.value)}
-                placeholder={isBn ? "ক্যাম্পেইনের নাম লিখুন" : "Enter campaign name"} />
+                placeholder={isBn ? "যেমন: স্মার্টওয়াচ সেল Q1" : "e.g. Smartwatch Sale Q1"} />
             </div>
 
-            {/* Data Mode */}
+            {/* WordPress Websites with per-site data mode */}
             <div>
-              <label className="font-body text-sm font-medium text-foreground block mb-1.5">
-                {isBn ? "ডাটা পদ্ধতি *" : "Data Mode *"}
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setDataMode("lead")}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
-                    dataMode === "lead"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <p className="font-heading font-bold text-foreground text-sm">{isBn ? "🎯 লিড পদ্ধতি" : "🎯 Lead Mode"}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {isBn ? "ডাটা → TL → Bronze Agent → CSO → Warehouse → Steadfast → CS → Silver" : "Data → TL → Bronze Agent → CSO → Warehouse → Steadfast → CS → Silver"}
-                  </p>
-                </button>
-                <button
-                  onClick={() => setDataMode("processing")}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
-                    dataMode === "processing"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <p className="font-heading font-bold text-foreground text-sm">{isBn ? "⚙️ প্রসেসিং পদ্ধতি" : "⚙️ Processing Mode"}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {isBn ? "সেলস হওয়া ডাটা → TL → CSO → Warehouse → Steadfast (Agent ছাড়া)" : "Sold data → TL → CSO → Warehouse → Steadfast (No Agent)"}
-                  </p>
-                </button>
-              </div>
-            </div>
-
-            {/* WordPress Websites */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-1">
                 <label className="font-body text-sm font-medium text-foreground">
                   {isBn ? "WordPress ওয়েবসাইট *" : "WordPress Websites *"}
                 </label>
@@ -296,48 +266,132 @@ const HRCampaigns = () => {
                   <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "আরো যোগ করুন" : "Add More"}
                 </Button>
               </div>
-              <div className="space-y-3">
+              <p className="text-xs text-muted-foreground mb-3">
+                {isBn
+                  ? "🌐 প্রতিটি WordPress সাইটের নাম ও লিংক দিন এবং সেই সাইটের ডাটা কোন পদ্ধতিতে আসবে তা নির্ধারণ করুন। Campaign approve হলে Webhook URL ও Secret Key পাবেন যা WordPress সাইটে বসাতে হবে।"
+                  : "🌐 Add each WordPress site's name & URL, then choose how data from that site should flow. After approval you'll get a Webhook URL & Secret to add to WordPress."}
+              </p>
+              <div className="space-y-4">
                 {websites.map((w, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input
-                      value={w.name} onChange={(e) => updateWebsite(i, "name", e.target.value)}
-                      placeholder={isBn ? "সাইটের নাম" : "Site Name"} className="flex-1"
-                    />
-                    <Input
-                      value={w.url} onChange={(e) => updateWebsite(i, "url", e.target.value)}
-                      placeholder="https://example.com" className="flex-[2]"
-                    />
-                    {websites.length > 1 && (
-                      <Button variant="ghost" size="icon" onClick={() => removeWebsite(i)} className="text-destructive shrink-0">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                  <div key={i} className="p-4 rounded-xl border border-border bg-card space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {isBn ? `সাইট #${i + 1}` : `Site #${i + 1}`}
+                      </span>
+                      {websites.length > 1 && (
+                        <Button variant="ghost" size="sm" onClick={() => removeWebsite(i)} className="text-destructive h-7 px-2">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] text-muted-foreground mb-1 block">
+                          {isBn ? "সাইটের নাম (যেমন: মূল সাইট)" : "Site Name (e.g. Main Site)"}
+                        </label>
+                        <Input
+                          value={w.name} onChange={(e) => updateWebsite(i, "name", e.target.value)}
+                          placeholder={isBn ? "যেমন: মূল সাইট" : "e.g. Main Site"}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-muted-foreground mb-1 block">
+                          {isBn ? "সাইটের URL (পুরো লিংক)" : "Site URL (full link)"}
+                        </label>
+                        <Input
+                          value={w.url} onChange={(e) => updateWebsite(i, "url", e.target.value)}
+                          placeholder="https://yoursite.com"
+                        />
+                      </div>
+                    </div>
+                    {/* Per-site data mode */}
+                    <div>
+                      <label className="text-[11px] text-muted-foreground mb-1.5 block">
+                        {isBn ? "এই সাইটের ডাটা কোন পদ্ধতিতে যাবে?" : "How should data from this site flow?"}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateWebsite(i, "dataMode", "lead")}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            w.dataMode === "lead"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/30"
+                          }`}
+                        >
+                          <p className="font-heading font-bold text-foreground text-xs">🎯 {isBn ? "লিড পদ্ধতি" : "Lead Mode"}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {isBn ? "TL → Bronze Agent → CSO → Warehouse → Steadfast → CS → Silver" : "TL → Bronze → CSO → WH → SF → CS → Silver"}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateWebsite(i, "dataMode", "processing")}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            w.dataMode === "processing"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/30"
+                          }`}
+                        >
+                          <p className="font-heading font-bold text-foreground text-xs">⚙️ {isBn ? "প্রসেসিং পদ্ধতি" : "Processing Mode"}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {isBn ? "TL সরাসরি → CSO → Warehouse → Steadfast" : "TL direct → CSO → WH → Steadfast"}
+                          </p>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* TL Selection */}
+            {/* TL Selection — Dropdown */}
             <div>
-              <label className="font-body text-sm font-medium text-foreground block mb-1.5">
-                {isBn ? "টিম লিডার নির্বাচন" : "Assign Team Leaders"}
+              <label className="font-body text-sm font-medium text-foreground block mb-1">
+                {isBn ? "টিম লিডার নির্বাচন *" : "Assign Team Leaders *"}
               </label>
-              <div className="border border-border rounded-lg bg-background max-h-40 overflow-y-auto">
-                {tlUsers.length === 0 ? (
-                  <p className="p-3 text-xs text-muted-foreground">{isBn ? "কোনো TL পাওয়া যায়নি" : "No TLs found"}</p>
-                ) : tlUsers.map((tl) => (
-                  <label key={tl.id} className="flex items-center gap-2 p-2.5 hover:bg-accent cursor-pointer text-sm text-foreground">
-                    <input type="checkbox" checked={selectedTLs.includes(tl.id)}
-                      onChange={() => setSelectedTLs((prev) => prev.includes(tl.id) ? prev.filter((x) => x !== tl.id) : [...prev, tl.id])}
-                      className="accent-[hsl(var(--primary))]" />
-                    {tl.name}
-                  </label>
-                ))}
-              </div>
+              <p className="text-xs text-muted-foreground mb-2">
+                {isBn
+                  ? "👤 এই ক্যাম্পেইনে কোন টিম লিডার(দের) দায়িত্ব থাকবে তা সিলেক্ট করুন। একাধিক TL সিলেক্ট করা যাবে।"
+                  : "👤 Select which Team Leader(s) will manage this campaign. You can select multiple TLs."}
+              </p>
+              {tlUsers.length === 0 ? (
+                <p className="p-3 text-xs text-muted-foreground border border-border rounded-lg bg-card">
+                  {isBn ? "কোনো টিম লিডার পাওয়া যায়নি। প্রথমে Employees থেকে TL যোগ করুন।" : "No Team Leaders found. Add TLs from Employees first."}
+                </p>
+              ) : (
+                <div className="border border-border rounded-lg bg-card divide-y divide-border max-h-48 overflow-y-auto">
+                  {tlUsers.map((tl) => {
+                    const isSelected = selectedTLs.includes(tl.id);
+                    return (
+                      <button
+                        key={tl.id}
+                        type="button"
+                        onClick={() => setSelectedTLs((prev) => prev.includes(tl.id) ? prev.filter((x) => x !== tl.id) : [...prev, tl.id])}
+                        className={`w-full flex items-center gap-3 p-3 text-left text-sm transition-colors ${
+                          isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-accent"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                        }`}>
+                          {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
+                        </div>
+                        <span>{tl.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedTLs.length > 0 && (
+                <p className="text-xs text-primary mt-1.5">
+                  {isBn ? `${selectedTLs.length} জন TL সিলেক্ট করা হয়েছে` : `${selectedTLs.length} TL(s) selected`}
+                </p>
+              )}
             </div>
 
             <Button onClick={handleCreate} disabled={!newName.trim() || submitting}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11">
               {submitting ? (isBn ? "সাবমিট হচ্ছে..." : "Submitting...") : (isBn ? "সাবমিট করুন (SA Approval)" : "Submit (SA Approval)")}
             </Button>
           </div>
