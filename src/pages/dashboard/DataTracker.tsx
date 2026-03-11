@@ -75,8 +75,9 @@ const DataTracker = () => {
   const [bulkAgent, setBulkAgent] = useState("");
 
   const panel = user?.panel;
-  const isTL = panel === "tl";
-  const canAssign = isTL; // Only TL can assign raw data
+  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isTL = panel === "tl" && !isBDO; // BDO uses TL panel but gets global access
+  const canAssign = panel === "tl" && !isBDO; // Only actual TL can assign raw data
 
   // Fetch campaigns
   const { data: campaigns } = useQuery({

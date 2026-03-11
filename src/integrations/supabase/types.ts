@@ -1420,6 +1420,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_bdo: { Args: { _auth_id: string }; Returns: boolean }
       is_hr: { Args: { _auth_id: string }; Returns: boolean }
       is_sa: { Args: { _auth_id: string }; Returns: boolean }
       notify_panel: {
