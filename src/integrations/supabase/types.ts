@@ -501,6 +501,51 @@ export type Database = {
           },
         ]
       }
+      employee_monthly_offs: {
+        Row: {
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          month: number
+          off_date: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          month: number
+          off_date: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          month?: number
+          off_date?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_monthly_offs_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_monthly_offs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           agent_id: string
