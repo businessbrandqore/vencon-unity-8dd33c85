@@ -35,6 +35,7 @@ export interface SidebarItem {
 export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   sa: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/sa/dashboard" },
+    { titleKey: "all_data", icon: Target, path: "/sa/all-data" },
     { titleKey: "approvals", icon: CheckSquare, path: "/sa/approvals" },
     { titleKey: "analytics", icon: BarChart3, path: "/sa/analytics" },
     { titleKey: "warehouse", icon: Package, path: "/sa/warehouse" },

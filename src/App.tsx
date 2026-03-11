@@ -14,6 +14,7 @@ import SAAnalytics from "./pages/dashboard/SAAnalytics";
 import SAWarehouse from "./pages/dashboard/SAWarehouse";
 import SABudget from "./pages/dashboard/SABudget";
 import SASettings from "./pages/dashboard/SASettings";
+import SAAllData from "./pages/dashboard/SAAllData";
 import HRDashboard from "./pages/dashboard/HRDashboard";
 import HRCampaigns from "./pages/dashboard/HRCampaigns";
 import HREmployees from "./pages/dashboard/HREmployees";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/sa/budget" element={<SABudget />} />
               <Route path="/sa/payroll" element={<SAPayroll />} />
               <Route path="/sa/audit-logs" element={<PlaceholderPage titleKey="audit_logs" />} />
+              <Route path="/sa/all-data" element={<SAAllData />} />
               <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/notifications" element={<NotificationsPage />} />
               <Route path="/sa/profile" element={<PlaceholderPage titleKey="profile" />} />
