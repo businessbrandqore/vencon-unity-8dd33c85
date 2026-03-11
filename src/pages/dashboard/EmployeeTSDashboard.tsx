@@ -350,7 +350,7 @@ export default function EmployeeTSDashboard() {
     setShowMoodInModal(false);
     setClockedIn(true);
     await loadAttendance();
-    toast.success(isLate ? "Clock In হয়েছে (Late entry — ৳33 কর্তন)" : "Clock In সফল ✓");
+    toast.success(isLate ? "Check In হয়েছে (Late entry — ৳33 কর্তন)" : "Check In সফল ✓");
   };
 
   const handleClockOut = async () => {
