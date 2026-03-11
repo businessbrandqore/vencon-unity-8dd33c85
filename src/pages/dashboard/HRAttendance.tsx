@@ -406,7 +406,7 @@ const HRAttendance = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-heading text-lg font-bold text-foreground">
-            {isBn ? "মাসিক ছুটির দিন" : "Monthly Holidays"}
+            {isBn ? "অতিরিক্ত ছুটি (সবার জন্য)" : "Extra Holidays (For All)"}
           </h3>
           <Button
             variant="outline"

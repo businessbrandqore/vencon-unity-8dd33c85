@@ -110,7 +110,7 @@ const HRLeaves = () => {
 
       if (empData?.basic_salary) {
         const days = getDuration(leave.start_date, leave.end_date);
-        const dailyRate = Number(empData.basic_salary) / 26;
+        const dailyRate = Number(empData.basic_salary) / 27;
         const deduction = Math.round(dailyRate * days);
 
         // Insert deduction as attendance record for tracking
