@@ -371,7 +371,7 @@ const HRPayroll = () => {
   const dailyNet = totalNet / 27;
   const yearlyNet = totalNet * 12;
 
-  const [overviewMode, setOverviewMode] = useState<"daily" | "monthly" | "yearly">("monthly");
+
 
   const overviewValue = overviewMode === "daily" ? dailyNet : overviewMode === "yearly" ? yearlyNet : totalNet;
   const overviewBasic = overviewMode === "daily" ? totalBasic / 27 : overviewMode === "yearly" ? totalBasic * 12 : totalBasic;
