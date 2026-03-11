@@ -62,8 +62,20 @@ export default function ManagerAttendance() {
   const [showCheckOutModal, setShowCheckOutModal] = useState(false);
   const [checkOutMood, setCheckOutMood] = useState("");
 
+  const [officeLocation, setOfficeLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [gpsChecking, setGpsChecking] = useState(false);
+  const [gpsError, setGpsError] = useState("");
+
   const loadData = useCallback(async () => {
     if (!user) return;
+
+    // Load office GPS from user profile
+    const { data: profileData } = await supabase.from("users").select("gps_location").eq("id", user.id).single();
+    if (profileData?.gps_location) {
+      const [lat, lon] = profileData.gps_location.split(",").map(Number);
+      if (!isNaN(lat) && !isNaN(lon)) setOfficeLocation({ lat, lon });
+    }
+
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
