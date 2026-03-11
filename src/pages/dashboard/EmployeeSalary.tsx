@@ -3,8 +3,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Wallet, AlertTriangle, CheckCircle, Info } from "lucide-react";
 
 interface SalaryData {
   user_id: string;
@@ -152,6 +153,82 @@ export default function EmployeeSalary() {
           )}
         </CardContent>
       </Card>
+
+      {/* Receive Ratio Warning & Progress — Agents only */}
+      {isIncentiveRole && (
+        <div className="space-y-4">
+          {/* Warning Banner */}
+          {salary.receive_ratio < 60 ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-heading font-bold text-destructive">
+                    ⚠ রিসিভ রেশিও ৬০% এর নিচে!
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    আপনার বর্তমান রিসিভ রেশিও <strong className="text-destructive">{salary.receive_ratio}%</strong>। মাস শেষে রিসিভ রেশিও ৬০% এর নিচে থাকলে বেতন <strong className="text-destructive">০ (শূন্য)</strong> হয়ে যাবে। ডেলিভারি সফল করার জন্য গ্রাহকদের সাথে ভালোভাবে কথা বলুন।
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : salary.receive_ratio < 80 ? (
+            <div className="rounded-md border border-orange-300/50 bg-orange-50 dark:bg-orange-950/20 p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-heading font-bold text-orange-600 dark:text-orange-400">
+                    রিসিভ রেশিও মোটামুটি
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    আপনার বর্তমান রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{salary.receive_ratio}%</strong>। আরও উন্নতি করলে ইনসেনটিভ বাড়বে। লক্ষ্য রাখুন ৮০% এর উপরে!
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-green-300/50 bg-green-50 dark:bg-green-950/20 p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-heading font-bold text-green-700 dark:text-green-400">
+                    রিসিভ রেশিও চমৎকার! 🎉
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    আপনার বর্তমান রিসিভ রেশিও <strong className="text-green-600 dark:text-green-400">{salary.receive_ratio}%</strong>। দারুণ পারফরম্যান্স! এভাবে চালিয়ে যান।
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-heading text-sm font-bold">রিসিভ রেশিও অগ্রগতি</p>
+                <Badge variant={salary.receive_ratio >= 60 ? "default" : "destructive"}>
+                  {salary.receive_ratio}% / ৬০% মিনিমাম
+                </Badge>
+              </div>
+              <Progress
+                value={Math.min(salary.receive_ratio, 100)}
+                className={cn(
+                  "h-3",
+                  salary.receive_ratio < 60 && "[&>div]:bg-destructive",
+                  salary.receive_ratio >= 60 && salary.receive_ratio < 80 && "[&>div]:bg-orange-500",
+                  salary.receive_ratio >= 80 && "[&>div]:bg-green-500"
+                )}
+              />
+              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                <span>০%</span>
+                <span>৬০% সীমা</span>
+                <span>১০০%</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
