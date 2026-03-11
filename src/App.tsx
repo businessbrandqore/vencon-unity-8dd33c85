@@ -14,6 +14,7 @@ import SAAnalytics from "./pages/dashboard/SAAnalytics";
 import SAWarehouse from "./pages/dashboard/SAWarehouse";
 import SABudget from "./pages/dashboard/SABudget";
 import SASettings from "./pages/dashboard/SASettings";
+import SAAllData from "./pages/dashboard/SAAllData";
 import HRDashboard from "./pages/dashboard/HRDashboard";
 import HRCampaigns from "./pages/dashboard/HRCampaigns";
 import HREmployees from "./pages/dashboard/HREmployees";
