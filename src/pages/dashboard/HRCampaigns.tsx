@@ -49,7 +49,7 @@ const HRCampaigns = () => {
   const [dataMode, setDataMode] = useState<"lead" | "processing">("lead");
   const [tlUsers, setTLUsers] = useState<TLUser[]>([]);
   const [selectedTLs, setSelectedTLs] = useState<string[]>([]);
-  const [websites, setWebsites] = useState<{ name: string; url: string }[]>([{ name: "", url: "" }]);
+  const [websites, setWebsites] = useState<{ name: string; url: string; dataMode: "lead" | "processing" }[]>([{ name: "", url: "", dataMode: "lead" }]);
   const [submitting, setSubmitting] = useState(false);
 
   // Detail
