@@ -96,34 +96,54 @@ export default function ManagerAttendance() {
 
   const presentDays = attendance.filter((a) => a.clock_in).length;
 
-  // Check In — NO deduction, NO shift restriction
+  const verifyLocation = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) { reject(new Error("GPS সাপোর্ট নেই")); return; }
+      navigator.geolocation.getCurrentPosition(resolve, (err) => {
+        if (err.code === 1) reject(new Error("লোকেশন অনুমতি দিন"));
+        else if (err.code === 2) reject(new Error("লোকেশন পাওয়া যাচ্ছে না"));
+        else reject(new Error("লোকেশন টাইমআউট"));
+      }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+  };
+
+  // Check In — office location required, NO deduction
   const handleCheckIn = async () => {
     if (!user || !checkInMood) { toast.error("মুড নির্বাচন করুন"); return; }
-    const now = new Date().toISOString();
+    
+    setGpsChecking(true);
+    setGpsError("");
+    
+    try {
+      const pos = await verifyLocation();
+      const { latitude, longitude } = pos.coords;
+      
+      if (officeLocation) {
+        const dist = getDistanceMeters(latitude, longitude, officeLocation.lat, officeLocation.lon);
+        if (dist > OFFICE_RADIUS_METERS) {
+          setGpsError(`আপনি অফিস থেকে ${Math.round(dist)} মিটার দূরে আছেন। অফিসে এসে Check In করুন।`);
+          setGpsChecking(false);
+          return;
+        }
+      }
+      
+      const now = new Date().toISOString();
+      if (todayRecord) {
+        await supabase.from("attendance").update({
+          clock_in: now, mood_in: checkInMood, mood_note: checkInNote || null,
+          is_late: false, deduction_amount: 0,
+        }).eq("id", todayRecord.id);
+      } else {
+        await supabase.from("attendance").insert({
+          user_id: user.id, date: todayStr(), clock_in: now,
+          mood_in: checkInMood, mood_note: checkInNote || null,
+          is_late: false, deduction_amount: 0,
+        });
+      }
 
-    if (todayRecord) {
-      await supabase.from("attendance").update({
-        clock_in: now,
-        mood_in: checkInMood,
-        mood_note: checkInNote || null,
-        is_late: false,
-        deduction_amount: 0,
-      }).eq("id", todayRecord.id);
-    } else {
-      await supabase.from("attendance").insert({
-        user_id: user.id,
-        date: todayStr(),
-        clock_in: now,
-        mood_in: checkInMood,
-        mood_note: checkInNote || null,
-        is_late: false,
-        deduction_amount: 0,
-      });
-    }
-
-    setShowCheckInModal(false);
-    setCheckInMood("");
-    setCheckInNote("");
+      setShowCheckInModal(false);
+      setCheckInMood("");
+      setCheckInNote("");
     await loadData();
     toast.success("Check In সফল ✓");
   };
