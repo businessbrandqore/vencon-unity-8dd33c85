@@ -302,8 +302,9 @@ export default function EmployeeTSDashboard() {
     if (!user || (!deskCondition && !deskNote)) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন বা লিখুন"); return; }
     // upsert attendance row for today
     if (todayAttendance) {
+      const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").update({
-        desk_condition: deskCondition,
+        desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
       }).eq("id", todayAttendance.id);
     } else {
