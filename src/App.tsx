@@ -106,6 +106,7 @@ const App = () => (
             <Route element={<DashboardLayout panel="tl" />}>
               <Route path="/tl/dashboard" element={<TLDashboard />} />
               <Route path="/tl/leads" element={<TLLeads />} />
+              <Route path="/tl/data-tracker" element={<DataTracker />} />
               <Route path="/tl/my-team" element={<TLTeam />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<ChatPage />} />
