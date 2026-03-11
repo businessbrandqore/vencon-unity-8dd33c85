@@ -136,7 +136,7 @@ const HRCampaigns = () => {
 
     toast({ title: isBn ? "Campaign SA approval-এর জন্য submit হয়েছে ✓" : "Campaign submitted for SA approval ✓" });
     setNewName(""); setSelectedTLs([]); setDataMode("lead");
-    setWebsites([{ name: "", url: "" }]);
+    setWebsites([{ name: "", url: "", dataMode: "lead" }]);
     setShowCreate(false); setSearchParams({});
     setSubmitting(false); fetchCampaigns();
   };
