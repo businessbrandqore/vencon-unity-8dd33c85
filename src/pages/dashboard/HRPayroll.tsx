@@ -88,6 +88,7 @@ const HRPayroll = () => {
   });
   const [loadingSalary, setLoadingSalary] = useState(true);
 
+  const [overviewMode, setOverviewMode] = useState<"daily" | "monthly" | "yearly">("monthly");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
