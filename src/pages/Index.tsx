@@ -6,17 +6,14 @@ import { Shield, Users, Target, User } from "lucide-react";
 
 const panelIcons: Record<string, React.ElementType> = {
   sa: Shield,
-  hr: Shield,
-  tl: Users,
+  hr: Users,
+  tl: Target,
   employee: User,
 };
 
 const Index = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-
-  // Show HR, TL, Employee on index (SA is hidden from public)
-  const visiblePanels = panels.filter((p) => p.type !== "sa");
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -27,22 +24,22 @@ const Index = () => {
         <h1 className="font-heading text-6xl font-bold tracking-[0.25em] text-foreground">
           VENCON
         </h1>
-        <div className="mx-auto mt-3 w-12 h-1 rounded-full bg-[#EA580C]" />
+        <div className="mx-auto mt-3 w-12 h-1 rounded-full bg-primary" />
         <p className="mt-4 font-body text-sm text-muted-foreground tracking-wide">
-          Company Operations Management
+          {t("tagline")}
         </p>
       </div>
 
       {/* Panel Cards */}
       <div className="flex-1 flex items-start justify-center px-4 pt-12 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
-          {visiblePanels.map((panel) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-5xl">
+          {panels.map((panel) => {
             const Icon = panelIcons[panel.type] || Shield;
             return (
               <button
                 key={panel.type}
                 onClick={() => navigate(panel.loginPath)}
-                className="group bg-card border border-border rounded-xl p-8 text-left transition-all duration-300 hover:border-[hsl(var(--border))]/60 hover:bg-secondary/30"
+                className="group bg-card border border-border rounded-xl p-7 text-left transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1"
               >
                 {/* Icon */}
                 <div
@@ -56,15 +53,15 @@ const Index = () => {
                   {t(panel.nameKey)}
                 </h2>
 
-                <p className="font-body text-sm text-muted-foreground mb-6 leading-relaxed">
+                <p className="font-body text-sm text-muted-foreground mb-6 leading-relaxed min-h-[40px]">
                   {t(panel.descKey)}
                 </p>
 
                 <span
-                  className="font-heading text-sm tracking-wide transition-colors duration-300"
+                  className="font-heading text-sm tracking-wide transition-colors duration-300 group-hover:underline"
                   style={{ color: panel.color }}
                 >
-                  Sign In →
+                  {t("login")} →
                 </span>
               </button>
             );
