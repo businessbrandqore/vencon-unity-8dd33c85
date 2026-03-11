@@ -20,6 +20,7 @@ import {
   Bell,
   Gift,
   Star,
+  BookOpen,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
@@ -53,6 +54,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "customer_feedback", icon: Star, path: "/hr/feedback" },
     { titleKey: "chat", icon: MessageSquare, path: "/hr/chat" },
     { titleKey: "notifications", icon: Bell, path: "/hr/notifications" },
+    { titleKey: "documentation", icon: BookOpen, path: "/hr/documentation" },
     { titleKey: "settings", icon: Settings, path: "/hr/settings" },
   ],
   tl: [

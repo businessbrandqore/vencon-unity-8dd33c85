@@ -34,6 +34,7 @@ import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import SAPayroll from "./pages/dashboard/SAPayroll";
+import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/hr/chat-admin" element={<HRChatAdmin />} />
               <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
               <Route path="/hr/leads/import" element={<HRLeadImport />} />
+              <Route path="/hr/documentation" element={<WebhookDocumentation />} />
               <Route path="/hr/settings" element={<HRSettings />} />
               <Route path="/hr/notifications" element={<NotificationsPage />} />
               <Route path="/hr/profile" element={<PlaceholderPage titleKey="profile" />} />
