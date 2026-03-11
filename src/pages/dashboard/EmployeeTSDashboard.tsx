@@ -136,7 +136,9 @@ export default function EmployeeTSDashboard() {
 
   /* desk report */
   const [deskCondition, setDeskCondition] = useState("");
+  const [deskNote, setDeskNote] = useState("");
   const [phoneMins, setPhoneMins] = useState<number>(0);
+  const [phoneInstruction, setPhoneInstruction] = useState("");
 
   /* mood */
   const [selectedMood, setSelectedMood] = useState("");
@@ -227,6 +229,18 @@ export default function EmployeeTSDashboard() {
 
   useEffect(() => { loadAttendance(); }, [loadAttendance]);
 
+  /* ───── load phone instruction ───── */
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "phone_minutes_instruction")
+        .maybeSingle();
+      if (data?.value) setPhoneInstruction(String(data.value));
+    })();
+  }, []);
+
   /* ───── load leads ───── */
   const loadLeads = useCallback(async () => {
     if (!user) return;
@@ -297,18 +311,20 @@ export default function EmployeeTSDashboard() {
   /* ───── handlers ───── */
 
   const handleDeskReportSubmit = async () => {
-    if (!user || !deskCondition) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন"); return; }
+    if (!user || (!deskCondition && !deskNote)) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন বা লিখুন"); return; }
     // upsert attendance row for today
     if (todayAttendance) {
+      const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").update({
-        desk_condition: deskCondition,
+        desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
       }).eq("id", todayAttendance.id);
     } else {
+      const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").insert({
         user_id: user.id,
         date: todayStr(),
-        desk_condition: deskCondition,
+        desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
       });
     }
@@ -527,7 +543,17 @@ export default function EmployeeTSDashboard() {
                 </RadioGroup>
               </div>
               <div>
+                <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
+                <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
+              </div>
+              <div>
                 <Label>{t("phone_minutes")}</Label>
+                {phoneInstruction && (
+                  <div className="mt-1 mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-300">
+                    <p className="font-medium mb-1">📱 মিনিট চেক করার নিয়ম:</p>
+                    <p className="whitespace-pre-wrap">{phoneInstruction}</p>
+                  </div>
+                )}
                 <Input type="number" min={0} value={phoneMins} onChange={(e) => setPhoneMins(Number(e.target.value))} className="mt-1" />
               </div>
             </div>
