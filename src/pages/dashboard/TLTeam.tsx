@@ -4,41 +4,39 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, Users, Target, CheckCircle, TrendingUp, RefreshCw, Filter, Shield, UserCheck } from "lucide-react";
+import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase } from "lucide-react";
 
-interface TeamMember {
+type TimePeriod = "daily" | "monthly" | "yearly";
+type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings";
+
+interface PersonStats {
   id: string;
-  oderId: string;
-  userId: string;
   name: string;
   role: string;
   panel: string;
-  designation: string | null;
   phone: string | null;
   email: string;
+  designation: string | null;
   basicSalary: number | null;
+  joinDate: string | null;
   isActive: boolean;
-  memberType: "bdo" | "tl" | "agent" | "employee";
-  isBronze: boolean;
-  isSilver: boolean;
   todayLeads: number;
-  todayConfirmed: number;
-  todayReceiveRatio: number;
-  monthlyConfirmed: number;
+  todayOrders: number;
+  todayDelivered: number;
+  todayRatio: number;
+  monthlyLeads: number;
+  monthlyOrders: number;
   monthlyDelivered: number;
   monthlyRatio: number;
-  joinDate: string | null;
+  yearlyOrders: number;
+  yearlyDelivered: number;
+  yearlyRatio: number;
 }
-
-type MemberFilter = "all" | "tl" | "employee" | "bronze" | "silver" | "active" | "inactive";
-type SortField = "name" | "todayLeads" | "todayConfirmed" | "todayReceiveRatio" | "monthlyRatio";
-type ViewMode = "campaign" | "all_members";
 
 const TLTeam = () => {
   const { user } = useAuth();
@@ -46,577 +44,663 @@ const TLTeam = () => {
   const isBn = t("vencon") === "VENCON";
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState("");
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(isBDO ? "all_members" : "campaign");
+  const [viewLevel, setViewLevel] = useState<ViewLevel>("tl_list");
+  const [selectedTL, setSelectedTL] = useState<PersonStats | null>(null);
+  const [selectedGL, setSelectedGL] = useState<PersonStats | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<PersonStats | null>(null);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("daily");
 
-  // Search & filter
+  const [tlList, setTlList] = useState<PersonStats[]>([]);
+  const [glList, setGlList] = useState<PersonStats[]>([]);
+  const [agentList, setAgentList] = useState<PersonStats[]>([]);
+  const [otherEmployees, setOtherEmployees] = useState<PersonStats[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [memberFilter, setMemberFilter] = useState<MemberFilter>("all");
-  const [panelFilter, setPanelFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortAsc, setSortAsc] = useState(true);
+
+  const getDateRange = useCallback((period: TimePeriod) => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
+    return { todayStart, monthStart, yearStart };
+  }, []);
+
+  const fetchPersonStats = useCallback(async (userId: string, userInfo: any, isAgent: boolean): Promise<PersonStats> => {
+    const { todayStart, monthStart, yearStart } = getDateRange(timePeriod);
+    const field = isAgent ? "agent_id" : "tl_id";
+    const leadField = isAgent ? "assigned_to" : "tl_id";
+
+    const [tLeads, tOrders, tDel, mLeads, mOrders, mDel, yOrders, yDel] = await Promise.all([
+      supabase.from("leads").select("*", { count: "exact", head: true }).eq(leadField, userId).gte("created_at", todayStart),
+      supabase.from("orders").select("*", { count: "exact", head: true }).eq(field, userId).gte("created_at", todayStart),
+      supabase.from("orders").select("*", { count: "exact", head: true }).eq(field, userId).eq("delivery_status", "delivered").gte("created_at", todayStart),
+      supabase.from("leads").select("*", { count: "exact", head: true }).eq(leadField, userId).gte("created_at", monthStart),
+      supabase.from("orders").select("*", { count: "exact", head: true }).eq(field, userId).gte("created_at", monthStart),
+      supabase.from("orders").select("*", { count: "exact", head: true }).eq(field, userId).eq("delivery_status", "delivered").gte("created_at", monthStart),
+      supabase.from("orders").select("*", { count: "exact", head: true }).eq(field, userId).gte("created_at", yearStart),
+      supabase.from("orders").select("*", { count: "exact", head: true }).eq(field, userId).eq("delivery_status", "delivered").gte("created_at", yearStart),
+    ]);
+
+    const tO = tOrders.count || 0, tD = tDel.count || 0;
+    const mO = mOrders.count || 0, mD = mDel.count || 0;
+    const yO = yOrders.count || 0, yD = yDel.count || 0;
+
+    return {
+      id: userId,
+      name: userInfo.name,
+      role: userInfo.role,
+      panel: userInfo.panel,
+      phone: userInfo.phone,
+      email: userInfo.email,
+      designation: userInfo.designation,
+      basicSalary: userInfo.basic_salary,
+      joinDate: userInfo.created_at,
+      isActive: userInfo.is_active !== false,
+      todayLeads: tLeads.count || 0,
+      todayOrders: tO,
+      todayDelivered: tD,
+      todayRatio: tO > 0 ? Math.round((tD / tO) * 100) : 0,
+      monthlyLeads: mLeads.count || 0,
+      monthlyOrders: mO,
+      monthlyDelivered: mD,
+      monthlyRatio: mO > 0 ? Math.round((mD / mO) * 100) : 0,
+      yearlyOrders: yO,
+      yearlyDelivered: yD,
+      yearlyRatio: yO > 0 ? Math.round((yD / yO) * 100) : 0,
+    };
+  }, [getDateRange, timePeriod]);
+
+  // Load TL list
+  const loadTLs = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+
+    if (isBDO) {
+      const { data } = await supabase.from("users").select("*").eq("panel", "tl").eq("is_active", true).neq("id", user.id);
+      if (data) {
+        const stats = await Promise.all(data.map((u: any) => fetchPersonStats(u.id, u, false)));
+        setTlList(stats);
+      }
+    } else {
+      // Regular TL sees themselves - go directly to GL list
+      const { data: selfData } = await supabase.from("users").select("*").eq("id", user.id).single();
+      if (selfData) {
+        const stats = await fetchPersonStats(user.id, selfData, false);
+        setSelectedTL(stats);
+        setViewLevel("gl_list");
+        await loadGLs(user.id);
+        setLoading(false);
+        return;
+      }
+    }
+    setLoading(false);
+  }, [user, isBDO, fetchPersonStats]);
+
+  // Load Group Leaders under a TL
+  const loadGLs = useCallback(async (tlId: string) => {
+    setLoading(true);
+    // Get agents under this TL from campaign_agent_roles
+    const { data: agentRoles } = await supabase
+      .from("campaign_agent_roles")
+      .select("agent_id")
+      .eq("tl_id", tlId);
+
+    if (!agentRoles || agentRoles.length === 0) {
+      setGlList([]);
+      setLoading(false);
+      return;
+    }
+
+    const agentIds = agentRoles.map((r: any) => r.agent_id);
+
+    // Find group leaders who lead any of these agents
+    const { data: groupData } = await supabase
+      .from("group_members")
+      .select("group_leader_id")
+      .in("agent_id", agentIds);
+
+    const glIds = [...new Set((groupData || []).map((g: any) => g.group_leader_id))];
+
+    if (glIds.length === 0) {
+      setGlList([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data: glUsers } = await supabase.from("users").select("*").in("id", glIds).eq("is_active", true);
+    if (glUsers) {
+      const stats = await Promise.all(glUsers.map((u: any) => fetchPersonStats(u.id, u, true)));
+      setGlList(stats);
+    }
+    setLoading(false);
+  }, [fetchPersonStats]);
+
+  // Load Agents under a Group Leader
+  const loadAgents = useCallback(async (glId: string) => {
+    setLoading(true);
+    const { data: groupData } = await supabase.from("group_members").select("agent_id").eq("group_leader_id", glId);
+    if (!groupData || groupData.length === 0) {
+      setAgentList([]);
+      setLoading(false);
+      return;
+    }
+
+    const agentIds = groupData.map((g: any) => g.agent_id);
+    const { data: agentUsers } = await supabase.from("users").select("*").in("id", agentIds).eq("is_active", true);
+    if (agentUsers) {
+      const stats = await Promise.all(agentUsers.map((u: any) => fetchPersonStats(u.id, u, true)));
+      setAgentList(stats);
+    }
+    setLoading(false);
+  }, [fetchPersonStats]);
+
+  // Load other employees (non-sales roles)
+  const loadOtherEmployees = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("is_active", true)
+      .not("role", "in", '("team_leader","telesales_executive","assistant_team_leader","group_leader","Business Development And Marketing Manager","super_admin")')
+      .eq("panel", "employee");
+
+    if (data) {
+      const employees: PersonStats[] = data.map((u: any) => ({
+        id: u.id, name: u.name, role: u.role, panel: u.panel,
+        phone: u.phone, email: u.email, designation: u.designation,
+        basicSalary: u.basic_salary, joinDate: u.created_at, isActive: true,
+        todayLeads: 0, todayOrders: 0, todayDelivered: 0, todayRatio: 0,
+        monthlyLeads: 0, monthlyOrders: 0, monthlyDelivered: 0, monthlyRatio: 0,
+        yearlyOrders: 0, yearlyDelivered: 0, yearlyRatio: 0,
+      }));
+      setOtherEmployees(employees);
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
-    const fetchCampaigns = async () => {
-      if (isBDO) {
-        const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
-        if (data) {
-          const list = data.map((c: any) => ({ id: c.id, name: c.name }));
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
-        }
-      } else {
-        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
-        if (data) {
-          const list = data.map((d: any) => d.campaigns).filter(Boolean);
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
-        }
-      }
-    };
-    fetchCampaigns();
+    loadTLs();
+    if (isBDO) loadOtherEmployees();
   }, [user]);
 
-  // BDO: Load ALL users from the database
-  const loadAllMembers = useCallback(async () => {
-    if (!user || !isBDO) return;
-    setLoading(true);
+  // Navigation handlers
+  const navigateToTL = async (tl: PersonStats) => {
+    setSelectedTL(tl);
+    setViewLevel("gl_list");
+    await loadGLs(tl.id);
+  };
 
-    const { data: allUsers } = await supabase
-      .from("users")
-      .select("id, name, role, panel, designation, phone, email, basic_salary, is_active, created_at")
-      .eq("is_active", true)
-      .order("panel")
-      .order("name");
+  const navigateToGL = async (gl: PersonStats) => {
+    setSelectedGL(gl);
+    setViewLevel("agent_list");
+    await loadAgents(gl.id);
+  };
 
-    if (!allUsers) { setLoading(false); return; }
+  const navigateToProfile = (person: PersonStats) => {
+    setSelectedProfile(person);
+    setViewLevel("profile");
+  };
 
-    const today = new Date().toISOString().split("T")[0];
-    const startOfDay = `${today}T00:00:00.000Z`;
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const allMembers: TeamMember[] = [];
-
-    for (const u of allUsers as any[]) {
-      // Skip the BDO's own record
-      if (u.id === user.id) continue;
-
-      // Determine member type
-      let memberType: TeamMember["memberType"] = "employee";
-      if (u.panel === "tl") memberType = "tl";
-      else if (u.panel === "sa" || u.panel === "hr") memberType = "employee"; // show as employee type for display
-
-      // Get performance stats for sales-related roles
-      const isSalesRole = ["telesales_executive", "assistant_team_leader"].includes(u.role);
-      const isTL = u.panel === "tl";
-
-      let todayLeads = 0, todayConfirmed = 0, todayRatio = 0;
-      let monthlyConfirmed = 0, monthlyDelivered = 0, mRatio = 0;
-
-      if (isSalesRole) {
-        const [r1, r2, r3, r4, r5] = await Promise.all([
-          supabase.from("leads").select("*", { count: "exact", head: true }).eq("assigned_to", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).gte("created_at", startOfMonth.toISOString()),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
-        ]);
-        todayLeads = r1.count || 0;
-        todayConfirmed = r2.count || 0;
-        const todayDel = r3.count || 0;
-        todayRatio = todayConfirmed > 0 ? Math.round((todayDel / todayConfirmed) * 100) : 0;
-        monthlyConfirmed = r4.count || 0;
-        monthlyDelivered = r5.count || 0;
-        mRatio = monthlyConfirmed > 0 ? Math.round((monthlyDelivered / monthlyConfirmed) * 100) : 0;
-      } else if (isTL) {
-        const [r1, r2, r3, r4, r5] = await Promise.all([
-          supabase.from("leads").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfMonth.toISOString()),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
-        ]);
-        todayLeads = r1.count || 0;
-        todayConfirmed = r2.count || 0;
-        const todayDel = r3.count || 0;
-        todayRatio = todayConfirmed > 0 ? Math.round((todayDel / todayConfirmed) * 100) : 0;
-        monthlyConfirmed = r4.count || 0;
-        monthlyDelivered = r5.count || 0;
-        mRatio = monthlyConfirmed > 0 ? Math.round((monthlyDelivered / monthlyConfirmed) * 100) : 0;
+  const goBack = () => {
+    if (viewLevel === "profile") {
+      if (selectedGL) setViewLevel("agent_list");
+      else if (selectedTL) setViewLevel("gl_list");
+      else setViewLevel("tl_list");
+      setSelectedProfile(null);
+    } else if (viewLevel === "agent_list") {
+      setViewLevel("gl_list");
+      setSelectedGL(null);
+    } else if (viewLevel === "gl_list") {
+      if (isBDO) {
+        setViewLevel("tl_list");
+        setSelectedTL(null);
       }
+    } else if (viewLevel === "other_employees") {
+      setViewLevel("tl_list");
+    } else if (viewLevel === "rankings") {
+      setViewLevel("tl_list");
+    }
+  };
 
-      allMembers.push({
-        id: u.id,
-        oderId: "",
-        userId: u.id,
-        name: u.name,
-        role: u.role,
-        panel: u.panel,
-        designation: u.designation,
-        phone: u.phone,
-        email: u.email,
-        basicSalary: u.basic_salary,
-        isActive: u.is_active !== false,
-        memberType,
-        isBronze: false,
-        isSilver: false,
-        todayLeads,
-        todayConfirmed,
-        todayReceiveRatio: todayRatio,
-        monthlyConfirmed,
-        monthlyDelivered,
-        monthlyRatio: mRatio,
-        joinDate: u.created_at,
+  // Get stats based on period
+  const getStatsByPeriod = (p: PersonStats) => {
+    if (timePeriod === "daily") return { leads: p.todayLeads, orders: p.todayOrders, delivered: p.todayDelivered, ratio: p.todayRatio };
+    if (timePeriod === "monthly") return { leads: p.monthlyLeads, orders: p.monthlyOrders, delivered: p.monthlyDelivered, ratio: p.monthlyRatio };
+    return { leads: 0, orders: p.yearlyOrders, delivered: p.yearlyDelivered, ratio: p.yearlyRatio };
+  };
+
+  // Rankings
+  const allSalesPersons = useMemo(() => {
+    const all: (PersonStats & { type: string })[] = [];
+    tlList.forEach(p => all.push({ ...p, type: "TL" }));
+    glList.forEach(p => all.push({ ...p, type: "GL" }));
+    agentList.forEach(p => all.push({ ...p, type: "Agent" }));
+    return all;
+  }, [tlList, glList, agentList]);
+
+  const bestTL = useMemo(() => {
+    if (tlList.length === 0) return null;
+    return [...tlList].sort((a, b) => {
+      const sa = getStatsByPeriod(a), sb = getStatsByPeriod(b);
+      return sb.delivered - sa.delivered || sb.ratio - sa.ratio;
+    })[0];
+  }, [tlList, timePeriod]);
+
+  const bestGL = useMemo(() => {
+    if (glList.length === 0) return null;
+    return [...glList].sort((a, b) => {
+      const sa = getStatsByPeriod(a), sb = getStatsByPeriod(b);
+      return sb.delivered - sa.delivered || sb.ratio - sa.ratio;
+    })[0];
+  }, [glList, timePeriod]);
+
+  const bestAgent = useMemo(() => {
+    if (agentList.length === 0) return null;
+    return [...agentList].sort((a, b) => {
+      const sa = getStatsByPeriod(a), sb = getStatsByPeriod(b);
+      return sb.delivered - sa.delivered || sb.ratio - sa.ratio;
+    })[0];
+  }, [agentList, timePeriod]);
+
+  // Filtered list based on search
+  const filterList = (list: PersonStats[]) => {
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.role.toLowerCase().includes(q) ||
+      (p.phone && p.phone.includes(q)) ||
+      p.email.toLowerCase().includes(q)
+    );
+  };
+
+  // Breadcrumb
+  const renderBreadcrumb = () => {
+    const crumbs: { label: string; onClick?: () => void }[] = [];
+
+    if (isBDO) {
+      crumbs.push({
+        label: isBn ? "টিম লিডার তালিকা" : "Team Leaders",
+        onClick: viewLevel !== "tl_list" ? () => { setViewLevel("tl_list"); setSelectedTL(null); setSelectedGL(null); setSelectedProfile(null); } : undefined,
       });
     }
 
-    setMembers(allMembers);
-    setLoading(false);
-  }, [user, isBDO]);
-
-  // Campaign-specific load (for TL or BDO campaign view)
-  const loadCampaignTeam = useCallback(async () => {
-    if (!user || !selectedCampaign) return;
-    setLoading(true);
-
-    const today = new Date().toISOString().split("T")[0];
-    const startOfDay = `${today}T00:00:00.000Z`;
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const allMembers: TeamMember[] = [];
-
-    // 1. TLs for this campaign
-    let tlQuery = supabase
-      .from("campaign_tls")
-      .select("tl_id, users!campaign_tls_tl_id_fkey(id, name, role, panel, designation, phone, email, basic_salary, is_active, created_at)")
-      .eq("campaign_id", selectedCampaign);
-    if (!isBDO) tlQuery = tlQuery.eq("tl_id", user.id);
-    const { data: tlData } = await tlQuery;
-
-    if (tlData) {
-      for (const tl of tlData as any[]) {
-        const u = tl.users;
-        if (!u) continue;
-        const [r1, r2, r3, r4, r5] = await Promise.all([
-          supabase.from("leads").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).gte("created_at", startOfMonth.toISOString()),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("tl_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
-        ]);
-        const tRatio = (r2.count || 0) > 0 ? Math.round(((r3.count || 0) / (r2.count || 1)) * 100) : 0;
-        const mRatio = (r4.count || 0) > 0 ? Math.round(((r5.count || 0) / (r4.count || 1)) * 100) : 0;
-        allMembers.push({
-          id: `tl-${u.id}`, oderId: "", userId: u.id, name: u.name, role: u.role, panel: u.panel,
-          designation: u.designation, phone: u.phone, email: u.email, basicSalary: u.basic_salary,
-          isActive: u.is_active !== false, memberType: "tl", isBronze: false, isSilver: false,
-          todayLeads: r1.count || 0, todayConfirmed: r2.count || 0, todayReceiveRatio: tRatio,
-          monthlyConfirmed: r4.count || 0, monthlyDelivered: r5.count || 0, monthlyRatio: mRatio,
-          joinDate: u.created_at,
-        });
-      }
+    if (selectedTL && viewLevel !== "tl_list") {
+      crumbs.push({
+        label: selectedTL.name,
+        onClick: viewLevel !== "gl_list" ? () => { setViewLevel("gl_list"); setSelectedGL(null); setSelectedProfile(null); } : undefined,
+      });
     }
 
-    // 2. Agents for this campaign
-    let rolesQ = supabase
-      .from("campaign_agent_roles")
-      .select("id, agent_id, is_bronze, is_silver, tl_id, users!campaign_agent_roles_agent_id_fkey(id, name, role, panel, designation, phone, email, basic_salary, is_active, created_at)")
-      .eq("campaign_id", selectedCampaign);
-    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
-    const { data: roles } = await rolesQ;
-
-    if (roles) {
-      for (const r of roles as any[]) {
-        const u = r.users;
-        if (!u) continue;
-        const [r1, r2, r3, r4, r5] = await Promise.all([
-          supabase.from("leads").select("*", { count: "exact", head: true }).eq("assigned_to", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfDay),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).gte("created_at", startOfMonth.toISOString()),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("agent_id", u.id).eq("delivery_status", "delivered").gte("created_at", startOfMonth.toISOString()),
-        ]);
-        const tRatio = (r2.count || 0) > 0 ? Math.round(((r3.count || 0) / (r2.count || 1)) * 100) : 0;
-        const mRatio = (r4.count || 0) > 0 ? Math.round(((r5.count || 0) / (r4.count || 1)) * 100) : 0;
-        allMembers.push({
-          id: r.id, oderId: r.id, userId: u.id, name: u.name, role: u.role, panel: u.panel,
-          designation: u.designation, phone: u.phone, email: u.email, basicSalary: u.basic_salary,
-          isActive: u.is_active !== false, memberType: "agent", isBronze: r.is_bronze, isSilver: r.is_silver,
-          todayLeads: r1.count || 0, todayConfirmed: r2.count || 0, todayReceiveRatio: tRatio,
-          monthlyConfirmed: r4.count || 0, monthlyDelivered: r5.count || 0, monthlyRatio: mRatio,
-          joinDate: u.created_at,
-        });
-      }
+    if (selectedGL && (viewLevel === "agent_list" || viewLevel === "profile")) {
+      crumbs.push({
+        label: selectedGL.name,
+        onClick: viewLevel !== "agent_list" ? () => { setViewLevel("agent_list"); setSelectedProfile(null); } : undefined,
+      });
     }
 
-    setMembers(allMembers);
-    setLoading(false);
-  }, [user, selectedCampaign]);
+    if (selectedProfile && viewLevel === "profile") {
+      crumbs.push({ label: selectedProfile.name });
+    }
 
-  useEffect(() => {
-    if (viewMode === "all_members" && isBDO) loadAllMembers();
-    else if (viewMode === "campaign") loadCampaignTeam();
-  }, [viewMode, loadAllMembers, loadCampaignTeam]);
+    if (viewLevel === "other_employees") {
+      crumbs.push({ label: isBn ? "অন্যান্য কর্মী" : "Other Employees" });
+    }
 
-  const handleRefresh = () => {
-    if (viewMode === "all_members" && isBDO) loadAllMembers();
-    else loadCampaignTeam();
+    if (viewLevel === "rankings") {
+      crumbs.push({ label: isBn ? "সেরা পারফর্মার" : "Top Performers" });
+    }
+
+    return (
+      <div className="flex items-center gap-1 text-sm flex-wrap">
+        {crumbs.map((c, i) => (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+            {c.onClick ? (
+              <button onClick={c.onClick} className="text-primary hover:underline font-medium">{c.label}</button>
+            ) : (
+              <span className="text-foreground font-semibold">{c.label}</span>
+            )}
+          </span>
+        ))}
+      </div>
+    );
   };
 
-  const toggleRole = async (roleId: string, field: "is_bronze" | "is_silver", value: boolean) => {
-    await supabase.from("campaign_agent_roles").update({ [field]: value }).eq("id", roleId);
-    setMembers((prev) => prev.map((a) => a.oderId === roleId ? { ...a, [field === "is_bronze" ? "isBronze" : "isSilver"]: value } : a));
-    toast.success(isBn ? "আপডেট হয়েছে" : "Updated");
+  const renderPersonRow = (p: PersonStats, onClick: () => void, showType?: string) => {
+    const stats = getStatsByPeriod(p);
+    return (
+      <TableRow key={p.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={onClick}>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            {showType === "TL" && <Shield className="h-4 w-4 text-primary" />}
+            {showType === "GL" && <Crown className="h-4 w-4 text-amber-500" />}
+            {showType === "Agent" && <UserCheck className="h-4 w-4 text-muted-foreground" />}
+            <div>
+              <p className="font-medium text-foreground">{p.name}</p>
+              <p className="text-[11px] text-muted-foreground">{roleName(p.role)}</p>
+            </div>
+          </div>
+        </TableCell>
+        <TableCell className="text-center font-mono">{stats.leads}</TableCell>
+        <TableCell className="text-center font-mono">{stats.orders}</TableCell>
+        <TableCell className="text-center font-mono">{stats.delivered}</TableCell>
+        <TableCell className="text-center">
+          <Badge variant={stats.ratio >= 60 ? "default" : stats.ratio >= 30 ? "secondary" : "destructive"} className="font-mono text-xs">
+            {stats.ratio}%
+          </Badge>
+        </TableCell>
+        <TableCell className="text-center">
+          <ChevronRight className="h-4 w-4 text-muted-foreground mx-auto" />
+        </TableCell>
+      </TableRow>
+    );
   };
 
-  // Filtered & sorted
-  const filteredMembers = useMemo(() => {
-    let result = [...members];
+  const renderDataTable = (list: PersonStats[], onRowClick: (p: PersonStats) => void, type: string) => {
+    const filtered = filterList(list);
+    const periodLabel = timePeriod === "daily" ? (isBn ? "আজকের" : "Today's") :
+      timePeriod === "monthly" ? (isBn ? "মাসিক" : "Monthly") : (isBn ? "বাৎসরিক" : "Yearly");
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.role.toLowerCase().includes(q) ||
-        (m.phone && m.phone.includes(q)) ||
-        m.email.toLowerCase().includes(q)
-      );
-    }
-
-    if (memberFilter === "tl") result = result.filter((m) => m.memberType === "tl" || m.panel === "tl");
-    else if (memberFilter === "employee") result = result.filter((m) => m.panel === "employee");
-    else if (memberFilter === "bronze") result = result.filter((m) => m.isBronze);
-    else if (memberFilter === "silver") result = result.filter((m) => m.isSilver);
-    else if (memberFilter === "active") result = result.filter((m) => m.isActive);
-    else if (memberFilter === "inactive") result = result.filter((m) => !m.isActive);
-
-    if (panelFilter !== "all") {
-      result = result.filter((m) => m.panel === panelFilter);
-    }
-
-    result.sort((a, b) => {
-      if (a.memberType !== b.memberType) {
-        const order = { bdo: 0, tl: 1, agent: 2, employee: 3 };
-        return order[a.memberType] - order[b.memberType];
-      }
-      let cmp = 0;
-      if (sortField === "name") cmp = a.name.localeCompare(b.name);
-      else cmp = (a[sortField] as number) - (b[sortField] as number);
-      return sortAsc ? cmp : -cmp;
-    });
-
-    return result;
-  }, [members, searchQuery, memberFilter, panelFilter, sortField, sortAsc]);
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) setSortAsc(!sortAsc);
-    else { setSortField(field); setSortAsc(field === "name"); }
+    return (
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[180px]">{isBn ? "নাম / রোল" : "Name / Role"}</TableHead>
+              <TableHead className="text-center">{periodLabel} Leads</TableHead>
+              <TableHead className="text-center">{periodLabel} Orders</TableHead>
+              <TableHead className="text-center">{periodLabel} Delivered</TableHead>
+              <TableHead className="text-center">Ratio</TableHead>
+              <TableHead className="text-center w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  {isBn ? "কোনো ডাটা নেই" : "No data found"}
+                </TableCell>
+              </TableRow>
+            ) : filtered.map(p => renderPersonRow(p, () => onRowClick(p), type))}
+          </TableBody>
+        </Table>
+      </div>
+    );
   };
 
-  // Stats
-  const tlCount = members.filter((m) => m.panel === "tl").length;
-  const empCount = members.filter((m) => m.panel === "employee").length;
-  const activeCount = members.filter((m) => m.isActive).length;
-  const avgRatio = (() => {
-    const withRatio = members.filter((m) => m.monthlyConfirmed > 0);
-    return withRatio.length > 0 ? Math.round(withRatio.reduce((s, m) => s + m.monthlyRatio, 0) / withRatio.length) : 0;
-  })();
+  // Profile view
+  const renderProfile = () => {
+    if (!selectedProfile) return null;
+    const p = selectedProfile;
+    const stats = getStatsByPeriod(p);
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
+                {p.name.charAt(0)}
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="text-xl font-heading font-bold text-foreground">{p.name}</h3>
+                  <p className="text-sm text-muted-foreground">{roleName(p.role)}</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5" /> {p.phone || "—"}
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5" /> {p.email}
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <DollarSign className="h-3.5 w-3.5" /> {p.basicSalary ? `৳${p.basicSalary.toLocaleString()}` : "—"}
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" /> {p.joinDate ? new Date(p.joinDate).toLocaleDateString("bn-BD") : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: isBn ? "Leads" : "Leads", value: stats.leads, color: "text-primary" },
+            { label: isBn ? "Orders" : "Orders", value: stats.orders, color: "text-foreground" },
+            { label: isBn ? "Delivered" : "Delivered", value: stats.delivered, color: "text-emerald-500" },
+            { label: "Ratio", value: `${stats.ratio}%`, color: stats.ratio >= 60 ? "text-emerald-500" : stats.ratio >= 30 ? "text-amber-500" : "text-destructive" },
+          ].map(s => (
+            <Card key={s.label} className="bg-card border-border">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className={`text-2xl font-bold font-heading ${s.color}`}>{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* All 3 periods comparison */}
+        <Card className="bg-card border-border">
+          <CardHeader><CardTitle className="text-base">{isBn ? "সকল সময়কালের তুলনা" : "Period Comparison"}</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{isBn ? "সময়কাল" : "Period"}</TableHead>
+                  <TableHead className="text-center">Leads</TableHead>
+                  <TableHead className="text-center">Orders</TableHead>
+                  <TableHead className="text-center">Delivered</TableHead>
+                  <TableHead className="text-center">Ratio</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">{isBn ? "আজকের" : "Today"}</TableCell>
+                  <TableCell className="text-center font-mono">{p.todayLeads}</TableCell>
+                  <TableCell className="text-center font-mono">{p.todayOrders}</TableCell>
+                  <TableCell className="text-center font-mono">{p.todayDelivered}</TableCell>
+                  <TableCell className="text-center"><Badge variant={p.todayRatio >= 60 ? "default" : "secondary"} className="font-mono text-xs">{p.todayRatio}%</Badge></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">{isBn ? "মাসিক" : "Monthly"}</TableCell>
+                  <TableCell className="text-center font-mono">{p.monthlyLeads}</TableCell>
+                  <TableCell className="text-center font-mono">{p.monthlyOrders}</TableCell>
+                  <TableCell className="text-center font-mono">{p.monthlyDelivered}</TableCell>
+                  <TableCell className="text-center"><Badge variant={p.monthlyRatio >= 60 ? "default" : "secondary"} className="font-mono text-xs">{p.monthlyRatio}%</Badge></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">{isBn ? "বাৎসরিক" : "Yearly"}</TableCell>
+                  <TableCell className="text-center font-mono">—</TableCell>
+                  <TableCell className="text-center font-mono">{p.yearlyOrders}</TableCell>
+                  <TableCell className="text-center font-mono">{p.yearlyDelivered}</TableCell>
+                  <TableCell className="text-center"><Badge variant={p.yearlyRatio >= 60 ? "default" : "secondary"} className="font-mono text-xs">{p.yearlyRatio}%</Badge></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // Rankings view
+  const renderRankings = () => {
+    const periodLabel = timePeriod === "daily" ? (isBn ? "আজকের" : "Today's") :
+      timePeriod === "monthly" ? (isBn ? "মাসিক" : "Monthly") : (isBn ? "বাৎসরিক" : "Yearly");
+
+    const renderTopCard = (title: string, person: PersonStats | null, icon: React.ReactNode, color: string) => (
+      <Card className="bg-card border-border">
+        <CardContent className="p-4 text-center">
+          <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${color} mb-2`}>{icon}</div>
+          <p className="text-xs text-muted-foreground mb-1">{title}</p>
+          {person ? (
+            <>
+              <p className="font-bold text-foreground">{person.name}</p>
+              <p className="text-xs text-muted-foreground">{getStatsByPeriod(person).delivered} delivered • {getStatsByPeriod(person).ratio}%</p>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">{isBn ? "ডাটা নেই" : "No data"}</p>
+          )}
+        </CardContent>
+      </Card>
+    );
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {renderTopCard(isBn ? `${periodLabel} সেরা TL` : `${periodLabel} Best TL`, bestTL, <Shield className="h-5 w-5 text-primary" />, "bg-primary/10")}
+          {renderTopCard(isBn ? `${periodLabel} সেরা GL` : `${periodLabel} Best GL`, bestGL, <Crown className="h-5 w-5 text-amber-500" />, "bg-amber-500/10")}
+          {renderTopCard(isBn ? `${periodLabel} সেরা Agent` : `${periodLabel} Best Agent`, bestAgent, <Star className="h-5 w-5 text-emerald-500" />, "bg-emerald-500/10")}
+        </div>
+      </div>
+    );
+  };
+
+  // Other employees view
+  const renderOtherEmployees = () => {
+    const filtered = filterList(otherEmployees);
+    return (
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+              <TableHead className="text-center">{isBn ? "রোল" : "Role"}</TableHead>
+              <TableHead className="text-center">{isBn ? "ফোন" : "Phone"}</TableHead>
+              <TableHead className="text-center">{isBn ? "ইমেইল" : "Email"}</TableHead>
+              <TableHead className="text-center">{isBn ? "বেতন" : "Salary"}</TableHead>
+              <TableHead className="text-center">{isBn ? "যোগদান" : "Joined"}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো কর্মী নেই" : "No employees"}</TableCell></TableRow>
+            ) : filtered.map(p => (
+              <TableRow key={p.id} className="cursor-pointer hover:bg-accent/50" onClick={() => navigateToProfile(p)}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{p.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{roleName(p.role)}</p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center"><Badge variant="secondary" className="text-[10px]">{roleName(p.role)}</Badge></TableCell>
+                <TableCell className="text-center text-sm text-muted-foreground">{p.phone || "—"}</TableCell>
+                <TableCell className="text-center text-sm text-muted-foreground">{p.email}</TableCell>
+                <TableCell className="text-center font-mono text-sm">{p.basicSalary ? `৳${p.basicSalary.toLocaleString()}` : "—"}</TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground">{p.joinDate ? new Date(p.joinDate).toLocaleDateString() : "—"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   if (!user) return null;
 
-  const getPanelBadge = (panel: string) => {
-    const colors: Record<string, string> = {
-      sa: "bg-emerald-600 text-white",
-      hr: "bg-blue-600 text-white",
-      tl: "bg-primary text-primary-foreground",
-      employee: "bg-orange-600 text-white",
-    };
-    return colors[panel] || "bg-secondary text-foreground";
-  };
-
-  const renderMemberRow = (m: TeamMember) => (
-    <TableRow key={m.id} className={m.panel === "tl" ? "bg-primary/5" : ""}>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          {m.panel === "tl" ? (
-            <Shield className="h-4 w-4 text-primary flex-shrink-0" />
-          ) : (
-            <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          )}
-          <div>
-            <p className="font-medium text-foreground">{m.name}</p>
-            <p className="text-[11px] text-muted-foreground">{roleName(m.role)}</p>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell className="text-center">
-        <Badge className={`text-[10px] ${getPanelBadge(m.panel)}`}>
-          {m.panel.toUpperCase()}
-        </Badge>
-      </TableCell>
-      {viewMode === "campaign" && (
-        <>
-          <TableCell className="text-center">
-            {m.memberType === "agent" ? (
-              <div className="flex items-center justify-center gap-1">
-                {m.isBronze && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-500">B</Badge>}
-                {m.isSilver && <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">S</Badge>}
-                {!m.isBronze && !m.isSilver && <span className="text-muted-foreground text-xs">—</span>}
-              </div>
-            ) : <span className="text-muted-foreground text-xs">—</span>}
-          </TableCell>
-          <TableCell className="text-center">
-            {m.memberType === "agent" ? <Switch checked={m.isBronze} onCheckedChange={(v) => toggleRole(m.oderId, "is_bronze", v)} disabled={isBDO} /> : null}
-          </TableCell>
-          <TableCell className="text-center">
-            {m.memberType === "agent" ? <Switch checked={m.isSilver} onCheckedChange={(v) => toggleRole(m.oderId, "is_silver", v)} disabled={isBDO} /> : null}
-          </TableCell>
-        </>
-      )}
-      {viewMode === "all_members" && (
-        <>
-          <TableCell className="text-center text-sm text-muted-foreground">{m.phone || "—"}</TableCell>
-          <TableCell className="text-center font-mono text-sm">
-            {m.basicSalary ? `৳${m.basicSalary.toLocaleString()}` : "—"}
-          </TableCell>
-        </>
-      )}
-      <TableCell className="text-center font-mono">{m.todayLeads}</TableCell>
-      <TableCell className="text-center font-mono">{m.todayConfirmed}</TableCell>
-      <TableCell className="text-center">
-        {m.monthlyConfirmed > 0 ? (
-          <Badge variant={m.monthlyRatio >= 60 ? "default" : m.monthlyRatio >= 30 ? "secondary" : "destructive"} className="font-mono text-xs">
-            {m.monthlyRatio}%
-          </Badge>
-        ) : <span className="text-muted-foreground text-xs">—</span>}
-      </TableCell>
-      <TableCell className="text-center">
-        <Badge variant={m.isActive ? "default" : "destructive"} className="text-[10px]">
-          {m.isActive ? (isBn ? "সক্রিয়" : "Active") : (isBn ? "নিষ্ক্রিয়" : "Inactive")}
-        </Badge>
-      </TableCell>
-      {viewMode === "all_members" && (
-        <TableCell className="text-center text-xs text-muted-foreground">
-          {m.joinDate ? new Date(m.joinDate).toLocaleDateString() : "—"}
-        </TableCell>
-      )}
-    </TableRow>
-  );
+  const showBackButton = viewLevel !== "tl_list" && (isBDO || viewLevel !== "gl_list");
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="font-heading text-2xl font-bold text-foreground">
-          {isBn ? "টিম ম্যানেজমেন্ট" : "Team Management"}
-        </h2>
         <div className="flex items-center gap-3">
-          {/* BDO: Toggle between all members and campaign view */}
-          {isBDO && (
-            <div className="flex border border-border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setViewMode("all_members")}
-                className={`px-3 py-1.5 text-xs font-body transition-colors ${viewMode === "all_members" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-              >
-                {isBn ? "সব মেম্বার" : "All Members"}
-              </button>
-              <button
-                onClick={() => setViewMode("campaign")}
-                className={`px-3 py-1.5 text-xs font-body transition-colors ${viewMode === "campaign" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-              >
-                {isBn ? "ক্যাম্পেইন ভিত্তিক" : "By Campaign"}
-              </button>
-            </div>
+          {showBackButton && (
+            <Button variant="ghost" size="icon" onClick={goBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
           )}
-          {viewMode === "campaign" && (
-            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-              <SelectTrigger className="w-56 border-primary/30 bg-secondary">
-                <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
-              </SelectTrigger>
-              <SelectContent>
-                {campaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={loading}>
+          <div>
+            <h2 className="font-heading text-2xl font-bold text-foreground">
+              {isBn ? "টিম ম্যানেজমেন্ট" : "Team Management"}
+            </h2>
+            {renderBreadcrumb()}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={timePeriod} onValueChange={(v) => setTimePeriod(v as TimePeriod)}>
+            <SelectTrigger className="w-36 bg-secondary border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">{isBn ? "দৈনিক" : "Daily"}</SelectItem>
+              <SelectItem value="monthly">{isBn ? "মাসিক" : "Monthly"}</SelectItem>
+              <SelectItem value="yearly">{isBn ? "বাৎসরিক" : "Yearly"}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" onClick={() => {
+            if (viewLevel === "tl_list") loadTLs();
+            else if (viewLevel === "gl_list" && selectedTL) loadGLs(selectedTL.id);
+            else if (viewLevel === "agent_list" && selectedGL) loadAgents(selectedGL.id);
+          }} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: isBn ? "মোট মেম্বার" : "Total Members", value: members.length, icon: Users, color: "text-primary" },
-          ...(viewMode === "all_members" ? [
-            { label: isBn ? "টিম লিডার" : "Team Leaders", value: tlCount, icon: Shield, color: "text-foreground" },
-            { label: isBn ? "কর্মী" : "Employees", value: empCount, icon: UserCheck, color: "text-muted-foreground" },
-          ] : [
-            { label: isBn ? "টিম লিডার" : "Team Leaders", value: tlCount, icon: Shield, color: "text-foreground" },
-            { label: isBn ? "এজেন্ট" : "Agents", value: members.filter(m => m.memberType === "agent").length, icon: Target, color: "text-muted-foreground" },
-          ]),
-          { label: isBn ? "গড় Ratio" : "Avg Ratio", value: `${avgRatio}%`, icon: TrendingUp, color: "text-emerald-500" },
-        ].map((s) => (
-          <Card key={s.label} className="bg-card border-border">
-            <CardContent className="p-4 flex items-center gap-3">
-              <s.icon className={`h-5 w-5 ${s.color}`} />
-              <div>
-                <p className="text-[11px] text-muted-foreground font-body">{s.label}</p>
-                <p className="text-xl font-bold font-heading text-foreground">{s.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Quick Actions for BDO */}
+      {isBDO && viewLevel === "tl_list" && (
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setViewLevel("rankings")} className="gap-1.5">
+            <Trophy className="h-4 w-4" /> {isBn ? "সেরা পারফর্মার" : "Top Performers"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setViewLevel("other_employees")} className="gap-1.5">
+            <Briefcase className="h-4 w-4" /> {isBn ? "অন্যান্য কর্মী" : "Other Employees"}
+          </Button>
+        </div>
+      )}
 
-      {/* Search & Filter */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={isBn ? "নাম, রোল, ফোন বা ইমেইল দিয়ে খুঁজুন..." : "Search by name, role, phone or email..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-secondary border-border"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              {viewMode === "all_members" && (
-                <Select value={panelFilter} onValueChange={setPanelFilter}>
-                  <SelectTrigger className="w-32 bg-secondary border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{isBn ? "সব প্যানেল" : "All Panels"}</SelectItem>
-                    <SelectItem value="tl">TL</SelectItem>
-                    <SelectItem value="employee">{isBn ? "কর্মী" : "Employee"}</SelectItem>
-                    <SelectItem value="hr">HR</SelectItem>
-                    <SelectItem value="sa">SA</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={memberFilter} onValueChange={(v) => setMemberFilter(v as MemberFilter)}>
-                <SelectTrigger className="w-40 bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{isBn ? "সব মেম্বার" : "All Members"}</SelectItem>
-                  <SelectItem value="tl">{isBn ? "শুধু TL" : "TL Only"}</SelectItem>
-                  <SelectItem value="employee">{isBn ? "শুধু কর্মী" : "Employees Only"}</SelectItem>
-                  {viewMode === "campaign" && (
-                    <>
-                      <SelectItem value="bronze">{isBn ? "শুধু Bronze" : "Bronze Only"}</SelectItem>
-                      <SelectItem value="silver">{isBn ? "শুধু Silver" : "Silver Only"}</SelectItem>
-                    </>
-                  )}
-                  <SelectItem value="active">{isBn ? "সক্রিয়" : "Active"}</SelectItem>
-                  <SelectItem value="inactive">{isBn ? "নিষ্ক্রিয়" : "Inactive"}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {(searchQuery || memberFilter !== "all" || panelFilter !== "all") && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <span className="text-xs text-muted-foreground font-body">
-                {isBn ? `${filteredMembers.length}টি ফলাফল` : `${filteredMembers.length} results`}
-              </span>
-              {searchQuery && (
-                <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSearchQuery("")}>
-                  "{searchQuery}" ✕
-                </Badge>
-              )}
-              {panelFilter !== "all" && (
-                <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setPanelFilter("all")}>
-                  {panelFilter.toUpperCase()} ✕
-                </Badge>
-              )}
-              {memberFilter !== "all" && (
-                <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setMemberFilter("all")}>
-                  {memberFilter} ✕
-                </Badge>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Rankings cards - always visible at TL list level for BDO */}
+      {isBDO && viewLevel === "tl_list" && bestTL && renderRankings()}
 
-      {/* Team Table */}
+      {/* Search */}
+      {viewLevel !== "profile" && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={isBn ? "নাম, ফোন বা ইমেইল দিয়ে খুঁজুন..." : "Search by name, phone or email..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-secondary border-border"
+          />
+        </div>
+      )}
+
+      {/* Content */}
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg font-heading">
-            {viewMode === "all_members" ? (isBn ? "সকল মেম্বার" : "All Members") : (isBn ? "ক্যাম্পেইন টিম" : "Campaign Team")}
-            <span className="text-sm font-normal text-muted-foreground ml-2">
-              ({filteredMembers.length}/{members.length})
-            </span>
+            {viewLevel === "tl_list" && (isBn ? "টিম লিডার তালিকা" : "Team Leaders")}
+            {viewLevel === "gl_list" && (isBn ? `${selectedTL?.name} এর গ্রুপ লিডারগণ` : `${selectedTL?.name}'s Group Leaders`)}
+            {viewLevel === "agent_list" && (isBn ? `${selectedGL?.name} এর এজেন্টগণ` : `${selectedGL?.name}'s Agents`)}
+            {viewLevel === "profile" && (isBn ? "প্রোফাইল ও পারফর্ম্যান্স" : "Profile & Performance")}
+            {viewLevel === "other_employees" && (isBn ? "অন্যান্য কর্মী" : "Other Employees")}
+            {viewLevel === "rankings" && (isBn ? "সেরা পারফর্মার" : "Top Performers")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-3 text-sm text-muted-foreground font-body">{isBn ? "লোড হচ্ছে..." : "Loading..."}</span>
+              <span className="ml-3 text-sm text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="cursor-pointer select-none min-w-[180px]" onClick={() => handleSort("name")}>
-                      {isBn ? "নাম / রোল" : "Name / Role"} {sortField === "name" && (sortAsc ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="text-center">{isBn ? "প্যানেল" : "Panel"}</TableHead>
-                    {viewMode === "campaign" && (
-                      <>
-                        <TableHead className="text-center">{isBn ? "ক্যাম্পেইন রোল" : "Campaign Role"}</TableHead>
-                        <TableHead className="text-center">Bronze</TableHead>
-                        <TableHead className="text-center">Silver</TableHead>
-                      </>
-                    )}
-                    {viewMode === "all_members" && (
-                      <>
-                        <TableHead className="text-center">{isBn ? "ফোন" : "Phone"}</TableHead>
-                        <TableHead className="text-center">{isBn ? "বেতন" : "Salary"}</TableHead>
-                      </>
-                    )}
-                    <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("todayLeads")}>
-                      {isBn ? "আজকের Leads" : "Today Leads"} {sortField === "todayLeads" && (sortAsc ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("todayConfirmed")}>
-                      {isBn ? "আজকের Orders" : "Today Orders"} {sortField === "todayConfirmed" && (sortAsc ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("monthlyRatio")}>
-                      {isBn ? "মাসিক Ratio" : "Monthly Ratio"} {sortField === "monthlyRatio" && (sortAsc ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="text-center">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
-                    {viewMode === "all_members" && (
-                      <TableHead className="text-center">{isBn ? "যোগদান" : "Joined"}</TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMembers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
-                        {searchQuery
-                          ? (isBn ? `"${searchQuery}" এর জন্য কোনো মেম্বার পাওয়া যায়নি` : `No members found for "${searchQuery}"`)
-                          : (isBn ? "কোনো মেম্বার নেই" : "No members")}
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredMembers.map(renderMemberRow)}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              {viewLevel === "tl_list" && renderDataTable(tlList, navigateToTL, "TL")}
+              {viewLevel === "gl_list" && renderDataTable(glList, navigateToGL, "GL")}
+              {viewLevel === "agent_list" && renderDataTable(agentList, navigateToProfile, "Agent")}
+              {viewLevel === "profile" && renderProfile()}
+              {viewLevel === "other_employees" && renderOtherEmployees()}
+              {viewLevel === "rankings" && renderRankings()}
+            </>
           )}
         </CardContent>
       </Card>
