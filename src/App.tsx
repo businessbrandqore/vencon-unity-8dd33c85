@@ -43,6 +43,7 @@ import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
 import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
+import DataTracker from "./pages/dashboard/DataTracker";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
