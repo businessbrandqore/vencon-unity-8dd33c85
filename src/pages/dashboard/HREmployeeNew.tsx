@@ -217,7 +217,7 @@ const HREmployeeNew = () => {
   const fieldClass = "bg-background border-border text-foreground";
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl mx-auto">
       <div>
         <h2 className="font-heading text-2xl font-bold text-foreground">
           {isBn ? "নতুন Employee Hire করুন" : "Hire New Employee"}
