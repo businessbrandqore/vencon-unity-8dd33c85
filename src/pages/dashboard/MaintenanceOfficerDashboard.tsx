@@ -74,6 +74,39 @@ export default function MaintenanceOfficerDashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  /* ───── load phone instruction ───── */
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "phone_minutes_instruction")
+        .maybeSingle();
+      if (data?.value) {
+        const val = String(data.value).replace(/^"|"$/g, '');
+        setPhoneInstruction(val);
+        setInstructionDraft(val);
+      }
+    })();
+  }, []);
+
+  const savePhoneInstruction = async () => {
+    const { data: existing } = await supabase
+      .from("app_settings")
+      .select("id")
+      .eq("key", "phone_minutes_instruction")
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("app_settings").update({ value: JSON.stringify(instructionDraft) }).eq("key", "phone_minutes_instruction");
+    } else {
+      await supabase.from("app_settings").insert({ key: "phone_minutes_instruction", value: JSON.stringify(instructionDraft) });
+    }
+    setPhoneInstruction(instructionDraft);
+    setEditingInstruction(false);
+    toast.success("ফোন মিনিট নির্দেশনা সংরক্ষণ হয়েছে ✓");
+  };
+
   const balance = totalBudget - totalSpent;
 
   const handleSubmit = async () => {
