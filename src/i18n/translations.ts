@@ -196,8 +196,8 @@ export const translations: TranslationMap = {
   mood_angry: { bn: "রাগান্বিত", en: "Angry" },
 
   // ─── Attendance ───
-  clock_in: { bn: "Clock In করুন", en: "Clock In" },
-  clock_out: { bn: "Clock Out করুন", en: "Clock Out" },
+  clock_in: { bn: "Check In করুন", en: "Check In" },
+  clock_out: { bn: "Check Out করুন", en: "Check Out" },
   desk_report: { bn: "ডেস্ক ও ফোন রিপোর্ট", en: "Desk & Phone Report" },
   desk_condition: { bn: "ডেস্কের অবস্থা", en: "Desk Condition" },
   desk_good: { bn: "ভালো", en: "Good" },
