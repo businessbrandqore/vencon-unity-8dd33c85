@@ -112,52 +112,9 @@ export default function EmployeeSalary() {
         )}
       </div>
 
-      {/* Detail Table */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm font-heading">বিস্তারিত ভাঙ্গন</CardTitle></CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">বেসিক বেতন</span>
-              <span className="font-medium">৳{salary.basic_salary.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">{isIncentiveRole ? "ইনসেনটিভ (পারফরম্যান্স ভিত্তিক)" : "প্রফিট শেয়ার"}</span>
-              <span className="font-medium text-green-500">+৳{salary.incentive.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">দেরি/আগে চলে যাওয়া কর্তন</span>
-              <span className="font-medium text-destructive">-৳{salary.attendance_deductions.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">আনপেইড ছুটি কর্তন</span>
-              <span className="font-medium text-destructive">-৳{salary.unpaid_deductions.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between py-3 border-t-2 border-border font-bold text-lg">
-              <span>নিট বেতন</span>
-              <span className="text-[hsl(var(--panel-employee))]">৳{salary.net_salary.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {isIncentiveRole && (
-            <div className="mt-6 p-4 rounded-md border border-border bg-muted/30">
-              <p className="text-xs text-muted-foreground mb-2">📊 ইনসেনটিভ হিসাব</p>
-              <p className="text-sm">
-                আপনার রিসিভ রেশিও <strong>{salary.receive_ratio}%</strong>।
-                {salary.incentive > 0
-                  ? ` প্রতিটি ডেলিভারড অর্ডারের জন্য ইনসেনটিভ গণনা করা হয়েছে।`
-                  : ` ন্যূনতম threshold-এর নিচে থাকায় ইনসেনটিভ যোগ হয়নি।`
-                }
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Receive Ratio Warning & Progress — Agents only */}
       {isIncentiveRole && (
         <div className="space-y-4">
-          {/* Warning Banner */}
           {salary.receive_ratio < 60 ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
               <div className="flex items-start gap-3">
@@ -202,7 +159,6 @@ export default function EmployeeSalary() {
             </div>
           )}
 
-          {/* Progress Bar */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-3">
@@ -229,6 +185,48 @@ export default function EmployeeSalary() {
           </Card>
         </div>
       )}
+
+      {/* Detail Table */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm font-heading">বিস্তারিত ভাঙ্গন</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">বেসিক বেতন</span>
+              <span className="font-medium">৳{salary.basic_salary.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">{isIncentiveRole ? "ইনসেনটিভ (পারফরম্যান্স ভিত্তিক)" : "প্রফিট শেয়ার"}</span>
+              <span className="font-medium text-green-500">+৳{salary.incentive.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">দেরি/আগে চলে যাওয়া কর্তন</span>
+              <span className="font-medium text-destructive">-৳{salary.attendance_deductions.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">আনপেইড ছুটি কর্তন</span>
+              <span className="font-medium text-destructive">-৳{salary.unpaid_deductions.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between py-3 border-t-2 border-border font-bold text-lg">
+              <span>নিট বেতন</span>
+              <span className="text-[hsl(var(--panel-employee))]">৳{salary.net_salary.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {isIncentiveRole && (
+            <div className="mt-6 p-4 rounded-md border border-border bg-muted/30">
+              <p className="text-xs text-muted-foreground mb-2">📊 ইনসেনটিভ হিসাব</p>
+              <p className="text-sm">
+                আপনার রিসিভ রেশিও <strong>{salary.receive_ratio}%</strong>।
+                {salary.incentive > 0
+                  ? ` প্রতিটি ডেলিভারড অর্ডারের জন্য ইনসেনটিভ গণনা করা হয়েছে।`
+                  : ` ন্যূনতম threshold-এর নিচে থাকায় ইনসেনটিভ যোগ হয়নি।`
+                }
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
