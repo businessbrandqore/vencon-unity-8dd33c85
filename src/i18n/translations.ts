@@ -196,8 +196,8 @@ export const translations: TranslationMap = {
   mood_angry: { bn: "রাগান্বিত", en: "Angry" },
 
   // ─── Attendance ───
-  clock_in: { bn: "Clock In করুন", en: "Clock In" },
-  clock_out: { bn: "Clock Out করুন", en: "Clock Out" },
+  clock_in: { bn: "Check In করুন", en: "Check In" },
+  clock_out: { bn: "Check Out করুন", en: "Check Out" },
   desk_report: { bn: "ডেস্ক ও ফোন রিপোর্ট", en: "Desk & Phone Report" },
   desk_condition: { bn: "ডেস্কের অবস্থা", en: "Desk Condition" },
   desk_good: { bn: "ভালো", en: "Good" },
@@ -210,14 +210,14 @@ export const translations: TranslationMap = {
   select_desk_condition: { bn: "ডেস্কের অবস্থা নির্বাচন করুন", en: "Select desk condition" },
   mood_select: { bn: "মুড নির্বাচন করুন", en: "Select mood" },
   mood_write: { bn: "আজকের অনুভূতি সম্পর্কে লিখুন (optional)", en: "Write about today's feeling (optional)" },
-  clock_in_success: { bn: "Clock In সফল ✓", en: "Clock In successful ✓" },
-  clock_in_late: { bn: "Clock In হয়েছে (Late entry — ৳33 কর্তন)", en: "Clocked In (Late entry — ৳33 deduction)" },
-  clock_out_success: { bn: "Clock Out সফল ✓", en: "Clock Out successful ✓" },
-  clock_out_early: { bn: "Clock Out হয়েছে (Early out — ৳33 কর্তন)", en: "Clocked Out (Early out — ৳33 deduction)" },
+  clock_in_success: { bn: "Check In সফল ✓", en: "Check In successful ✓" },
+  clock_in_late: { bn: "Check In হয়েছে (Late entry — ৳33 কর্তন)", en: "Checked In (Late entry — ৳33 deduction)" },
+  clock_out_success: { bn: "Check Out সফল ✓", en: "Check Out successful ✓" },
+  clock_out_early: { bn: "Check Out হয়েছে (Early out — ৳33 কর্তন)", en: "Checked Out (Early out — ৳33 deduction)" },
   outside_shift: { bn: "আপনার shift এখন নেই।", en: "You're outside your shift hours." },
   personal_info_only: { bn: "শুধুমাত্র ব্যক্তিগত তথ্য দেখা যাচ্ছে।", en: "Only personal information is visible." },
-  not_clocked_in: { bn: "আপনি এখনো Clock In করেননি", en: "You haven't clocked in yet" },
-  clock_in_to_start: { bn: "কাজ শুরু করতে Clock In করুন", en: "Clock in to start working" },
+  not_clocked_in: { bn: "আপনি এখনো Check In করেননি", en: "You haven't checked in yet" },
+  clock_in_to_start: { bn: "কাজ শুরু করতে Check In করুন", en: "Check in to start working" },
 
   // ─── Lead Sheet ───
   lead_sheet: { bn: "লিড শিট", en: "Lead Sheet" },

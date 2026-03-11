@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +10,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 
 const BLUE = "#1D4ED8";
+
+interface MonthlyHoliday {
+  id: string;
+  holiday_date: string;
+  title: string;
+}
 
 interface AttendanceSummary {
   date: string;
@@ -40,6 +50,8 @@ interface Appeal {
 
 const HRAttendance = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const isBn = t("vencon") === "VENCON";
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -59,9 +71,16 @@ const HRAttendance = () => {
   // Appeals
   const [appeals, setAppeals] = useState<Appeal[]>([]);
 
+  // Monthly Holidays
+  const [holidays, setHolidays] = useState<MonthlyHoliday[]>([]);
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayTitle, setNewHolidayTitle] = useState("");
+  const [showHolidayForm, setShowHolidayForm] = useState(false);
+
   useEffect(() => {
     fetchMonthData();
     fetchAppeals();
+    fetchHolidays();
   }, [selectedMonth]);
 
   const fetchMonthData = async () => {
@@ -143,6 +162,43 @@ const HRAttendance = () => {
         status: a.status || "pending",
       }))
     );
+  };
+
+  const fetchHolidays = async () => {
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+    const { data } = await supabase
+      .from("monthly_holidays")
+      .select("id, holiday_date, title")
+      .eq("year", yr)
+      .eq("month", mo)
+      .order("holiday_date");
+    setHolidays((data as MonthlyHoliday[]) || []);
+  };
+
+  const addHoliday = async () => {
+    if (!newHolidayDate || !user) return;
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+    const { error } = await supabase.from("monthly_holidays").insert({
+      year: yr,
+      month: mo,
+      holiday_date: newHolidayDate,
+      title: newHolidayTitle.trim() || (isBn ? "ছুটি" : "Holiday"),
+      created_by: user.id,
+    } as any);
+    if (error) {
+      toast({ title: error.message, variant: "destructive" });
+      return;
+    }
+    setNewHolidayDate("");
+    setNewHolidayTitle("");
+    setShowHolidayForm(false);
+    fetchHolidays();
+    toast({ title: isBn ? "ছুটি যোগ হয়েছে ✓" : "Holiday added ✓" });
+  };
+
+  const removeHoliday = async (id: string) => {
+    await supabase.from("monthly_holidays").delete().eq("id", id);
+    fetchHolidays();
   };
 
   const openDateDetail = async (date: string) => {
@@ -346,6 +402,91 @@ const HRAttendance = () => {
         )}
       </div>
 
+      {/* Monthly Holidays Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-lg font-bold text-foreground">
+            {isBn ? "মাসিক ছুটির দিন" : "Monthly Holidays"}
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHolidayForm(!showHolidayForm)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {isBn ? "ছুটি যোগ করুন" : "Add Holiday"}
+          </Button>
+        </div>
+
+        {showHolidayForm && (
+          <div className="border border-border p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "তারিখ *" : "Date *"}
+                </label>
+                <Input
+                  type="date"
+                  value={newHolidayDate}
+                  onChange={(e) => setNewHolidayDate(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "শিরোনাম" : "Title"}
+                </label>
+                <Input
+                  value={newHolidayTitle}
+                  onChange={(e) => setNewHolidayTitle(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                  placeholder={isBn ? "যেমন: সরকারি ছুটি" : "e.g. Public Holiday"}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={addHoliday} size="sm" style={{ backgroundColor: BLUE }} className="text-white">
+                  {isBn ? "যোগ করুন" : "Add"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {holidays.length === 0 ? (
+          <p className="text-xs text-muted-foreground font-body border border-border p-4 text-center">
+            {isBn ? "এই মাসে কোনো ছুটি নির্ধারণ করা হয়নি" : "No holidays set for this month"}
+          </p>
+        ) : (
+          <div className="border border-border">
+            <table className="w-full text-sm font-body">
+              <thead>
+                <tr className="bg-secondary text-muted-foreground text-[11px]">
+                  <th className="text-left p-3">{isBn ? "তারিখ" : "Date"}</th>
+                  <th className="text-left p-3">{isBn ? "শিরোনাম" : "Title"}</th>
+                  <th className="text-right p-3">{isBn ? "অ্যাকশন" : "Action"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {holidays.map((h) => (
+                  <tr key={h.id}>
+                    <td className="p-3 text-foreground">{h.holiday_date}</td>
+                    <td className="p-3 text-foreground">{h.title}</td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => removeHoliday(h.id)}
+                        className="text-destructive hover:text-destructive/80"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Date Detail Dialog */}
       <Dialog open={!!detailDate} onOpenChange={(o) => { if (!o) setDetailDate(null); }}>
         <DialogContent className="bg-card border-border max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -365,8 +506,8 @@ const HRAttendance = () => {
               <thead>
                 <tr className="bg-secondary text-muted-foreground text-[11px]">
                   <th className="text-left p-2">{isBn ? "নাম" : "Name"}</th>
-                  <th className="text-left p-2">{isBn ? "ক্লক ইন" : "Clock In"}</th>
-                  <th className="text-left p-2">{isBn ? "ক্লক আউট" : "Clock Out"}</th>
+                   <th className="text-left p-2">{isBn ? "চেক ইন" : "Check In"}</th>
+                   <th className="text-left p-2">{isBn ? "চেক আউট" : "Check Out"}</th>
                   <th className="text-left p-2">{isBn ? "স্ট্যাটাস" : "Status"}</th>
                   <th className="text-right p-2">{isBn ? "কর্তন" : "Deduction"}</th>
                 </tr>

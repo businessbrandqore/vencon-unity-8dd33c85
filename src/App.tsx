@@ -35,6 +35,7 @@ import ChatPage from "./pages/dashboard/ChatPage";
 import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import SAPayroll from "./pages/dashboard/SAPayroll";
 import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
+import HRApprovals from "./pages/dashboard/HRApprovals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ const App = () => (
             {/* HR Panel Routes */}
             <Route element={<DashboardLayout panel="hr" />}>
               <Route path="/hr/dashboard" element={<HRDashboard />} />
+              <Route path="/hr/approvals" element={<HRApprovals />} />
               <Route path="/hr/campaigns" element={<HRCampaigns />} />
               <Route path="/hr/employees" element={<HREmployees />} />
               <Route path="/hr/employees/new" element={<HREmployeeNew />} />

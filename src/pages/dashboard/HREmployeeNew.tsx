@@ -74,9 +74,10 @@ const HREmployeeNew = () => {
     role: "",
     basicSalary: "",
     offDays: [] as string[],
-    clockIn: "09:00",
-    clockOut: "18:00",
-    gpsLocation: "",
+    checkIn: "09:00",
+    checkOut: "18:00",
+    gpsLatitude: "",
+    gpsLongitude: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -126,8 +127,8 @@ const HREmployeeNew = () => {
         role: form.role,
         panel,
         basic_salary: Number(form.basicSalary),
-        shift_start: form.clockIn,
-        shift_end: form.clockOut,
+        shift_start: form.checkIn,
+        shift_end: form.checkOut,
         is_active: isAgent,
         father_name: form.fatherName.trim(),
         father_phone: form.fatherPhone.trim(),
@@ -135,7 +136,7 @@ const HREmployeeNew = () => {
         mother_phone: form.motherPhone.trim(),
         guardian_type: form.guardianType,
         off_days: form.offDays,
-        gps_location: form.gpsLocation.trim() || null,
+        gps_location: (form.gpsLatitude.trim() && form.gpsLongitude.trim()) ? `${form.gpsLatitude.trim()},${form.gpsLongitude.trim()}` : null,
         must_change_password: true,
       } as any)
       .select("id")
@@ -217,7 +218,7 @@ const HREmployeeNew = () => {
   const fieldClass = "bg-background border-border text-foreground";
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl mx-auto">
       <div>
         <h2 className="font-heading text-2xl font-bold text-foreground">
           {isBn ? "নতুন Employee Hire করুন" : "Hire New Employee"}
@@ -374,27 +375,45 @@ const HREmployeeNew = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="font-body text-xs text-muted-foreground block mb-1">
-                {isBn ? "ক্লক-ইন টাইম" : "Clock-In Time"}
+                {isBn ? "চেক-ইন টাইম" : "Check-In Time"}
               </label>
-              <Input type="time" value={form.clockIn} onChange={(e) => set("clockIn", e.target.value)} className={fieldClass} />
+              <Input type="time" value={form.checkIn} onChange={(e) => set("checkIn", e.target.value)} className={fieldClass} />
             </div>
             <div>
               <label className="font-body text-xs text-muted-foreground block mb-1">
-                {isBn ? "ক্লক-আউট টাইম" : "Clock-Out Time"}
+                {isBn ? "চেক-আউট টাইম" : "Check-Out Time"}
               </label>
-              <Input type="time" value={form.clockOut} onChange={(e) => set("clockOut", e.target.value)} className={fieldClass} />
+              <Input type="time" value={form.checkOut} onChange={(e) => set("checkOut", e.target.value)} className={fieldClass} />
             </div>
           </div>
           <div>
-            <label className="font-body text-xs text-muted-foreground block mb-1">
+            <label className="font-body text-xs text-muted-foreground block mb-2">
               {isBn ? "GPS উপস্থিতি লোকেশন" : "GPS Attendance Location"}
             </label>
-            <Input
-              value={form.gpsLocation}
-              onChange={(e) => set("gpsLocation", e.target.value)}
-              className={fieldClass}
-              placeholder={isBn ? "শহর বা এলাকা" : "City or area"}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "Latitude" : "Latitude"}
+                </label>
+                <Input
+                  value={form.gpsLatitude}
+                  onChange={(e) => set("gpsLatitude", e.target.value)}
+                  className={fieldClass}
+                  placeholder="e.g. 23.8103"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "Longitude" : "Longitude"}
+                </label>
+                <Input
+                  value={form.gpsLongitude}
+                  onChange={(e) => set("gpsLongitude", e.target.value)}
+                  className={fieldClass}
+                  placeholder="e.g. 90.4125"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
