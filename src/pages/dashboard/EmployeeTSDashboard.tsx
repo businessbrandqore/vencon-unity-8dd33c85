@@ -555,6 +555,16 @@ export default function EmployeeTSDashboard() {
                 <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
                 <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>মোবাইল নাম্বার</Label>
+                  <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" />
+                </div>
+                <div>
+                  <Label>ডেস্ক নাম্বার</Label>
+                  <Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" />
+                </div>
+              </div>
               <div>
                 <Label>{t("phone_minutes")}</Label>
                 {phoneInstruction && (
