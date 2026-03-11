@@ -1,21 +1,24 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   Activity, Target, ShoppingCart, Search, Phone, User, Package, Truck,
-  MapPin, Clock, ArrowRight, CircleDot,
+  MapPin, Clock, ArrowRight, CircleDot, Database, Send,
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 // Pipeline position mapping
 const getLeadPosition = (lead: any, isBn: boolean): { label: string; color: string; step: number } => {
@@ -55,21 +58,27 @@ const statusColorMap: Record<string, string> = {
   callback: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
   order_confirmed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
   order_confirm: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  processing_assigned: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
 };
 
 const DataTracker = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [dataMode, setDataMode] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("all_leads");
+  const [activeTab, setActiveTab] = useState("raw_data");
   const [search, setSearch] = useState("");
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [bulkAgent, setBulkAgent] = useState("");
 
   const panel = user?.panel;
   const isTL = panel === "tl";
+  const canAssign = isTL; // Only TL can assign raw data
 
-  // Fetch campaigns — TL sees only assigned campaigns
+  // Fetch campaigns
   const { data: campaigns } = useQuery({
     queryKey: ["tracker-campaigns", user?.id, isTL],
     queryFn: async () => {
@@ -90,7 +99,7 @@ const DataTracker = () => {
     enabled: !!user,
   });
 
-  // Fetch leads
+  // Fetch ALL leads (for all tabs)
   const { data: leads, isLoading: leadsLoading } = useQuery({
     queryKey: ["tracker-leads", selectedCampaign, dataMode, user?.id, isTL],
     queryFn: async () => {
@@ -104,7 +113,6 @@ const DataTracker = () => {
       const { data, error } = await q;
       if (error) throw error;
       let result = data || [];
-      // Filter by data mode
       if (dataMode === "lead") result = result.filter(l => l.source !== "processing" && l.import_source !== "processing");
       if (dataMode === "processing") result = result.filter(l => l.source === "processing" || l.import_source === "processing");
       return result;
@@ -129,15 +137,66 @@ const DataTracker = () => {
     enabled: !!user,
   });
 
+  // Fetch agents for TL assignment
+  const { data: agents } = useQuery({
+    queryKey: ["tracker-agents", user?.id, selectedCampaign],
+    queryFn: async () => {
+      if (!user || !selectedCampaign || selectedCampaign === "all") {
+        // Get all agents under this TL across campaigns
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
+          .eq("tl_id", user!.id);
+        if (!data) return { bronze: [], silver: [], all: [] };
+        const seen = new Set<string>();
+        const bronze: { id: string; name: string }[] = [];
+        const silver: { id: string; name: string }[] = [];
+        const all: { id: string; name: string }[] = [];
+        data.forEach((r: any) => {
+          const agent = { id: r.users.id, name: r.users.name };
+          if (!seen.has(agent.id)) { all.push(agent); seen.add(agent.id); }
+          if (r.is_bronze && !bronze.find(b => b.id === agent.id)) bronze.push(agent);
+          if (r.is_silver && !silver.find(s => s.id === agent.id)) silver.push(agent);
+        });
+        return { bronze, silver, all };
+      }
+      const { data } = await supabase
+        .from("campaign_agent_roles")
+        .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
+        .eq("campaign_id", selectedCampaign)
+        .eq("tl_id", user!.id);
+      if (!data) return { bronze: [], silver: [], all: [] };
+      const bronze: { id: string; name: string }[] = [];
+      const silver: { id: string; name: string }[] = [];
+      const all: { id: string; name: string }[] = [];
+      data.forEach((r: any) => {
+        const agent = { id: r.users.id, name: r.users.name };
+        all.push(agent);
+        if (r.is_bronze) bronze.push(agent);
+        if (r.is_silver) silver.push(agent);
+      });
+      return { bronze, silver, all };
+    },
+    enabled: !!user && isTL,
+  });
+
   const allLeads = leads || [];
   const allOrders = orders || [];
 
-  // Agent status-changed leads (has been called at least once or status changed from fresh)
+  // Raw data = leads that came in but not yet operated on (fresh + unassigned)
+  const rawLeads = allLeads.filter(l => l.status === "fresh" && !l.assigned_to);
+  const rawLeadLeads = rawLeads.filter(l => l.source !== "processing" && l.import_source !== "processing");
+  const rawProcessingLeads = rawLeads.filter(l => l.source === "processing" || l.import_source === "processing");
+
+  // Agent status-changed leads
   const agentChangedLeads = allLeads.filter(l => l.status !== "fresh" && l.assigned_to);
+
+  // Operated leads (assigned or status changed)
+  const operatedLeads = allLeads.filter(l => l.assigned_to || l.status !== "fresh");
 
   // Pipeline summary
   const pipelineSummary = {
-    tlPending: allLeads.filter(l => l.status === "fresh" && !l.assigned_to).length,
+    rawData: rawLeads.length,
     agentPending: allLeads.filter(l => (l.status === "fresh" || l.status === "assigned") && l.assigned_to).length,
     agentFollowUp: allLeads.filter(l => ["called", "callback", "busy_now", "follow_up", "positive", "customer_reschedule"].includes(l.status || "")).length,
     csoPending: allOrders.filter(o => o.status === "pending_cso").length,
@@ -157,8 +216,41 @@ const DataTracker = () => {
     );
   };
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["tracker-leads"] });
+    queryClient.invalidateQueries({ queryKey: ["tracker-orders"] });
+  };
+
+  // TL assignment functions
+  const assignLead = async (leadId: string, agentId: string, isProcessing: boolean) => {
+    if (isProcessing) {
+      await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+    } else {
+      await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+    }
+    toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
+    setAssignments(prev => { const n = { ...prev }; delete n[leadId]; return n; });
+    invalidateAll();
+  };
+
+  const bulkAssignLeads = async (isProcessing: boolean) => {
+    if (!bulkAgent || selectedLeads.size === 0) return;
+    const ids = Array.from(selectedLeads);
+    for (const id of ids) {
+      if (isProcessing) {
+        await supabase.from("leads").update({ assigned_to: bulkAgent, status: "processing_assigned" }).eq("id", id);
+      } else {
+        await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze" }).eq("id", id);
+      }
+    }
+    toast.success(isBn ? `${ids.length}টি lead assign হয়েছে` : `${ids.length} leads assigned`);
+    setSelectedLeads(new Set());
+    setBulkAgent("");
+    invalidateAll();
+  };
+
   const pipelineSteps = [
-    { label: isBn ? "TL পেন্ডিং" : "TL Pending", value: pipelineSummary.tlPending, color: "text-blue-500", icon: User },
+    { label: isBn ? "র ডাটা" : "Raw Data", value: pipelineSummary.rawData, color: "text-rose-500", icon: Database },
     { label: isBn ? "এজেন্ট পেন্ডিং" : "Agent Pending", value: pipelineSummary.agentPending, color: "text-amber-500", icon: Phone },
     { label: isBn ? "ফলো আপ" : "Follow Up", value: pipelineSummary.agentFollowUp, color: "text-purple-500", icon: Clock },
     { label: isBn ? "CSO পেন্ডিং" : "CSO Pending", value: pipelineSummary.csoPending, color: "text-orange-500", icon: Target },
@@ -168,6 +260,11 @@ const DataTracker = () => {
     { label: isBn ? "ডেলিভার্ড" : "Delivered", value: pipelineSummary.delivered, color: "text-green-500", icon: CircleDot },
     { label: isBn ? "রিটার্নড" : "Returned", value: pipelineSummary.returned, color: "text-red-500", icon: CircleDot },
   ];
+
+  // Determine which raw leads to show based on dataMode filter within raw tab
+  const [rawSubTab, setRawSubTab] = useState<"lead" | "processing">("lead");
+  const displayRawLeads = rawSubTab === "processing" ? rawProcessingLeads : rawLeadLeads;
+  const agentList = rawSubTab === "processing" ? (agents?.all || []) : (agents?.bronze || []);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -179,11 +276,10 @@ const DataTracker = () => {
             {isBn ? "ডাটা ট্র্যাকার" : "Data Tracker"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {isBn ? "সব ডাটার বর্তমান অবস্থান ও স্ট্যাটাস দেখুন" : "Track current position & status of all data"}
+            {isBn ? "সব ডাটার বর্তমান অবস্থান ও স্ট্যাটাস দেখুন — সব কিছু ডাইনামিক ও পরস্পর সম্পর্কিত" : "Track current position & status of all data — everything is dynamic & interconnected"}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Campaign Filter */}
           <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
@@ -197,7 +293,6 @@ const DataTracker = () => {
               ))}
             </SelectContent>
           </Select>
-          {/* Data Mode Filter */}
           <Select value={dataMode} onValueChange={setDataMode}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
@@ -214,7 +309,7 @@ const DataTracker = () => {
       {/* Pipeline Position Summary */}
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="py-4">
-          <p className="text-xs font-heading text-muted-foreground mb-3">{isBn ? "📍 পাইপলাইন অবস্থান সারাংশ" : "📍 Pipeline Position Summary"}</p>
+          <p className="text-xs font-heading text-muted-foreground mb-3">{isBn ? "📍 পাইপলাইন অবস্থান সারাংশ — সব সংখ্যা রিয়েলটাইম" : "📍 Pipeline Position Summary — All counts are realtime"}</p>
           <div className="flex flex-wrap items-center gap-2">
             {pipelineSteps.map((step, i) => (
               <div key={i} className="flex items-center gap-1.5">
@@ -236,6 +331,9 @@ const DataTracker = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="raw_data" className="text-xs">
+              📦 {isBn ? "র ডাটা" : "Raw Data"} ({rawLeads.length})
+            </TabsTrigger>
             <TabsTrigger value="all_leads" className="text-xs">
               🎯 {isBn ? "সব ডাটা" : "All Data"} ({allLeads.length})
             </TabsTrigger>
@@ -257,7 +355,161 @@ const DataTracker = () => {
           </div>
         </div>
 
-        {/* All Leads / Data Tab */}
+        {/* ========== RAW DATA TAB ========== */}
+        <TabsContent value="raw_data">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle className="text-lg font-heading flex items-center gap-2">
+                  <Database className="h-5 w-5 text-primary" />
+                  {isBn ? "র ডাটা — ইন হয়েছে কিন্তু অপারেশন হয়নি" : "Raw Data — Imported but not operated"}
+                </CardTitle>
+                {/* Lead / Processing sub-filter */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={rawSubTab === "lead" ? "default" : "outline"}
+                    onClick={() => { setRawSubTab("lead"); setSelectedLeads(new Set()); }}
+                    className="text-xs"
+                  >
+                    🎯 {isBn ? "লিড" : "Lead"} ({rawLeadLeads.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={rawSubTab === "processing" ? "default" : "outline"}
+                    onClick={() => { setRawSubTab("processing"); setSelectedLeads(new Set()); }}
+                    className="text-xs"
+                  >
+                    ⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({rawProcessingLeads.length})
+                  </Button>
+                </div>
+              </div>
+
+              {/* TL Bulk Assignment */}
+              {canAssign && selectedLeads.size > 0 && (
+                <div className="flex items-center gap-3 pt-2 border-t border-border mt-2">
+                  <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
+                  <Select value={bulkAgent} onValueChange={setBulkAgent}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agentList.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={() => bulkAssignLeads(rawSubTab === "processing")} disabled={!bulkAgent} size="sm">
+                    <Send className="h-3.5 w-3.5 mr-1" />
+                    {isBn ? "Assign করুন" : "Assign"}
+                  </Button>
+                </div>
+              )}
+
+              {!canAssign && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isBn ? "⚠️ শুধুমাত্র TL এই ডাটা গুলো এজেন্টদের মাঝে ডিস্ট্রিবিউট করতে পারবে" : "⚠️ Only TL can distribute these data to agents"}
+                </p>
+              )}
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {canAssign && (
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={selectedLeads.size === displayRawLeads.length && displayRawLeads.length > 0}
+                            onCheckedChange={(v) => setSelectedLeads(v ? new Set(displayRawLeads.map(l => l.id)) : new Set())}
+                          />
+                        </TableHead>
+                      )}
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                      {canAssign && <TableHead className="text-xs">{isBn ? "Agent Assign" : "Assign Agent"}</TableHead>}
+                      {canAssign && <TableHead className="text-xs"></TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leadsLoading ? (
+                      <TableRow><TableCell colSpan={canAssign ? 9 : 7} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : filterBySearch(displayRawLeads).length === 0 ? (
+                      <TableRow><TableCell colSpan={canAssign ? 9 : 7} className="text-center py-12 text-muted-foreground">
+                        {isBn ? "কোনো র ডাটা নেই — সব ডাটা অপারেশনে আছে ✅" : "No raw data — all data is in operation ✅"}
+                      </TableCell></TableRow>
+                    ) : filterBySearch(displayRawLeads).map((lead, i) => (
+                      <TableRow key={lead.id} className="group">
+                        {canAssign && (
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedLeads.has(lead.id)}
+                              onCheckedChange={(v) => {
+                                const next = new Set(selectedLeads);
+                                v ? next.add(lead.id) : next.delete(lead.id);
+                                setSelectedLeads(next);
+                              }}
+                            />
+                          </TableCell>
+                        )}
+                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {lead.name || "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{lead.address || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">
+                            {lead.source || lead.import_source || "—"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}
+                        </TableCell>
+                        {canAssign && (
+                          <TableCell>
+                            <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(prev => ({ ...prev, [lead.id]: v }))}>
+                              <SelectTrigger className="w-36 h-8 text-xs">
+                                <SelectValue placeholder={isBn ? "Agent" : "Agent"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {agentList.map((a) => (
+                                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        )}
+                        {canAssign && (
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={!assignments[lead.id]}
+                              onClick={() => assignLead(lead.id, assignments[lead.id], rawSubTab === "processing")}
+                              className="h-8 text-xs"
+                            >
+                              <Send className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ========== ALL DATA TAB ========== */}
         <TabsContent value="all_leads">
           <Card>
             <CardContent className="p-0">
@@ -325,7 +577,7 @@ const DataTracker = () => {
           </Card>
         </TabsContent>
 
-        {/* Agent Status Changed Tab */}
+        {/* ========== AGENT STATUS CHANGED TAB ========== */}
         <TabsContent value="agent_changed">
           <Card>
             <CardContent className="p-0">
@@ -376,7 +628,7 @@ const DataTracker = () => {
           </Card>
         </TabsContent>
 
-        {/* Orders Tracking Tab */}
+        {/* ========== ORDERS TRACKING TAB ========== */}
         <TabsContent value="orders">
           <Card>
             <CardContent className="p-0">
