@@ -49,12 +49,12 @@ const TLAnalytics = () => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Get all orders for this TL this month
-    const { data: orders } = await supabase
+    let ordersQ = supabase
       .from("orders")
       .select("id, agent_id, delivery_status, status")
-      .eq("tl_id", user.id)
       .gte("created_at", startOfMonth.toISOString());
+    if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+    const { data: orders } = await ordersQ;
 
     const allOrders = orders || [];
     const total = allOrders.length;
