@@ -217,6 +217,75 @@ const HRAttendance = () => {
     fetchHolidays();
   };
 
+  const fetchEmployees = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("id, name")
+      .eq("is_active", true)
+      .neq("panel", "sa")
+      .order("name");
+    setEmployees(data || []);
+  };
+
+  const fetchEmpOffs = async () => {
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+    const { data: offRows } = await supabase
+      .from("employee_monthly_offs")
+      .select("id, user_id, off_date")
+      .eq("year", yr)
+      .eq("month", mo)
+      .order("off_date") as any;
+
+    if (!offRows || offRows.length === 0) {
+      setEmpOffs([]);
+      return;
+    }
+
+    const userIds = [...new Set(offRows.map((r: any) => r.user_id))];
+    const { data: usersData } = await supabase.from("users").select("id, name").in("id", userIds as string[]);
+    const userMap: Record<string, string> = {};
+    (usersData || []).forEach((u) => { userMap[u.id] = u.name; });
+
+    setEmpOffs(offRows.map((r: any) => ({
+      id: r.id,
+      user_id: r.user_id,
+      user_name: userMap[r.user_id] || "Unknown",
+      off_date: r.off_date,
+    })));
+  };
+
+  const addEmpOff = async () => {
+    if (!selectedEmployee || !empOffDate || !user) return;
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+
+    // Check limit: max 3 per employee per month
+    const existing = empOffs.filter((o) => o.user_id === selectedEmployee);
+    if (existing.length >= 3) {
+      toast({ title: isBn ? "এই মাসে এই কর্মচারীর জন্য সর্বোচ্চ ৩ দিন ছুটি দেওয়া যায়" : "Max 3 off days per employee per month", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await (supabase.from("employee_monthly_offs") as any).insert({
+      user_id: selectedEmployee,
+      off_date: empOffDate,
+      month: mo,
+      year: yr,
+      assigned_by: user.id,
+    });
+    if (error) {
+      toast({ title: error.message, variant: "destructive" });
+      return;
+    }
+    setEmpOffDate("");
+    fetchEmpOffs();
+    toast({ title: isBn ? "ছুটি বরাদ্দ হয়েছে ✓" : "Off day assigned ✓" });
+  };
+
+  const removeEmpOff = async (id: string) => {
+    await (supabase.from("employee_monthly_offs") as any).delete().eq("id", id);
+    fetchEmpOffs();
+  };
+
   const openDateDetail = async (date: string) => {
     setDetailDate(date);
     setDetailLoading(true);
