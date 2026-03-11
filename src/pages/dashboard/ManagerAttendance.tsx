@@ -313,9 +313,21 @@ export default function ManagerAttendance() {
               ))}
             </div>
             <Textarea value={checkInNote} onChange={(e) => setCheckInNote(e.target.value)} rows={2} placeholder="মন্তব্য (ঐচ্ছিক)" />
+            {gpsError && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <MapPin className="inline h-4 w-4 mr-1" />{gpsError}
+              </div>
+            )}
+            {!officeLocation && (
+              <div className="rounded-md border border-orange-500/50 bg-orange-500/10 p-3 text-sm text-orange-400">
+                ⚠️ আপনার অফিস লোকেশন সেট করা নেই। অ্যাডমিনের সাথে যোগাযোগ করুন।
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button onClick={handleCheckIn} disabled={!checkInMood} className="bg-green-600 hover:bg-green-700 text-white">Check In নিশ্চিত করুন</Button>
+            <Button onClick={handleCheckIn} disabled={!checkInMood || gpsChecking || !officeLocation}>
+              {gpsChecking ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> লোকেশন যাচাই...</> : "Check In নিশ্চিত করুন"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
