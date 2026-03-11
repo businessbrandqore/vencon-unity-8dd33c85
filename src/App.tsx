@@ -36,6 +36,8 @@ import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import SAPayroll from "./pages/dashboard/SAPayroll";
 import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
 import HRApprovals from "./pages/dashboard/HRApprovals";
+import HRWarehouse from "./pages/dashboard/HRWarehouse";
+import HRDataMonitor from "./pages/dashboard/HRDataMonitor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
