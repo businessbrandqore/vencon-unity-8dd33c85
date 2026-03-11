@@ -82,6 +82,8 @@ const App = () => (
               <Route path="/hr/chat-admin" element={<HRChatAdmin />} />
               <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
               <Route path="/hr/leads/import" element={<HRLeadImport />} />
+              <Route path="/hr/warehouse" element={<HRWarehouse />} />
+              <Route path="/hr/data-monitor" element={<HRDataMonitor />} />
               <Route path="/hr/documentation" element={<WebhookDocumentation />} />
               <Route path="/hr/settings" element={<HRSettings />} />
               <Route path="/hr/notifications" element={<NotificationsPage />} />
