@@ -349,28 +349,22 @@ const HREmployeeNew = () => {
               className={fieldClass}
               placeholder="e.g. 15000"
             />
-          </div>
-          <div>
-            <label className="font-body text-xs text-muted-foreground block mb-2">
-              {isBn ? "সাপ্তাহিক ছুটির দিন" : "Off Days"}
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {DAYS.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  onClick={() => toggleDay(d.value)}
-                  className={`px-3 py-1.5 text-xs font-body border transition-colors ${
-                    form.offDays.includes(d.value)
-                      ? "text-white border-transparent"
-                      : "text-foreground border-border hover:bg-secondary"
-                  }`}
-                  style={form.offDays.includes(d.value) ? { backgroundColor: BLUE } : {}}
-                >
-                  {isBn ? d.bn : d.label}
-                </button>
-              ))}
-            </div>
+            {form.basicSalary && Number(form.basicSalary) > 0 && (
+              <div className="mt-2 flex gap-4 text-xs text-muted-foreground font-body">
+                <span>
+                  {isBn ? "দৈনিক:" : "Daily:"}{" "}
+                  <span className="text-foreground font-bold">
+                    ৳{(Number(form.basicSalary) / 26).toFixed(0)}
+                  </span>
+                </span>
+                <span>
+                  {isBn ? "ঘন্টায়:" : "Hourly:"}{" "}
+                  <span className="text-foreground font-bold">
+                    ৳{(Number(form.basicSalary) / 26 / 9).toFixed(0)}
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
