@@ -1309,6 +1309,7 @@ export type Database = {
       users: {
         Row: {
           auth_id: string | null
+          avatar_url: string | null
           basic_salary: number | null
           created_at: string | null
           department: string | null
@@ -1336,6 +1337,7 @@ export type Database = {
         }
         Insert: {
           auth_id?: string | null
+          avatar_url?: string | null
           basic_salary?: number | null
           created_at?: string | null
           department?: string | null
@@ -1363,6 +1365,7 @@ export type Database = {
         }
         Update: {
           auth_id?: string | null
+          avatar_url?: string | null
           basic_salary?: number | null
           created_at?: string | null
           department?: string | null
