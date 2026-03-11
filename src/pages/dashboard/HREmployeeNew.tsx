@@ -136,7 +136,7 @@ const HREmployeeNew = () => {
         mother_phone: form.motherPhone.trim(),
         guardian_type: form.guardianType,
         off_days: form.offDays,
-        gps_location: form.gpsLocation.trim() || null,
+        gps_location: (form.gpsLatitude.trim() && form.gpsLongitude.trim()) ? `${form.gpsLatitude.trim()},${form.gpsLongitude.trim()}` : null,
         must_change_password: true,
       } as any)
       .select("id")
