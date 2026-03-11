@@ -881,6 +881,44 @@ export type Database = {
           },
         ]
       }
+      monthly_holidays: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          holiday_date: string
+          id: string
+          month: number
+          title: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          holiday_date: string
+          id?: string
+          month: number
+          title?: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          holiday_date?: string
+          id?: string
+          month?: number
+          title?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_holidays_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
