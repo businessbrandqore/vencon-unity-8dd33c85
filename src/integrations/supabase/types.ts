@@ -53,6 +53,7 @@ export type Database = {
           date: string
           deduction_amount: number | null
           desk_condition: string | null
+          desk_number: string | null
           id: string
           is_early_out: boolean | null
           is_late: boolean | null
@@ -60,6 +61,7 @@ export type Database = {
           mood_note: string | null
           mood_out: string | null
           phone_minutes_remaining: number | null
+          phone_number: string | null
           user_id: string | null
         }
         Insert: {
@@ -68,6 +70,7 @@ export type Database = {
           date: string
           deduction_amount?: number | null
           desk_condition?: string | null
+          desk_number?: string | null
           id?: string
           is_early_out?: boolean | null
           is_late?: boolean | null
@@ -75,6 +78,7 @@ export type Database = {
           mood_note?: string | null
           mood_out?: string | null
           phone_minutes_remaining?: number | null
+          phone_number?: string | null
           user_id?: string | null
         }
         Update: {
@@ -83,6 +87,7 @@ export type Database = {
           date?: string
           deduction_amount?: number | null
           desk_condition?: string | null
+          desk_number?: string | null
           id?: string
           is_early_out?: boolean | null
           is_late?: boolean | null
@@ -90,6 +95,7 @@ export type Database = {
           mood_note?: string | null
           mood_out?: string | null
           phone_minutes_remaining?: number | null
+          phone_number?: string | null
           user_id?: string | null
         }
         Relationships: [

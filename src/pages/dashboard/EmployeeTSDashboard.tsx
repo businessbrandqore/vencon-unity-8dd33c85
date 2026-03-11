@@ -138,6 +138,8 @@ export default function EmployeeTSDashboard() {
   const [deskCondition, setDeskCondition] = useState("");
   const [deskNote, setDeskNote] = useState("");
   const [phoneMins, setPhoneMins] = useState<number>(0);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [deskNumber, setDeskNumber] = useState("");
   const [phoneInstruction, setPhoneInstruction] = useState("");
 
   /* mood */
@@ -321,7 +323,9 @@ export default function EmployeeTSDashboard() {
       await supabase.from("attendance").update({
         desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
-      }).eq("id", todayAttendance.id);
+        phone_number: phoneNumber || null,
+        desk_number: deskNumber || null,
+      } as any).eq("id", todayAttendance.id);
     } else {
       const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").insert({
@@ -329,7 +333,9 @@ export default function EmployeeTSDashboard() {
         date: todayStr(),
         desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
-      });
+        phone_number: phoneNumber || null,
+        desk_number: deskNumber || null,
+      } as any);
     }
     setShowDeskModal(false);
     setDeskReportDone(true);
@@ -548,6 +554,16 @@ export default function EmployeeTSDashboard() {
               <div>
                 <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
                 <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>মোবাইল নাম্বার</Label>
+                  <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" />
+                </div>
+                <div>
+                  <Label>ডেস্ক নাম্বার</Label>
+                  <Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" />
+                </div>
               </div>
               <div>
                 <Label>{t("phone_minutes")}</Label>
