@@ -88,11 +88,11 @@ const HRCampaigns = () => {
     if (data) setTLUsers(data);
   };
 
-  const addWebsite = () => setWebsites([...websites, { name: "", url: "" }]);
+  const addWebsite = () => setWebsites([...websites, { name: "", url: "", dataMode: "lead" }]);
   const removeWebsite = (i: number) => setWebsites(websites.filter((_, idx) => idx !== i));
-  const updateWebsite = (i: number, field: "name" | "url", val: string) => {
+  const updateWebsite = (i: number, field: "name" | "url" | "dataMode", val: string) => {
     const copy = [...websites];
-    copy[i][field] = val;
+    (copy[i] as any)[field] = val;
     setWebsites(copy);
   };
 
