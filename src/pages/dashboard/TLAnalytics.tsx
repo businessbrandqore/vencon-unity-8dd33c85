@@ -13,6 +13,7 @@ const TLAnalytics = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
+  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
@@ -22,11 +23,20 @@ const TLAnalytics = () => {
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
-      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
-      if (data) {
-        const list = data.map((d: any) => d.campaigns).filter(Boolean);
-        setCampaigns(list);
-        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+      if (isBDO) {
+        const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+        if (data) {
+          const list = data.map((c: any) => ({ id: c.id, name: c.name }));
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+        }
+      } else {
+        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+        if (data) {
+          const list = data.map((d: any) => d.campaigns).filter(Boolean);
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+        }
       }
     };
     fetch();
@@ -39,12 +49,12 @@ const TLAnalytics = () => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Get all orders for this TL this month
-    const { data: orders } = await supabase
+    let ordersQ = supabase
       .from("orders")
       .select("id, agent_id, delivery_status, status")
-      .eq("tl_id", user.id)
       .gte("created_at", startOfMonth.toISOString());
+    if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+    const { data: orders } = await ordersQ;
 
     const allOrders = orders || [];
     const total = allOrders.length;
@@ -59,11 +69,12 @@ const TLAnalytics = () => {
     });
 
     // Agent performance
-    const { data: roles } = await supabase
+    let rolesQ = supabase
       .from("campaign_agent_roles")
       .select("agent_id, users!campaign_agent_roles_agent_id_fkey(name)")
-      .eq("campaign_id", selectedCampaign)
-      .eq("tl_id", user.id);
+      .eq("campaign_id", selectedCampaign);
+    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    const { data: roles } = await rolesQ;
 
     if (roles) {
       const perf = roles.map((r: any) => {
