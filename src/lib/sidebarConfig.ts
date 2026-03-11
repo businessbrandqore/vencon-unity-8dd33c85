@@ -63,6 +63,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   tl: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/tl/dashboard" },
     { titleKey: "leads", icon: Target, path: "/tl/leads" },
+    { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker" },
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team" },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics" },
     { titleKey: "chat", icon: MessageSquare, path: "/tl/chat" },
