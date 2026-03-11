@@ -308,10 +308,11 @@ export default function EmployeeTSDashboard() {
         phone_minutes_remaining: phoneMins,
       }).eq("id", todayAttendance.id);
     } else {
+      const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").insert({
         user_id: user.id,
         date: todayStr(),
-        desk_condition: deskCondition,
+        desk_condition: deskValue,
         phone_minutes_remaining: phoneMins,
       });
     }
