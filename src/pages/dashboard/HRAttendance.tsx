@@ -365,8 +365,8 @@ const HRAttendance = () => {
               <thead>
                 <tr className="bg-secondary text-muted-foreground text-[11px]">
                   <th className="text-left p-2">{isBn ? "নাম" : "Name"}</th>
-                  <th className="text-left p-2">{isBn ? "ক্লক ইন" : "Clock In"}</th>
-                  <th className="text-left p-2">{isBn ? "ক্লক আউট" : "Clock Out"}</th>
+                   <th className="text-left p-2">{isBn ? "চেক ইন" : "Check In"}</th>
+                   <th className="text-left p-2">{isBn ? "চেক আউট" : "Check Out"}</th>
                   <th className="text-left p-2">{isBn ? "স্ট্যাটাস" : "Status"}</th>
                   <th className="text-right p-2">{isBn ? "কর্তন" : "Deduction"}</th>
                 </tr>

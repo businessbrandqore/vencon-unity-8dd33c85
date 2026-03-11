@@ -216,8 +216,8 @@ export const translations: TranslationMap = {
   clock_out_early: { bn: "Check Out হয়েছে (Early out — ৳33 কর্তন)", en: "Checked Out (Early out — ৳33 deduction)" },
   outside_shift: { bn: "আপনার shift এখন নেই।", en: "You're outside your shift hours." },
   personal_info_only: { bn: "শুধুমাত্র ব্যক্তিগত তথ্য দেখা যাচ্ছে।", en: "Only personal information is visible." },
-  not_clocked_in: { bn: "আপনি এখনো Clock In করেননি", en: "You haven't clocked in yet" },
-  clock_in_to_start: { bn: "কাজ শুরু করতে Clock In করুন", en: "Clock in to start working" },
+  not_clocked_in: { bn: "আপনি এখনো Check In করেননি", en: "You haven't checked in yet" },
+  clock_in_to_start: { bn: "কাজ শুরু করতে Check In করুন", en: "Check in to start working" },
 
   // ─── Lead Sheet ───
   lead_sheet: { bn: "লিড শিট", en: "Lead Sheet" },
