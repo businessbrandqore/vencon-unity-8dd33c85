@@ -1,4 +1,4 @@
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Package } from "lucide-react";
 import {
   LayoutDashboard,
   CheckSquare,

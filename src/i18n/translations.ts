@@ -55,6 +55,7 @@ export const translations: TranslationMap = {
   delete_sheet: { bn: "ডিলিট শিট", en: "Delete Sheet" },
   my_leads: { bn: "আমার লিডস", en: "My Leads" },
   salary: { bn: "বেতন", en: "Salary" },
+  my_orders: { bn: "আমার অর্ডার", en: "My Orders" },
   profile: { bn: "প্রোফাইল", en: "Profile" },
   notifications: { bn: "নোটিফিকেশন", en: "Notifications" },
   documentation: { bn: "ডকুমেন্টেশন", en: "Documentation" },
