@@ -50,6 +50,8 @@ interface Appeal {
 
 const HRAttendance = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const isBn = t("vencon") === "VENCON";
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
