@@ -84,10 +84,19 @@ const HRAttendance = () => {
   const [newHolidayTitle, setNewHolidayTitle] = useState("");
   const [showHolidayForm, setShowHolidayForm] = useState(false);
 
+  // Employee Individual Offs
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [empOffDate, setEmpOffDate] = useState("");
+  const [empOffs, setEmpOffs] = useState<{ id: string; user_id: string; user_name: string; off_date: string }[]>([]);
+  const [showEmpOffForm, setShowEmpOffForm] = useState(false);
+
   useEffect(() => {
     fetchMonthData();
     fetchAppeals();
     fetchHolidays();
+    fetchEmployees();
+    fetchEmpOffs();
   }, [selectedMonth]);
 
   const fetchMonthData = async () => {
