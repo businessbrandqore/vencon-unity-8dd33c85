@@ -200,6 +200,40 @@ export default function MaintenanceOfficerDashboard() {
         </CardContent>
       </Card>
 
+      {/* Phone Minutes Instruction */}
+      <Card className="border-blue-500/30">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-heading">📱 ফোন মিনিট চেক করার নির্দেশনা</CardTitle>
+            {!editingInstruction && (
+              <Button variant="outline" size="sm" onClick={() => { setInstructionDraft(phoneInstruction); setEditingInstruction(true); }}>
+                এডিট করুন
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {editingInstruction ? (
+            <div className="space-y-3">
+              <Textarea
+                value={instructionDraft}
+                onChange={(e) => setInstructionDraft(e.target.value)}
+                rows={4}
+                placeholder="কর্মীরা কিভাবে ফোনের অবশিষ্ট মিনিট চেক করবে তার নির্দেশনা লিখুন..."
+              />
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setEditingInstruction(false)}>বাতিল</Button>
+                <Button size="sm" onClick={savePhoneInstruction} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">সংরক্ষণ</Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {phoneInstruction || "এখনো কোনো নির্দেশনা দেওয়া হয়নি। 'এডিট করুন' বাটনে ক্লিক করে নির্দেশনা যোগ করুন।"}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Today's expenses */}
       <Card>
         <CardHeader><CardTitle className="text-sm font-heading">আজকের Expenses</CardTitle></CardHeader>
