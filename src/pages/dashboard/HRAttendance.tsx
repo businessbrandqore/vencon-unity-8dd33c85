@@ -164,7 +164,44 @@ const HRAttendance = () => {
     );
   };
 
-  const openDateDetail = async (date: string) => {
+  const fetchHolidays = async () => {
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+    const { data } = await supabase
+      .from("monthly_holidays")
+      .select("id, holiday_date, title")
+      .eq("year", yr)
+      .eq("month", mo)
+      .order("holiday_date");
+    setHolidays((data as MonthlyHoliday[]) || []);
+  };
+
+  const addHoliday = async () => {
+    if (!newHolidayDate || !user) return;
+    const [yr, mo] = selectedMonth.split("-").map(Number);
+    const { error } = await supabase.from("monthly_holidays").insert({
+      year: yr,
+      month: mo,
+      holiday_date: newHolidayDate,
+      title: newHolidayTitle.trim() || (isBn ? "ছুটি" : "Holiday"),
+      created_by: user.id,
+    } as any);
+    if (error) {
+      toast({ title: error.message, variant: "destructive" });
+      return;
+    }
+    setNewHolidayDate("");
+    setNewHolidayTitle("");
+    setShowHolidayForm(false);
+    fetchHolidays();
+    toast({ title: isBn ? "ছুটি যোগ হয়েছে ✓" : "Holiday added ✓" });
+  };
+
+  const removeHoliday = async (id: string) => {
+    await supabase.from("monthly_holidays").delete().eq("id", id);
+    fetchHolidays();
+  };
+
+
     setDetailDate(date);
     setDetailLoading(true);
 
