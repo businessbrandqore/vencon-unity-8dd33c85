@@ -23,6 +23,7 @@ const TLTeam = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
+  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
@@ -31,11 +32,20 @@ const TLTeam = () => {
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
-      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
-      if (data) {
-        const list = data.map((d: any) => d.campaigns).filter(Boolean);
-        setCampaigns(list);
-        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+      if (isBDO) {
+        const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+        if (data) {
+          const list = data.map((c: any) => ({ id: c.id, name: c.name }));
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+        }
+      } else {
+        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+        if (data) {
+          const list = data.map((d: any) => d.campaigns).filter(Boolean);
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+        }
       }
     };
     fetch();
