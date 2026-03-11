@@ -44,6 +44,8 @@ export const translations: TranslationMap = {
   budget: { bn: "বাজেট", en: "Budget" },
   audit_logs: { bn: "অডিট লগ", en: "Audit Logs" },
   settings: { bn: "সেটিংস", en: "Settings" },
+  main_section: { bn: "প্রধান", en: "Main" },
+  settings_section: { bn: "সেটিংস", en: "Settings" },
   leaves: { bn: "ছুটি", en: "Leaves" },
   chat: { bn: "চ্যাট", en: "Chat" },
   my_team: { bn: "আমার টিম", en: "My Team" },
