@@ -71,9 +71,16 @@ const HRAttendance = () => {
   // Appeals
   const [appeals, setAppeals] = useState<Appeal[]>([]);
 
+  // Monthly Holidays
+  const [holidays, setHolidays] = useState<MonthlyHoliday[]>([]);
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayTitle, setNewHolidayTitle] = useState("");
+  const [showHolidayForm, setShowHolidayForm] = useState(false);
+
   useEffect(() => {
     fetchMonthData();
     fetchAppeals();
+    fetchHolidays();
   }, [selectedMonth]);
 
   const fetchMonthData = async () => {
