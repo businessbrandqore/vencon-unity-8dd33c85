@@ -73,6 +73,7 @@ const App = () => (
               <Route path="/sa/audit-logs" element={<SAAuditLogs />} />
               <Route path="/sa/all-data" element={<SAAllData />} />
               <Route path="/sa/data-tracker" element={<DataTracker />} />
+              <Route path="/sa/attendance" element={<ManagerAttendance />} />
               <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/notifications" element={<NotificationsPage />} />
               <Route path="/sa/profile" element={<ProfileSettings />} />
