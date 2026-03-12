@@ -138,6 +138,63 @@ const DataTracker = () => {
     enabled: !!user,
   });
 
+  // Fetch Silver data: orders delivered from Bronze agents → original lead info
+  const { data: silverLeads, isLoading: silverLoading } = useQuery({
+    queryKey: ["tracker-silver", selectedCampaign, user?.id, isTL],
+    queryFn: async () => {
+      let q = supabase
+        .from("orders")
+        .select("id, lead_id, customer_name, phone, address, product, price, created_at, delivery_status, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at, campaign_id)")
+        .eq("delivery_status", "delivered")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (isTL && user) q = q.eq("tl_id", user.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      // Filter to only bronze-origin leads
+      const result = (data || []).filter((o: any) => o.leads);
+      // Further filter by campaign if selected
+      if (selectedCampaign !== "all") {
+        return result.filter((o: any) => o.leads?.campaign_id === selectedCampaign);
+      }
+      return result;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch Golden data: orders from Silver agents that got delivered again
+  // Golden = leads that have agent_type = 'silver' AND their order is delivered
+  const { data: goldenLeads, isLoading: goldenLoading } = useQuery({
+    queryKey: ["tracker-golden", selectedCampaign, user?.id, isTL],
+    queryFn: async () => {
+      // Get leads assigned as silver that have delivered orders
+      let q = supabase
+        .from("leads")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type")
+        .eq("agent_type", "silver")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (isTL && user) q = q.eq("tl_id", user.id);
+      const { data: silverAssigned, error: sErr } = await q;
+      if (sErr) throw sErr;
+      if (!silverAssigned || silverAssigned.length === 0) return [];
+
+      // Check which of these silver leads have delivered orders
+      const silverIds = silverAssigned.map(l => l.id);
+      const { data: deliveredOrders, error: oErr } = await supabase
+        .from("orders")
+        .select("lead_id")
+        .in("lead_id", silverIds)
+        .eq("delivery_status", "delivered");
+      if (oErr) throw oErr;
+
+      const deliveredLeadIds = new Set((deliveredOrders || []).map(o => o.lead_id));
+      return silverAssigned.filter(l => deliveredLeadIds.has(l.id));
+    },
+    enabled: !!user,
+  });
+
   // Fetch agents for TL assignment
   const { data: agents } = useQuery({
     queryKey: ["tracker-agents", user?.id, selectedCampaign],
