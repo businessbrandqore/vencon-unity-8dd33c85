@@ -12,7 +12,21 @@ import { toast } from "sonner";
 import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
-type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings";
+type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "data_requests";
+
+interface DataRequest {
+  id: string;
+  requested_by: string;
+  tl_id: string;
+  campaign_id: string | null;
+  status: string;
+  message: string | null;
+  response_note: string | null;
+  created_at: string;
+  responded_at: string | null;
+  requester_name?: string;
+  requester_role?: string;
+}
 
 interface PersonStats {
   id: string;
