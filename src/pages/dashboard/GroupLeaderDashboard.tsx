@@ -67,6 +67,8 @@ export default function GroupLeaderDashboard() {
   const [salaryData, setSalaryData] = useState<any>(null);
   const [myAttendance, setMyAttendance] = useState<any[]>([]);
   const [incentiveThreshold, setIncentiveThreshold] = useState(0);
+  const [campaignOptions, setCampaignOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all");
   const [campaignName, setCampaignName] = useState<string | null>(null);
 
   const now = new Date();
