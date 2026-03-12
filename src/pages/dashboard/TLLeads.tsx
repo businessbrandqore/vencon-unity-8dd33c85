@@ -168,7 +168,7 @@ const TLLeads = () => {
 
     let preQ = supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
       .eq("status", "pending").order("created_at", { ascending: false });
-    if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    if (!isBDO) preQ = preQ.eq("tl_id", getEffectiveTlId());
     const { data: pre } = await preQ;
     setPreOrders(pre || []);
 
