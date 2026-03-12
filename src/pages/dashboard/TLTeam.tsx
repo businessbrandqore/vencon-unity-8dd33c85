@@ -873,18 +873,6 @@ const TLTeam = () => {
             </>
           )}
           <Button
-            variant={pendingRequestCount > 0 ? "default" : "outline"}
-            size="sm"
-            onClick={() => { setViewLevel("data_requests"); loadDataRequests(); }}
-            className="gap-1.5"
-          >
-            <Database className="h-4 w-4" />
-            {isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests"}
-            {pendingRequestCount > 0 && (
-              <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{pendingRequestCount}</Badge>
-            )}
-          </Button>
-          <Button
             variant="outline"
             size="sm"
             onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); }}
