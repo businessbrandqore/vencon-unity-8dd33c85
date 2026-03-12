@@ -190,20 +190,24 @@ export default function ManagerAttendance() {
   const loadCampaignAgents = useCallback(async () => {
     if (!user || !selectedCampaign) { setCampaignAgents([]); setAvailableLeads(0); return; }
 
+    // Filter agents by bronze (lead) or silver (processing) based on distDataMode
     let q = supabase
       .from("campaign_agent_roles")
-      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name)")
+      .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
       .eq("campaign_id", selectedCampaign);
     if (!isBDO) q = q.eq("tl_id", user.id);
 
     const { data: roles } = await q;
     if (roles) {
-      const agents = roles.map((r: any) => ({ id: r.users.id, name: r.users.name }));
+      const filtered = distDataMode === "lead"
+        ? roles.filter((r: any) => r.is_bronze)
+        : roles.filter((r: any) => r.is_silver);
+      const agents = filtered.map((r: any) => ({ id: r.users.id, name: r.users.name }));
       const unique = Array.from(new Map(agents.map((a: any) => [a.id, a])).values());
       setCampaignAgents(unique);
     }
 
-    // Count available unassigned leads
+    // Count available unassigned leads filtered by import_source for processing
     let leadQ = supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
@@ -211,9 +215,14 @@ export default function ManagerAttendance() {
       .is("assigned_to", null)
       .eq("status", "fresh");
     if (!isBDO) leadQ = leadQ.eq("tl_id", user.id);
+    if (distDataMode === "processing") {
+      leadQ = leadQ.eq("import_source", "processing");
+    } else {
+      leadQ = leadQ.or("import_source.is.null,import_source.neq.processing");
+    }
     const { count } = await leadQ;
     setAvailableLeads(count || 0);
-  }, [user, selectedCampaign, isBDO]);
+  }, [user, selectedCampaign, isBDO, distDataMode]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { if (isTL || isBDO) { loadTeamAttendance(); loadCampaigns(); } }, [loadTeamAttendance, loadCampaigns, isTL, isBDO]);
