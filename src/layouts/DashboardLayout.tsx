@@ -6,6 +6,7 @@ import { PanelType } from "@/lib/panelConfig";
 import TopNav from "@/components/TopNav";
 import PanelSidebar from "@/components/PanelSidebar";
 import AIChatWidget from "@/components/AIChatWidget";
+import ATLApprovalBanner from "@/components/ATLApprovalBanner";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
