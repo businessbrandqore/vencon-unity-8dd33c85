@@ -324,11 +324,48 @@ export default function EmployeeLeads() {
         </div>
       </div>
 
-      <Tabs defaultValue="bronze">
-        <TabsList>
-          <TabsTrigger value="bronze">ব্রোঞ্জ লিড ({bronzeLeads.length})</TabsTrigger>
-          <TabsTrigger value="silver">সিল্ভার লিড ({silverLeads.length})</TabsTrigger>
-        </TabsList>
+      {/* Data Request Button */}
+      {leads.length === 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-6 text-center">
+            <Database className="mx-auto mb-2 h-8 w-8 text-primary" />
+            <p className="text-sm text-muted-foreground mb-3">আপনার কোনো লিড নেই। TL-কে ডাটা রিকোয়েস্ট পাঠান।</p>
+            <Button onClick={() => setShowDataRequestModal(true)} className="gap-2">
+              <Send className="h-4 w-4" /> ডাটা রিকোয়েস্ট পাঠান
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent requests */}
+      {pendingRequests.length > 0 && (
+        <div className="flex gap-2 flex-wrap text-xs">
+          {pendingRequests.filter(r => r.status === 'pending').length > 0 && (
+            <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+              ⏳ {pendingRequests.filter(r => r.status === 'pending').length}টি রিকোয়েস্ট পেন্ডিং
+            </Badge>
+          )}
+          {pendingRequests.filter(r => r.status === 'fulfilled').length > 0 && (
+            <Badge variant="outline" className="text-emerald-500 border-emerald-500/50">
+              ✓ {pendingRequests.filter(r => r.status === 'fulfilled').length}টি পূরণ হয়েছে
+            </Badge>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <Tabs defaultValue="bronze" className="flex-1">
+          <div className="flex items-center justify-between mb-2">
+            <TabsList>
+              <TabsTrigger value="bronze">ব্রোঞ্জ লিড ({bronzeLeads.length})</TabsTrigger>
+              <TabsTrigger value="silver">সিল্ভার লিড ({silverLeads.length})</TabsTrigger>
+            </TabsList>
+            {leads.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
+                <Send className="h-3.5 w-3.5" /> ডাটা চাই
+              </Button>
+            )}
+          </div>
         <TabsContent value="bronze">
           <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
         </TabsContent>
