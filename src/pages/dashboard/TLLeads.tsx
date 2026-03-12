@@ -200,59 +200,128 @@ const TLLeads = () => {
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
   const assignLead = async (leadId: string, agentId: string) => {
-    await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
-    toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned"); loadData();
+    await executeOrRequestApproval(
+      "lead_assign",
+      { leadId, agentId },
+      isBn ? "লিড অ্যাসাইন" : "Lead assignment",
+      async () => {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+        toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
+      }
+    );
+    loadData();
   };
 
   const bulkAssign = async () => {
     if (!bulkAgent || selectedLeads.size === 0) return;
     const ids = Array.from(selectedLeads);
-    for (const id of ids) {
-      await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze" }).eq("id", id);
-    }
-    toast.success(isBn ? `${ids.length}টি lead assign হয়েছে` : `${ids.length} leads assigned`);
+    await executeOrRequestApproval(
+      "data_distribute",
+      { leadIds: ids, agentId: bulkAgent },
+      isBn ? `${ids.length}টি লিড বাল্ক অ্যাসাইন` : `Bulk assign ${ids.length} leads`,
+      async () => {
+        for (const id of ids) {
+          await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze" }).eq("id", id);
+        }
+        toast.success(isBn ? `${ids.length}টি lead assign হয়েছে` : `${ids.length} leads assigned`);
+      }
+    );
     setSelectedLeads(new Set()); setBulkAgent(""); loadData();
   };
 
   const assignSilver = async (orderId: string, agentId: string) => {
-    await supabase.from("orders").update({ status: "silver_assigned", agent_id: agentId }).eq("id", orderId);
-    toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned"); loadData();
+    await executeOrRequestApproval(
+      "lead_assign",
+      { orderId, agentId, type: "silver" },
+      isBn ? "সিলভার এজেন্ট অ্যাসাইন" : "Silver agent assignment",
+      async () => {
+        await supabase.from("orders").update({ status: "silver_assigned", agent_id: agentId }).eq("id", orderId);
+        toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned");
+      }
+    );
+    loadData();
   };
 
   const assignProcessing = async (leadId: string, agentId: string) => {
-    await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
-    toast.success(isBn ? "Processing data assign হয়েছে" : "Processing data assigned"); loadData();
+    await executeOrRequestApproval(
+      "lead_assign",
+      { leadId, agentId, type: "processing" },
+      isBn ? "প্রসেসিং ডাটা অ্যাসাইন" : "Processing data assignment",
+      async () => {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+        toast.success(isBn ? "Processing data assign হয়েছে" : "Processing data assigned");
+      }
+    );
+    loadData();
   };
 
   const convertPreOrder = async (po: PreOrder) => {
     if (!po.lead_id) return;
-    await supabase.from("pre_orders").update({ status: "converted" }).eq("id", po.id);
-    toast.success(isBn ? "Regular order-এ convert হয়েছে" : "Converted"); loadData();
+    await executeOrRequestApproval(
+      "order_action",
+      { preOrderId: po.id },
+      isBn ? "প্রি-অর্ডার কনভার্ট" : "Convert pre-order",
+      async () => {
+        await supabase.from("pre_orders").update({ status: "converted" }).eq("id", po.id);
+        toast.success(isBn ? "Regular order-এ convert হয়েছে" : "Converted");
+      }
+    );
+    loadData();
   };
 
   const deletePreOrder = async (id: string) => {
-    await supabase.from("pre_orders").update({ status: "deleted" }).eq("id", id);
-    toast.success(isBn ? "Pre-order delete হয়েছে" : "Pre-order deleted"); loadData();
+    await executeOrRequestApproval(
+      "lead_delete",
+      { preOrderId: id },
+      isBn ? "প্রি-অর্ডার ডিলিট" : "Delete pre-order",
+      async () => {
+        await supabase.from("pre_orders").update({ status: "deleted" }).eq("id", id);
+        toast.success(isBn ? "Pre-order delete হয়েছে" : "Pre-order deleted");
+      }
+    );
+    loadData();
   };
 
   const confirmDeleteLead = async () => {
     if (deleteTarget) {
-      await supabase.from("leads").delete().eq("id", deleteTarget);
-      toast.success(isBn ? "Lead delete হয়েছে" : "Lead deleted");
+      await executeOrRequestApproval(
+        "lead_delete",
+        { leadId: deleteTarget },
+        isBn ? "লিড ডিলিট" : "Delete lead",
+        async () => {
+          await supabase.from("leads").delete().eq("id", deleteTarget);
+          toast.success(isBn ? "Lead delete হয়েছে" : "Lead deleted");
+        }
+      );
     }
     setDeleteTarget(null); setDeleteConfirmOpen(false); loadData();
   };
 
   const bulkDeleteLeads = async () => {
     const ids = Array.from(selectedDeleteLeads);
-    for (const id of ids) { await supabase.from("leads").delete().eq("id", id); }
-    toast.success(isBn ? `${ids.length}টি lead delete হয়েছে` : `${ids.length} leads deleted`);
+    await executeOrRequestApproval(
+      "lead_delete",
+      { leadIds: ids },
+      isBn ? `${ids.length}টি লিড বাল্ক ডিলিট` : `Bulk delete ${ids.length} leads`,
+      async () => {
+        for (const id of ids) { await supabase.from("leads").delete().eq("id", id); }
+        toast.success(isBn ? `${ids.length}টি lead delete হয়েছে` : `${ids.length} leads deleted`);
+      }
+    );
     setSelectedDeleteLeads(new Set()); loadData();
   };
 
   const reassignLead = async (leadId: string, agentId: string) => {
-    await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", requeue_count: 0 }).eq("id", leadId);
-    toast.success(isBn ? "Lead reassign হয়েছে" : "Lead reassigned"); loadData();
+    await executeOrRequestApproval(
+      "lead_assign",
+      { leadId, agentId, type: "reassign" },
+      isBn ? "লিড রিঅ্যাসাইন" : "Lead reassignment",
+      async () => {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", requeue_count: 0 }).eq("id", leadId);
+        toast.success(isBn ? "Lead reassign হয়েছে" : "Lead reassigned");
+      }
+    );
+    loadData();
   };
 
   if (!user) return null;
