@@ -68,6 +68,7 @@ export const translations: TranslationMap = {
   my_attendance: { bn: "আমার উপস্থিতি", en: "My Attendance" },
   data_requests: { bn: "ডাটা রিকোয়েস্ট", en: "Data Requests" },
   agent_assignment: { bn: "এজেন্ট অ্যাসাইনমেন্ট", en: "Agent Assignment" },
+  atl_approvals: { bn: "ATL এপ্রোভাল", en: "ATL Approvals" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },
