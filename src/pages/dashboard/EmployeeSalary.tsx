@@ -113,6 +113,7 @@ export default function EmployeeSalary() {
   if (!salary) return <div className="p-6 text-muted-foreground">বেতন তথ্য পাওয়া যায়নি</div>;
 
   const isIncentiveRole = ["telesales_executive", "assistant_team_leader", "Assistant Team Leader", "team_leader", "group_leader"].includes(salary.role);
+  const isTelesalesRole = salary.role === "telesales_executive";
 
   const yearlyTotals = yearlySalaries.length > 0 ? {
     basic: yearlySalaries.reduce((s, d) => s + n(d.basic_salary), 0),
@@ -286,7 +287,7 @@ export default function EmployeeSalary() {
           {/* Receive Ratio Warning */}
           {isIncentiveRole && (
             <div className="space-y-4">
-              {ratio < 60 ? (
+              {isTelesalesRole && ratio < 60 ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
@@ -294,6 +295,18 @@ export default function EmployeeSalary() {
                       <p className="font-heading font-bold text-destructive">⚠ রিসিভ রেশিও ৬০% এর নিচে!</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         আপনার বর্তমান রিসিভ রেশিও <strong className="text-destructive">{ratio}%</strong>। মাস শেষে রিসিভ রেশিও ৬০% এর নিচে থাকলে বেতন <strong className="text-destructive">০ (শূন্য)</strong> হয়ে যাবে।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : !isTelesalesRole && ratio < 60 ? (
+                <div className="rounded-md border border-orange-300/50 bg-orange-50 dark:bg-orange-950/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-heading font-bold text-orange-600 dark:text-orange-400">রিসিভ রেশিও কম</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। উন্নতি করলে ইনসেনটিভ বাড়বে।
                       </p>
                     </div>
                   </div>
