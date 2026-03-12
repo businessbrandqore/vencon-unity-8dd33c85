@@ -36,6 +36,7 @@ import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
 import TLDashboard from "./pages/dashboard/TLDashboard";
 import TLLeads from "./pages/dashboard/TLLeads";
+import BDOAgentAssignment from "./pages/dashboard/BDOAgentAssignment";
 import TLTeam from "./pages/dashboard/TLTeam";
 import TLDataRequests from "./pages/dashboard/TLDataRequests";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/tl/my-team" element={<TLTeam />} />
               <Route path="/tl/data-requests" element={<TLDataRequests />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
+              <Route path="/tl/agent-assignment" element={<BDOAgentAssignment />} />
               <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/settings" element={<ProfileSettings />} />
