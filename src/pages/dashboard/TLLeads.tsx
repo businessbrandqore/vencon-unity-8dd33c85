@@ -142,7 +142,7 @@ const TLLeads = () => {
       });
       setBronzeAgents(bronze); setSilverAgents(silver); setAllAgents(all);
     }
-  }, [user, selectedCampaign]);
+  }, [user, selectedCampaign, getEffectiveTlId]);
 
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
