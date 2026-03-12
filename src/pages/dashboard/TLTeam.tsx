@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, Users, RefreshCw, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Crown, Briefcase, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
+import { Search, Users, RefreshCw, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Crown, Briefcase, CheckCircle, XCircle, Plus, Trash2, Target } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
 type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "group_management";
@@ -69,6 +69,14 @@ const TLTeam = () => {
   const [existingGroups, setExistingGroups] = useState<{ leader: { id: string; name: string }; members: { id: string; name: string }[] }[]>([]);
   const [groupApprovals, setGroupApprovals] = useState<any[]>([]);
   const [groupSubmitting, setGroupSubmitting] = useState(false);
+
+  // GL Campaign Assignment state
+  const [glAssignOpen, setGlAssignOpen] = useState(false);
+  const [glCampaigns, setGlCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [glSelectedCampaign, setGlSelectedCampaign] = useState("");
+  const [glSelectedGL, setGlSelectedGL] = useState("");
+  const [glAssignSubmitting, setGlAssignSubmitting] = useState(false);
+  const [glAssignApprovals, setGlAssignApprovals] = useState<any[]>([]);
 
   const getDateRange = useCallback((period: TimePeriod) => {
     const now = new Date();
@@ -367,6 +375,82 @@ const TLTeam = () => {
     loadExistingGroups();
   };
 
+
+  // GL Campaign Assignment functions
+  const loadGLCampaigns = useCallback(async () => {
+    if (!user) return;
+    // Load campaigns this TL is assigned to
+    const { data: ctData } = await supabase
+      .from("campaign_tls")
+      .select("campaign_id, campaigns!campaign_tls_campaign_id_fkey(id, name)")
+      .eq("tl_id", user.id);
+    if (ctData) {
+      setGlCampaigns(ctData.map((d: any) => ({ id: d.campaigns.id, name: d.campaigns.name })));
+    }
+  }, [user]);
+
+  const loadGLAssignApprovals = useCallback(async () => {
+    if (!user) return;
+    let q = supabase.from("sa_approvals").select("*").eq("type", "gl_campaign_assignment").order("created_at", { ascending: false });
+    if (!isBDO) q = q.eq("requested_by", user.id);
+    const { data } = await q;
+    setGlAssignApprovals(data || []);
+  }, [user, isBDO]);
+
+  const handleSubmitGLAssign = async () => {
+    if (!user || !glSelectedGL || !glSelectedCampaign) return;
+    setGlAssignSubmitting(true);
+    const glUser = existingGroups.find(g => g.leader.id === glSelectedGL)?.leader;
+    const campaign = glCampaigns.find(c => c.id === glSelectedCampaign);
+
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "gl_campaign_assignment",
+      requested_by: user.id,
+      details: {
+        group_leader_id: glSelectedGL,
+        group_leader_name: glUser?.name || "",
+        campaign_id: glSelectedCampaign,
+        campaign_name: campaign?.name || "",
+        tl_id: user.id,
+        tl_name: user.name,
+      },
+    });
+
+    if (error) {
+      toast.error("ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ ব্যর্থ হয়েছে");
+    } else {
+      toast.success("ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ BDO-এর কাছে পাঠানো হয়েছে");
+      setGlAssignOpen(false);
+      setGlSelectedGL("");
+      setGlSelectedCampaign("");
+      loadGLAssignApprovals();
+    }
+    setGlAssignSubmitting(false);
+  };
+
+  const handleApproveGLAssign = async (approval: any) => {
+    const details = approval.details as any;
+    if (!details?.group_leader_id || !details?.campaign_id || !details?.tl_id) return;
+
+    const { error } = await supabase.from("campaign_agent_roles").insert({
+      agent_id: details.group_leader_id,
+      campaign_id: details.campaign_id,
+      tl_id: details.tl_id,
+      is_bronze: false,
+      is_silver: false,
+    });
+    if (error) { toast.error("ক্যাম্পেইন অ্যাসাইনমেন্ট ব্যর্থ: " + error.message); return; }
+
+    await supabase.from("sa_approvals").update({ status: "approved", decided_by: user?.id }).eq("id", approval.id);
+    toast.success("গ্রুপ লিডার ক্যাম্পেইনে অ্যাসাইন হয়েছে");
+    loadGLAssignApprovals();
+  };
+
+  const handleRejectGLAssign = async (approvalId: string) => {
+    await supabase.from("sa_approvals").update({ status: "rejected", decided_by: user?.id }).eq("id", approvalId);
+    toast.success("ক্যাম্পেইন অ্যাসাইনমেন্ট প্রত্যাখ্যান হয়েছে");
+    loadGLAssignApprovals();
+  };
 
   // Initial load - only once
   useEffect(() => {
@@ -837,7 +921,7 @@ const TLTeam = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); }}
+            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); loadGLAssignApprovals(); }}
             className="gap-1.5"
           >
             <Users className="h-4 w-4" />
@@ -976,6 +1060,60 @@ const TLTeam = () => {
                       );
                     })}
                   </div>
+
+                  {/* GL Campaign Assignment Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-heading text-base font-semibold">
+                        {isBn ? "গ্রুপ লিডার ক্যাম্পেইন অ্যাসাইনমেন্ট" : "GL Campaign Assignment"}
+                      </h3>
+                      {!isBDO && existingGroups.length > 0 && (
+                        <Button size="sm" onClick={() => { setGlAssignOpen(true); loadGLCampaigns(); }} className="gap-1.5">
+                          <Plus className="h-3.5 w-3.5" /> {isBn ? "ক্যাম্পেইনে অ্যাসাইন করুন" : "Assign to Campaign"}
+                        </Button>
+                      )}
+                    </div>
+                    {glAssignApprovals.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">{isBn ? "কোনো ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ নেই" : "No campaign assignment requests"}</p>
+                    ) : glAssignApprovals.map(a => {
+                      const d = a.details as any;
+                      return (
+                        <div key={a.id} className={`p-4 rounded-lg border mb-3 ${a.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : a.status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-foreground">{d?.tl_name || "TL"}</span>
+                                <Badge variant={a.status === 'pending' ? 'outline' : a.status === 'approved' ? 'default' : 'destructive'} className="text-[10px]">
+                                  {a.status === 'pending' ? (isBn ? 'পেন্ডিং' : 'Pending') : a.status === 'approved' ? (isBn ? 'অনুমোদিত' : 'Approved') : (isBn ? 'প্রত্যাখ্যাত' : 'Rejected')}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-foreground">
+                                <Crown className="inline h-3 w-3 text-amber-500 mr-1" />
+                                {isBn ? "গ্রুপ লিডার:" : "GL:"} <span className="font-medium">{d?.group_leader_name}</span>
+                              </p>
+                              <p className="text-sm text-foreground mt-0.5">
+                                <Target className="inline h-3 w-3 text-primary mr-1" />
+                                {isBn ? "ক্যাম্পেইন:" : "Campaign:"} <span className="font-medium">{d?.campaign_name}</span>
+                              </p>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {new Date(a.created_at).toLocaleString("bn-BD")}
+                              </p>
+                            </div>
+                            {a.status === 'pending' && isBDO && (
+                              <div className="flex gap-1.5">
+                                <Button size="sm" variant="outline" onClick={() => handleApproveGLAssign(a)} className="gap-1 text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10">
+                                  <CheckCircle className="h-3.5 w-3.5" /> {isBn ? "অনুমোদন" : "Approve"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleRejectGLAssign(a.id)} className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10">
+                                  <XCircle className="h-3.5 w-3.5" /> {isBn ? "বাতিল" : "Reject"}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </>
@@ -1034,6 +1172,53 @@ const TLTeam = () => {
               disabled={selectedGroupMembers.size < 2 || !selectedGroupLeader || groupSubmitting}
             >
               {groupSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isBn ? "অনুমোদনের জন্য পাঠান" : "Send for Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* GL Campaign Assignment Dialog */}
+      <Dialog open={glAssignOpen} onOpenChange={setGlAssignOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isBn ? "গ্রুপ লিডার ক্যাম্পেইনে অ্যাসাইন করুন" : "Assign GL to Campaign"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "গ্রুপ লিডার নির্বাচন করুন" : "Select Group Leader"}</p>
+              <Select value={glSelectedGL} onValueChange={setGlSelectedGL}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isBn ? "গ্রুপ লিডার বাছুন" : "Choose Group Leader"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {existingGroups.map(g => (
+                    <SelectItem key={g.leader.id} value={g.leader.id}>{g.leader.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "ক্যাম্পেইন নির্বাচন করুন" : "Select Campaign"}</p>
+              <Select value={glSelectedCampaign} onValueChange={setGlSelectedCampaign}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isBn ? "ক্যাম্পেইন বাছুন" : "Choose Campaign"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {glCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGlAssignOpen(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button
+              onClick={handleSubmitGLAssign}
+              disabled={!glSelectedGL || !glSelectedCampaign || glAssignSubmitting}
+            >
+              {glAssignSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
               {isBn ? "অনুমোদনের জন্য পাঠান" : "Send for Approval"}
             </Button>
           </DialogFooter>
