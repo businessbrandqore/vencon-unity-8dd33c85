@@ -59,6 +59,15 @@ const HRCampaigns = () => {
   const [detailWebsites, setDetailWebsites] = useState<Website[]>([]);
   const [detailLeadStats, setDetailLeadStats] = useState<Record<string, number>>({});
 
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDataMode, setEditDataMode] = useState<"lead" | "processing">("lead");
+  const [editTLs, setEditTLs] = useState<string[]>([]);
+  const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
+  const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean }[]>([]);
+  const [saving, setSaving] = useState(false);
+
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
   useEffect(() => { fetchCampaigns(); fetchTLUsers(); }, []);
