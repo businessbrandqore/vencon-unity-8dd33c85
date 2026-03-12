@@ -70,6 +70,14 @@ const TLTeam = () => {
   const [groupApprovals, setGroupApprovals] = useState<any[]>([]);
   const [groupSubmitting, setGroupSubmitting] = useState(false);
 
+  // GL Campaign Assignment state
+  const [glAssignOpen, setGlAssignOpen] = useState(false);
+  const [glCampaigns, setGlCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [glSelectedCampaign, setGlSelectedCampaign] = useState("");
+  const [glSelectedGL, setGlSelectedGL] = useState("");
+  const [glAssignSubmitting, setGlAssignSubmitting] = useState(false);
+  const [glAssignApprovals, setGlAssignApprovals] = useState<any[]>([]);
+
   const getDateRange = useCallback((period: TimePeriod) => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
