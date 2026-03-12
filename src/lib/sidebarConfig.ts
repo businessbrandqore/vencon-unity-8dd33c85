@@ -75,7 +75,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
-    { titleKey: "agent_assignment", icon: UserCheck, path: "/tl/agent-assignment", roles: ["Business Development And Marketing Manager"] },
+    { titleKey: "tl_approvals_bdo", icon: ShieldCheck, path: "/tl/agent-assignment", roles: ["Business Development And Marketing Manager"] },
     { titleKey: "atl_approvals", icon: ShieldCheck, path: "/tl/atl-approvals", roles: ["team_leader", "Assistant Team Leader"] },
     { titleKey: "attendance", icon: Clock, path: "/tl/attendance" },
     { titleKey: "salary", icon: DollarSign, path: "/tl/salary", roles: ["Assistant Team Leader"] },
