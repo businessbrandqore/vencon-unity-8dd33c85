@@ -151,7 +151,27 @@ const TLDashboard = () => {
     fetchStats();
   }, [fetchStats]);
 
-  // Realtime: auto-refresh stats when leads/orders/pre_orders change
+  // Refetch campaigns list helper
+  const refetchCampaigns = useCallback(async () => {
+    if (!user) return;
+    if (isBDO) {
+      const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+      if (data) {
+        const list = data.map((c: any) => ({ id: c.id, name: c.name }));
+        setCampaigns(list);
+        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+      }
+    } else {
+      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+      if (data) {
+        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
+        setCampaigns(list);
+        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+      }
+    }
+  }, [user, isBDO, selectedCampaign]);
+
+  // Realtime: auto-refresh stats + campaigns when related tables change
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -159,25 +179,13 @@ const TLDashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchStats())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchStats())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pre_orders' }, () => fetchStats())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => {
-        // Re-fetch campaigns list
-        if (isBDO) {
-          supabase.from("campaigns").select("id, name").order("created_at", { ascending: false }).then(({ data }) => {
-            if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name })));
-          });
-        } else {
-          supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id).then(({ data }) => {
-            if (data) {
-              const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
-              setCampaigns(list);
-            }
-          });
-        }
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => refetchCampaigns())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_tls' }, () => refetchCampaigns())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => fetchStats())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, isBDO, fetchStats]);
+  }, [user, isBDO, fetchStats, refetchCampaigns]);
 
   if (!user) return null;
 
