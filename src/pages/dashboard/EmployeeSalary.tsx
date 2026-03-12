@@ -306,7 +306,7 @@ export default function EmployeeSalary() {
                     <div>
                       <p className="font-heading font-bold text-orange-600 dark:text-orange-400">রিসিভ রেশিও কম</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। উন্নতি করলে ইনসেনটিভ বাড়বে।
+                        আপনার গ্রুপ লিডারদের গড় রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। গ্রুপ লিডারদের রিসিভ রেশিও উন্নতি করলে আপনার ইনসেনটিভ বাড়বে।
                       </p>
                     </div>
                   </div>
