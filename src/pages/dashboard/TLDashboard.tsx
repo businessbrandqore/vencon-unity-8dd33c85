@@ -15,6 +15,12 @@ interface CampaignOption {
 const TLDashboard = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+
+  // GL users on TL panel should see GroupLeaderDashboard
+  if (user?.role === "Group Leader") {
+    return <GroupLeaderDashboard />;
+  }
+
   const isBn = t("vencon") === "VENCON";
 
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
