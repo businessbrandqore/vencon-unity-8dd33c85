@@ -142,7 +142,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
       const parts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-      if (now < shiftEnd) { earlyOut = true; extraDeduction = LATE_DEDUCTION; }
+      if (now < shiftEnd) { earlyOut = true; extraDeduction = deductionConfig.early_checkout_amount; }
     }
     if (todayAttendance) {
       await supabase.from("attendance").update({ clock_out: now.toISOString(), mood_out: clockOutMood, is_early_out: earlyOut, deduction_amount: (Number(todayAttendance.deduction_amount) || 0) + extraDeduction }).eq("id", todayAttendance.id);
