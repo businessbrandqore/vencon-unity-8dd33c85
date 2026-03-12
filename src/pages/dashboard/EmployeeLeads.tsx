@@ -77,6 +77,10 @@ export default function EmployeeLeads() {
 
   const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0 });
   const [tick, setTick] = useState(0);
+  const [showDataRequestModal, setShowDataRequestModal] = useState(false);
+  const [dataRequestMsg, setDataRequestMsg] = useState("");
+  const [dataRequestLoading, setDataRequestLoading] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 60_000);
