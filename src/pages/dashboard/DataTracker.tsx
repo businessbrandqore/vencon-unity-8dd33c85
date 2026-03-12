@@ -169,7 +169,7 @@ const DataTracker = () => {
 
   // Fetch Silver data: orders delivered from Bronze agents → original lead info
   const { data: silverLeads, isLoading: silverLoading } = useQuery({
-    queryKey: ["tracker-silver", selectedCampaign, user?.id, isTL],
+    queryKey: ["tracker-silver", selectedCampaign, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
       let q = supabase
         .from("orders")
@@ -177,12 +177,10 @@ const DataTracker = () => {
         .eq("delivery_status", "delivered")
         .order("created_at", { ascending: false })
         .limit(500);
-      if (isTL && user) q = q.eq("tl_id", user.id);
+      if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
       const { data, error } = await q;
       if (error) throw error;
-      // Filter to only bronze-origin leads
       const result = (data || []).filter((o: any) => o.leads);
-      // Further filter by campaign if selected
       if (selectedCampaign !== "all") {
         return result.filter((o: any) => o.leads?.campaign_id === selectedCampaign);
       }
