@@ -175,7 +175,7 @@ const TLLeads = () => {
     let delQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5).order("updated_at", { ascending: false });
-    if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    if (!isBDO) delQ = delQ.eq("tl_id", getEffectiveTlId());
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
