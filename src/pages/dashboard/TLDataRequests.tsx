@@ -276,7 +276,7 @@ export default function TLDataRequests() {
           </h2>
           <p className="text-sm text-muted-foreground">{isBn ? "এজেন্টদের ডাটা পাঠান এবং রিকোয়েস্ট পরিচালনা করুন" : "Send data to agents and manage requests"}</p>
         </div>
-        <Button variant="outline" size="icon" onClick={() => { loadDataRequests(); loadAvailableCount(); }} disabled={loading}>
+        <Button variant="outline" size="icon" onClick={() => { loadDataRequests(); }} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
       </div>
