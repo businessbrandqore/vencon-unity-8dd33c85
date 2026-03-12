@@ -46,85 +46,96 @@ export default function TLDataRequests() {
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
   const isATL = user?.role === "Assistant Team Leader";
-  const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
+  const atlTlMapRef = useRef<Record<string, string>>({});
 
-  const getEffectiveTlId = useCallback(() => {
+  const getEffectiveTlId = useCallback((campId?: string) => {
     if (!isATL || !user) return user?.id || "";
-    if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
-    const vals = Object.values(atlTlMap);
+    const cid = campId || selectedCampaign;
+    if (cid && atlTlMapRef.current[cid]) return atlTlMapRef.current[cid];
+    const vals = Object.values(atlTlMapRef.current);
     return vals.length > 0 ? vals[0] : user?.id || "";
-  }, [isATL, user, selectedCampaign, atlTlMap]);
+  }, [isATL, user, selectedCampaign]);
 
-  // Load campaigns
-  const loadCampaigns = useCallback(async () => {
+  // Load campaigns - only once on mount
+  useEffect(() => {
     if (!user) return;
-    if (isBDO) {
-      const { data } = await supabase.from("campaigns").select("id, name, data_mode").eq("status", "active");
-      setCampaigns(data || []);
-    } else if (isATL) {
-      const { data } = await supabase
-        .from("campaign_agent_roles")
-        .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
-        .eq("agent_id", user.id);
-      if (data) {
-        const tlMap: Record<string, string> = {};
-        const seen = new Set<string>();
-        const list = data
-          .filter((d: any) => d.campaigns)
-          .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
-          .map((d: any) => { tlMap[d.campaigns.id] = d.tl_id; return d.campaigns; });
-        setAtlTlMap(tlMap);
-        setCampaigns(list);
+    const load = async () => {
+      if (isBDO) {
+        const { data } = await supabase.from("campaigns").select("id, name, data_mode").eq("status", "active");
+        setCampaigns(data || []);
+      } else if (isATL) {
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const tlMap: Record<string, string> = {};
+          const seen = new Set<string>();
+          const list = data
+            .filter((d: any) => d.campaigns)
+            .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
+            .map((d: any) => { tlMap[d.campaigns.id] = d.tl_id; return d.campaigns; });
+          atlTlMapRef.current = tlMap;
+          setCampaigns(list);
+        }
+      } else {
+        const { data } = await supabase
+          .from("campaign_tls")
+          .select("campaign_id, campaigns(id, name, data_mode)")
+          .eq("tl_id", user.id);
+        setCampaigns((data || []).map((d: any) => d.campaigns).filter(Boolean));
       }
-    } else {
-      const { data } = await supabase
-        .from("campaign_tls")
-        .select("campaign_id, campaigns(id, name, data_mode)")
-        .eq("tl_id", user.id);
-      setCampaigns((data || []).map((d: any) => d.campaigns).filter(Boolean));
-    }
-  }, [user, isBDO, isATL]);
+    };
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Load agents for selected campaign + mode
-  const loadAgents = useCallback(async () => {
+  useEffect(() => {
     if (!user || !selectedCampaign) { setAgents([]); return; }
-    const q = supabase
-      .from("campaign_agent_roles")
-      .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
-      .eq("campaign_id", selectedCampaign)
-      .eq("tl_id", getEffectiveTlId());
+    const load = async () => {
+      const q = supabase
+        .from("campaign_agent_roles")
+        .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
+        .eq("campaign_id", selectedCampaign)
+        .eq("tl_id", getEffectiveTlId());
 
-    const { data } = await q;
-    if (!data) { setAgents([]); return; }
+      const { data } = await q;
+      if (!data) { setAgents([]); return; }
 
-    const filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
-    const unique = new Map<string, string>();
-    filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
-    setAgents(Array.from(unique, ([id, name]) => ({ id, name })));
-    setSelectedAgent("");
-  }, [user, selectedCampaign, distDataMode, getEffectiveTlId]);
+      const filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
+      const unique = new Map<string, string>();
+      filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
+      setAgents(Array.from(unique, ([id, name]) => ({ id, name })));
+      setSelectedAgent("");
+    };
+    load();
+  }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId]);
 
   // Count available raw leads
-  const loadAvailableCount = useCallback(async () => {
+  useEffect(() => {
     if (!user || !selectedCampaign) { setAvailableCount(0); return; }
-    let q = supabase
-      .from("leads")
-      .select("id", { count: "exact", head: true })
-      .eq("campaign_id", selectedCampaign)
-      .eq("status", "fresh")
-      .is("assigned_to", null);
+    const load = async () => {
+      let q = supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign)
+        .eq("status", "fresh")
+        .is("assigned_to", null);
 
-    if (!isBDO) q = q.eq("tl_id", getEffectiveTlId());
+      if (!isBDO) q = q.eq("tl_id", getEffectiveTlId());
 
-    if (distDataMode === "lead") {
-      q = q.or("source.is.null,source.neq.processing").or("import_source.is.null,import_source.neq.processing");
-    } else {
-      q = q.or("source.eq.processing,import_source.eq.processing");
-    }
+      if (distDataMode === "lead") {
+        q = q.or("source.is.null,source.neq.processing").or("import_source.is.null,import_source.neq.processing");
+      } else {
+        q = q.or("source.eq.processing,import_source.eq.processing");
+      }
 
-    const { count } = await q;
-    setAvailableCount(count || 0);
-  }, [user, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
+      const { count } = await q;
+      setAvailableCount(count || 0);
+    };
+    load();
+  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
 
   // Send data to agent
   const handleSendData = async () => {
@@ -178,13 +189,22 @@ export default function TLDataRequests() {
         : `${ids.length} ${distDataMode} data sent to ${agentName} ✅`
       );
       setSendCount("");
-      loadAvailableCount();
+      // Reload available count
+      const reloadQ = supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign)
+        .eq("status", "fresh")
+        .is("assigned_to", null);
+      const { count: newCount } = await reloadQ;
+      setAvailableCount(newCount || 0);
     } catch (err: any) {
       toast.error(err.message || "Failed to send data");
     }
     setSending(false);
   };
 
+  // Load data requests
   const loadDataRequests = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -213,8 +233,10 @@ export default function TLDataRequests() {
 
   useEffect(() => {
     loadDataRequests();
-    loadCampaigns();
+  }, [loadDataRequests]);
 
+  // Realtime subscription - stable, no dependency on callbacks
+  useEffect(() => {
     const channel = supabase
       .channel('data-requests-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'data_requests' }, () => {
@@ -223,10 +245,8 @@ export default function TLDataRequests() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [loadDataRequests, loadCampaigns]);
-
-  useEffect(() => { loadAgents(); }, [loadAgents]);
-  useEffect(() => { loadAvailableCount(); }, [loadAvailableCount]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleFulfillRequest = async (requestId: string) => {
     await supabase.from("data_requests").update({ status: "fulfilled", responded_at: new Date().toISOString() }).eq("id", requestId);
