@@ -194,7 +194,7 @@ const TLLeads = () => {
       .select("id, customer_name, phone, address, product, price, created_at, delivery_status, lead_id, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at)")
       .eq("delivery_status", "delivered")
       .order("created_at", { ascending: false });
-    if (!isBDO) silverQ = silverQ.eq("tl_id", user.id);
+    if (!isBDO) silverQ = silverQ.eq("tl_id", getEffectiveTlId());
     const { data: silverOrders } = await silverQ;
     const silverItems: SilverGoldenLead[] = (silverOrders || []).map((o: any) => ({
       id: o.id,
