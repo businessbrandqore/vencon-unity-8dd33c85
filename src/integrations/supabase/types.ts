@@ -46,6 +46,57 @@ export type Database = {
           },
         ]
       }
+      atl_approvals: {
+        Row: {
+          action_data: Json
+          action_type: string
+          atl_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          rejection_reason: string | null
+          status: string
+          tl_id: string
+        }
+        Insert: {
+          action_data?: Json
+          action_type: string
+          atl_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          tl_id: string
+        }
+        Update: {
+          action_data?: Json
+          action_type?: string
+          atl_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          tl_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atl_approvals_atl_id_fkey"
+            columns: ["atl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atl_approvals_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance: {
         Row: {
           clock_in: string | null

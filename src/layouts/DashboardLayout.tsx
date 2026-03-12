@@ -6,6 +6,7 @@ import { PanelType } from "@/lib/panelConfig";
 import TopNav from "@/components/TopNav";
 import PanelSidebar from "@/components/PanelSidebar";
 import AIChatWidget from "@/components/AIChatWidget";
+import ATLApprovalBanner from "@/components/ATLApprovalBanner";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
@@ -44,7 +45,8 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       <div className="flex flex-1 overflow-hidden">
         <PanelSidebar open={sidebarOpen} onClose={closeSidebar} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto space-y-4">
+            {panel === "tl" && <ATLApprovalBanner />}
             <Outlet />
           </div>
         </main>

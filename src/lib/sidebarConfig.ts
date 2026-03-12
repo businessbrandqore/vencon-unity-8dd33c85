@@ -22,6 +22,7 @@ import {
   Gift,
   Star,
   BookOpen,
+  ShieldCheck,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
@@ -68,14 +69,15 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   tl: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/tl/dashboard" },
     { titleKey: "leads", icon: Target, path: "/tl/leads" },
-    { titleKey: "my_orders", icon: Package, path: "/tl/my-orders", roles: ["assistant_team_leader"] },
-    { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker", roles: ["team_leader", "Business Development And Marketing Manager"] },
-    { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Business Development And Marketing Manager"] },
-    { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team", roles: ["team_leader", "Business Development And Marketing Manager"] },
-    { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics", roles: ["team_leader", "Business Development And Marketing Manager"] },
+    { titleKey: "my_orders", icon: Package, path: "/tl/my-orders", roles: ["Assistant Team Leader"] },
+    { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
+    { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
+    { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
+    { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "agent_assignment", icon: UserCheck, path: "/tl/agent-assignment", roles: ["Business Development And Marketing Manager"] },
+    { titleKey: "atl_approvals", icon: ShieldCheck, path: "/tl/atl-approvals", roles: ["team_leader", "Assistant Team Leader"] },
     { titleKey: "attendance", icon: Clock, path: "/tl/attendance" },
-    { titleKey: "salary", icon: DollarSign, path: "/tl/salary", roles: ["assistant_team_leader"] },
+    { titleKey: "salary", icon: DollarSign, path: "/tl/salary", roles: ["Assistant Team Leader"] },
     { titleKey: "chat", icon: MessageSquare, path: "/tl/chat" },
     { titleKey: "notifications", icon: Bell, path: "/tl/notifications" },
     { titleKey: "settings", icon: Settings, path: "/tl/settings" },

@@ -40,6 +40,7 @@ import BDOAgentAssignment from "./pages/dashboard/BDOAgentAssignment";
 import TLTeam from "./pages/dashboard/TLTeam";
 import TLDataRequests from "./pages/dashboard/TLDataRequests";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
+import TLATLApprovals from "./pages/dashboard/TLATLApprovals";
 import EmployeeAttendance from "./pages/dashboard/EmployeeAttendance";
 import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
 import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
@@ -119,6 +120,7 @@ const App = () => (
               <Route path="/tl/data-requests" element={<TLDataRequests />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/agent-assignment" element={<BDOAgentAssignment />} />
+              <Route path="/tl/atl-approvals" element={<TLATLApprovals />} />
               <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/settings" element={<ProfileSettings />} />
