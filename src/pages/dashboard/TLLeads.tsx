@@ -130,7 +130,7 @@ const TLLeads = () => {
       .from("campaign_agent_roles")
       .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
       .eq("campaign_id", selectedCampaign);
-    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    if (!isBDO) rolesQ = rolesQ.eq("tl_id", getEffectiveTlId());
     const { data: roles } = await rolesQ;
     if (roles) {
       const bronze: Agent[] = [], silver: Agent[] = [], all: Agent[] = [];
