@@ -16,20 +16,6 @@ import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck
 type TimePeriod = "daily" | "monthly" | "yearly";
 type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "group_management";
 
-interface DataRequest {
-  id: string;
-  requested_by: string;
-  tl_id: string;
-  campaign_id: string | null;
-  status: string;
-  message: string | null;
-  response_note: string | null;
-  created_at: string;
-  responded_at: string | null;
-  requester_name?: string;
-  requester_role?: string;
-}
-
 interface PersonStats {
   id: string;
   name: string;
