@@ -162,7 +162,7 @@ const TLLeads = () => {
 
     let callDoneQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "call_done").order("created_at", { ascending: false });
-    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", user.id);
+    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", getEffectiveTlId());
     const { data: callDone } = await callDoneQ;
     setCallDoneOrders(callDone || []);
 
