@@ -154,7 +154,7 @@ export default function EmployeeAttendance() {
     setCheckInMood("");
     setCheckInNote("");
     await loadData();
-    toast.success(isLate ? "Check In হয়েছে (Late — ৳33 কর্তন)" : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (Late — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   // Check Out handler
