@@ -53,6 +53,16 @@ const TLLeads = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  
+  const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
+
+  // Get the effective TL id for data queries (ATL uses their assigned TL's id)
+  const getEffectiveTlId = useCallback((campaignId?: string) => {
+    if (!isATL || !user) return user?.id || "";
+    if (campaignId && atlTlMap[campaignId]) return atlTlMap[campaignId];
+    if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
+    return user?.id || "";
+  }, [isATL, user, atlTlMap, selectedCampaign]);
 
   useEffect(() => {
     if (!user) return;
@@ -61,6 +71,33 @@ const TLLeads = () => {
         const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
         if (data) {
           const list = data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) {
+            setSelectedCampaign(list[0].id);
+            setCampaignMode(list[0].data_mode);
+          }
+        }
+      } else if (isATL) {
+        // ATL: fetch campaigns from campaign_agent_roles
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const tlMap: Record<string, string> = {};
+          const seen = new Set<string>();
+          const list = data
+            .filter((d: any) => d.campaigns)
+            .filter((d: any) => { 
+              if (seen.has(d.campaigns.id)) return false; 
+              seen.add(d.campaigns.id); 
+              return true; 
+            })
+            .map((d: any) => {
+              tlMap[d.campaigns.id] = d.tl_id;
+              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
+            });
+          setAtlTlMap(tlMap);
           setCampaigns(list);
           if (list.length > 0 && !selectedCampaign) {
             setSelectedCampaign(list[0].id);
@@ -93,7 +130,7 @@ const TLLeads = () => {
       .from("campaign_agent_roles")
       .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
       .eq("campaign_id", selectedCampaign);
-    if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    if (!isBDO) rolesQ = rolesQ.eq("tl_id", getEffectiveTlId());
     const { data: roles } = await rolesQ;
     if (roles) {
       const bronze: Agent[] = [], silver: Agent[] = [], all: Agent[] = [];
@@ -105,7 +142,7 @@ const TLLeads = () => {
       });
       setBronzeAgents(bronze); setSilverAgents(silver); setAllAgents(all);
     }
-  }, [user, selectedCampaign]);
+  }, [user, selectedCampaign, getEffectiveTlId]);
 
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
@@ -113,32 +150,32 @@ const TLLeads = () => {
     let freshQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .is("assigned_to", null).eq("status", "fresh").order("created_at", { ascending: false });
-    if (!isBDO) freshQ = freshQ.eq("tl_id", user.id);
+    if (!isBDO) freshQ = freshQ.eq("tl_id", getEffectiveTlId());
     const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
 
     let csoQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "pending_cso").order("created_at", { ascending: false });
-    if (!isBDO) csoQ = csoQ.eq("tl_id", user.id);
+    if (!isBDO) csoQ = csoQ.eq("tl_id", getEffectiveTlId());
     const { data: cso } = await csoQ;
     setCsoOrders(cso || []);
 
     let callDoneQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "call_done").order("created_at", { ascending: false });
-    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", user.id);
+    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", getEffectiveTlId());
     const { data: callDone } = await callDoneQ;
     setCallDoneOrders(callDone || []);
 
     let preQ = supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
       .eq("status", "pending").order("created_at", { ascending: false });
-    if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    if (!isBDO) preQ = preQ.eq("tl_id", getEffectiveTlId());
     const { data: pre } = await preQ;
     setPreOrders(pre || []);
 
     let delQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5).order("updated_at", { ascending: false });
-    if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    if (!isBDO) delQ = delQ.eq("tl_id", getEffectiveTlId());
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
@@ -146,7 +183,7 @@ const TLLeads = () => {
       let procQ = supabase.from("leads").select("*")
         .eq("campaign_id", selectedCampaign)
         .is("assigned_to", null).order("created_at", { ascending: false });
-      if (!isBDO) procQ = procQ.eq("tl_id", user.id);
+      if (!isBDO) procQ = procQ.eq("tl_id", getEffectiveTlId());
       const { data: proc } = await procQ;
       setProcessingLeads(proc || []);
     }
@@ -157,7 +194,7 @@ const TLLeads = () => {
       .select("id, customer_name, phone, address, product, price, created_at, delivery_status, lead_id, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at)")
       .eq("delivery_status", "delivered")
       .order("created_at", { ascending: false });
-    if (!isBDO) silverQ = silverQ.eq("tl_id", user.id);
+    if (!isBDO) silverQ = silverQ.eq("tl_id", getEffectiveTlId());
     const { data: silverOrders } = await silverQ;
     const silverItems: SilverGoldenLead[] = (silverOrders || []).map((o: any) => ({
       id: o.id,
@@ -178,7 +215,7 @@ const TLLeads = () => {
       .eq("agent_type", "silver")
       .order("created_at", { ascending: false });
     if (selectedCampaign) goldenLeadsQ = goldenLeadsQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", user.id);
+    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", getEffectiveTlId());
     const { data: silverAssignedLeads } = await goldenLeadsQ;
 
     if (silverAssignedLeads && silverAssignedLeads.length > 0) {
@@ -195,7 +232,7 @@ const TLLeads = () => {
     } else {
       setGoldenData([]);
     }
-  }, [user, selectedCampaign, campaignMode]);
+  }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
