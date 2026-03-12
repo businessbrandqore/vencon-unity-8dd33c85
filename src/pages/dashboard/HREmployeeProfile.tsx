@@ -74,7 +74,7 @@ const HREmployeeProfile = () => {
   useEffect(() => {
     if (!id) return;
     const fetchAll = async () => {
-      const [empRes, attRes, leaveRes] = await Promise.all([
+      const [empRes, attRes, leaveRes, campaignsRes] = await Promise.all([
         supabase.from("users").select("*").eq("id", id).single(),
         supabase
           .from("attendance")
@@ -88,6 +88,7 @@ const HREmployeeProfile = () => {
           .eq("user_id", id)
           .order("created_at", { ascending: false })
           .limit(20),
+        supabase.from("campaigns").select("id, name").eq("status", "active"),
       ]);
 
       if (empRes.data) {
@@ -99,6 +100,24 @@ const HREmployeeProfile = () => {
       }
       setAttendance(attRes.data || []);
       setLeaves((leaveRes.data || []) as LeaveReq[]);
+      setCampaigns(campaignsRes.data || []);
+
+      // Find current campaign assignment
+      const isTL = empRes.data && ["Team Leader", "Assistant Team Leader"].includes((empRes.data as any).role);
+      if (isTL) {
+        const { data: ctData } = await supabase.from("campaign_tls").select("campaign_id").eq("tl_id", id).limit(1).single();
+        if (ctData) {
+          setCurrentCampaignId(ctData.campaign_id);
+          setEditCampaignId(ctData.campaign_id);
+        }
+      } else {
+        const { data: carData } = await supabase.from("campaign_agent_roles").select("campaign_id").eq("agent_id", id).limit(1).single();
+        if (carData) {
+          setCurrentCampaignId(carData.campaign_id);
+          setEditCampaignId(carData.campaign_id);
+        }
+      }
+
       setLoading(false);
     };
     fetchAll();
@@ -122,9 +141,51 @@ const HREmployeeProfile = () => {
       changes.push(`shift_end: ${emp.shift_end} → ${editShiftEnd}`);
     }
 
-    if (Object.keys(updates).length === 0) return;
+    // Handle campaign change
+    if (editCampaignId !== currentCampaignId) {
+      const isTL = ["Team Leader", "Assistant Team Leader"].includes(emp.role);
+      if (isTL) {
+        // Remove old
+        if (currentCampaignId) {
+          await supabase.from("campaign_tls").delete().eq("tl_id", emp.id).eq("campaign_id", currentCampaignId);
+        }
+        // Add new
+        if (editCampaignId) {
+          await supabase.from("campaign_tls").insert({ campaign_id: editCampaignId, tl_id: emp.id });
+        }
+      } else {
+        // Remove old
+        if (currentCampaignId) {
+          await supabase.from("campaign_agent_roles").delete().eq("agent_id", emp.id).eq("campaign_id", currentCampaignId);
+        }
+        // Add new
+        if (editCampaignId) {
+          const { data: campaignTl } = await supabase
+            .from("campaign_tls")
+            .select("tl_id")
+            .eq("campaign_id", editCampaignId)
+            .limit(1)
+            .single();
+          if (campaignTl) {
+            await supabase.from("campaign_agent_roles").insert({
+              campaign_id: editCampaignId,
+              agent_id: emp.id,
+              tl_id: campaignTl.tl_id,
+              is_bronze: true,
+              is_silver: false,
+            });
+          }
+        }
+      }
+      changes.push(`campaign: ${currentCampaignId || 'none'} → ${editCampaignId || 'none'}`);
+      setCurrentCampaignId(editCampaignId);
+    }
 
-    await supabase.from("users").update(updates as any).eq("id", emp.id);
+    if (Object.keys(updates).length > 0) {
+      await supabase.from("users").update(updates as any).eq("id", emp.id);
+    }
+
+    if (changes.length === 0) return;
 
     // Audit log
     await supabase.from("audit_logs").insert({
