@@ -137,8 +137,10 @@ const TLTeam = () => {
     };
   }, [getDateRange, timePeriod]);
 
+  const initializedRef = { current: false };
+
   // Load TL list
-  const loadTLs = useCallback(async () => {
+  const loadTLs = useCallback(async (skipViewChange = false) => {
     if (!user) return;
     setLoading(true);
 
@@ -154,7 +156,7 @@ const TLTeam = () => {
       if (selfData) {
         const stats = await fetchPersonStats(user.id, selfData, false);
         setSelectedTL(stats);
-        setViewLevel("gl_list");
+        if (!skipViewChange) setViewLevel("gl_list");
         await loadGLs(user.id);
         setLoading(false);
         return;
