@@ -392,6 +392,12 @@ const DataTracker = () => {
             <TabsTrigger value="raw_data" className="text-xs">
               📦 {isBn ? "র ডাটা" : "Raw Data"} ({rawLeads.length})
             </TabsTrigger>
+            <TabsTrigger value="silver_data" className="text-xs">
+              🥈 {isBn ? "সিলভার" : "Silver"} ({(silverLeads || []).length})
+            </TabsTrigger>
+            <TabsTrigger value="golden_data" className="text-xs">
+              🥇 {isBn ? "গোল্ডেন" : "Golden"} ({(goldenLeads || []).length})
+            </TabsTrigger>
             <TabsTrigger value="all_leads" className="text-xs">
               🎯 {isBn ? "সব ডাটা" : "All Data"} ({allLeads.length})
             </TabsTrigger>
