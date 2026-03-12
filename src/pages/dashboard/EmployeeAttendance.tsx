@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut } from "lucide-react";
+import { useDeductionConfig } from "@/hooks/useDeductionConfig";
 
 interface AttendanceRow {
   id: string;
@@ -48,11 +49,11 @@ const MOODS = [
   { value: "angry", emoji: "😠", label: "রাগান্বিত" },
 ];
 
-const LATE_DEDUCTION = 33;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 export default function EmployeeAttendance() {
   const { user } = useAuth();
+  const deductionConfig = useDeductionConfig();
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,13 +129,14 @@ export default function EmployeeAttendance() {
       if (new Date() > shiftDate) isLate = true;
     }
 
+    const lateAmt = deductionConfig.late_checkin_amount;
     if (todayRecord) {
       await supabase.from("attendance").update({
         clock_in: now,
         mood_in: checkInMood,
         mood_note: checkInNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       }).eq("id", todayRecord.id);
     } else {
       await supabase.from("attendance").insert({
@@ -144,7 +146,7 @@ export default function EmployeeAttendance() {
         mood_in: checkInMood,
         mood_note: checkInNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       });
     }
 
@@ -152,7 +154,7 @@ export default function EmployeeAttendance() {
     setCheckInMood("");
     setCheckInNote("");
     await loadData();
-    toast.success(isLate ? "Check In হয়েছে (Late — ৳33 কর্তন)" : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (Late — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   // Check Out handler
@@ -165,7 +167,7 @@ export default function EmployeeAttendance() {
       const parts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-      if (now < shiftEnd) { earlyOut = true; extraDeduction = LATE_DEDUCTION; }
+      if (now < shiftEnd) { earlyOut = true; extraDeduction = deductionConfig.early_checkout_amount; }
     }
 
     if (todayRecord) {

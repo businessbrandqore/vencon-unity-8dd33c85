@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useDeductionConfig } from "@/hooks/useDeductionConfig";
 import { CalendarIcon, Clock, AlertTriangle, LogOut } from "lucide-react";
 
 /* ───── types ───── */
@@ -106,7 +107,7 @@ const REQUEUE_STATUSES = [
 
 const REQUEUE_MINUTES = 40;
 const DELETE_SHEET_THRESHOLD = 5;
-const LATE_DEDUCTION = 33;
+
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -114,6 +115,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 export default function EmployeeTSDashboard() {
   const { user } = useAuth();
   const { t, n, lang, statusName } = useLanguage();
+  const deductionConfig = useDeductionConfig();
 
   /* user profile with shift info */
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -353,13 +355,14 @@ export default function EmployeeTSDashboard() {
       shiftDate.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
       if (new Date() > shiftDate) isLate = true;
     }
+    const lateAmt = deductionConfig.late_checkin_amount;
     if (todayAttendance) {
       await supabase.from("attendance").update({
         clock_in: now,
         mood_in: selectedMood,
         mood_note: moodNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       }).eq("id", todayAttendance.id);
     } else {
       await supabase.from("attendance").insert({
@@ -369,13 +372,13 @@ export default function EmployeeTSDashboard() {
         mood_in: selectedMood,
         mood_note: moodNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       });
     }
     setShowMoodInModal(false);
     setClockedIn(true);
     await loadAttendance();
-    toast.success(isLate ? "Check In হয়েছে (Late entry — ৳33 কর্তন)" : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (Late entry — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   const handleClockOut = async () => {
@@ -387,7 +390,7 @@ export default function EmployeeTSDashboard() {
       const shiftParts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
-      if (now < shiftEnd) { earlyOut = true; extraDeduction = LATE_DEDUCTION; }
+      if (now < shiftEnd) { earlyOut = true; extraDeduction = deductionConfig.early_checkout_amount; }
     }
     if (todayAttendance) {
       await supabase.from("attendance").update({
