@@ -78,12 +78,12 @@ const TLLeads = () => {
     ) => {
       setAtlTlMap(tlMap);
       setCampaigns(list);
-      setSelectedCampaign((prev) => {
-        const next = list.some((c) => c.id === prev) ? prev : (list[0]?.id || "");
-        const nextCampaign = list.find((c) => c.id === next);
-        setCampaignMode(nextCampaign?.data_mode || "lead");
-        return next;
-      });
+      const nextSelectedCampaign = list.some((c) => c.id === selectedCampaign)
+        ? selectedCampaign
+        : (list[0]?.id || "");
+      setSelectedCampaign(nextSelectedCampaign);
+      const nextCampaign = list.find((c) => c.id === nextSelectedCampaign);
+      setCampaignMode(nextCampaign?.data_mode || "lead");
     };
 
     const fetch = async () => {
