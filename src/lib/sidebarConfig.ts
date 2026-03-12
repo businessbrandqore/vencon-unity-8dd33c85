@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   CheckSquare,
   BarChart3,
+  Database,
   Package,
   Wallet,
   ScrollText,
