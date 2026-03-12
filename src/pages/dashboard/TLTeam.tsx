@@ -74,6 +74,16 @@ const TLTeam = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dataRequests, setDataRequests] = useState<DataRequest[]>([]);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+  // Group management state
+  const [groupCreateOpen, setGroupCreateOpen] = useState(false);
+  const [allTeamMembers, setAllTeamMembers] = useState<{ id: string; name: string; role: string }[]>([]);
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState<Set<string>>(new Set());
+  const [selectedGroupLeader, setSelectedGroupLeader] = useState("");
+  const [existingGroups, setExistingGroups] = useState<{ leader: { id: string; name: string }; members: { id: string; name: string }[] }[]>([]);
+  const [groupApprovals, setGroupApprovals] = useState<any[]>([]);
+  const [groupSubmitting, setGroupSubmitting] = useState(false);
+
   const getDateRange = useCallback((period: TimePeriod) => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
