@@ -37,6 +37,7 @@ import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
 import TLDashboard from "./pages/dashboard/TLDashboard";
 import TLLeads from "./pages/dashboard/TLLeads";
 import TLTeam from "./pages/dashboard/TLTeam";
+import TLDataRequests from "./pages/dashboard/TLDataRequests";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
 import EmployeeAttendance from "./pages/dashboard/EmployeeAttendance";
 import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
@@ -112,6 +113,7 @@ const App = () => (
               <Route path="/tl/data-tracker" element={<DataTracker />} />
               <Route path="/tl/attendance" element={<ManagerAttendance />} />
               <Route path="/tl/my-team" element={<TLTeam />} />
+              <Route path="/tl/data-requests" element={<TLDataRequests />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />

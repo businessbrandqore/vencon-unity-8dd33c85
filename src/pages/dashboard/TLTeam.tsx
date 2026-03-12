@@ -11,24 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
+import { Search, Users, RefreshCw, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Crown, Briefcase, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
-type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "data_requests" | "group_management";
-
-interface DataRequest {
-  id: string;
-  requested_by: string;
-  tl_id: string;
-  campaign_id: string | null;
-  status: string;
-  message: string | null;
-  response_note: string | null;
-  created_at: string;
-  responded_at: string | null;
-  requester_name?: string;
-  requester_role?: string;
-}
+type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "group_management";
 
 interface PersonStats {
   id: string;
@@ -72,8 +58,6 @@ const TLTeam = () => {
   const [otherEmployees, setOtherEmployees] = useState<PersonStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [dataRequests, setDataRequests] = useState<DataRequest[]>([]);
-  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   // Group management state
   const [groupCreateOpen, setGroupCreateOpen] = useState(false);
@@ -137,8 +121,10 @@ const TLTeam = () => {
     };
   }, [getDateRange, timePeriod]);
 
+  const initializedRef = { current: false };
+
   // Load TL list
-  const loadTLs = useCallback(async () => {
+  const loadTLs = useCallback(async (skipViewChange = false) => {
     if (!user) return;
     setLoading(true);
 
@@ -154,7 +140,7 @@ const TLTeam = () => {
       if (selfData) {
         const stats = await fetchPersonStats(user.id, selfData, false);
         setSelectedTL(stats);
-        setViewLevel("gl_list");
+        if (!skipViewChange) setViewLevel("gl_list");
         await loadGLs(user.id);
         setLoading(false);
         return;
@@ -245,42 +231,6 @@ const TLTeam = () => {
     setLoading(false);
   }, []);
 
-  // Load data requests
-  const loadDataRequests = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("data_requests")
-      .select("*")
-      .eq("tl_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      // Fetch requester names
-      const requesterIds = [...new Set(data.map((r: any) => r.requested_by))];
-      const { data: users } = await supabase.from("users").select("id, name, role").in("id", requesterIds);
-      const userMap = new Map((users || []).map((u: any) => [u.id, u]));
-
-      const enriched: DataRequest[] = data.map((r: any) => ({
-        ...r,
-        requester_name: userMap.get(r.requested_by)?.name || "Unknown",
-        requester_role: userMap.get(r.requested_by)?.role || "",
-      }));
-      setDataRequests(enriched);
-      setPendingRequestCount(enriched.filter(r => r.status === "pending").length);
-    }
-  }, [user]);
-
-  const handleFulfillRequest = async (requestId: string) => {
-    await supabase.from("data_requests").update({ status: "fulfilled", responded_at: new Date().toISOString() }).eq("id", requestId);
-    toast.success("রিকোয়েস্ট পূরণ হিসেবে মার্ক করা হয়েছে");
-    loadDataRequests();
-  };
-
-  const handleRejectRequest = async (requestId: string) => {
-    await supabase.from("data_requests").update({ status: "rejected", responded_at: new Date().toISOString() }).eq("id", requestId);
-    toast.success("রিকোয়েস্ট প্রত্যাখ্যান করা হয়েছে");
-    loadDataRequests();
-  };
 
   // Group management functions
   const loadTeamMembersForGroup = useCallback(async () => {
@@ -404,50 +354,28 @@ const TLTeam = () => {
   };
 
 
+  // Initial load - only once
   useEffect(() => {
-    if (!user) return;
+    if (!user || initializedRef.current) return;
+    initializedRef.current = true;
     loadTLs();
     if (isBDO) loadOtherEmployees();
-    loadDataRequests();
+  }, [user]);
 
-    // Realtime subscriptions for dynamic updates
+  // Realtime subscriptions - stable, no dependency on view state
+  useEffect(() => {
+    if (!user) return;
+
     const channel = supabase
       .channel('tl-team-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'data_requests' }, () => {
-        loadDataRequests();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => {
-        // Team structure changed - reload current view
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-        else loadTLs();
-      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, () => {
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
-        // User data changed (new hire, profile update)
-        loadTLs();
-        if (isBDO) loadOtherEmployees();
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        // Performance stats changed
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-        else loadTLs();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-        else loadTLs();
+        // Only reload groups on group_members change
+        loadExistingGroups();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, viewLevel, selectedTL, selectedGL]);
+  }, [user]);
 
   // Navigation handlers
   const navigateToTL = async (tl: PersonStats) => {
@@ -485,9 +413,6 @@ const TLTeam = () => {
       setViewLevel("tl_list");
     } else if (viewLevel === "rankings") {
       setViewLevel("tl_list");
-    } else if (viewLevel === "data_requests") {
-      if (isBDO) setViewLevel("tl_list");
-      else setViewLevel("gl_list");
     } else if (viewLevel === "group_management") {
       if (isBDO) setViewLevel("tl_list");
       else setViewLevel("gl_list");
@@ -583,9 +508,6 @@ const TLTeam = () => {
       crumbs.push({ label: isBn ? "সেরা পারফর্মার" : "Top Performers" });
     }
 
-    if (viewLevel === "data_requests") {
-      crumbs.push({ label: isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests" });
-    }
 
     if (viewLevel === "group_management") {
       crumbs.push({ label: isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management" });
@@ -899,18 +821,6 @@ const TLTeam = () => {
             </>
           )}
           <Button
-            variant={pendingRequestCount > 0 ? "default" : "outline"}
-            size="sm"
-            onClick={() => { setViewLevel("data_requests"); loadDataRequests(); }}
-            className="gap-1.5"
-          >
-            <Database className="h-4 w-4" />
-            {isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests"}
-            {pendingRequestCount > 0 && (
-              <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{pendingRequestCount}</Badge>
-            )}
-          </Button>
-          <Button
             variant="outline"
             size="sm"
             onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); }}
@@ -948,7 +858,6 @@ const TLTeam = () => {
             {viewLevel === "profile" && (isBn ? "প্রোফাইল ও পারফর্ম্যান্স" : "Profile & Performance")}
             {viewLevel === "other_employees" && (isBn ? "অন্যান্য কর্মী" : "Other Employees")}
             {viewLevel === "rankings" && (isBn ? "সেরা পারফর্মার" : "Top Performers")}
-            {viewLevel === "data_requests" && (isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests")}
             {viewLevel === "group_management" && (isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management")}
           </CardTitle>
         </CardHeader>
@@ -966,44 +875,6 @@ const TLTeam = () => {
               {viewLevel === "profile" && renderProfile()}
               {viewLevel === "other_employees" && renderOtherEmployees()}
               {viewLevel === "rankings" && renderRankings()}
-              {viewLevel === "data_requests" && (
-                <div className="space-y-3">
-                  {dataRequests.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>{isBn ? "কোনো ডাটা রিকোয়েস্ট নেই" : "No data requests"}</p>
-                    </div>
-                  ) : dataRequests.map(req => (
-                    <div key={req.id} className={`p-4 rounded-lg border ${req.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : req.status === 'fulfilled' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-foreground">{req.requester_name}</span>
-                            <Badge variant="secondary" className="text-[10px]">{roleName(req.requester_role || "")}</Badge>
-                            <Badge variant={req.status === 'pending' ? 'outline' : req.status === 'fulfilled' ? 'default' : 'destructive'} className="text-[10px]">
-                              {req.status === 'pending' ? (isBn ? 'পেন্ডিং' : 'Pending') : req.status === 'fulfilled' ? (isBn ? 'পূরণ হয়েছে' : 'Fulfilled') : (isBn ? 'প্রত্যাখ্যান' : 'Rejected')}
-                            </Badge>
-                          </div>
-                          {req.message && <p className="text-sm text-muted-foreground">{req.message}</p>}
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            {new Date(req.created_at).toLocaleString("bn-BD")}
-                          </p>
-                        </div>
-                        {req.status === 'pending' && (
-                          <div className="flex gap-1.5">
-                            <Button size="sm" variant="outline" onClick={() => handleFulfillRequest(req.id)} className="gap-1 text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10">
-                              <CheckCircle className="h-3.5 w-3.5" /> {isBn ? "পূরণ" : "Fulfill"}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleRejectRequest(req.id)} className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10">
-                              <XCircle className="h-3.5 w-3.5" /> {isBn ? "বাতিল" : "Reject"}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               {viewLevel === "group_management" && (
                 <div className="space-y-6">
                   {/* Create Group Button - only for TL, not BDO */}
