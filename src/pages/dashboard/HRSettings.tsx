@@ -425,6 +425,28 @@ const HRSettings = () => {
         <TabsContent value="api" className="mt-4">
           <div className="border border-border p-4 space-y-4">
             <h3 className="font-heading text-sm font-bold text-foreground">{isBn ? "API কনফিগারেশন" : "API Configuration"}</h3>
+            
+            {/* Cloudinary */}
+            <div className="border-b border-border pb-4">
+              <h4 className="font-body text-xs font-bold text-foreground mb-1">Cloudinary {isBn ? "(ছবি আপলোড)" : "(Image Upload)"}</h4>
+              <p className="text-[10px] text-muted-foreground font-body mb-2">
+                {isBn ? "একবার সংরক্ষণ করলে সব ছবি Cloudinary তে আপলোড হবে।" : "Once saved, all images will upload to Cloudinary."}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="font-body text-[10px] text-muted-foreground block mb-1">Cloud Name</label><Input value={settings.cloudinary_cloud_name || ""} onChange={(e) => set("cloudinary_cloud_name", e.target.value)} className={fieldClass} placeholder="my-cloud" /></div>
+                <div><label className="font-body text-[10px] text-muted-foreground block mb-1">Upload Preset</label><Input value={settings.cloudinary_upload_preset || ""} onChange={(e) => set("cloudinary_upload_preset", e.target.value)} className={fieldClass} placeholder="unsigned_preset" /></div>
+                <div><label className="font-body text-[10px] text-muted-foreground block mb-1">API Key ({isBn ? "ঐচ্ছিক" : "Optional"})</label><Input value={settings.cloudinary_api_key || ""} onChange={(e) => set("cloudinary_api_key", e.target.value)} className={fieldClass} /></div>
+              </div>
+              {settings.cloudinary_cloud_name && settings.cloudinary_upload_preset && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] text-green-500 font-body">✓ {isBn ? "সংযুক্ত" : "Connected"}</span>
+                </div>
+              )}
+              <button onClick={() => saveGroup("cloudinary_config", { cloud_name: settings.cloudinary_cloud_name, upload_preset: settings.cloudinary_upload_preset, api_key: settings.cloudinary_api_key })} disabled={saving} className="mt-2 text-[10px] px-2 py-1 border border-border text-foreground hover:bg-secondary">
+                {isBn ? "সংরক্ষণ" : "Save"}
+              </button>
+            </div>
+
             {/* WhatsApp */}
             <div className="border-b border-border pb-4">
               <h4 className="font-body text-xs font-bold text-foreground mb-2">WhatsApp Business API</h4>
