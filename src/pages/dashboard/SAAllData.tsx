@@ -12,6 +12,7 @@ const SAAllData = () => {
   const [tab, setTab] = useState<TabKey>("leads");
   const [search, setSearch] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("all");
+  const [dataModeFilter, setDataModeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
@@ -34,7 +35,7 @@ const SAAllData = () => {
 
   useEffect(() => {
     loadData();
-  }, [tab, campaignFilter, statusFilter]);
+  }, [tab, campaignFilter, dataModeFilter, statusFilter]);
 
   const loadData = async () => {
     setLoading(true);
@@ -54,11 +55,14 @@ const SAAllData = () => {
     });
 
     if (tab === "leads") {
-      let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source").order("created_at", { ascending: false }).limit(200);
       if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       const { data } = await q;
-      setLeads(data || []);
+      let result = data || [];
+      if (dataModeFilter === "lead") result = result.filter((l: any) => l.source !== "processing" && l.import_source !== "processing");
+      if (dataModeFilter === "processing") result = result.filter((l: any) => l.source === "processing" || l.import_source === "processing");
+      setLeads(result);
     } else if (tab === "orders") {
       let q = supabase.from("orders").select("id, customer_name, phone, product, price, quantity, status, delivery_status, created_at").order("created_at", { ascending: false }).limit(200);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
@@ -164,6 +168,15 @@ const SAAllData = () => {
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
+            </select>
+            <select
+              value={dataModeFilter}
+              onChange={(e) => setDataModeFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
+            >
+              <option value="all">{isBn ? "সব ডাটা" : "All Data"}</option>
+              <option value="lead">{isBn ? "লিড" : "Lead"}</option>
+              <option value="processing">{isBn ? "প্রসেসিং" : "Processing"}</option>
             </select>
             <select
               value={statusFilter}

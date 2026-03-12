@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle } from "lucide-react";
+import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
-type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "data_requests";
+type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "data_requests" | "group_management";
 
 interface DataRequest {
   id: string;
@@ -72,6 +74,16 @@ const TLTeam = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dataRequests, setDataRequests] = useState<DataRequest[]>([]);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+  // Group management state
+  const [groupCreateOpen, setGroupCreateOpen] = useState(false);
+  const [allTeamMembers, setAllTeamMembers] = useState<{ id: string; name: string; role: string }[]>([]);
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState<Set<string>>(new Set());
+  const [selectedGroupLeader, setSelectedGroupLeader] = useState("");
+  const [existingGroups, setExistingGroups] = useState<{ leader: { id: string; name: string }; members: { id: string; name: string }[] }[]>([]);
+  const [groupApprovals, setGroupApprovals] = useState<any[]>([]);
+  const [groupSubmitting, setGroupSubmitting] = useState(false);
+
   const getDateRange = useCallback((period: TimePeriod) => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -270,6 +282,128 @@ const TLTeam = () => {
     loadDataRequests();
   };
 
+  // Group management functions
+  const loadTeamMembersForGroup = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("campaign_agent_roles")
+      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name, role)")
+      .eq("tl_id", user.id);
+    if (data) {
+      const seen = new Set<string>();
+      const members: { id: string; name: string; role: string }[] = [];
+      data.forEach((r: any) => {
+        if (r.users && !seen.has(r.users.id)) {
+          members.push({ id: r.users.id, name: r.users.name, role: r.users.role });
+          seen.add(r.users.id);
+        }
+      });
+      setAllTeamMembers(members);
+    }
+  }, [user]);
+
+  const loadExistingGroups = useCallback(async () => {
+    if (!user) return;
+    // Get agents under this TL
+    const { data: agentRoles } = await supabase
+      .from("campaign_agent_roles")
+      .select("agent_id")
+      .eq("tl_id", user.id);
+    if (!agentRoles || agentRoles.length === 0) { setExistingGroups([]); return; }
+    const agentIds = agentRoles.map((r: any) => r.agent_id);
+
+    const { data: gm } = await supabase
+      .from("group_members")
+      .select("agent_id, group_leader_id")
+      .in("agent_id", agentIds);
+
+    if (!gm || gm.length === 0) { setExistingGroups([]); return; }
+
+    const glIds = [...new Set(gm.map((g: any) => g.group_leader_id))];
+    const allIds = [...new Set([...glIds, ...gm.map((g: any) => g.agent_id)])];
+    const { data: users } = await supabase.from("users").select("id, name").in("id", allIds);
+    const userMap = new Map((users || []).map((u: any) => [u.id, u.name]));
+
+    const groups = glIds.map(glId => ({
+      leader: { id: glId, name: userMap.get(glId) || "Unknown" },
+      members: gm.filter((g: any) => g.group_leader_id === glId).map((g: any) => ({
+        id: g.agent_id, name: userMap.get(g.agent_id) || "Unknown"
+      }))
+    }));
+    setExistingGroups(groups);
+  }, [user]);
+
+  const loadGroupApprovals = useCallback(async () => {
+    if (!user) return;
+    let q = supabase.from("sa_approvals").select("*").eq("type", "group_creation").order("created_at", { ascending: false });
+    if (!isBDO) q = q.eq("requested_by", user.id);
+    const { data } = await q;
+    setGroupApprovals(data || []);
+  }, [user, isBDO]);
+
+  const handleSubmitGroup = async () => {
+    if (!user || selectedGroupMembers.size === 0 || !selectedGroupLeader) return;
+    setGroupSubmitting(true);
+    const memberIds = [...selectedGroupMembers].filter(id => id !== selectedGroupLeader);
+    const leaderName = allTeamMembers.find(m => m.id === selectedGroupLeader)?.name || "";
+    const memberNames = memberIds.map(id => allTeamMembers.find(m => m.id === id)?.name || "").filter(Boolean);
+
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "group_creation",
+      requested_by: user.id,
+      details: {
+        group_leader_id: selectedGroupLeader,
+        group_leader_name: leaderName,
+        member_ids: memberIds,
+        member_names: memberNames,
+        tl_id: user.id,
+        tl_name: user.name,
+      },
+    });
+
+    if (error) {
+      toast.error("গ্রুপ তৈরির অনুরোধ ব্যর্থ হয়েছে");
+    } else {
+      toast.success("গ্রুপ তৈরির অনুরোধ BDO-এর কাছে পাঠানো হয়েছে");
+      setGroupCreateOpen(false);
+      setSelectedGroupMembers(new Set());
+      setSelectedGroupLeader("");
+      loadGroupApprovals();
+    }
+    setGroupSubmitting(false);
+  };
+
+  const handleApproveGroup = async (approval: any) => {
+    const details = approval.details as any;
+    if (!details?.group_leader_id || !details?.member_ids) return;
+
+    // Insert into group_members
+    const inserts = details.member_ids.map((agentId: string) => ({
+      group_leader_id: details.group_leader_id,
+      agent_id: agentId,
+    }));
+    const { error: insertErr } = await supabase.from("group_members").insert(inserts);
+    if (insertErr) { toast.error("গ্রুপ তৈরি ব্যর্থ: " + insertErr.message); return; }
+
+    await supabase.from("sa_approvals").update({ status: "approved", decided_by: user?.id }).eq("id", approval.id);
+    toast.success("গ্রুপ অনুমোদন হয়েছে");
+    loadGroupApprovals();
+    loadExistingGroups();
+  };
+
+  const handleRejectGroup = async (approvalId: string) => {
+    await supabase.from("sa_approvals").update({ status: "rejected", decided_by: user?.id }).eq("id", approvalId);
+    toast.success("গ্রুপ প্রত্যাখ্যান করা হয়েছে");
+    loadGroupApprovals();
+  };
+
+  const handleDeleteGroup = async (leaderId: string) => {
+    await supabase.from("group_members").delete().eq("group_leader_id", leaderId);
+    toast.success("গ্রুপ মুছে ফেলা হয়েছে");
+    loadExistingGroups();
+  };
+
+
   useEffect(() => {
     if (!user) return;
     loadTLs();
@@ -352,6 +486,9 @@ const TLTeam = () => {
     } else if (viewLevel === "rankings") {
       setViewLevel("tl_list");
     } else if (viewLevel === "data_requests") {
+      if (isBDO) setViewLevel("tl_list");
+      else setViewLevel("gl_list");
+    } else if (viewLevel === "group_management") {
       if (isBDO) setViewLevel("tl_list");
       else setViewLevel("gl_list");
     }
@@ -448,6 +585,10 @@ const TLTeam = () => {
 
     if (viewLevel === "data_requests") {
       crumbs.push({ label: isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests" });
+    }
+
+    if (viewLevel === "group_management") {
+      crumbs.push({ label: isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management" });
     }
 
     return (
@@ -769,6 +910,15 @@ const TLTeam = () => {
               <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{pendingRequestCount}</Badge>
             )}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); }}
+            className="gap-1.5"
+          >
+            <Users className="h-4 w-4" />
+            {isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management"}
+          </Button>
         </div>
       )}
 
@@ -799,6 +949,7 @@ const TLTeam = () => {
             {viewLevel === "other_employees" && (isBn ? "অন্যান্য কর্মী" : "Other Employees")}
             {viewLevel === "rankings" && (isBn ? "সেরা পারফর্মার" : "Top Performers")}
             {viewLevel === "data_requests" && (isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests")}
+            {viewLevel === "group_management" && (isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -853,10 +1004,156 @@ const TLTeam = () => {
                   ))}
                 </div>
               )}
+              {viewLevel === "group_management" && (
+                <div className="space-y-6">
+                  {/* Create Group Button - only for TL, not BDO */}
+                  {!isBDO && (
+                    <Button onClick={() => { setGroupCreateOpen(true); loadTeamMembersForGroup(); }} className="gap-2">
+                      <Plus className="h-4 w-4" /> {isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}
+                    </Button>
+                  )}
+
+                  {/* Existing Groups */}
+                  <div>
+                    <h3 className="font-heading text-base font-semibold mb-3">{isBn ? "বর্তমান গ্রুপসমূহ" : "Existing Groups"}</h3>
+                    {existingGroups.length === 0 ? (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>{isBn ? "কোনো গ্রুপ নেই" : "No groups yet"}</p>
+                      </div>
+                    ) : existingGroups.map(g => (
+                      <div key={g.leader.id} className="p-4 rounded-lg border border-border mb-3 bg-secondary/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Crown className="h-4 w-4 text-amber-500" />
+                            <span className="font-semibold text-foreground">{g.leader.name}</span>
+                            <Badge variant="outline" className="text-[10px]">{isBn ? "গ্রুপ লিডার" : "Group Leader"}</Badge>
+                          </div>
+                          {!isBDO && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteGroup(g.leader.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.members.map(m => (
+                            <Badge key={m.id} variant="secondary" className="text-xs">{m.name}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Group Approvals */}
+                  <div>
+                    <h3 className="font-heading text-base font-semibold mb-3">
+                      {isBn ? "গ্রুপ অনুমোদন" : "Group Approvals"}
+                    </h3>
+                    {groupApprovals.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">{isBn ? "কোনো অনুমোদন নেই" : "No approvals"}</p>
+                    ) : groupApprovals.map(a => {
+                      const d = a.details as any;
+                      return (
+                        <div key={a.id} className={`p-4 rounded-lg border mb-3 ${a.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : a.status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-foreground">{d?.tl_name || "TL"}</span>
+                                <Badge variant={a.status === 'pending' ? 'outline' : a.status === 'approved' ? 'default' : 'destructive'} className="text-[10px]">
+                                  {a.status === 'pending' ? (isBn ? 'পেন্ডিং' : 'Pending') : a.status === 'approved' ? (isBn ? 'অনুমোদিত' : 'Approved') : (isBn ? 'প্রত্যাখ্যাত' : 'Rejected')}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-foreground">
+                                <Crown className="inline h-3 w-3 text-amber-500 mr-1" />
+                                {isBn ? "গ্রুপ লিডার:" : "Group Leader:"} <span className="font-medium">{d?.group_leader_name}</span>
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {(d?.member_names || []).map((name: string, i: number) => (
+                                  <Badge key={i} variant="secondary" className="text-[10px]">{name}</Badge>
+                                ))}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {new Date(a.created_at).toLocaleString("bn-BD")}
+                              </p>
+                            </div>
+                            {a.status === 'pending' && isBDO && (
+                              <div className="flex gap-1.5">
+                                <Button size="sm" variant="outline" onClick={() => handleApproveGroup(a)} className="gap-1 text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10">
+                                  <CheckCircle className="h-3.5 w-3.5" /> {isBn ? "অনুমোদন" : "Approve"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleRejectGroup(a.id)} className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10">
+                                  <XCircle className="h-3.5 w-3.5" /> {isBn ? "বাতিল" : "Reject"}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* Group Create Dialog */}
+      <Dialog open={groupCreateOpen} onOpenChange={setGroupCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "মেম্বার নির্বাচন করুন" : "Select Members"}</p>
+              <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
+                {allTeamMembers.map(m => (
+                  <label key={m.id} className="flex items-center gap-2 p-1.5 hover:bg-accent/50 rounded cursor-pointer">
+                    <Checkbox
+                      checked={selectedGroupMembers.has(m.id)}
+                      onCheckedChange={(c) => {
+                        const next = new Set(selectedGroupMembers);
+                        if (c) next.add(m.id); else { next.delete(m.id); if (selectedGroupLeader === m.id) setSelectedGroupLeader(""); }
+                        setSelectedGroupMembers(next);
+                      }}
+                    />
+                    <span className="text-sm text-foreground">{m.name}</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">{roleName(m.role)}</span>
+                  </label>
+                ))}
+                {allTeamMembers.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">{isBn ? "কোনো মেম্বার নেই" : "No members"}</p>}
+              </div>
+            </div>
+            {selectedGroupMembers.size > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">{isBn ? "গ্রুপ লিডার নির্বাচন করুন" : "Select Group Leader"}</p>
+                <Select value={selectedGroupLeader} onValueChange={setSelectedGroupLeader}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isBn ? "গ্রুপ লিডার বাছুন" : "Choose Group Leader"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...selectedGroupMembers].map(id => {
+                      const m = allTeamMembers.find(t => t.id === id);
+                      return m ? <SelectItem key={id} value={id}>{m.name}</SelectItem> : null;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGroupCreateOpen(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button
+              onClick={handleSubmitGroup}
+              disabled={selectedGroupMembers.size < 2 || !selectedGroupLeader || groupSubmitting}
+            >
+              {groupSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isBn ? "অনুমোদনের জন্য পাঠান" : "Send for Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

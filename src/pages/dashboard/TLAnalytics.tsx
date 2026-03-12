@@ -15,8 +15,9 @@ const TLAnalytics = () => {
   const isBn = t("vencon") === "VENCON";
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode?: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [dataMode, setDataMode] = useState<string>("all");
   const [ratios, setRatios] = useState({ receive: 0, cancel: 0, return: 0 });
   const [agentPerf, setAgentPerf] = useState<{ name: string; confirmed: number; delivered: number; ratio: number }[]>([]);
 
@@ -24,14 +25,14 @@ const TLAnalytics = () => {
     if (!user) return;
     const fetch = async () => {
       if (isBDO) {
-        const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+        const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
         if (data) {
-          const list = data.map((c: any) => ({ id: c.id, name: c.name }));
+          const list = data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode }));
           setCampaigns(list);
           if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
       } else {
-        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name, data_mode)").eq("tl_id", user.id);
         if (data) {
           const list = data.map((d: any) => d.campaigns).filter(Boolean);
           setCampaigns(list);
@@ -68,12 +69,14 @@ const TLAnalytics = () => {
       return: total > 0 ? Math.round((returned / total) * 100) : 0,
     });
 
-    // Agent performance
+    // Agent performance - filter by data mode
     let rolesQ = supabase
       .from("campaign_agent_roles")
-      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(name)")
+      .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(name)")
       .eq("campaign_id", selectedCampaign);
     if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    if (dataMode === "lead") rolesQ = rolesQ.eq("is_bronze", true);
+    if (dataMode === "processing") rolesQ = rolesQ.eq("is_silver", true);
     const { data: roles } = await rolesQ;
 
     if (roles) {
@@ -89,7 +92,7 @@ const TLAnalytics = () => {
       }).sort((a, b) => b.ratio - a.ratio);
       setAgentPerf(perf);
     }
-  }, [user, selectedCampaign]);
+  }, [user, selectedCampaign, dataMode]);
 
   useEffect(() => { loadAnalytics(); }, [loadAnalytics]);
 
@@ -107,6 +110,16 @@ const TLAnalytics = () => {
         <h2 className="font-heading text-2xl font-bold text-foreground">
           {isBn ? "অ্যানালিটিক্স" : "Analytics"}
         </h2>
+        <Select value={dataMode} onValueChange={setDataMode}>
+          <SelectTrigger className="w-40 bg-secondary border-border">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"}</SelectItem>
+            <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+            <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
           <SelectTrigger className="w-64 border-[hsl(var(--panel-tl))] bg-secondary">
             <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />

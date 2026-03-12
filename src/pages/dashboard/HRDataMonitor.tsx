@@ -39,6 +39,7 @@ const HRDataMonitor = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [dataMode, setDataMode] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("leads");
   const [search, setSearch] = useState("");
 
@@ -57,7 +58,7 @@ const HRDataMonitor = () => {
 
   // Fetch leads
   const { data: leads, isLoading: leadsLoading } = useQuery({
-    queryKey: ["monitor-leads", selectedCampaign],
+    queryKey: ["monitor-leads", selectedCampaign, dataMode],
     queryFn: async () => {
       let q = supabase
         .from("leads")
@@ -67,7 +68,10 @@ const HRDataMonitor = () => {
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
       const { data, error } = await q;
       if (error) throw error;
-      return data;
+      let result = data || [];
+      if (dataMode === "lead") result = result.filter(l => l.source !== "processing" && l.import_source !== "processing");
+      if (dataMode === "processing") result = result.filter(l => l.source === "processing" || l.import_source === "processing");
+      return result;
     },
   });
 
@@ -123,6 +127,16 @@ const HRDataMonitor = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Select value={dataMode} onValueChange={setDataMode}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"}</SelectItem>
+              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
             <SelectTrigger className="w-[220px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
