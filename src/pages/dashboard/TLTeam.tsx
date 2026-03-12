@@ -231,7 +231,6 @@ const TLTeam = () => {
     setLoading(false);
   }, []);
 
-  };
 
   // Group management functions
   const loadTeamMembersForGroup = useCallback(async () => {
