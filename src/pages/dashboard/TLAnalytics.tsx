@@ -15,8 +15,9 @@ const TLAnalytics = () => {
   const isBn = t("vencon") === "VENCON";
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
 
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode?: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [dataMode, setDataMode] = useState<string>("all");
   const [ratios, setRatios] = useState({ receive: 0, cancel: 0, return: 0 });
   const [agentPerf, setAgentPerf] = useState<{ name: string; confirmed: number; delivered: number; ratio: number }[]>([]);
 
