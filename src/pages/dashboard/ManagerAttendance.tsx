@@ -5,12 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, CheckCircle, LogIn, LogOut, MapPin, Loader2 } from "lucide-react";
+import { Clock, CheckCircle, LogIn, LogOut, MapPin, Loader2, Users, Send } from "lucide-react";
 
 const OFFICE_RADIUS_METERS = 500;
 
@@ -32,6 +35,7 @@ interface AttendanceRow {
   is_late: boolean | null;
   is_early_out: boolean | null;
   deduction_amount: number | null;
+  user_id: string | null;
 }
 
 const MOOD_EMOJIS: Record<string, string> = {
@@ -66,10 +70,26 @@ export default function ManagerAttendance() {
   const [gpsChecking, setGpsChecking] = useState(false);
   const [gpsError, setGpsError] = useState("");
 
+  // Team attendance state
+  const isTL = user?.panel === "tl";
+  const [teamAttendance, setTeamAttendance] = useState<(AttendanceRow & { userName?: string })[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+
+  // Data distribution state
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [campaignAgents, setCampaignAgents] = useState<{ id: string; name: string }[]>([]);
+  const [distAgent, setDistAgent] = useState("");
+  const [distCount, setDistCount] = useState("");
+  const [distributing, setDistributing] = useState(false);
+  const [availableLeads, setAvailableLeads] = useState(0);
+
+  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+
   const loadData = useCallback(async () => {
     if (!user) return;
 
-    // Load office GPS from user profile
     const { data: profileData } = await supabase.from("users").select("gps_location").eq("id", user.id).single();
     if (profileData?.gps_location) {
       const [lat, lon] = profileData.gps_location.split(",").map(Number);
@@ -92,7 +112,96 @@ export default function ManagerAttendance() {
     setLoading(false);
   }, [user]);
 
+  // Load team attendance for TL
+  const loadTeamAttendance = useCallback(async () => {
+    if (!user || (!isTL && !isBDO)) return;
+    setTeamLoading(true);
+
+    // Get agents under this TL via campaign_agent_roles
+    const { data: roles } = await supabase
+      .from("campaign_agent_roles")
+      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name)")
+      .eq("tl_id", user.id);
+
+    if (roles) {
+      const members = roles.map((r: any) => ({ id: r.users.id, name: r.users.name }));
+      // Deduplicate
+      const unique = Array.from(new Map(members.map((m: any) => [m.id, m])).values());
+      setTeamMembers(unique);
+
+      const agentIds = unique.map((m: any) => m.id);
+      if (agentIds.length > 0) {
+        const todayDate = todayStr();
+        const { data: attData } = await supabase
+          .from("attendance")
+          .select("*")
+          .in("user_id", agentIds)
+          .eq("date", todayDate);
+
+        if (attData) {
+          const enriched = attData.map((a: any) => ({
+            ...a,
+            userName: unique.find((m: any) => m.id === a.user_id)?.name || "Unknown",
+          }));
+          setTeamAttendance(enriched);
+        }
+      }
+    }
+    setTeamLoading(false);
+  }, [user, isTL, isBDO]);
+
+  // Load campaigns for data distribution
+  const loadCampaigns = useCallback(async () => {
+    if (!user || (!isTL && !isBDO)) return;
+    if (isBDO) {
+      const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+      if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name })));
+    } else {
+      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+      if (data) {
+        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
+        setCampaigns(list);
+      }
+    }
+  }, [user, isTL, isBDO]);
+
+  // Load agents for selected campaign
+  const loadCampaignAgents = useCallback(async () => {
+    if (!user || !selectedCampaign) { setCampaignAgents([]); setAvailableLeads(0); return; }
+
+    let q = supabase
+      .from("campaign_agent_roles")
+      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name)")
+      .eq("campaign_id", selectedCampaign);
+    if (!isBDO) q = q.eq("tl_id", user.id);
+
+    const { data: roles } = await q;
+    if (roles) {
+      const agents = roles.map((r: any) => ({ id: r.users.id, name: r.users.name }));
+      const unique = Array.from(new Map(agents.map((a: any) => [a.id, a])).values());
+      setCampaignAgents(unique);
+    }
+
+    // Count available unassigned leads
+    let leadQ = supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("campaign_id", selectedCampaign)
+      .is("assigned_to", null)
+      .eq("status", "fresh");
+    if (!isBDO) leadQ = leadQ.eq("tl_id", user.id);
+    const { count } = await leadQ;
+    setAvailableLeads(count || 0);
+  }, [user, selectedCampaign, isBDO]);
+
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { if (isTL || isBDO) { loadTeamAttendance(); loadCampaigns(); } }, [loadTeamAttendance, loadCampaigns, isTL, isBDO]);
+  useEffect(() => { loadCampaignAgents(); }, [loadCampaignAgents]);
+
+  // Set first campaign as default
+  useEffect(() => {
+    if (campaigns.length > 0 && !selectedCampaign) setSelectedCampaign(campaigns[0].id);
+  }, [campaigns]);
 
   const presentDays = attendance.filter((a) => a.clock_in).length;
 
@@ -107,17 +216,13 @@ export default function ManagerAttendance() {
     });
   };
 
-  // Check In — office location required, NO deduction
   const handleCheckIn = async () => {
     if (!user || !checkInMood) { toast.error("মুড নির্বাচন করুন"); return; }
-    
     setGpsChecking(true);
     setGpsError("");
-    
     try {
       const pos = await verifyLocation();
       const { latitude, longitude } = pos.coords;
-      
       if (officeLocation) {
         const dist = getDistanceMeters(latitude, longitude, officeLocation.lat, officeLocation.lon);
         if (dist > OFFICE_RADIUS_METERS) {
@@ -126,7 +231,6 @@ export default function ManagerAttendance() {
           return;
         }
       }
-      
       const now = new Date().toISOString();
       if (todayRecord) {
         await supabase.from("attendance").update({
@@ -140,7 +244,6 @@ export default function ManagerAttendance() {
           is_late: false, deduction_amount: 0,
         });
       }
-
       setShowCheckInModal(false);
       setCheckInMood("");
       setCheckInNote("");
@@ -153,24 +256,62 @@ export default function ManagerAttendance() {
     }
   };
 
-  // Check Out — NO deduction
   const handleCheckOut = async () => {
     if (!user || !checkOutMood) { toast.error("মুড নির্বাচন করুন"); return; }
     const now = new Date().toISOString();
-
     if (todayRecord) {
       await supabase.from("attendance").update({
-        clock_out: now,
-        mood_out: checkOutMood,
-        is_early_out: false,
-        deduction_amount: 0,
+        clock_out: now, mood_out: checkOutMood, is_early_out: false, deduction_amount: 0,
       }).eq("id", todayRecord.id);
     }
-
     setShowCheckOutModal(false);
     setCheckOutMood("");
     await loadData();
     toast.success("Check Out সফল ✓");
+  };
+
+  // Data distribution handler
+  const handleDistribute = async () => {
+    if (!user || !distAgent || !distCount || !selectedCampaign) return;
+    const count = parseInt(distCount);
+    if (isNaN(count) || count <= 0) { toast.error("সঠিক সংখ্যা দিন"); return; }
+    if (count > availableLeads) { toast.error(`মাত্র ${availableLeads} টি ডাটা আছে`); return; }
+
+    setDistributing(true);
+    try {
+      // Fetch unassigned leads for this campaign
+      let q = supabase
+        .from("leads")
+        .select("id")
+        .eq("campaign_id", selectedCampaign)
+        .is("assigned_to", null)
+        .eq("status", "fresh")
+        .order("created_at", { ascending: true })
+        .limit(count);
+      if (!isBDO) q = q.eq("tl_id", user.id);
+
+      const { data: leads, error: fetchErr } = await q;
+      if (fetchErr) throw fetchErr;
+      if (!leads || leads.length === 0) { toast.error("কোনো ডাটা পাওয়া যায়নি"); return; }
+
+      // Assign each lead to the selected agent
+      const ids = leads.map((l: any) => l.id);
+      const { error: updateErr } = await supabase
+        .from("leads")
+        .update({ assigned_to: distAgent, agent_type: "bronze" })
+        .in("id", ids);
+
+      if (updateErr) throw updateErr;
+
+      toast.success(`${leads.length} টি ডাটা সফলভাবে হস্তান্তর হয়েছে`);
+      setDistAgent("");
+      setDistCount("");
+      await loadCampaignAgents();
+    } catch (err: any) {
+      toast.error("হস্তান্তর ব্যর্থ: " + (err.message || ""));
+    } finally {
+      setDistributing(false);
+    }
   };
 
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
@@ -178,18 +319,8 @@ export default function ManagerAttendance() {
   const hasCheckedIn = !!todayRecord?.clock_in;
   const hasCheckedOut = !!todayRecord?.clock_out;
 
-  return (
+  const MyAttendanceContent = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" /> উপস্থিতি
-        </h1>
-        <Badge variant="outline" className="text-xs border-primary/30 text-primary">
-          <MapPin className="h-3 w-3 mr-1" />
-          অফিসে উপস্থিত — কোনো কর্তন নেই
-        </Badge>
-      </div>
-
       {/* Check In / Check Out Action Card */}
       <Card className="border-primary/20">
         <CardContent className="pt-6">
@@ -222,22 +353,14 @@ export default function ManagerAttendance() {
                 <p className="text-xl">{todayRecord?.mood_in ? MOOD_EMOJIS[todayRecord.mood_in] || "—" : "—"}</p>
               </div>
             </div>
-
             <div className="flex gap-2 sm:flex-col">
               {!hasCheckedIn && (
-                <Button
-                  onClick={() => { setCheckInMood(""); setCheckInNote(""); setShowCheckInModal(true); }}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
+                <Button onClick={() => { setCheckInMood(""); setCheckInNote(""); setShowCheckInModal(true); }} className="bg-green-600 hover:bg-green-700 text-white">
                   <LogIn className="h-4 w-4 mr-2" /> Check In
                 </Button>
               )}
               {hasCheckedIn && !hasCheckedOut && (
-                <Button
-                  onClick={() => { setCheckOutMood(""); setShowCheckOutModal(true); }}
-                  variant="outline"
-                  className="border-destructive text-destructive hover:bg-destructive/10"
-                >
+                <Button onClick={() => { setCheckOutMood(""); setShowCheckOutModal(true); }} variant="outline" className="border-destructive text-destructive hover:bg-destructive/10">
                   <LogOut className="h-4 w-4 mr-2" /> Check Out
                 </Button>
               )}
@@ -295,6 +418,189 @@ export default function ManagerAttendance() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+
+  const TeamAttendanceContent = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Badge variant="secondary" className="text-xs">
+          আজ: {todayStr()}
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          মোট সদস্য: {teamMembers.length}
+        </Badge>
+        <Badge variant="outline" className="text-xs text-green-400 border-green-600/50">
+          উপস্থিত: {teamAttendance.filter(a => a.clock_in).length}
+        </Badge>
+        <Badge variant="outline" className="text-xs text-red-400 border-red-600/50">
+          অনুপস্থিত: {teamMembers.length - teamAttendance.filter(a => a.clock_in).length}
+        </Badge>
+      </div>
+
+      {teamLoading ? (
+        <div className="py-8 text-center text-muted-foreground">লোড হচ্ছে...</div>
+      ) : (
+        <Card>
+          <CardContent className="pt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="py-2 px-2 text-left">নাম</th>
+                    <th className="py-2 px-2 text-left">Check In</th>
+                    <th className="py-2 px-2 text-left">Check Out</th>
+                    <th className="py-2 px-2 text-center">মুড</th>
+                    <th className="py-2 px-2 text-center">স্ট্যাটাস</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamMembers.map((member) => {
+                    const att = teamAttendance.find(a => a.user_id === member.id);
+                    return (
+                      <tr key={member.id} className="border-b border-border">
+                        <td className="py-2 px-2 font-medium">{member.name}</td>
+                        <td className="py-2 px-2 text-xs">
+                          {att?.clock_in ? new Date(att.clock_in).toLocaleTimeString("bn-BD") : "—"}
+                        </td>
+                        <td className="py-2 px-2 text-xs">
+                          {att?.clock_out ? new Date(att.clock_out).toLocaleTimeString("bn-BD") : att?.clock_in ? <span className="text-blue-400">চলমান</span> : "—"}
+                        </td>
+                        <td className="py-2 px-2 text-center text-lg">
+                          {att?.mood_in ? MOOD_EMOJIS[att.mood_in] || "—" : "—"}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {att?.clock_in ? (
+                            <Badge variant="outline" className="text-green-400 border-green-600/50 text-xs">উপস্থিত</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-400 border-red-600/50 text-xs">অনুপস্থিত</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {teamMembers.length === 0 && (
+                    <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো টিম মেম্বার পাওয়া যায়নি</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  const DataDistributionContent = () => (
+    <div className="space-y-4">
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-sm font-heading flex items-center gap-2">
+            <Send className="h-4 w-4 text-primary" /> ডাটা হস্তান্তর
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Campaign select */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">ক্যাম্পেইন</Label>
+            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+              <SelectTrigger className="border-border">
+                <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
+              </SelectTrigger>
+              <SelectContent>
+                {campaigns.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedCampaign && (
+            <>
+              <div className="rounded-md bg-secondary p-3">
+                <p className="text-sm text-muted-foreground">
+                  অ্যাসাইন না হওয়া ডাটা: <span className="font-bold text-foreground">{availableLeads}</span> টি
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Agent select */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">এজেন্ট</Label>
+                  <Select value={distAgent} onValueChange={setDistAgent}>
+                    <SelectTrigger className="border-border">
+                      <SelectValue placeholder="এজেন্ট নির্বাচন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campaignAgents.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Count input */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">সংখ্যা</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={availableLeads}
+                    value={distCount}
+                    onChange={e => setDistCount(e.target.value)}
+                    placeholder="কতটি ডাটা?"
+                  />
+                </div>
+
+                {/* Submit */}
+                <div className="flex items-end">
+                  <Button
+                    onClick={handleDistribute}
+                    disabled={!distAgent || !distCount || distributing || availableLeads === 0}
+                    className="w-full"
+                  >
+                    {distributing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                    পাঠাও
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-xl flex items-center gap-2">
+          <Clock className="h-5 w-5 text-primary" /> উপস্থিতি
+        </h1>
+        <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+          <MapPin className="h-3 w-3 mr-1" />
+          অফিসে উপস্থিত — কোনো কর্তন নেই
+        </Badge>
+      </div>
+
+      {(isTL || isBDO) ? (
+        <Tabs defaultValue="my">
+          <TabsList>
+            <TabsTrigger value="my">আমার উপস্থিতি</TabsTrigger>
+            <TabsTrigger value="team" className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" /> টিম উপস্থিতি
+            </TabsTrigger>
+            <TabsTrigger value="distribute" className="flex items-center gap-1">
+              <Send className="h-3.5 w-3.5" /> ডাটা হস্তান্তর
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="my"><MyAttendanceContent /></TabsContent>
+          <TabsContent value="team"><TeamAttendanceContent /></TabsContent>
+          <TabsContent value="distribute"><DataDistributionContent /></TabsContent>
+        </Tabs>
+      ) : (
+        <MyAttendanceContent />
+      )}
 
       {/* Check In Modal */}
       <Dialog open={showCheckInModal} onOpenChange={setShowCheckInModal}>
