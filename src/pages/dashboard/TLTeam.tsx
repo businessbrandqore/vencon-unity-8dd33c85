@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase } from "lucide-react";
+import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
 type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings";
