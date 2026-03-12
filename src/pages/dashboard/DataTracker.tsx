@@ -419,7 +419,7 @@ const DataTracker = () => {
           </div>
         </div>
 
-        {/* ========== RAW DATA TAB ========== */}
+        {/* ========== RAW DATA TAB — READ ONLY ========== */}
         <TabsContent value="raw_data">
           <Card>
             <CardHeader className="pb-3">
@@ -433,7 +433,7 @@ const DataTracker = () => {
                   <Button
                     size="sm"
                     variant={rawSubTab === "lead" ? "default" : "outline"}
-                    onClick={() => { setRawSubTab("lead"); setSelectedLeads(new Set()); }}
+                    onClick={() => setRawSubTab("lead")}
                     className="text-xs"
                   >
                     🎯 {isBn ? "লিড" : "Lead"} ({rawLeadLeads.length})
@@ -441,85 +441,39 @@ const DataTracker = () => {
                   <Button
                     size="sm"
                     variant={rawSubTab === "processing" ? "default" : "outline"}
-                    onClick={() => { setRawSubTab("processing"); setSelectedLeads(new Set()); }}
+                    onClick={() => setRawSubTab("processing")}
                     className="text-xs"
                   >
                     ⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({rawProcessingLeads.length})
                   </Button>
                 </div>
               </div>
-
-              {/* TL Bulk Assignment */}
-              {canAssign && selectedLeads.size > 0 && (
-                <div className="flex items-center gap-3 pt-2 border-t border-border mt-2">
-                  <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
-                  <Select value={bulkAgent} onValueChange={setBulkAgent}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {agentList.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={() => bulkAssignLeads(rawSubTab === "processing")} disabled={!bulkAgent} size="sm">
-                    <Send className="h-3.5 w-3.5 mr-1" />
-                    {isBn ? "Assign করুন" : "Assign"}
-                  </Button>
-                </div>
-              )}
-
-              {!canAssign && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isBn ? "⚠️ শুধুমাত্র TL এই ডাটা গুলো এজেন্টদের মাঝে ডিস্ট্রিবিউট করতে পারবে" : "⚠️ Only TL can distribute these data to agents"}
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {isBn ? "📖 শুধুমাত্র পড়ার জন্য — ইউজার থেকে আসা মূল ডাটা, কোনো পরিবর্তন ছাড়া" : "📖 Read-only — original data from users, without any changes"}
+              </p>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {canAssign && (
-                        <TableHead className="w-10">
-                          <Checkbox
-                            checked={selectedLeads.size === displayRawLeads.length && displayRawLeads.length > 0}
-                            onCheckedChange={(v) => setSelectedLeads(v ? new Set(displayRawLeads.map(l => l.id)) : new Set())}
-                          />
-                        </TableHead>
-                      )}
                       <TableHead className="text-xs">#</TableHead>
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
-                      {canAssign && <TableHead className="text-xs">{isBn ? "Agent Assign" : "Assign Agent"}</TableHead>}
-                      {canAssign && <TableHead className="text-xs"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {leadsLoading ? (
-                      <TableRow><TableCell colSpan={canAssign ? 9 : 7} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
                     ) : filterBySearch(displayRawLeads).length === 0 ? (
-                      <TableRow><TableCell colSpan={canAssign ? 9 : 7} className="text-center py-12 text-muted-foreground">
+                      <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                         {isBn ? "কোনো র ডাটা নেই — সব ডাটা অপারেশনে আছে ✅" : "No raw data — all data is in operation ✅"}
                       </TableCell></TableRow>
                     ) : filterBySearch(displayRawLeads).map((lead, i) => (
-                      <TableRow key={lead.id} className="group">
-                        {canAssign && (
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedLeads.has(lead.id)}
-                              onCheckedChange={(v) => {
-                                const next = new Set(selectedLeads);
-                                v ? next.add(lead.id) : next.delete(lead.id);
-                                setSelectedLeads(next);
-                              }}
-                            />
-                          </TableCell>
-                        )}
+                      <TableRow key={lead.id}>
                         <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
                         <TableCell className="text-sm font-medium">
                           <div className="flex items-center gap-1.5">
@@ -537,33 +491,6 @@ const DataTracker = () => {
                         <TableCell className="text-xs text-muted-foreground">
                           {lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}
                         </TableCell>
-                        {canAssign && (
-                          <TableCell>
-                            <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(prev => ({ ...prev, [lead.id]: v }))}>
-                              <SelectTrigger className="w-36 h-8 text-xs">
-                                <SelectValue placeholder={isBn ? "Agent" : "Agent"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {agentList.map((a) => (
-                                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        )}
-                        {canAssign && (
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={!assignments[lead.id]}
-                              onClick={() => assignLead(lead.id, assignments[lead.id], rawSubTab === "processing")}
-                              className="h-8 text-xs"
-                            >
-                              <Send className="h-3 w-3" />
-                            </Button>
-                          </TableCell>
-                        )}
                       </TableRow>
                     ))}
                   </TableBody>
