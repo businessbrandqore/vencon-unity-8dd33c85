@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
+import { Search, Users, RefreshCw, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Crown, Briefcase, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
 type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "group_management";
