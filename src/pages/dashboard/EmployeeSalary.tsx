@@ -35,6 +35,8 @@ const MONTHS_BN = ["", "জানুয়ারি", "ফেব্রুয়�
 
 type FilterType = "daily" | "monthly" | "yearly";
 
+const fmt = (v: number | null | undefined) => (v ?? 0).toLocaleString();
+
 export default function EmployeeSalary() {
   const { user } = useAuth();
   const [salary, setSalary] = useState<SalaryData | null>(null);
