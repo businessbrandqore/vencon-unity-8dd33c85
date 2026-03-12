@@ -31,6 +31,8 @@ interface Settings {
   ai_provider?: string;
   ai_api_key?: string;
   notification_sound?: string;
+  late_checkin_amount?: string;
+  early_checkout_amount?: string;
 }
 
 const HRSettings = () => {
