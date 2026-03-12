@@ -462,20 +462,30 @@ const TLTeam = () => {
     if (isBDO) loadOtherEmployees();
   }, [user]);
 
-  // Realtime subscriptions - stable, no dependency on view state
+  // Realtime subscriptions
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
       .channel('tl-team-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, () => {
-        // Only reload groups on group_members change
         loadExistingGroups();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => {
+        // Reload team data when campaign_agent_roles changes (new hire assigned)
+        if (selectedTL) loadGLs(selectedTL.id);
+        loadTeamMembersForGroup();
+        loadExistingGroups();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        // Reload when user data changes
+        if (selectedTL) loadGLs(selectedTL.id);
+        loadTeamMembersForGroup();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, selectedTL]);
 
   // Navigation handlers
   const navigateToTL = async (tl: PersonStats) => {
