@@ -276,7 +276,7 @@ export default function EmployeeSalary() {
                 <CardContent className="pt-6 flex items-center gap-3">
                   <TrendingUp className={cn("h-8 w-8", ratio >= 50 ? "text-green-500" : "text-orange-400")} />
                   <div>
-                    <p className="text-xs text-muted-foreground">রিসিভ রেশিও</p>
+                    <p className="text-xs text-muted-foreground">{isTelesalesRole ? "রিসিভ রেশিও" : "গ্রুপ লিডারদের গড় রেশিও"}</p>
                     <p className="text-2xl font-heading">{ratio}%</p>
                   </div>
                 </CardContent>
@@ -306,7 +306,7 @@ export default function EmployeeSalary() {
                     <div>
                       <p className="font-heading font-bold text-orange-600 dark:text-orange-400">রিসিভ রেশিও কম</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। উন্নতি করলে ইনসেনটিভ বাড়বে।
+                        আপনার গ্রুপ লিডারদের গড় রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। গ্রুপ লিডারদের রিসিভ রেশিও উন্নতি করলে আপনার ইনসেনটিভ বাড়বে।
                       </p>
                     </div>
                   </div>
