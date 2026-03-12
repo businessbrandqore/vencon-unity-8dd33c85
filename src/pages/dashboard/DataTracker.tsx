@@ -131,7 +131,7 @@ const DataTracker = () => {
 
   // Fetch ALL leads (for all tabs)
   const { data: leads, isLoading: leadsLoading } = useQuery({
-    queryKey: ["tracker-leads", selectedCampaign, dataMode, user?.id, isTL],
+    queryKey: ["tracker-leads", selectedCampaign, dataMode, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
       let q = supabase
         .from("leads")
@@ -139,7 +139,7 @@ const DataTracker = () => {
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
-      if (isTL && user) q = q.eq("tl_id", user.id);
+      if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
       const { data, error } = await q;
       if (error) throw error;
       let result = data || [];
