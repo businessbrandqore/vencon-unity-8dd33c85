@@ -16,6 +16,7 @@ interface Agent { id: string; name: string; }
 interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; }
 interface Order { id: string; customer_name: string | null; phone: string | null; product: string | null; agent_id: string | null; created_at: string | null; status: string | null; cs_note: string | null; cs_rating: string | null; agent?: { name: string }; }
 interface PreOrder { id: string; lead_id: string | null; scheduled_date: string | null; agent_id: string | null; note: string | null; status: string | null; lead?: { name: string | null; phone: string | null; }; agent?: { name: string; }; }
+interface SilverGoldenLead { id: string; name: string | null; phone: string | null; address: string | null; source: string | null; created_at: string | null; product?: string | null; price?: number | null; }
 
 const TLLeads = () => {
   const { user } = useAuth();
@@ -34,8 +35,11 @@ const TLLeads = () => {
   const [callDoneOrders, setCallDoneOrders] = useState<Order[]>([]);
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
   const [deleteSheetLeads, setDeleteSheetLeads] = useState<Lead[]>([]);
-  // Processing mode data
   const [processingLeads, setProcessingLeads] = useState<Lead[]>([]);
+
+  // Silver & Golden data
+  const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
+  const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
 
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [silverAssignments, setSilverAssignments] = useState<Record<string, string>>({});
@@ -52,7 +56,6 @@ const TLLeads = () => {
     if (!user) return;
     const fetch = async () => {
       if (isBDO) {
-        // BDO sees all campaigns
         const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
         if (data) {
           const list = data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
@@ -137,7 +140,6 @@ const TLLeads = () => {
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
-    // Processing leads
     if (campaignMode === "processing") {
       let procQ = supabase.from("leads").select("*")
         .eq("campaign_id", selectedCampaign)
@@ -145,6 +147,51 @@ const TLLeads = () => {
       if (!isBDO) procQ = procQ.eq("tl_id", user.id);
       const { data: proc } = await procQ;
       setProcessingLeads(proc || []);
+    }
+
+    // Silver data: Bronze orders that got delivered via Steadfast → show original user data
+    let silverQ = supabase
+      .from("orders")
+      .select("id, customer_name, phone, address, product, price, created_at, delivery_status, lead_id, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at)")
+      .eq("delivery_status", "delivered")
+      .order("created_at", { ascending: false });
+    if (!isBDO) silverQ = silverQ.eq("tl_id", user.id);
+    const { data: silverOrders } = await silverQ;
+    const silverItems: SilverGoldenLead[] = (silverOrders || []).map((o: any) => ({
+      id: o.id,
+      name: o.leads?.name || o.customer_name,
+      phone: o.leads?.phone || o.phone,
+      address: o.leads?.address || o.address,
+      source: o.leads?.source || null,
+      created_at: o.leads?.created_at || o.created_at,
+      product: o.product,
+      price: o.price,
+    }));
+    setSilverData(silverItems);
+
+    // Golden data: Silver agent leads that got delivered again
+    let goldenLeadsQ = supabase
+      .from("leads")
+      .select("id, name, phone, address, source, created_at, agent_type")
+      .eq("agent_type", "silver")
+      .order("created_at", { ascending: false });
+    if (selectedCampaign) goldenLeadsQ = goldenLeadsQ.eq("campaign_id", selectedCampaign);
+    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", user.id);
+    const { data: silverAssignedLeads } = await goldenLeadsQ;
+
+    if (silverAssignedLeads && silverAssignedLeads.length > 0) {
+      const silverLeadIds = silverAssignedLeads.map(l => l.id);
+      const { data: deliveredFromSilver } = await supabase
+        .from("orders")
+        .select("lead_id")
+        .in("lead_id", silverLeadIds)
+        .eq("delivery_status", "delivered");
+      const deliveredIds = new Set((deliveredFromSilver || []).map(o => o.lead_id));
+      setGoldenData(silverAssignedLeads.filter(l => deliveredIds.has(l.id)).map(l => ({
+        id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
+      })));
+    } else {
+      setGoldenData([]);
     }
   }, [user, selectedCampaign, campaignMode]);
 
@@ -170,7 +217,6 @@ const TLLeads = () => {
     toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned"); loadData();
   };
 
-  // Processing: assign to any agent for direct handling
   const assignProcessing = async (leadId: string, agentId: string) => {
     await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
     toast.success(isBn ? "Processing data assign হয়েছে" : "Processing data assigned"); loadData();
@@ -254,10 +300,14 @@ const TLLeads = () => {
               </>
             ) : (
               <>
-                {["WordPress", "TL", "Bronze", "CSO", "Warehouse", "Steadfast", "Delivery", "CS", "Silver"].map((step, i) => (
+                {["WordPress", "TL", "Bronze", "CSO", "Warehouse", "Steadfast", "Delivery", "CS", "Silver", "Golden"].map((step, i) => (
                   <span key={i} className="flex items-center gap-1.5">
-                    <span className="px-2 py-1 rounded-md bg-card border border-border text-foreground font-medium">{step}</span>
-                    {i < 8 && <span className="text-primary font-bold">→</span>}
+                    <span className={`px-2 py-1 rounded-md border font-medium ${
+                      step === "Silver" ? "bg-gray-200 dark:bg-gray-700 border-gray-400 text-gray-800 dark:text-gray-200" :
+                      step === "Golden" ? "bg-amber-100 dark:bg-amber-900/30 border-amber-400 text-amber-800 dark:text-amber-300" :
+                      "bg-card border-border text-foreground"
+                    }`}>{step}</span>
+                    {i < 9 && <span className="text-primary font-bold">→</span>}
                   </span>
                 ))}
                 <span className="text-primary ml-1">🔄</span>
@@ -291,6 +341,12 @@ const TLLeads = () => {
               </TabsTrigger>
               <TabsTrigger value="deletesheet" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 Delete Sheet ({deleteSheetLeads.length})
+              </TabsTrigger>
+              <TabsTrigger value="silver" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
+                🥈 Silver ({silverData.length})
+              </TabsTrigger>
+              <TabsTrigger value="golden" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+                🥇 Golden ({goldenData.length})
               </TabsTrigger>
             </>
           )}
@@ -334,7 +390,7 @@ const TLLeads = () => {
                         </TableCell>
                         <TableCell>
                           <Button size="sm" disabled={!processingAssignments[lead.id]} onClick={() => assignProcessing(lead.id, processingAssignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেভ" : "Save"}
+                            {isBn ? "সেন্ড" : "Send"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -402,7 +458,7 @@ const TLLeads = () => {
                         </TableCell>
                         <TableCell>
                           <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেভ" : "Save"}
+                            {isBn ? "সেন্ড" : "Send"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -488,7 +544,7 @@ const TLLeads = () => {
                           </TableCell>
                           <TableCell>
                             <Button size="sm" disabled={!silverAssignments[o.id]} onClick={() => assignSilver(o.id, silverAssignments[o.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                              {isBn ? "সেভ" : "Save"}
+                              {isBn ? "সেন্ড" : "Send"}
                             </Button>
                           </TableCell>
                         </>
@@ -590,6 +646,100 @@ const TLLeads = () => {
                           </Select>
                           <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>Delete</Button>
                         </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ========== SILVER TAB — Raw data only, NO assign ========== */}
+        {!isProcessing && (
+          <TabsContent value="silver">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-heading">
+                  🥈 {isBn ? "সিলভার ডাটা — ব্রোঞ্জ থেকে প্রোডাক্ট রিসিভ হয়েছে" : "Silver Data — Product Received from Bronze"}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {isBn ? "স্টিডফাস্ট ডেলিভারি সম্পন্ন হওয়া ইউজারদের মূল তথ্য — কোনো Assign নেই, শুধু র ডাটা" : "Original user data from delivered orders — raw data only, no assignment"}
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
+                      <TableHead>{isBn ? "মূল্য" : "Price"}</TableHead>
+                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {silverData.length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        {isBn ? "কোনো সিলভার ডাটা নেই — ব্রোঞ্জ অর্ডার ডেলিভার হলে এখানে আসবে" : "No silver data — appears when Bronze orders are delivered"}
+                      </TableCell></TableRow>
+                    ) : silverData.map((item, i) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell className="font-medium">{item.name || "—"}</TableCell>
+                        <TableCell>{item.phone || "—"}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
+                        <TableCell>{item.product || "—"}</TableCell>
+                        <TableCell className="font-medium">{item.price ? `৳${item.price.toLocaleString()}` : "—"}</TableCell>
+                        <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ========== GOLDEN TAB — Raw data only, NO assign ========== */}
+        {!isProcessing && (
+          <TabsContent value="golden">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-heading">
+                  🥇 {isBn ? "গোল্ডেন ডাটা — সিলভার থেকে প্রোডাক্ট রিসিভ হয়েছে" : "Golden Data — Product Received from Silver"}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {isBn ? "সিলভার এজেন্টের মাধ্যমে পুনরায় ডেলিভারি সম্পন্ন — ইউজারের মূল তথ্য, কোনো Assign নেই" : "Re-delivered via Silver agents — original user data, no assignment"}
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead>{isBn ? "সোর্স" : "Source"}</TableHead>
+                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {goldenData.length === 0 ? (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        {isBn ? "কোনো গোল্ডেন ডাটা নেই — সিলভার অর্ডার ডেলিভার হলে এখানে আসবে" : "No golden data — appears when Silver orders are delivered"}
+                      </TableCell></TableRow>
+                    ) : goldenData.map((item, i) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell className="font-medium">{item.name || "—"}</TableCell>
+                        <TableCell>{item.phone || "—"}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
+                        <TableCell>{item.source || "—"}</TableCell>
+                        <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
