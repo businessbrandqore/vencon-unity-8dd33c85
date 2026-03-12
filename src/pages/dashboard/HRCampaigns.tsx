@@ -182,8 +182,10 @@ const HRCampaigns = () => {
     setEditName(detailCampaign.name);
     setEditDataMode(detailCampaign.data_mode as "lead" | "processing");
     setEditTLs(detailTLs.map((t) => t.id));
-    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active })));
+    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode || detailCampaign.data_mode || "lead" })));
     setEditing(true);
+    // Refresh TL users to get latest employees
+    fetchTLUsers();
   };
 
   const handleSaveEdit = async () => {
