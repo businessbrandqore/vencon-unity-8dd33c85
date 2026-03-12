@@ -183,7 +183,7 @@ const TLLeads = () => {
       let procQ = supabase.from("leads").select("*")
         .eq("campaign_id", selectedCampaign)
         .is("assigned_to", null).order("created_at", { ascending: false });
-      if (!isBDO) procQ = procQ.eq("tl_id", user.id);
+      if (!isBDO) procQ = procQ.eq("tl_id", getEffectiveTlId());
       const { data: proc } = await procQ;
       setProcessingLeads(proc || []);
     }
