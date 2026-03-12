@@ -79,6 +79,8 @@ export default function ManagerAttendance() {
   const [teamAttendance, setTeamAttendance] = useState<(AttendanceRow & { userName?: string })[]>([]);
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
+  const [teamFilter, setTeamFilter] = useState<"daily" | "monthly" | "yearly">("daily");
+  const [teamFilterDate, setTeamFilterDate] = useState<Date>(new Date());
 
   // Data distribution state
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
