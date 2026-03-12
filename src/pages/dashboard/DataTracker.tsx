@@ -192,9 +192,8 @@ const DataTracker = () => {
   // Fetch Golden data: orders from Silver agents that got delivered again
   // Golden = leads that have agent_type = 'silver' AND their order is delivered
   const { data: goldenLeads, isLoading: goldenLoading } = useQuery({
-    queryKey: ["tracker-golden", selectedCampaign, user?.id, isTL],
+    queryKey: ["tracker-golden", selectedCampaign, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
-      // Get leads assigned as silver that have delivered orders
       let q = supabase
         .from("leads")
         .select("id, name, phone, address, source, created_at, campaign_id, agent_type")
@@ -202,12 +201,11 @@ const DataTracker = () => {
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
-      if (isTL && user) q = q.eq("tl_id", user.id);
+      if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
       const { data: silverAssigned, error: sErr } = await q;
       if (sErr) throw sErr;
       if (!silverAssigned || silverAssigned.length === 0) return [];
 
-      // Check which of these silver leads have delivered orders
       const silverIds = silverAssigned.map(l => l.id);
       const { data: deliveredOrders, error: oErr } = await supabase
         .from("orders")
