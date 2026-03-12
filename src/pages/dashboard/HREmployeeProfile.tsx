@@ -142,7 +142,8 @@ const HREmployeeProfile = () => {
     }
 
     // Handle campaign change
-    if (editCampaignId !== currentCampaignId) {
+    const effectiveCampaignId = editCampaignId === "none" ? "" : editCampaignId;
+    if (effectiveCampaignId !== currentCampaignId) {
       const isTL = ["Team Leader", "Assistant Team Leader"].includes(emp.role);
       if (isTL) {
         // Remove old
