@@ -138,6 +138,63 @@ const DataTracker = () => {
     enabled: !!user,
   });
 
+  // Fetch Silver data: orders delivered from Bronze agents → original lead info
+  const { data: silverLeads, isLoading: silverLoading } = useQuery({
+    queryKey: ["tracker-silver", selectedCampaign, user?.id, isTL],
+    queryFn: async () => {
+      let q = supabase
+        .from("orders")
+        .select("id, lead_id, customer_name, phone, address, product, price, created_at, delivery_status, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at, campaign_id)")
+        .eq("delivery_status", "delivered")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (isTL && user) q = q.eq("tl_id", user.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      // Filter to only bronze-origin leads
+      const result = (data || []).filter((o: any) => o.leads);
+      // Further filter by campaign if selected
+      if (selectedCampaign !== "all") {
+        return result.filter((o: any) => o.leads?.campaign_id === selectedCampaign);
+      }
+      return result;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch Golden data: orders from Silver agents that got delivered again
+  // Golden = leads that have agent_type = 'silver' AND their order is delivered
+  const { data: goldenLeads, isLoading: goldenLoading } = useQuery({
+    queryKey: ["tracker-golden", selectedCampaign, user?.id, isTL],
+    queryFn: async () => {
+      // Get leads assigned as silver that have delivered orders
+      let q = supabase
+        .from("leads")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type")
+        .eq("agent_type", "silver")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (isTL && user) q = q.eq("tl_id", user.id);
+      const { data: silverAssigned, error: sErr } = await q;
+      if (sErr) throw sErr;
+      if (!silverAssigned || silverAssigned.length === 0) return [];
+
+      // Check which of these silver leads have delivered orders
+      const silverIds = silverAssigned.map(l => l.id);
+      const { data: deliveredOrders, error: oErr } = await supabase
+        .from("orders")
+        .select("lead_id")
+        .in("lead_id", silverIds)
+        .eq("delivery_status", "delivered");
+      if (oErr) throw oErr;
+
+      const deliveredLeadIds = new Set((deliveredOrders || []).map(o => o.lead_id));
+      return silverAssigned.filter(l => deliveredLeadIds.has(l.id));
+    },
+    enabled: !!user,
+  });
+
   // Fetch agents for TL assignment
   const { data: agents } = useQuery({
     queryKey: ["tracker-agents", user?.id, selectedCampaign],
@@ -335,6 +392,12 @@ const DataTracker = () => {
             <TabsTrigger value="raw_data" className="text-xs">
               📦 {isBn ? "র ডাটা" : "Raw Data"} ({rawLeads.length})
             </TabsTrigger>
+            <TabsTrigger value="silver_data" className="text-xs">
+              🥈 {isBn ? "সিলভার" : "Silver"} ({(silverLeads || []).length})
+            </TabsTrigger>
+            <TabsTrigger value="golden_data" className="text-xs">
+              🥇 {isBn ? "গোল্ডেন" : "Golden"} ({(goldenLeads || []).length})
+            </TabsTrigger>
             <TabsTrigger value="all_leads" className="text-xs">
               🎯 {isBn ? "সব ডাটা" : "All Data"} ({allLeads.length})
             </TabsTrigger>
@@ -501,6 +564,116 @@ const DataTracker = () => {
                             </Button>
                           </TableCell>
                         )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ========== SILVER DATA TAB ========== */}
+        <TabsContent value="silver_data">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-heading flex items-center gap-2">
+                🥈 {isBn ? "সিলভার ডাটা — ব্রোঞ্জ থেকে প্রোডাক্ট রিসিভ হয়েছে (স্টিডফাস্ট ডেলিভার্ড)" : "Silver Data — Product received from Bronze (Steadfast Delivered)"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "এই ডাটা গুলো ব্রোঞ্জ এজেন্টদের মাধ্যমে অর্ডার হয়ে স্টিডফাস্ট থেকে ডেলিভারি সম্পন্ন হয়েছে — ইউজারের মূল তথ্য" : "Orders from Bronze agents that were delivered via Steadfast — original user data"}
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "পণ্য" : "Product"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "মূল্য" : "Price"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {silverLoading ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : filterBySearch(silverLeads || []).length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"}</TableCell></TableRow>
+                    ) : filterBySearch(silverLeads || []).map((order: any, i: number) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {order.leads?.name || order.customer_name || "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{order.leads?.phone || order.phone || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{order.leads?.address || order.address || "—"}</TableCell>
+                        <TableCell className="text-sm">{order.product || "—"}</TableCell>
+                        <TableCell className="text-sm font-medium">৳{(order.price || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {order.created_at ? format(new Date(order.created_at), "dd MMM yyyy") : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ========== GOLDEN DATA TAB ========== */}
+        <TabsContent value="golden_data">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-heading flex items-center gap-2">
+                🥇 {isBn ? "গোল্ডেন ডাটা — সিলভার থেকে প্রোডাক্ট রিসিভ হয়েছে" : "Golden Data — Product received from Silver"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "সিলভার এজেন্টদের মাধ্যমে পুনরায় অর্ডার হয়ে স্টিডফাস্ট থেকে ডেলিভারি সম্পন্ন — ইউজারের মূল তথ্য" : "Re-ordered via Silver agents and delivered — original user data"}
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {goldenLoading ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : filterBySearch(goldenLeads || []).length === 0 ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data"}</TableCell></TableRow>
+                    ) : filterBySearch(goldenLeads || []).map((lead: any, i: number) => (
+                      <TableRow key={lead.id}>
+                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {lead.name || "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{lead.address || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">{lead.source || "—"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
