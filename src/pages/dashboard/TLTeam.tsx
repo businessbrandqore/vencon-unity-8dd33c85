@@ -406,50 +406,28 @@ const TLTeam = () => {
   };
 
 
+  // Initial load - only once
   useEffect(() => {
-    if (!user) return;
+    if (!user || initializedRef.current) return;
+    initializedRef.current = true;
     loadTLs();
     if (isBDO) loadOtherEmployees();
-    loadDataRequests();
+  }, [user]);
 
-    // Realtime subscriptions for dynamic updates
+  // Realtime subscriptions - stable, no dependency on view state
+  useEffect(() => {
+    if (!user) return;
+
     const channel = supabase
       .channel('tl-team-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'data_requests' }, () => {
-        loadDataRequests();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => {
-        // Team structure changed - reload current view
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-        else loadTLs();
-      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, () => {
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
-        // User data changed (new hire, profile update)
-        loadTLs();
-        if (isBDO) loadOtherEmployees();
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        // Performance stats changed
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-        else loadTLs();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
-        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
-        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
-        else loadTLs();
+        // Only reload groups on group_members change
+        loadExistingGroups();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, viewLevel, selectedTL, selectedGL]);
+  }, [user]);
 
   // Navigation handlers
   const navigateToTL = async (tl: PersonStats) => {
