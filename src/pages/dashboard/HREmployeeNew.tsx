@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,8 +68,16 @@ const HREmployeeNew = () => {
     checkOut: "18:00",
     gpsLatitude: "",
     gpsLongitude: "",
+    campaignId: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from("campaigns").select("id, name").eq("status", "active").then(({ data }) => {
+      if (data) setCampaigns(data);
+    });
+  }, []);
 
   const set = (key: string, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -128,6 +136,36 @@ const HREmployeeNew = () => {
       toast({ title: insertErr?.message || "Error", variant: "destructive" });
       setSubmitting(false);
       return;
+    }
+
+    // Assign to campaign if selected
+    if (form.campaignId) {
+      const isTLRole = ["Team Leader", "Assistant Team Leader"].includes(form.role);
+      if (isTLRole) {
+        await supabase.from("campaign_tls").insert({
+          campaign_id: form.campaignId,
+          tl_id: newUser.id,
+        });
+      } else {
+        // For agents and other roles, store campaign assignment in campaign_agent_roles
+        // TL will be assigned later or we find the campaign's TL
+        const { data: campaignTl } = await supabase
+          .from("campaign_tls")
+          .select("tl_id")
+          .eq("campaign_id", form.campaignId)
+          .limit(1)
+          .single();
+
+        if (campaignTl) {
+          await supabase.from("campaign_agent_roles").insert({
+            campaign_id: form.campaignId,
+            agent_id: newUser.id,
+            tl_id: campaignTl.tl_id,
+            is_bronze: true,
+            is_silver: false,
+          });
+        }
+      }
     }
 
     if (isAgent) {
@@ -312,6 +350,22 @@ const HREmployeeNew = () => {
                 {isBn ? "⚠ SA approval প্রয়োজন হবে" : "⚠ SA approval will be required"}
               </p>
             )}
+          </div>
+          {/* Campaign Selection */}
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "ক্যাম্পেইন" : "Campaign"}
+            </label>
+            <Select value={form.campaignId} onValueChange={(v) => set("campaignId", v)}>
+              <SelectTrigger className={`${fieldClass} w-full`}>
+                <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন করুন (ঐচ্ছিক)" : "Select campaign (optional)"} />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border max-h-60">
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
