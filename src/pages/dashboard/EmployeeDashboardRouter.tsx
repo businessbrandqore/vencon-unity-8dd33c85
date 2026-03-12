@@ -15,7 +15,7 @@ export default function EmployeeDashboardRouter() {
   if (!user) return null;
 
   // TS dashboard handles its own attendance flow internally
-  if (user.role === "telesales_executive" || user.role === "assistant_team_leader") {
+  if (user.role === "telesales_executive") {
     return <EmployeeTSDashboard />;
   }
 
