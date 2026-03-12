@@ -72,7 +72,7 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
       <div>
         <span className="font-heading text-sm font-bold text-foreground tracking-wider">VENCON</span>
         <p className="font-body text-[10px] text-muted-foreground">
-          {user.role === "Business Development And Marketing Manager" ? t("bdo_panel") : user.role === "assistant_team_leader" ? t("atl_panel") : (panelConfig ? t(panelConfig.nameKey) : "")}
+          {user.role === "Business Development And Marketing Manager" ? t("bdo_panel") : user.role === "Assistant Team Leader" ? t("atl_panel") : (panelConfig ? t(panelConfig.nameKey) : "")}
         </p>
       </div>
     </div>
