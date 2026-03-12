@@ -176,7 +176,7 @@ const TLDashboard = () => {
       deleteSheet: deleteSheet || 0,
       receiveRatio: ratio,
     });
-  }, [user, selectedCampaign, isBDO, isATL]);
+  }, [user, selectedCampaign, isBDO, isATL, getEffectiveTlId]);
 
   useEffect(() => {
     fetchStats();
