@@ -355,21 +355,40 @@ export default function GroupLeaderDashboard() {
   return (
     <div className="space-y-6">
       {/* ═══ SECTION 1: TOP STATS ═══ */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-heading text-xl flex items-center gap-2">
             <Users className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
             গ্রুপ লিডার ড্যাশবোর্ড
           </h1>
-          {campaignName && (
-            <p className="text-sm text-muted-foreground mt-1">
-              ক্যাম্পেইন: <span className="font-semibold text-foreground">{campaignName}</span>
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-1">
+            {campaignName ? (
+              <>ক্যাম্পেইন: <span className="font-semibold text-foreground">{campaignName}</span></>
+            ) : (
+              "ক্যাম্পেইন: সব"
+            )}
+          </p>
         </div>
-        <Button variant="outline" size="icon" onClick={loadData} disabled={loading}>
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaignOptions.map((campaign) => (
+                <SelectItem key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" size="icon" onClick={loadData} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
