@@ -951,7 +951,7 @@ const TLTeam = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); loadGLAssignApprovals(); }}
+            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); loadGLAssignApprovals(); loadTLCampaigns(); }}
             className="gap-1.5"
           >
             <Users className="h-4 w-4" />
