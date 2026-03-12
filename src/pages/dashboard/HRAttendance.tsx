@@ -224,7 +224,7 @@ const HRAttendance = () => {
       .from("users")
       .select("id, name")
       .eq("is_active", true)
-      .eq("panel", "employee")
+      .in("panel", ["employee", "tl", "hr"])
       .order("name");
     setEmployees(data || []);
   };

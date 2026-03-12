@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -5,6 +6,7 @@ import { sidebarMenus, SidebarItem } from "@/lib/sidebarConfig";
 import { getPanelByType } from "@/lib/panelConfig";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PanelSidebarProps {
   open: boolean;
@@ -24,6 +26,24 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string>("VENCON");
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ui_config")
+        .single();
+      if (data?.value) {
+        const val = data.value as Record<string, string>;
+        if (val.company_logo) setCompanyLogo(val.company_logo);
+        if (val.company_name) setCompanyName(val.company_name);
+      }
+    };
+    fetchBranding();
+  }, []);
 
   if (!user) return null;
 
@@ -63,14 +83,18 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
 
   const logoSection = (
     <div className="px-4 py-4 flex items-center gap-3">
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center font-heading text-sm font-bold"
-        style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
-      >
-        V
-      </div>
+      {companyLogo ? (
+        <img src={companyLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+      ) : (
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center font-heading text-sm font-bold"
+          style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
+        >
+          {companyName.charAt(0)}
+        </div>
+      )}
       <div>
-        <span className="font-heading text-sm font-bold text-foreground tracking-wider">VENCON</span>
+        <span className="font-heading text-sm font-bold text-foreground tracking-wider">{companyName}</span>
         <p className="font-body text-[10px] text-muted-foreground">
           {user.role === "Business Development And Marketing Manager" ? t("bdo_panel") : user.role === "Assistant Team Leader" ? t("atl_panel") : (panelConfig ? t(panelConfig.nameKey) : "")}
         </p>
@@ -140,13 +164,17 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center font-heading text-xs font-bold"
-              style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
-            >
-              V
-            </div>
-            <span className="font-heading text-sm font-bold text-foreground">VENCON</span>
+            {companyLogo ? (
+              <img src={companyLogo} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
+            ) : (
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center font-heading text-xs font-bold"
+                style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
+              >
+                {companyName.charAt(0)}
+              </div>
+            )}
+            <span className="font-heading text-sm font-bold text-foreground">{companyName}</span>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
