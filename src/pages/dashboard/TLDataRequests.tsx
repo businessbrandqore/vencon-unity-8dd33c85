@@ -45,6 +45,15 @@ export default function TLDataRequests() {
   const [sending, setSending] = useState(false);
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isATL = user?.role === "Assistant Team Leader";
+  const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
+
+  const getEffectiveTlId = useCallback(() => {
+    if (!isATL || !user) return user?.id || "";
+    if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
+    const vals = Object.values(atlTlMap);
+    return vals.length > 0 ? vals[0] : user?.id || "";
+  }, [isATL, user, selectedCampaign, atlTlMap]);
 
   // Load campaigns
   const loadCampaigns = useCallback(async () => {
@@ -52,6 +61,21 @@ export default function TLDataRequests() {
     if (isBDO) {
       const { data } = await supabase.from("campaigns").select("id, name, data_mode").eq("status", "active");
       setCampaigns(data || []);
+    } else if (isATL) {
+      const { data } = await supabase
+        .from("campaign_agent_roles")
+        .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+        .eq("agent_id", user.id);
+      if (data) {
+        const tlMap: Record<string, string> = {};
+        const seen = new Set<string>();
+        const list = data
+          .filter((d: any) => d.campaigns)
+          .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
+          .map((d: any) => { tlMap[d.campaigns.id] = d.tl_id; return d.campaigns; });
+        setAtlTlMap(tlMap);
+        setCampaigns(list);
+      }
     } else {
       const { data } = await supabase
         .from("campaign_tls")
@@ -59,7 +83,7 @@ export default function TLDataRequests() {
         .eq("tl_id", user.id);
       setCampaigns((data || []).map((d: any) => d.campaigns).filter(Boolean));
     }
-  }, [user, isBDO]);
+  }, [user, isBDO, isATL]);
 
   // Load agents for selected campaign + mode
   const loadAgents = useCallback(async () => {
@@ -68,7 +92,7 @@ export default function TLDataRequests() {
       .from("campaign_agent_roles")
       .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
       .eq("campaign_id", selectedCampaign)
-      .eq("tl_id", user.id);
+      .eq("tl_id", getEffectiveTlId());
 
     const { data } = await q;
     if (!data) { setAgents([]); return; }
@@ -78,7 +102,7 @@ export default function TLDataRequests() {
     filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
     setAgents(Array.from(unique, ([id, name]) => ({ id, name })));
     setSelectedAgent("");
-  }, [user, selectedCampaign, distDataMode]);
+  }, [user, selectedCampaign, distDataMode, getEffectiveTlId]);
 
   // Count available raw leads
   const loadAvailableCount = useCallback(async () => {
@@ -90,7 +114,7 @@ export default function TLDataRequests() {
       .eq("status", "fresh")
       .is("assigned_to", null);
 
-    if (!isBDO) q = q.eq("tl_id", user.id);
+    if (!isBDO) q = q.eq("tl_id", getEffectiveTlId());
 
     if (distDataMode === "lead") {
       q = q.or("source.is.null,source.neq.processing").or("import_source.is.null,import_source.neq.processing");
@@ -100,7 +124,7 @@ export default function TLDataRequests() {
 
     const { count } = await q;
     setAvailableCount(count || 0);
-  }, [user, selectedCampaign, distDataMode, isBDO]);
+  }, [user, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
 
   // Send data to agent
   const handleSendData = async () => {
@@ -121,7 +145,7 @@ export default function TLDataRequests() {
         .order("created_at", { ascending: true })
         .limit(count);
 
-      if (!isBDO) q = q.eq("tl_id", user.id);
+      if (!isBDO) q = q.eq("tl_id", getEffectiveTlId());
 
       if (distDataMode === "lead") {
         q = q.or("source.is.null,source.neq.processing").or("import_source.is.null,import_source.neq.processing");
@@ -167,7 +191,7 @@ export default function TLDataRequests() {
     const { data } = await supabase
       .from("data_requests")
       .select("*")
-      .eq("tl_id", user.id)
+      .eq("tl_id", getEffectiveTlId())
       .order("created_at", { ascending: false });
 
     if (data) {
@@ -185,7 +209,7 @@ export default function TLDataRequests() {
       setDataRequests(enriched);
     }
     setLoading(false);
-  }, [user]);
+  }, [user, getEffectiveTlId]);
 
   useEffect(() => {
     loadDataRequests();
