@@ -53,7 +53,7 @@ const TLLeads = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
-  const isATL = user?.role === "Assistant Team Leader";
+  
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
   // Get the effective TL id for data queries (ATL uses their assigned TL's id)
