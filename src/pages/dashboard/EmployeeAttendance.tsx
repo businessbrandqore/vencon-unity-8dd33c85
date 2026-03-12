@@ -159,18 +159,22 @@ export default function EmployeeAttendance() {
     if (!user || !checkOutMood) { toast.error("মুড নির্বাচন করুন"); return; }
     const now = new Date();
     let earlyOut = false;
+    let earlyMinutes = 0;
     let extraDeduction = 0;
     if (profile?.shift_end) {
       const parts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-      if (now < shiftEnd) { earlyOut = true; extraDeduction = deductionConfig.early_checkout_amount; }
+      if (now < shiftEnd) {
+        earlyOut = true;
+        earlyMinutes = Math.ceil((shiftEnd.getTime() - now.getTime()) / 60000);
+        extraDeduction = getDeductionAmount(deductionConfig.early_tiers, earlyMinutes);
+      }
     }
 
     if (todayRecord) {
       await supabase.from("attendance").update({
-        clock_out: now.toISOString(),
-        mood_out: checkOutMood,
+        clock_out: now.toISOString(), mood_out: checkOutMood,
         is_early_out: earlyOut,
         deduction_amount: (Number(todayRecord.deduction_amount) || 0) + extraDeduction,
       }).eq("id", todayRecord.id);
