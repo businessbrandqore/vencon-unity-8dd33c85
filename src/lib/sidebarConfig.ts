@@ -22,6 +22,7 @@ import {
   Gift,
   Star,
   BookOpen,
+  ShieldCheck,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
