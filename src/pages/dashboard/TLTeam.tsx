@@ -69,6 +69,8 @@ const TLTeam = () => {
   const [existingGroups, setExistingGroups] = useState<{ leader: { id: string; name: string }; members: { id: string; name: string }[] }[]>([]);
   const [groupApprovals, setGroupApprovals] = useState<any[]>([]);
   const [groupSubmitting, setGroupSubmitting] = useState(false);
+  const [groupCampaignFilter, setGroupCampaignFilter] = useState("");
+  const [tlCampaigns, setTlCampaigns] = useState<{ id: string; name: string }[]>([]);
 
   // GL Campaign Assignment state
   const [glAssignOpen, setGlAssignOpen] = useState(false);
