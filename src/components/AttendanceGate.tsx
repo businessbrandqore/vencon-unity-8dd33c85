@@ -149,7 +149,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
     }
     setShowClockOutModal(false);
     await loadAttendance();
-    toast.success(earlyOut ? "Check Out হয়েছে (Early — ৳33 কর্তন)" : "Check Out সফল ✓");
+    toast.success(earlyOut ? `Check Out হয়েছে (Early — ৳${deductionConfig.early_checkout_amount} কর্তন)` : "Check Out সফল ✓");
   };
 
   if (!profile || isWithinShift === null || loading) {
