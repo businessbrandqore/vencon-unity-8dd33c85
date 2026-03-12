@@ -28,6 +28,7 @@ const TLDashboard = () => {
   });
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isATL = user?.role === "assistant_team_leader";
 
   useEffect(() => {
     if (!user) return;
@@ -40,6 +41,22 @@ const TLDashboard = () => {
           .order("created_at", { ascending: false });
         if (data) {
           const list = data.map((c: any) => ({ id: c.id, name: c.name }));
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+        }
+      } else if (isATL) {
+        // ATL sees campaigns they're assigned to as agent
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, campaigns(id, name)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const seen = new Set<string>();
+          const list = data
+            .map((d: any) => d.campaigns)
+            .filter(Boolean)
+            .filter((c: any) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })
+            .map((c: any) => ({ id: c.id, name: c.name }));
           setCampaigns(list);
           if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
@@ -63,14 +80,18 @@ const TLDashboard = () => {
 
   const fetchStats = useCallback(async () => {
     if (!user || !selectedCampaign) return;
-    // New leads (fresh, unassigned in this campaign)
+    // New leads for ATL: show leads assigned to them
     let leadsQ = supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
-      .eq("campaign_id", selectedCampaign)
-      .is("assigned_to", null)
-      .eq("status", "fresh");
-    if (!isBDO) leadsQ = leadsQ.eq("tl_id", user.id);
+      .eq("campaign_id", selectedCampaign);
+    if (isATL) {
+      leadsQ = leadsQ.eq("assigned_to", user.id);
+    } else if (!isBDO) {
+      leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh").eq("tl_id", user.id);
+    } else {
+      leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh");
+    }
 
     const { count: newLeads } = await leadsQ;
 
@@ -79,7 +100,8 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending_cso");
-    if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+    if (isATL) ordersQ = ordersQ.eq("agent_id", user.id);
+    else if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
 
     const { count: confirmedOrders } = await ordersQ;
 
@@ -88,7 +110,8 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "call_done");
-    if (!isBDO) callQ = callQ.eq("tl_id", user.id);
+    if (isATL) callQ = callQ.eq("agent_id", user.id);
+    else if (!isBDO) callQ = callQ.eq("tl_id", user.id);
 
     const { count: callDoneQueue } = await callQ;
 
@@ -97,7 +120,8 @@ const TLDashboard = () => {
       .from("pre_orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending");
-    if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    if (isATL) preQ = preQ.eq("agent_id", user.id);
+    else if (!isBDO) preQ = preQ.eq("tl_id", user.id);
 
     const { count: preOrders } = await preQ;
 
@@ -107,7 +131,8 @@ const TLDashboard = () => {
       .select("*", { count: "exact", head: true })
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5);
-    if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    if (isATL) delQ = delQ.eq("assigned_to", user.id);
+    else if (!isBDO) delQ = delQ.eq("tl_id", user.id);
 
     const { count: deleteSheet } = await delQ;
 
@@ -120,7 +145,8 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .gte("created_at", startOfMonth.toISOString());
-    if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
+    if (isATL) totalQ = totalQ.eq("agent_id", user.id);
+    else if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
 
     const { count: totalOrders } = await totalQ;
 
@@ -129,7 +155,8 @@ const TLDashboard = () => {
       .select("*", { count: "exact", head: true })
       .eq("delivery_status", "delivered")
       .gte("created_at", startOfMonth.toISOString());
-    if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
+    if (isATL) delivQ = delivQ.eq("agent_id", user.id);
+    else if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
 
     const { count: deliveredOrders } = await delivQ;
 
@@ -145,7 +172,7 @@ const TLDashboard = () => {
       deleteSheet: deleteSheet || 0,
       receiveRatio: ratio,
     });
-  }, [user, selectedCampaign, isBDO]);
+  }, [user, selectedCampaign, isBDO, isATL]);
 
   useEffect(() => {
     fetchStats();
@@ -161,6 +188,14 @@ const TLDashboard = () => {
         setCampaigns(list);
         if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
       }
+    } else if (isATL) {
+      const { data } = await supabase.from("campaign_agent_roles").select("campaign_id, campaigns(id, name)").eq("agent_id", user.id);
+      if (data) {
+        const seen = new Set<string>();
+        const list = data.map((d: any) => d.campaigns).filter(Boolean).filter((c: any) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; }).map((c: any) => ({ id: c.id, name: c.name }));
+        setCampaigns(list);
+        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+      }
     } else {
       const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
       if (data) {
@@ -169,7 +204,7 @@ const TLDashboard = () => {
         if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
       }
     }
-  }, [user, isBDO, selectedCampaign]);
+  }, [user, isBDO, isATL, selectedCampaign]);
 
   // Realtime: auto-refresh stats + campaigns when related tables change
   useEffect(() => {
@@ -203,7 +238,7 @@ const TLDashboard = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="font-heading text-2xl font-bold text-foreground">
-            {isBDO ? (isBn ? "BDO ড্যাশবোর্ড" : "BDO Dashboard") : (isBn ? "TL ড্যাশবোর্ড" : "TL Dashboard")}
+            {isBDO ? (isBn ? "BDO ড্যাশবোর্ড" : "BDO Dashboard") : isATL ? (isBn ? "ATL ড্যাশবোর্ড" : "ATL Dashboard") : (isBn ? "TL ড্যাশবোর্ড" : "TL Dashboard")}
           </h2>
           <p className="font-body text-sm text-muted-foreground mt-1">
             {isBn ? "স্বাগতম" : "Welcome"}, {user.name}
