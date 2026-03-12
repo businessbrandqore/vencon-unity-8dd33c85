@@ -1520,6 +1520,7 @@ export type Database = {
         Args: { _month: number; _user_id: string; _year: number }
         Returns: Json
       }
+      get_atl_tl_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_id: { Args: { _auth_id: string }; Returns: string }
       get_user_panel: {
         Args: { _auth_id: string }
@@ -1532,6 +1533,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_atl: { Args: { _auth_id: string }; Returns: boolean }
       is_bdo: { Args: { _auth_id: string }; Returns: boolean }
       is_hr: { Args: { _auth_id: string }; Returns: boolean }
       is_sa: { Args: { _auth_id: string }; Returns: boolean }
