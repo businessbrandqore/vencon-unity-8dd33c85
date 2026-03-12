@@ -347,38 +347,35 @@ export default function EmployeeTSDashboard() {
 
   const handleClockIn = async () => {
     if (!user || !selectedMood) { toast.error("মুড নির্বাচন করুন"); return; }
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowISO = now.toISOString();
     let isLate = false;
+    let lateMinutes = 0;
     if (profile?.shift_start) {
       const shiftParts = profile.shift_start.split(":");
       const shiftDate = new Date();
       shiftDate.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
-      if (new Date() > shiftDate) isLate = true;
+      if (now > shiftDate) {
+        isLate = true;
+        lateMinutes = Math.ceil((now.getTime() - shiftDate.getTime()) / 60000);
+      }
     }
-    const lateAmt = deductionConfig.late_checkin_amount;
+    const lateAmt = isLate ? getDeductionAmount(deductionConfig.late_tiers, lateMinutes) : 0;
     if (todayAttendance) {
       await supabase.from("attendance").update({
-        clock_in: now,
-        mood_in: selectedMood,
-        mood_note: moodNote || null,
-        is_late: isLate,
-        deduction_amount: isLate ? lateAmt : 0,
+        clock_in: nowISO, mood_in: selectedMood, mood_note: moodNote || null,
+        is_late: isLate, deduction_amount: lateAmt,
       }).eq("id", todayAttendance.id);
     } else {
       await supabase.from("attendance").insert({
-        user_id: user.id,
-        date: todayStr(),
-        clock_in: now,
-        mood_in: selectedMood,
-        mood_note: moodNote || null,
-        is_late: isLate,
-        deduction_amount: isLate ? lateAmt : 0,
+        user_id: user.id, date: todayStr(), clock_in: nowISO, mood_in: selectedMood,
+        mood_note: moodNote || null, is_late: isLate, deduction_amount: lateAmt,
       });
     }
     setShowMoodInModal(false);
     setClockedIn(true);
     await loadAttendance();
-    toast.success(isLate ? `Check In হয়েছে (Late entry — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (${lateMinutes} মিনিট দেরি — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   const handleClockOut = async () => {
