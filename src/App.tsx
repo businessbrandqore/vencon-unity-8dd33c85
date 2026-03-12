@@ -112,6 +112,7 @@ const App = () => (
             <Route element={<DashboardLayout panel="tl" />}>
               <Route path="/tl/dashboard" element={<TLDashboard />} />
               <Route path="/tl/leads" element={<TLLeads />} />
+              <Route path="/tl/my-leads" element={<EmployeeLeads />} />
               <Route path="/tl/my-orders" element={<EmployeeMyOrders />} />
               <Route path="/tl/data-tracker" element={<DataTracker />} />
               <Route path="/tl/attendance" element={<ManagerAttendance />} />
