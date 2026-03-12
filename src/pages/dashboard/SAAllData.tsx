@@ -170,6 +170,15 @@ const SAAllData = () => {
               ))}
             </select>
             <select
+              value={dataModeFilter}
+              onChange={(e) => setDataModeFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
+            >
+              <option value="all">{isBn ? "সব ডাটা" : "All Data"}</option>
+              <option value="lead">{isBn ? "লিড" : "Lead"}</option>
+              <option value="processing">{isBn ? "প্রসেসিং" : "Processing"}</option>
+            </select>
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"

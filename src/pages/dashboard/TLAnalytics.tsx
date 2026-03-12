@@ -110,6 +110,16 @@ const TLAnalytics = () => {
         <h2 className="font-heading text-2xl font-bold text-foreground">
           {isBn ? "অ্যানালিটিক্স" : "Analytics"}
         </h2>
+        <Select value={dataMode} onValueChange={setDataMode}>
+          <SelectTrigger className="w-40 bg-secondary border-border">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"}</SelectItem>
+            <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+            <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
           <SelectTrigger className="w-64 border-[hsl(var(--panel-tl))] bg-secondary">
             <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
