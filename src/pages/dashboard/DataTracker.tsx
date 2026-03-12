@@ -573,6 +573,116 @@ const DataTracker = () => {
           </Card>
         </TabsContent>
 
+        {/* ========== SILVER DATA TAB ========== */}
+        <TabsContent value="silver_data">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-heading flex items-center gap-2">
+                🥈 {isBn ? "সিলভার ডাটা — ব্রোঞ্জ থেকে প্রোডাক্ট রিসিভ হয়েছে (স্টিডফাস্ট ডেলিভার্ড)" : "Silver Data — Product received from Bronze (Steadfast Delivered)"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "এই ডাটা গুলো ব্রোঞ্জ এজেন্টদের মাধ্যমে অর্ডার হয়ে স্টিডফাস্ট থেকে ডেলিভারি সম্পন্ন হয়েছে — ইউজারের মূল তথ্য" : "Orders from Bronze agents that were delivered via Steadfast — original user data"}
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "পণ্য" : "Product"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "মূল্য" : "Price"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {silverLoading ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : filterBySearch(silverLeads || []).length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"}</TableCell></TableRow>
+                    ) : filterBySearch(silverLeads || []).map((order: any, i: number) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {order.leads?.name || order.customer_name || "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{order.leads?.phone || order.phone || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{order.leads?.address || order.address || "—"}</TableCell>
+                        <TableCell className="text-sm">{order.product || "—"}</TableCell>
+                        <TableCell className="text-sm font-medium">৳{(order.price || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {order.created_at ? format(new Date(order.created_at), "dd MMM yyyy") : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ========== GOLDEN DATA TAB ========== */}
+        <TabsContent value="golden_data">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-heading flex items-center gap-2">
+                🥇 {isBn ? "গোল্ডেন ডাটা — সিলভার থেকে প্রোডাক্ট রিসিভ হয়েছে" : "Golden Data — Product received from Silver"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "সিলভার এজেন্টদের মাধ্যমে পুনরায় অর্ডার হয়ে স্টিডফাস্ট থেকে ডেলিভারি সম্পন্ন — ইউজারের মূল তথ্য" : "Re-ordered via Silver agents and delivered — original user data"}
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {goldenLoading ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : filterBySearch(goldenLeads || []).length === 0 ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data"}</TableCell></TableRow>
+                    ) : filterBySearch(goldenLeads || []).map((lead: any, i: number) => (
+                      <TableRow key={lead.id}>
+                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {lead.name || "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{lead.address || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">{lead.source || "—"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ========== ALL DATA TAB ========== */}
         <TabsContent value="all_leads">
           <Card>
