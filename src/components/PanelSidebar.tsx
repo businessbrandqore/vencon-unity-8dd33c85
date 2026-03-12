@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -5,6 +6,7 @@ import { sidebarMenus, SidebarItem } from "@/lib/sidebarConfig";
 import { getPanelByType } from "@/lib/panelConfig";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PanelSidebarProps {
   open: boolean;
