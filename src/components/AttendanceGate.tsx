@@ -29,6 +29,7 @@ interface AttendanceGateProps {
 }
 
 export default function AttendanceGate({ children }: AttendanceGateProps) {
+  const deductionConfig = useDeductionConfig();
   const { user } = useAuth();
 
   const [profile, setProfile] = useState<{ shift_start: string | null; shift_end: string | null } | null>(null);
