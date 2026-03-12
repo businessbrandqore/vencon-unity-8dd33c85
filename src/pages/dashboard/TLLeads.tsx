@@ -53,6 +53,7 @@ const TLLeads = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isGL = user?.role === "group_leader";
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
