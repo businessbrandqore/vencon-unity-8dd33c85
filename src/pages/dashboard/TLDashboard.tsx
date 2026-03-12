@@ -91,15 +91,14 @@ const TLDashboard = () => {
 
   const fetchStats = useCallback(async () => {
     if (!user || !selectedCampaign) return;
-    // New leads for ATL: show leads assigned to them
+    const effectiveTlId = getEffectiveTlId();
+    // New leads
     let leadsQ = supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
       .eq("campaign_id", selectedCampaign);
-    if (isATL) {
-      leadsQ = leadsQ.eq("assigned_to", user.id);
-    } else if (!isBDO) {
-      leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh").eq("tl_id", user.id);
+    if (!isBDO) {
+      leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh").eq("tl_id", effectiveTlId);
     } else {
       leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh");
     }
@@ -111,8 +110,7 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending_cso");
-    if (isATL) ordersQ = ordersQ.eq("agent_id", user.id);
-    else if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+    if (!isBDO) ordersQ = ordersQ.eq("tl_id", effectiveTlId);
 
     const { count: confirmedOrders } = await ordersQ;
 
@@ -121,8 +119,7 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "call_done");
-    if (isATL) callQ = callQ.eq("agent_id", user.id);
-    else if (!isBDO) callQ = callQ.eq("tl_id", user.id);
+    if (!isBDO) callQ = callQ.eq("tl_id", effectiveTlId);
 
     const { count: callDoneQueue } = await callQ;
 
@@ -131,8 +128,7 @@ const TLDashboard = () => {
       .from("pre_orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending");
-    if (isATL) preQ = preQ.eq("agent_id", user.id);
-    else if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    if (!isBDO) preQ = preQ.eq("tl_id", effectiveTlId);
 
     const { count: preOrders } = await preQ;
 
@@ -142,8 +138,7 @@ const TLDashboard = () => {
       .select("*", { count: "exact", head: true })
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5);
-    if (isATL) delQ = delQ.eq("assigned_to", user.id);
-    else if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    if (!isBDO) delQ = delQ.eq("tl_id", effectiveTlId);
 
     const { count: deleteSheet } = await delQ;
 
@@ -156,8 +151,7 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .gte("created_at", startOfMonth.toISOString());
-    if (isATL) totalQ = totalQ.eq("agent_id", user.id);
-    else if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
+    if (!isBDO) totalQ = totalQ.eq("tl_id", effectiveTlId);
 
     const { count: totalOrders } = await totalQ;
 
@@ -166,8 +160,7 @@ const TLDashboard = () => {
       .select("*", { count: "exact", head: true })
       .eq("delivery_status", "delivered")
       .gte("created_at", startOfMonth.toISOString());
-    if (isATL) delivQ = delivQ.eq("agent_id", user.id);
-    else if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
+    if (!isBDO) delivQ = delivQ.eq("tl_id", effectiveTlId);
 
     const { count: deliveredOrders } = await delivQ;
 
