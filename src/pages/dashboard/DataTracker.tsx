@@ -152,14 +152,14 @@ const DataTracker = () => {
 
   // Fetch orders
   const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["tracker-orders", selectedCampaign, user?.id, isTL],
+    queryKey: ["tracker-orders", selectedCampaign, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
       let q = supabase
         .from("orders")
         .select("id, customer_name, phone, address, product, price, quantity, status, delivery_status, steadfast_consignment_id, created_at, agent_id, tl_id, lead_id, rider_name, rider_phone")
         .order("created_at", { ascending: false })
         .limit(500);
-      if (isTL && user) q = q.eq("tl_id", user.id);
+      if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
       const { data, error } = await q;
       if (error) throw error;
       return data;
