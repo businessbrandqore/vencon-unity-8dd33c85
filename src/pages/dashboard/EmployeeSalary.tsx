@@ -276,7 +276,7 @@ export default function EmployeeSalary() {
                 <CardContent className="pt-6 flex items-center gap-3">
                   <TrendingUp className={cn("h-8 w-8", ratio >= 50 ? "text-green-500" : "text-orange-400")} />
                   <div>
-                    <p className="text-xs text-muted-foreground">রিসিভ রেশিও</p>
+                    <p className="text-xs text-muted-foreground">{isTelesalesRole ? "রিসিভ রেশিও" : "গ্রুপ লিডারদের গড় রেশিও"}</p>
                     <p className="text-2xl font-heading">{ratio}%</p>
                   </div>
                 </CardContent>
