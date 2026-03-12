@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Target, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Target, AlertTriangle, Database, Send } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 
 interface LeadRow {
@@ -77,6 +77,10 @@ export default function EmployeeLeads() {
 
   const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0 });
   const [tick, setTick] = useState(0);
+  const [showDataRequestModal, setShowDataRequestModal] = useState(false);
+  const [dataRequestMsg, setDataRequestMsg] = useState("");
+  const [dataRequestLoading, setDataRequestLoading] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 60_000);
@@ -101,7 +105,34 @@ export default function EmployeeLeads() {
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
-  useEffect(() => { if (checkedIn) loadLeads(); }, [checkedIn, loadLeads]);
+  useEffect(() => { if (checkedIn) { loadLeads(); loadMyRequests(); } }, [checkedIn, loadLeads]);
+
+  const loadMyRequests = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("data_requests").select("*").eq("requested_by", user.id).order("created_at", { ascending: false }).limit(5);
+    if (data) setPendingRequests(data);
+  };
+
+  const handleDataRequest = async () => {
+    if (!user) return;
+    setDataRequestLoading(true);
+    // Find the TL who assigned leads to this agent
+    const { data: leadData } = await supabase.from("leads").select("tl_id").eq("assigned_to", user.id).not("tl_id", "is", null).limit(1);
+    const tlId = leadData?.[0]?.tl_id;
+    if (!tlId) {
+      // Try campaign_agent_roles
+      const { data: carData } = await supabase.from("campaign_agent_roles").select("tl_id, campaign_id").eq("agent_id", user.id).limit(1);
+      if (!carData?.[0]?.tl_id) { toast.error("টিম লিডার পাওয়া যায়নি"); setDataRequestLoading(false); return; }
+      await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: carData[0].tl_id, campaign_id: carData[0].campaign_id, message: dataRequestMsg || null });
+    } else {
+      await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: tlId, message: dataRequestMsg || null });
+    }
+    toast.success("ডাটা রিকোয়েস্ট পাঠানো হয়েছে ✓");
+    setShowDataRequestModal(false);
+    setDataRequestMsg("");
+    setDataRequestLoading(false);
+    loadMyRequests();
+  };
 
   useEffect(() => {
     (async () => {
@@ -293,18 +324,56 @@ export default function EmployeeLeads() {
         </div>
       </div>
 
-      <Tabs defaultValue="bronze">
-        <TabsList>
-          <TabsTrigger value="bronze">ব্রোঞ্জ লিড ({bronzeLeads.length})</TabsTrigger>
-          <TabsTrigger value="silver">সিল্ভার লিড ({silverLeads.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="bronze">
-          <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
-        </TabsContent>
-        <TabsContent value="silver">
-          <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(silverLeads)}</CardContent></Card>
-        </TabsContent>
-      </Tabs>
+      {/* Data Request Button */}
+      {leads.length === 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-6 text-center">
+            <Database className="mx-auto mb-2 h-8 w-8 text-primary" />
+            <p className="text-sm text-muted-foreground mb-3">আপনার কোনো লিড নেই। TL-কে ডাটা রিকোয়েস্ট পাঠান।</p>
+            <Button onClick={() => setShowDataRequestModal(true)} className="gap-2">
+              <Send className="h-4 w-4" /> ডাটা রিকোয়েস্ট পাঠান
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent requests */}
+      {pendingRequests.length > 0 && (
+        <div className="flex gap-2 flex-wrap text-xs">
+          {pendingRequests.filter(r => r.status === 'pending').length > 0 && (
+            <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+              ⏳ {pendingRequests.filter(r => r.status === 'pending').length}টি রিকোয়েস্ট পেন্ডিং
+            </Badge>
+          )}
+          {pendingRequests.filter(r => r.status === 'fulfilled').length > 0 && (
+            <Badge variant="outline" className="text-emerald-500 border-emerald-500/50">
+              ✓ {pendingRequests.filter(r => r.status === 'fulfilled').length}টি পূরণ হয়েছে
+            </Badge>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <Tabs defaultValue="bronze" className="flex-1">
+          <div className="flex items-center justify-between mb-2">
+            <TabsList>
+              <TabsTrigger value="bronze">ব্রোঞ্জ লিড ({bronzeLeads.length})</TabsTrigger>
+              <TabsTrigger value="silver">সিল্ভার লিড ({silverLeads.length})</TabsTrigger>
+            </TabsList>
+            {leads.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
+                <Send className="h-3.5 w-3.5" /> ডাটা চাই
+              </Button>
+            )}
+          </div>
+          <TabsContent value="bronze">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
+          </TabsContent>
+          <TabsContent value="silver">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(silverLeads)}</CardContent></Card>
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Order Confirm Modal */}
       <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
@@ -358,6 +427,25 @@ export default function EmployeeLeads() {
           </div>
           <DialogFooter>
             <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">সাবমিট</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Data Request Modal */}
+      <Dialog open={showDataRequestModal} onOpenChange={setShowDataRequestModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>ডাটা রিকোয়েস্ট</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">আপনার TL-কে নতুন ডাটা পাঠানোর জন্য রিকোয়েস্ট পাঠান।</p>
+            <div>
+              <Label>মেসেজ (ঐচ্ছিক)</Label>
+              <Textarea value={dataRequestMsg} onChange={e => setDataRequestMsg(e.target.value)} className="mt-1" rows={3} placeholder="কি ধরনের ডাটা দরকার..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleDataRequest} disabled={dataRequestLoading} className="gap-2">
+              <Send className="h-4 w-4" /> {dataRequestLoading ? "পাঠানো হচ্ছে..." : "রিকোয়েস্ট পাঠান"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
