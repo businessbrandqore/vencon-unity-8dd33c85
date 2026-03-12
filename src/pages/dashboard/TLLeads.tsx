@@ -57,13 +57,13 @@ const TLLeads = () => {
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
-  // Get the effective TL id for data queries (ATL uses their assigned TL's id)
+  // Get the effective TL id for data queries (ATL/GL uses their assigned TL's id)
   const getEffectiveTlId = useCallback((campaignId?: string) => {
-    if (!isATL || !user) return user?.id || "";
+    if ((!isATL && !isGL) || !user) return user?.id || "";
     if (campaignId && atlTlMap[campaignId]) return atlTlMap[campaignId];
     if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
     return user?.id || "";
-  }, [isATL, user, atlTlMap, selectedCampaign]);
+  }, [isATL, isGL, user, atlTlMap, selectedCampaign]);
 
   useEffect(() => {
     if (!user) return;
