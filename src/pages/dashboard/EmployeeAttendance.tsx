@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut } from "lucide-react";
+import { useDeductionConfig } from "@/hooks/useDeductionConfig";
 
 interface AttendanceRow {
   id: string;
@@ -48,7 +49,6 @@ const MOODS = [
   { value: "angry", emoji: "😠", label: "রাগান্বিত" },
 ];
 
-const LATE_DEDUCTION = 33;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 export default function EmployeeAttendance() {
