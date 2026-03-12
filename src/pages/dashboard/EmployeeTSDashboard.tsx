@@ -390,7 +390,7 @@ export default function EmployeeTSDashboard() {
       const shiftParts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
-      if (now < shiftEnd) { earlyOut = true; extraDeduction = LATE_DEDUCTION; }
+      if (now < shiftEnd) { earlyOut = true; extraDeduction = deductionConfig.early_checkout_amount; }
     }
     if (todayAttendance) {
       await supabase.from("attendance").update({
