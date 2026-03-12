@@ -106,7 +106,7 @@ const REQUEUE_STATUSES = [
 
 const REQUEUE_MINUTES = 40;
 const DELETE_SHEET_THRESHOLD = 5;
-const LATE_DEDUCTION = 33;
+
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
