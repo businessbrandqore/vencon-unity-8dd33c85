@@ -83,8 +83,9 @@ export default function ManagerAttendance() {
   const [teamFilterDate, setTeamFilterDate] = useState<Date>(new Date());
 
   // Data distribution state
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [distDataMode, setDistDataMode] = useState<"lead" | "processing">("lead");
   const [campaignAgents, setCampaignAgents] = useState<{ id: string; name: string }[]>([]);
   const [distAgent, setDistAgent] = useState("");
   const [distCount, setDistCount] = useState("");
