@@ -1,0 +1,2 @@
+ALTER TABLE public.sa_approvals DROP CONSTRAINT sa_approvals_type_check;
+ALTER TABLE public.sa_approvals ADD CONSTRAINT sa_approvals_type_check CHECK (type = ANY (ARRAY['new_campaign'::text, 'non_agent_hire'::text, 'incentive_config'::text, 'profit_share_config'::text, 'group_creation'::text, 'gl_campaign_assignment'::text]));
