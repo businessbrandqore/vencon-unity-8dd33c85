@@ -483,6 +483,57 @@ const HRSettings = () => {
         </div>
       </div>
 
+      {/* Attendance Deduction Config */}
+      <div className="border border-border p-4 space-y-4">
+        <h3 className="font-heading text-sm font-bold text-foreground">
+          {isBn ? "উপস্থিতি কর্তন সেটিংস" : "Attendance Deduction Settings"}
+        </h3>
+        <p className="text-xs text-muted-foreground font-body">
+          {isBn ? "দেরিতে চেক ইন বা আগে চেক আউট করলে কত টাকা কাটা যাবে তা এখান থেকে নির্ধারণ করুন" : "Configure deduction amounts for late check-in or early check-out"}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "দেরিতে চেক ইন কর্তন (৳)" : "Late Check-In Deduction (৳)"}
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={settings.late_checkin_amount || "33"}
+              onChange={(e) => set("late_checkin_amount", e.target.value)}
+              className={fieldClass}
+              placeholder="33"
+            />
+          </div>
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "আগে চেক আউট কর্তন (৳)" : "Early Check-Out Deduction (৳)"}
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={settings.early_checkout_amount || "33"}
+              onChange={(e) => set("early_checkout_amount", e.target.value)}
+              className={fieldClass}
+              placeholder="33"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={() => saveGroup("attendance_deduction_config", {
+            late_checkin_amount: settings.late_checkin_amount || "33",
+            early_checkout_amount: settings.early_checkout_amount || "33",
+          })}
+          disabled={saving}
+          className="px-4 py-1.5 text-xs font-bold text-white"
+          style={{ backgroundColor: BLUE }}
+        >
+          {isBn ? "সংরক্ষণ" : "Save"}
+        </button>
+      </div>
+
       {/* Notification Sound */}
       <div className="border border-border p-4 space-y-3">
         <h3 className="font-heading text-sm font-bold text-foreground">
