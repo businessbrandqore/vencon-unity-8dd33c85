@@ -928,44 +928,6 @@ const TLTeam = () => {
               {viewLevel === "profile" && renderProfile()}
               {viewLevel === "other_employees" && renderOtherEmployees()}
               {viewLevel === "rankings" && renderRankings()}
-              {viewLevel === "data_requests" && (
-                <div className="space-y-3">
-                  {dataRequests.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>{isBn ? "কোনো ডাটা রিকোয়েস্ট নেই" : "No data requests"}</p>
-                    </div>
-                  ) : dataRequests.map(req => (
-                    <div key={req.id} className={`p-4 rounded-lg border ${req.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : req.status === 'fulfilled' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-foreground">{req.requester_name}</span>
-                            <Badge variant="secondary" className="text-[10px]">{roleName(req.requester_role || "")}</Badge>
-                            <Badge variant={req.status === 'pending' ? 'outline' : req.status === 'fulfilled' ? 'default' : 'destructive'} className="text-[10px]">
-                              {req.status === 'pending' ? (isBn ? 'পেন্ডিং' : 'Pending') : req.status === 'fulfilled' ? (isBn ? 'পূরণ হয়েছে' : 'Fulfilled') : (isBn ? 'প্রত্যাখ্যান' : 'Rejected')}
-                            </Badge>
-                          </div>
-                          {req.message && <p className="text-sm text-muted-foreground">{req.message}</p>}
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            {new Date(req.created_at).toLocaleString("bn-BD")}
-                          </p>
-                        </div>
-                        {req.status === 'pending' && (
-                          <div className="flex gap-1.5">
-                            <Button size="sm" variant="outline" onClick={() => handleFulfillRequest(req.id)} className="gap-1 text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10">
-                              <CheckCircle className="h-3.5 w-3.5" /> {isBn ? "পূরণ" : "Fulfill"}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleRejectRequest(req.id)} className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10">
-                              <XCircle className="h-3.5 w-3.5" /> {isBn ? "বাতিল" : "Reject"}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               {viewLevel === "group_management" && (
                 <div className="space-y-6">
                   {/* Create Group Button - only for TL, not BDO */}
