@@ -34,6 +34,9 @@ interface Settings {
   ai_provider?: string;
   ai_api_key?: string;
   notification_sound?: string;
+  cloudinary_cloud_name?: string;
+  cloudinary_upload_preset?: string;
+  cloudinary_api_key?: string;
 }
 
 interface DeductionTier {
@@ -86,7 +89,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
@@ -95,12 +98,18 @@ const HRSettings = () => {
         if (val?.late_tiers && val?.early_tiers) {
           setDeduction(val);
         } else if (val?.late_checkin_amount) {
-          // Migrate old format
           setDeduction({
             late_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.late_checkin_amount) || 33 }],
             early_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.early_checkout_amount) || 33 }],
           });
         }
+      } else if (row.key === "cloudinary_config") {
+        const val = row.value as Record<string, string>;
+        Object.assign(merged, {
+          cloudinary_cloud_name: val.cloud_name,
+          cloudinary_upload_preset: val.upload_preset,
+          cloudinary_api_key: val.api_key,
+        });
       } else {
         const val = row.value as Record<string, string>;
         Object.assign(merged, val);
@@ -123,7 +132,35 @@ const HRSettings = () => {
     setSaving(false);
   };
 
+  const uploadToCloudinary = async (file: File, folder: string): Promise<string | null> => {
+    const cloudName = settings.cloudinary_cloud_name;
+    const uploadPreset = settings.cloudinary_upload_preset;
+    if (!cloudName || !uploadPreset) {
+      toast({ title: isBn ? "Cloudinary কনফিগারেশন সেট করুন (API ট্যাবে)" : "Set Cloudinary config in API tab", variant: "destructive" });
+      return null;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+    formData.append("folder", folder);
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.secure_url) return data.secure_url;
+      toast({ title: data.error?.message || "Upload failed", variant: "destructive" });
+      return null;
+    } catch (err: any) {
+      toast({ title: err.message || "Upload failed", variant: "destructive" });
+      return null;
+    }
+  };
+
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    // Use Cloudinary if configured
+    if (settings.cloudinary_cloud_name && settings.cloudinary_upload_preset) {
+      return uploadToCloudinary(file, folder);
+    }
+    // Fallback to Supabase storage
     const ext = file.name.split(".").pop();
     const path = `${folder}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("app-assets").upload(path, file);
@@ -388,6 +425,28 @@ const HRSettings = () => {
         <TabsContent value="api" className="mt-4">
           <div className="border border-border p-4 space-y-4">
             <h3 className="font-heading text-sm font-bold text-foreground">{isBn ? "API কনফিগারেশন" : "API Configuration"}</h3>
+            
+            {/* Cloudinary */}
+            <div className="border-b border-border pb-4">
+              <h4 className="font-body text-xs font-bold text-foreground mb-1">Cloudinary {isBn ? "(ছবি আপলোড)" : "(Image Upload)"}</h4>
+              <p className="text-[10px] text-muted-foreground font-body mb-2">
+                {isBn ? "একবার সংরক্ষণ করলে সব ছবি Cloudinary তে আপলোড হবে।" : "Once saved, all images will upload to Cloudinary."}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="font-body text-[10px] text-muted-foreground block mb-1">Cloud Name</label><Input value={settings.cloudinary_cloud_name || ""} onChange={(e) => set("cloudinary_cloud_name", e.target.value)} className={fieldClass} placeholder="my-cloud" /></div>
+                <div><label className="font-body text-[10px] text-muted-foreground block mb-1">Upload Preset</label><Input value={settings.cloudinary_upload_preset || ""} onChange={(e) => set("cloudinary_upload_preset", e.target.value)} className={fieldClass} placeholder="unsigned_preset" /></div>
+                <div><label className="font-body text-[10px] text-muted-foreground block mb-1">API Key ({isBn ? "ঐচ্ছিক" : "Optional"})</label><Input value={settings.cloudinary_api_key || ""} onChange={(e) => set("cloudinary_api_key", e.target.value)} className={fieldClass} /></div>
+              </div>
+              {settings.cloudinary_cloud_name && settings.cloudinary_upload_preset && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] text-green-500 font-body">✓ {isBn ? "সংযুক্ত" : "Connected"}</span>
+                </div>
+              )}
+              <button onClick={() => saveGroup("cloudinary_config", { cloud_name: settings.cloudinary_cloud_name, upload_preset: settings.cloudinary_upload_preset, api_key: settings.cloudinary_api_key })} disabled={saving} className="mt-2 text-[10px] px-2 py-1 border border-border text-foreground hover:bg-secondary">
+                {isBn ? "সংরক্ষণ" : "Save"}
+              </button>
+            </div>
+
             {/* WhatsApp */}
             <div className="border-b border-border pb-4">
               <h4 className="font-body text-xs font-bold text-foreground mb-2">WhatsApp Business API</h4>
