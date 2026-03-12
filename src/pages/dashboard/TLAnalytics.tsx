@@ -92,7 +92,7 @@ const TLAnalytics = () => {
       }).sort((a, b) => b.ratio - a.ratio);
       setAgentPerf(perf);
     }
-  }, [user, selectedCampaign]);
+  }, [user, selectedCampaign, dataMode]);
 
   useEffect(() => { loadAnalytics(); }, [loadAnalytics]);
 
