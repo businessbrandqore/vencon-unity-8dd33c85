@@ -66,6 +66,7 @@ export default function GroupLeaderDashboard() {
   const [salaryData, setSalaryData] = useState<any>(null);
   const [myAttendance, setMyAttendance] = useState<any[]>([]);
   const [incentiveThreshold, setIncentiveThreshold] = useState(0);
+  const [campaignName, setCampaignName] = useState<string | null>(null);
 
   const now = new Date();
   const monthStart = useMemo(() => {
