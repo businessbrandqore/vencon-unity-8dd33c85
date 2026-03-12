@@ -624,19 +624,33 @@ export default function ManagerAttendance() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Campaign select */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">ক্যাম্পেইন</Label>
-            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-              <SelectTrigger className="border-border">
-                <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
-              </SelectTrigger>
-              <SelectContent>
-                {campaigns.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Campaign + Data Mode filter row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">ক্যাম্পেইন</Label>
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                <SelectTrigger className="border-border">
+                  <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">ডাটা মোড</Label>
+              <Select value={distDataMode} onValueChange={(v) => setDistDataMode(v as "lead" | "processing")}>
+                <SelectTrigger className="border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lead">📞 লিড মোড</SelectItem>
+                  <SelectItem value="processing">⚙️ প্রসেসিং মোড</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {selectedCampaign && (
