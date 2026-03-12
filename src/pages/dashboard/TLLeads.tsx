@@ -23,6 +23,7 @@ const TLLeads = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
+  const { isATL, executeOrRequestApproval } = useATLApproval();
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
