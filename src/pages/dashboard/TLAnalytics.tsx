@@ -25,9 +25,9 @@ const TLAnalytics = () => {
     if (!user) return;
     const fetch = async () => {
       if (isBDO) {
-        const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+        const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
         if (data) {
-          const list = data.map((c: any) => ({ id: c.id, name: c.name }));
+          const list = data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode }));
           setCampaigns(list);
           if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
