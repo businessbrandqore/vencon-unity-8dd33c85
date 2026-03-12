@@ -122,10 +122,11 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
       shiftDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
       if (new Date() > shiftDate) isLate = true;
     }
+    const lateAmt = deductionConfig.late_checkin_amount;
     if (todayAttendance) {
-      await supabase.from("attendance").update({ clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? LATE_DEDUCTION : 0 }).eq("id", todayAttendance.id);
+      await supabase.from("attendance").update({ clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? lateAmt : 0 }).eq("id", todayAttendance.id);
     } else {
-      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? LATE_DEDUCTION : 0 });
+      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? lateAmt : 0 });
     }
     setClockedIn(true);
     await loadAttendance();
