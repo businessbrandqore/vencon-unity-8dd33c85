@@ -114,7 +114,7 @@ export default function TLDataRequests() {
       .eq("status", "fresh")
       .is("assigned_to", null);
 
-    if (!isBDO) q = q.eq("tl_id", user.id);
+    if (!isBDO) q = q.eq("tl_id", getEffectiveTlId());
 
     if (distDataMode === "lead") {
       q = q.or("source.is.null,source.neq.processing").or("import_source.is.null,import_source.neq.processing");
