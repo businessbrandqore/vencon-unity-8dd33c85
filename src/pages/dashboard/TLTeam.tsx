@@ -1177,6 +1177,53 @@ const TLTeam = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* GL Campaign Assignment Dialog */}
+      <Dialog open={glAssignOpen} onOpenChange={setGlAssignOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isBn ? "গ্রুপ লিডার ক্যাম্পেইনে অ্যাসাইন করুন" : "Assign GL to Campaign"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "গ্রুপ লিডার নির্বাচন করুন" : "Select Group Leader"}</p>
+              <Select value={glSelectedGL} onValueChange={setGlSelectedGL}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isBn ? "গ্রুপ লিডার বাছুন" : "Choose Group Leader"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {existingGroups.map(g => (
+                    <SelectItem key={g.leader.id} value={g.leader.id}>{g.leader.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "ক্যাম্পেইন নির্বাচন করুন" : "Select Campaign"}</p>
+              <Select value={glSelectedCampaign} onValueChange={setGlSelectedCampaign}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isBn ? "ক্যাম্পেইন বাছুন" : "Choose Campaign"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {glCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGlAssignOpen(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button
+              onClick={handleSubmitGLAssign}
+              disabled={!glSelectedGL || !glSelectedCampaign || glAssignSubmitting}
+            >
+              {glAssignSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isBn ? "অনুমোদনের জন্য পাঠান" : "Send for Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
