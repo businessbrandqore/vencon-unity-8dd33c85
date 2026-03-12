@@ -465,9 +465,6 @@ const TLTeam = () => {
       setViewLevel("tl_list");
     } else if (viewLevel === "rankings") {
       setViewLevel("tl_list");
-    } else if (viewLevel === "data_requests") {
-      if (isBDO) setViewLevel("tl_list");
-      else setViewLevel("gl_list");
     } else if (viewLevel === "group_management") {
       if (isBDO) setViewLevel("tl_list");
       else setViewLevel("gl_list");
