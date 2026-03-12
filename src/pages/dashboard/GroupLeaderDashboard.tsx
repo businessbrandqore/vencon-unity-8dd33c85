@@ -270,10 +270,17 @@ export default function GroupLeaderDashboard() {
     <div className="space-y-6">
       {/* ═══ SECTION 1: TOP STATS ═══ */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-heading text-xl flex items-center gap-2">
-          <Users className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
-          গ্রুপ লিডার ড্যাশবোর্ড
-        </h1>
+        <div>
+          <h1 className="font-heading text-xl flex items-center gap-2">
+            <Users className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
+            গ্রুপ লিডার ড্যাশবোর্ড
+          </h1>
+          {campaignName && (
+            <p className="text-sm text-muted-foreground mt-1">
+              ক্যাম্পেইন: <span className="font-semibold text-foreground">{campaignName}</span>
+            </p>
+          )}
+        </div>
         <Button variant="outline" size="icon" onClick={loadData} disabled={loading}>
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
         </Button>
