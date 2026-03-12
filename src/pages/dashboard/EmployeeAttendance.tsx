@@ -120,33 +120,30 @@ export default function EmployeeAttendance() {
   // Check In handler
   const handleCheckIn = async () => {
     if (!user || !checkInMood) { toast.error("মুড নির্বাচন করুন"); return; }
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowISO = now.toISOString();
     let isLate = false;
+    let lateMinutes = 0;
     if (profile?.shift_start) {
       const parts = profile.shift_start.split(":");
       const shiftDate = new Date();
       shiftDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-      if (new Date() > shiftDate) isLate = true;
+      if (now > shiftDate) {
+        isLate = true;
+        lateMinutes = Math.ceil((now.getTime() - shiftDate.getTime()) / 60000);
+      }
     }
 
-    const lateAmt = deductionConfig.late_checkin_amount;
+    const lateAmt = isLate ? getDeductionAmount(deductionConfig.late_tiers, lateMinutes) : 0;
     if (todayRecord) {
       await supabase.from("attendance").update({
-        clock_in: now,
-        mood_in: checkInMood,
-        mood_note: checkInNote || null,
-        is_late: isLate,
-        deduction_amount: isLate ? lateAmt : 0,
+        clock_in: nowISO, mood_in: checkInMood, mood_note: checkInNote || null,
+        is_late: isLate, deduction_amount: lateAmt,
       }).eq("id", todayRecord.id);
     } else {
       await supabase.from("attendance").insert({
-        user_id: user.id,
-        date: todayStr(),
-        clock_in: now,
-        mood_in: checkInMood,
-        mood_note: checkInNote || null,
-        is_late: isLate,
-        deduction_amount: isLate ? lateAmt : 0,
+        user_id: user.id, date: todayStr(), clock_in: nowISO, mood_in: checkInMood,
+        mood_note: checkInNote || null, is_late: isLate, deduction_amount: lateAmt,
       });
     }
 
@@ -154,7 +151,7 @@ export default function EmployeeAttendance() {
     setCheckInMood("");
     setCheckInNote("");
     await loadData();
-    toast.success(isLate ? `Check In হয়েছে (Late — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (${lateMinutes} মিনিট দেরি — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   // Check Out handler
