@@ -81,17 +81,31 @@ const BDOAgentAssignment = () => {
     }
   }, [selectedCampaign]);
 
-  // Load all employee panel users (potential agents)
+  // Load all assignable users (employee panel agents + TL panel ATLs)
   useEffect(() => {
     const fetchEmployees = async () => {
-      const { data } = await supabase
+      // Fetch employee panel agents
+      const { data: empData } = await supabase
         .from("users")
         .select("id, name, role")
         .eq("panel", "employee")
         .eq("is_active", true)
         .in("role", ["telesales_executive", "assistant_team_leader", "group_leader"])
         .order("name");
-      if (data) setEmployees(data);
+
+      // Fetch ATLs from TL panel
+      const { data: atlData } = await supabase
+        .from("users")
+        .select("id, name, role")
+        .eq("panel", "tl")
+        .eq("is_active", true)
+        .eq("role", "Assistant Team Leader")
+        .order("name");
+
+      const combined = [...(empData || []), ...(atlData || [])];
+      // Deduplicate by id
+      const unique = Array.from(new Map(combined.map(e => [e.id, e])).values());
+      setEmployees(unique);
     };
     fetchEmployees();
   }, []);
