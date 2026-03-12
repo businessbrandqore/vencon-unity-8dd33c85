@@ -910,6 +910,15 @@ const TLTeam = () => {
               <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{pendingRequestCount}</Badge>
             )}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); }}
+            className="gap-1.5"
+          >
+            <Users className="h-4 w-4" />
+            {isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management"}
+          </Button>
         </div>
       )}
 
