@@ -39,6 +39,7 @@ const HRDataMonitor = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [dataMode, setDataMode] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("leads");
   const [search, setSearch] = useState("");
 
