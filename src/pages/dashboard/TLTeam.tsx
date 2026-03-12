@@ -256,13 +256,31 @@ const TLTeam = () => {
   }, []);
 
 
-  // Group management functions
-  const loadTeamMembersForGroup = useCallback(async () => {
+  // Load TL's campaigns
+  const loadTLCampaigns = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
-      .from("campaign_agent_roles")
-      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name, role)")
+      .from("campaign_tls")
+      .select("campaign_id, campaigns!campaign_tls_campaign_id_fkey(id, name)")
       .eq("tl_id", user.id);
+    if (data) {
+      setTlCampaigns(data.map((d: any) => ({ id: d.campaigns.id, name: d.campaigns.name })));
+    }
+  }, [user]);
+
+  // Group management functions
+  const loadTeamMembersForGroup = useCallback(async (campaignId?: string) => {
+    if (!user) return;
+    let query = supabase
+      .from("campaign_agent_roles")
+      .select("agent_id, campaign_id, users!campaign_agent_roles_agent_id_fkey(id, name, role)")
+      .eq("tl_id", user.id);
+    
+    if (campaignId) {
+      query = query.eq("campaign_id", campaignId);
+    }
+
+    const { data } = await query;
     if (data) {
       const seen = new Set<string>();
       const members: { id: string; name: string; role: string }[] = [];
