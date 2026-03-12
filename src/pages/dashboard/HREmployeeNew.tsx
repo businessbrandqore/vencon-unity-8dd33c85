@@ -68,8 +68,16 @@ const HREmployeeNew = () => {
     checkOut: "18:00",
     gpsLatitude: "",
     gpsLongitude: "",
+    campaignId: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from("campaigns").select("id, name").eq("status", "active").then(({ data }) => {
+      if (data) setCampaigns(data);
+    });
+  }, []);
 
   const set = (key: string, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
