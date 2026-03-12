@@ -24,7 +24,7 @@ interface Campaign {
 }
 
 interface TLUser { id: string; name: string; }
-interface Website { id: string; site_name: string; site_url: string; webhook_secret: string; is_active: boolean; }
+interface Website { id: string; site_name: string; site_url: string; webhook_secret: string; is_active: boolean; data_mode?: string; }
 
 const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -65,7 +65,7 @@ const HRCampaigns = () => {
   const [editDataMode, setEditDataMode] = useState<"lead" | "processing">("lead");
   const [editTLs, setEditTLs] = useState<string[]>([]);
   const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
-  const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean }[]>([]);
+  const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean; data_mode: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -182,8 +182,10 @@ const HRCampaigns = () => {
     setEditName(detailCampaign.name);
     setEditDataMode(detailCampaign.data_mode as "lead" | "processing");
     setEditTLs(detailTLs.map((t) => t.id));
-    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active })));
+    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode || detailCampaign.data_mode || "lead" })));
     setEditing(true);
+    // Refresh TL users to get latest employees
+    fetchTLUsers();
   };
 
   const handleSaveEdit = async () => {
@@ -207,9 +209,9 @@ const HRCampaigns = () => {
     }
     for (const w of editWebsites) {
       if (w.id) {
-        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active }).eq("id", w.id);
+        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode } as any).eq("id", w.id);
       } else if (w.site_name.trim() && w.site_url.trim()) {
-        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active });
+        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode } as any);
       }
     }
 
@@ -652,7 +654,7 @@ const HRCampaigns = () => {
                     {isBn ? "সংযুক্ত ওয়েবসাইট" : "Connected Websites"} ({editing ? editWebsites.length : detailWebsites.length})
                     {editing && (
                       <Button variant="ghost" size="sm" className="text-primary ml-auto"
-                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true }])}>
+                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true, data_mode: editDataMode }])}>
                         <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
                       </Button>
                     )}
@@ -676,6 +678,42 @@ const HRCampaigns = () => {
                             onChange={(e) => { const c = [...editWebsites]; c[i].site_name = e.target.value; setEditWebsites(c); }} />
                           <Input value={site.site_url} placeholder="https://..."
                             onChange={(e) => { const c = [...editWebsites]; c[i].site_url = e.target.value; setEditWebsites(c); }} />
+                        </div>
+                        {/* Data mode selector */}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1.5 block">
+                            {isBn ? "এই সাইটের ডাটা কোন পদ্ধতিতে যাবে?" : "How should data from this site flow?"}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { const c = [...editWebsites]; c[i].data_mode = "lead"; setEditWebsites(c); }}
+                              className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                                site.data_mode === "lead"
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/30"
+                              }`}
+                            >
+                              <p className="font-heading font-bold text-foreground text-xs">🎯 {isBn ? "লিড" : "Lead"}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {isBn ? "TL → Bronze → CSO → WH → SF → CS → Silver" : "TL → Bronze → CSO → WH → SF → CS → Silver"}
+                              </p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { const c = [...editWebsites]; c[i].data_mode = "processing"; setEditWebsites(c); }}
+                              className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                                site.data_mode === "processing"
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/30"
+                              }`}
+                            >
+                              <p className="font-heading font-bold text-foreground text-xs">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {isBn ? "TL সরাসরি → CSO → WH → Steadfast" : "TL direct → CSO → WH → Steadfast"}
+                              </p>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))

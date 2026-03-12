@@ -290,6 +290,7 @@ export type Database = {
         Row: {
           campaign_id: string
           created_at: string | null
+          data_mode: string
           id: string
           is_active: boolean
           site_name: string
@@ -299,6 +300,7 @@ export type Database = {
         Insert: {
           campaign_id: string
           created_at?: string | null
+          data_mode?: string
           id?: string
           is_active?: boolean
           site_name: string
@@ -308,6 +310,7 @@ export type Database = {
         Update: {
           campaign_id?: string
           created_at?: string | null
+          data_mode?: string
           id?: string
           is_active?: boolean
           site_name?: string
