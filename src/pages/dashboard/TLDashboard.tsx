@@ -44,6 +44,22 @@ const TLDashboard = () => {
           setCampaigns(list);
           if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
+      } else if (isATL) {
+        // ATL sees campaigns they're assigned to as agent
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, campaigns(id, name)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const seen = new Set<string>();
+          const list = data
+            .map((d: any) => d.campaigns)
+            .filter(Boolean)
+            .filter((c: any) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })
+            .map((c: any) => ({ id: c.id, name: c.name }));
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+        }
       } else {
         const { data } = await supabase
           .from("campaign_tls")
