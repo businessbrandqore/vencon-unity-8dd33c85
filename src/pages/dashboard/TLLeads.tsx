@@ -215,7 +215,7 @@ const TLLeads = () => {
       .eq("agent_type", "silver")
       .order("created_at", { ascending: false });
     if (selectedCampaign) goldenLeadsQ = goldenLeadsQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", user.id);
+    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", getEffectiveTlId());
     const { data: silverAssignedLeads } = await goldenLeadsQ;
 
     if (silverAssignedLeads && silverAssignedLeads.length > 0) {
