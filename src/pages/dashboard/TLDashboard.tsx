@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target, ShoppingCart, Phone, Trash2, CheckCircle, TrendingUp } from "lucide-react";
+import GroupLeaderDashboard from "./GroupLeaderDashboard";
 
 interface CampaignOption {
   id: string;
