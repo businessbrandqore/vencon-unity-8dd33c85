@@ -507,6 +507,64 @@ export type Database = {
           },
         ]
       }
+      data_requests: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          id: string
+          message: string | null
+          requested_by: string
+          responded_at: string | null
+          response_note: string | null
+          status: string
+          tl_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          requested_by: string
+          responded_at?: string | null
+          response_note?: string | null
+          status?: string
+          tl_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          requested_by?: string
+          responded_at?: string | null
+          response_note?: string | null
+          status?: string
+          tl_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_requests_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_requests_tl_id_fkey"
+            columns: ["tl_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_monthly_offs: {
         Row: {
           assigned_by: string | null
