@@ -87,7 +87,9 @@ const HRAttendance = () => {
   // Employee Individual Offs
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
-  const [empOffDate, setEmpOffDate] = useState("");
+  const [empOffDate1, setEmpOffDate1] = useState("");
+  const [empOffDate2, setEmpOffDate2] = useState("");
+  const [empOffDate3, setEmpOffDate3] = useState("");
   const [empOffs, setEmpOffs] = useState<{ id: string; user_id: string; user_name: string; off_date: string }[]>([]);
   const [showEmpOffForm, setShowEmpOffForm] = useState(false);
 
