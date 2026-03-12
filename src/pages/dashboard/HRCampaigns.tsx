@@ -159,17 +159,65 @@ const HRCampaigns = () => {
 
   const openDetail = async (id: string) => {
     setDetailId(id);
+    setEditing(false);
     setDetailCampaign(campaigns.find((c) => c.id === id) || null);
 
-    const [{ data: sites }, { data: leads }] = await Promise.all([
+    const [{ data: sites }, { data: leads }, { data: assignedTls }] = await Promise.all([
       supabase.from("campaign_websites").select("*").eq("campaign_id", id),
       supabase.from("leads").select("status").eq("campaign_id", id),
+      supabase.from("campaign_tls").select("tl_id, users!campaign_tls_tl_id_fkey(id, name)").eq("campaign_id", id),
     ]);
     setDetailWebsites((sites as Website[]) || []);
+
+    const assignedTlList = (assignedTls || []).map((t: any) => t.users).filter(Boolean);
+    setDetailTLs(assignedTlList);
 
     const stats: Record<string, number> = { total: 0 };
     (leads || []).forEach((l) => { stats.total++; const s = l.status || "fresh"; stats[s] = (stats[s] || 0) + 1; });
     setDetailLeadStats(stats);
+  };
+
+  const startEditing = () => {
+    if (!detailCampaign) return;
+    setEditName(detailCampaign.name);
+    setEditDataMode(detailCampaign.data_mode as "lead" | "processing");
+    setEditTLs(detailTLs.map((t) => t.id));
+    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active })));
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailId || !editName.trim()) return;
+    setSaving(true);
+
+    // Update campaign
+    await supabase.from("campaigns").update({ name: editName.trim(), data_mode: editDataMode }).eq("id", detailId);
+
+    // Update TL assignments: delete old, insert new
+    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
+    if (editTLs.length > 0) {
+      await supabase.from("campaign_tls").insert(editTLs.map((tlId) => ({ campaign_id: detailId, tl_id: tlId })));
+    }
+
+    // Update websites: delete removed, upsert existing/new
+    const existingIds = editWebsites.filter((w) => w.id).map((w) => w.id!);
+    const toDelete = detailWebsites.filter((w) => !existingIds.includes(w.id));
+    for (const d of toDelete) {
+      await supabase.from("campaign_websites").delete().eq("id", d.id);
+    }
+    for (const w of editWebsites) {
+      if (w.id) {
+        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active }).eq("id", w.id);
+      } else if (w.site_name.trim() && w.site_url.trim()) {
+        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active });
+      }
+    }
+
+    toast({ title: isBn ? "ক্যাম্পেইন আপডেট হয়েছে ✓" : "Campaign updated ✓" });
+    setSaving(false);
+    setEditing(false);
+    fetchCampaigns();
+    openDetail(detailId);
   };
 
   const copyText = (text: string) => {
