@@ -129,13 +129,14 @@ export default function EmployeeAttendance() {
       if (new Date() > shiftDate) isLate = true;
     }
 
+    const lateAmt = deductionConfig.late_checkin_amount;
     if (todayRecord) {
       await supabase.from("attendance").update({
         clock_in: now,
         mood_in: checkInMood,
         mood_note: checkInNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       }).eq("id", todayRecord.id);
     } else {
       await supabase.from("attendance").insert({
@@ -145,7 +146,7 @@ export default function EmployeeAttendance() {
         mood_in: checkInMood,
         mood_note: checkInNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       });
     }
 
