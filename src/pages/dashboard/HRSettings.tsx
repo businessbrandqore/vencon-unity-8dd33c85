@@ -98,12 +98,18 @@ const HRSettings = () => {
         if (val?.late_tiers && val?.early_tiers) {
           setDeduction(val);
         } else if (val?.late_checkin_amount) {
-          // Migrate old format
           setDeduction({
             late_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.late_checkin_amount) || 33 }],
             early_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.early_checkout_amount) || 33 }],
           });
         }
+      } else if (row.key === "cloudinary_config") {
+        const val = row.value as Record<string, string>;
+        Object.assign(merged, {
+          cloudinary_cloud_name: val.cloud_name,
+          cloudinary_upload_preset: val.upload_preset,
+          cloudinary_api_key: val.api_key,
+        });
       } else {
         const val = row.value as Record<string, string>;
         Object.assign(merged, val);
