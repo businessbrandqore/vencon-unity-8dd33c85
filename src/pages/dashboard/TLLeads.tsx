@@ -52,8 +52,12 @@ const TLLeads = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
-  const isGL = user?.role === "group_leader";
+  const normalizedRole = (user?.role || "").toLowerCase().replace(/\s+/g, "_");
+  const isBDO =
+    normalizedRole === "bdo" ||
+    normalizedRole === "business_development_officer" ||
+    normalizedRole === "business_development_and_marketing_manager";
+  const isGL = normalizedRole === "group_leader";
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
@@ -67,85 +71,116 @@ const TLLeads = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    const applyCampaignList = (
+      list: { id: string; name: string; data_mode: string }[],
+      tlMap: Record<string, string> = {}
+    ) => {
+      setAtlTlMap(tlMap);
+      setCampaigns(list);
+      const nextSelectedCampaign = list.some((c) => c.id === selectedCampaign)
+        ? selectedCampaign
+        : (list[0]?.id || "");
+      setSelectedCampaign(nextSelectedCampaign);
+      const nextCampaign = list.find((c) => c.id === nextSelectedCampaign);
+      setCampaignMode(nextCampaign?.data_mode || "lead");
+    };
+
     const fetch = async () => {
       if (isBDO) {
-        const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
-        if (data) {
-          const list = data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) {
-            setSelectedCampaign(list[0].id);
-            setCampaignMode(list[0].data_mode);
-          }
-        }
+        const { data } = await supabase
+          .from("campaigns")
+          .select("id, name, data_mode")
+          .order("created_at", { ascending: false });
+
+        const list = (data || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          data_mode: c.data_mode || "lead",
+        }));
+        applyCampaignList(list);
       } else if (isATL) {
         // ATL: fetch campaigns from campaign_agent_roles
         const { data } = await supabase
           .from("campaign_agent_roles")
           .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
           .eq("agent_id", user.id);
-        if (data) {
-          const tlMap: Record<string, string> = {};
-          const seen = new Set<string>();
-          const list = data
-            .filter((d: any) => d.campaigns)
-            .filter((d: any) => { 
-              if (seen.has(d.campaigns.id)) return false; 
-              seen.add(d.campaigns.id); 
-              return true; 
-            })
-            .map((d: any) => {
-              tlMap[d.campaigns.id] = d.tl_id;
-              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
-            });
-          setAtlTlMap(tlMap);
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) {
-            setSelectedCampaign(list[0].id);
-            setCampaignMode(list[0].data_mode);
-          }
-        }
+
+        const tlMap: Record<string, string> = {};
+        const seen = new Set<string>();
+        const list = (data || [])
+          .filter((d: any) => d.campaigns)
+          .filter((d: any) => {
+            if (seen.has(d.campaigns.id)) return false;
+            seen.add(d.campaigns.id);
+            return true;
+          })
+          .map((d: any) => {
+            tlMap[d.campaigns.id] = d.tl_id;
+            return {
+              id: d.campaigns.id,
+              name: d.campaigns.name,
+              data_mode: d.campaigns.data_mode || "lead",
+            };
+          });
+
+        applyCampaignList(list, tlMap);
       } else if (isGL) {
-        // GL: fetch campaigns from campaign_agent_roles where they are an agent
+        // GL: fetch campaigns from own group members (same pattern as GL dashboard)
+        const { data: members } = await supabase
+          .from("group_members")
+          .select("agent_id")
+          .eq("group_leader_id", user.id);
+
+        const groupAgentIds = (members || []).map((m) => m.agent_id);
+        const relatedUserIds = Array.from(new Set([user.id, ...groupAgentIds]));
+
+        if (relatedUserIds.length === 0) {
+          applyCampaignList([]);
+          return;
+        }
+
         const { data } = await supabase
           .from("campaign_agent_roles")
-          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
-          .eq("agent_id", user.id);
-        if (data) {
-          const tlMap: Record<string, string> = {};
-          const seen = new Set<string>();
-          const list = data
-            .filter((d: any) => d.campaigns)
-            .filter((d: any) => { 
-              if (seen.has(d.campaigns.id)) return false; 
-              seen.add(d.campaigns.id); 
-              return true; 
-            })
-            .map((d: any) => {
-              tlMap[d.campaigns.id] = d.tl_id;
-              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
-            });
-          setAtlTlMap(tlMap);
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) {
-            setSelectedCampaign(list[0].id);
-            setCampaignMode(list[0].data_mode);
-          }
-        }
+          .select("agent_id, campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .in("agent_id", relatedUserIds);
+
+        const tlMap: Record<string, string> = {};
+        const seen = new Set<string>();
+        const list = (data || [])
+          .filter((d: any) => d.campaigns)
+          .filter((d: any) => {
+            if (seen.has(d.campaigns.id)) return false;
+            seen.add(d.campaigns.id);
+            return true;
+          })
+          .map((d: any) => {
+            if (!tlMap[d.campaigns.id]) tlMap[d.campaigns.id] = d.tl_id;
+            return {
+              id: d.campaigns.id,
+              name: d.campaigns.name,
+              data_mode: d.campaigns.data_mode || "lead",
+            };
+          });
+
+        applyCampaignList(list, tlMap);
       } else {
-        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name, data_mode)").eq("tl_id", user.id);
-        if (data) {
-          const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) {
-            setSelectedCampaign(list[0].id);
-            setCampaignMode(list[0].data_mode);
-          }
-        }
+        const { data } = await supabase
+          .from("campaign_tls")
+          .select("campaign_id, campaigns(id, name, data_mode)")
+          .eq("tl_id", user.id);
+
+        const list = (data || [])
+          .map((d: any) => d.campaigns)
+          .filter(Boolean)
+          .map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
+
+        applyCampaignList(list);
       }
     };
+
     fetch();
-  }, [user]);
+  }, [user, isBDO, isATL, isGL]);
 
   useEffect(() => {
     const c = campaigns.find((x) => x.id === selectedCampaign);
