@@ -560,9 +560,6 @@ const TLTeam = () => {
       crumbs.push({ label: isBn ? "সেরা পারফর্মার" : "Top Performers" });
     }
 
-    if (viewLevel === "data_requests") {
-      crumbs.push({ label: isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests" });
-    }
 
     if (viewLevel === "group_management") {
       crumbs.push({ label: isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management" });
