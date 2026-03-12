@@ -69,12 +69,14 @@ const TLAnalytics = () => {
       return: total > 0 ? Math.round((returned / total) * 100) : 0,
     });
 
-    // Agent performance
+    // Agent performance - filter by data mode
     let rolesQ = supabase
       .from("campaign_agent_roles")
-      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(name)")
+      .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(name)")
       .eq("campaign_id", selectedCampaign);
     if (!isBDO) rolesQ = rolesQ.eq("tl_id", user.id);
+    if (dataMode === "lead") rolesQ = rolesQ.eq("is_bronze", true);
+    if (dataMode === "processing") rolesQ = rolesQ.eq("is_silver", true);
     const { data: roles } = await rolesQ;
 
     if (roles) {
