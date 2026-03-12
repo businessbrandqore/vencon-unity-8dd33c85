@@ -112,8 +112,9 @@ export default function EmployeeSalary() {
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
   if (!salary) return <div className="p-6 text-muted-foreground">বেতন তথ্য পাওয়া যায়নি</div>;
 
-  const isIncentiveRole = ["telesales_executive", "assistant_team_leader", "Assistant Team Leader", "team_leader", "group_leader"].includes(salary.role);
-  const isTelesalesRole = salary.role === "telesales_executive";
+  const normalizedRole = (salary.role || "").toLowerCase().replace(/\s+/g, "_");
+  const isIncentiveRole = ["telesales_executive", "assistant_team_leader", "team_leader", "group_leader"].includes(normalizedRole);
+  const isTelesalesRole = normalizedRole === "telesales_executive";
 
   const yearlyTotals = yearlySalaries.length > 0 ? {
     basic: yearlySalaries.reduce((s, d) => s + n(d.basic_salary), 0),
