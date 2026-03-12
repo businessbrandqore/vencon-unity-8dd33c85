@@ -12,6 +12,7 @@ const SAAllData = () => {
   const [tab, setTab] = useState<TabKey>("leads");
   const [search, setSearch] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("all");
+  const [dataModeFilter, setDataModeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
