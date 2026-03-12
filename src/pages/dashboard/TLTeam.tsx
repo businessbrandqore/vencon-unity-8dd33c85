@@ -1060,6 +1060,60 @@ const TLTeam = () => {
                       );
                     })}
                   </div>
+
+                  {/* GL Campaign Assignment Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-heading text-base font-semibold">
+                        {isBn ? "গ্রুপ লিডার ক্যাম্পেইন অ্যাসাইনমেন্ট" : "GL Campaign Assignment"}
+                      </h3>
+                      {!isBDO && existingGroups.length > 0 && (
+                        <Button size="sm" onClick={() => { setGlAssignOpen(true); loadGLCampaigns(); }} className="gap-1.5">
+                          <Plus className="h-3.5 w-3.5" /> {isBn ? "ক্যাম্পেইনে অ্যাসাইন করুন" : "Assign to Campaign"}
+                        </Button>
+                      )}
+                    </div>
+                    {glAssignApprovals.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">{isBn ? "কোনো ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ নেই" : "No campaign assignment requests"}</p>
+                    ) : glAssignApprovals.map(a => {
+                      const d = a.details as any;
+                      return (
+                        <div key={a.id} className={`p-4 rounded-lg border mb-3 ${a.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : a.status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-foreground">{d?.tl_name || "TL"}</span>
+                                <Badge variant={a.status === 'pending' ? 'outline' : a.status === 'approved' ? 'default' : 'destructive'} className="text-[10px]">
+                                  {a.status === 'pending' ? (isBn ? 'পেন্ডিং' : 'Pending') : a.status === 'approved' ? (isBn ? 'অনুমোদিত' : 'Approved') : (isBn ? 'প্রত্যাখ্যাত' : 'Rejected')}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-foreground">
+                                <Crown className="inline h-3 w-3 text-amber-500 mr-1" />
+                                {isBn ? "গ্রুপ লিডার:" : "GL:"} <span className="font-medium">{d?.group_leader_name}</span>
+                              </p>
+                              <p className="text-sm text-foreground mt-0.5">
+                                <Target className="inline h-3 w-3 text-primary mr-1" />
+                                {isBn ? "ক্যাম্পেইন:" : "Campaign:"} <span className="font-medium">{d?.campaign_name}</span>
+                              </p>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {new Date(a.created_at).toLocaleString("bn-BD")}
+                              </p>
+                            </div>
+                            {a.status === 'pending' && isBDO && (
+                              <div className="flex gap-1.5">
+                                <Button size="sm" variant="outline" onClick={() => handleApproveGLAssign(a)} className="gap-1 text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10">
+                                  <CheckCircle className="h-3.5 w-3.5" /> {isBn ? "অনুমোদন" : "Approve"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleRejectGLAssign(a.id)} className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10">
+                                  <XCircle className="h-3.5 w-3.5" /> {isBn ? "বাতিল" : "Reject"}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </>
