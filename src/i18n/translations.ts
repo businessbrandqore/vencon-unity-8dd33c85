@@ -65,6 +65,7 @@ export const translations: TranslationMap = {
   attendance_leaves: { bn: "উপস্থিতি ও ছুটি", en: "Attendance & Leaves" },
   customer_feedback: { bn: "গ্রাহক প্রতিক্রিয়া", en: "Customer Feedback" },
   my_attendance: { bn: "আমার উপস্থিতি", en: "My Attendance" },
+  data_requests: { bn: "ডাটা রিকোয়েস্ট", en: "Data Requests" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },

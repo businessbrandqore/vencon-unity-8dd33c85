@@ -859,7 +859,6 @@ const TLTeam = () => {
             {viewLevel === "other_employees" && (isBn ? "অন্যান্য কর্মী" : "Other Employees")}
             {viewLevel === "rankings" && (isBn ? "সেরা পারফর্মার" : "Top Performers")}
             {viewLevel === "group_management" && (isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management")}
-            {viewLevel === "group_management" && (isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management")}
           </CardTitle>
         </CardHeader>
         <CardContent>

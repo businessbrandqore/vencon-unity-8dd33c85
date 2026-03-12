@@ -113,6 +113,7 @@ const App = () => (
               <Route path="/tl/data-tracker" element={<DataTracker />} />
               <Route path="/tl/attendance" element={<ManagerAttendance />} />
               <Route path="/tl/my-team" element={<TLTeam />} />
+              <Route path="/tl/data-requests" element={<TLDataRequests />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />
