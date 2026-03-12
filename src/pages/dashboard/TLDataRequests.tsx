@@ -92,7 +92,7 @@ export default function TLDataRequests() {
       .from("campaign_agent_roles")
       .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
       .eq("campaign_id", selectedCampaign)
-      .eq("tl_id", user.id);
+      .eq("tl_id", getEffectiveTlId());
 
     const { data } = await q;
     if (!data) { setAgents([]); return; }
@@ -102,7 +102,7 @@ export default function TLDataRequests() {
     filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
     setAgents(Array.from(unique, ([id, name]) => ({ id, name })));
     setSelectedAgent("");
-  }, [user, selectedCampaign, distDataMode]);
+  }, [user, selectedCampaign, distDataMode, getEffectiveTlId]);
 
   // Count available raw leads
   const loadAvailableCount = useCallback(async () => {
