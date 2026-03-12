@@ -1158,6 +1158,26 @@ const TLTeam = () => {
             <DialogTitle>{isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Campaign Filter */}
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "ক্যাম্পেইন অনুযায়ী ফিল্টার করুন" : "Filter by Campaign"}</p>
+              <Select value={groupCampaignFilter} onValueChange={(v) => {
+                setGroupCampaignFilter(v);
+                setSelectedGroupMembers(new Set());
+                setSelectedGroupLeader("");
+                loadTeamMembersForGroup(v === "all" ? undefined : v);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isBn ? "ক্যাম্পেইন বাছুন" : "Choose Campaign"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
+                  {tlCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <p className="text-sm font-medium mb-2">{isBn ? "মেম্বার নির্বাচন করুন" : "Select Members"}</p>
               <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
