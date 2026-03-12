@@ -78,7 +78,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "tl_approvals_bdo", icon: ShieldCheck, path: "/tl/agent-assignment", roles: ["Business Development And Marketing Manager"] },
     { titleKey: "atl_approvals", icon: ShieldCheck, path: "/tl/atl-approvals", roles: ["team_leader", "Assistant Team Leader"] },
     { titleKey: "attendance", icon: Clock, path: "/tl/attendance" },
-    { titleKey: "salary", icon: DollarSign, path: "/tl/salary", roles: ["Assistant Team Leader"] },
+    { titleKey: "salary", icon: DollarSign, path: "/tl/salary" },
     { titleKey: "chat", icon: MessageSquare, path: "/tl/chat" },
     { titleKey: "notifications", icon: Bell, path: "/tl/notifications" },
     { titleKey: "settings", icon: Settings, path: "/tl/settings" },
