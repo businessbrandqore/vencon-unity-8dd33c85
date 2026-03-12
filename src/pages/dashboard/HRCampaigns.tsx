@@ -679,6 +679,42 @@ const HRCampaigns = () => {
                           <Input value={site.site_url} placeholder="https://..."
                             onChange={(e) => { const c = [...editWebsites]; c[i].site_url = e.target.value; setEditWebsites(c); }} />
                         </div>
+                        {/* Data mode selector */}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1.5 block">
+                            {isBn ? "এই সাইটের ডাটা কোন পদ্ধতিতে যাবে?" : "How should data from this site flow?"}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { const c = [...editWebsites]; c[i].data_mode = "lead"; setEditWebsites(c); }}
+                              className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                                site.data_mode === "lead"
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/30"
+                              }`}
+                            >
+                              <p className="font-heading font-bold text-foreground text-xs">🎯 {isBn ? "লিড" : "Lead"}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {isBn ? "TL → Bronze → CSO → WH → SF → CS → Silver" : "TL → Bronze → CSO → WH → SF → CS → Silver"}
+                              </p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { const c = [...editWebsites]; c[i].data_mode = "processing"; setEditWebsites(c); }}
+                              className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                                site.data_mode === "processing"
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/30"
+                              }`}
+                            >
+                              <p className="font-heading font-bold text-foreground text-xs">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {isBn ? "TL সরাসরি → CSO → WH → Steadfast" : "TL direct → CSO → WH → Steadfast"}
+                              </p>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     ))
                   ) : (
