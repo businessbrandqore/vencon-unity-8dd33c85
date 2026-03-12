@@ -282,7 +282,128 @@ const TLTeam = () => {
     loadDataRequests();
   };
 
-  useEffect(() => {
+  // Group management functions
+  const loadTeamMembersForGroup = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("campaign_agent_roles")
+      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name, role)")
+      .eq("tl_id", user.id);
+    if (data) {
+      const seen = new Set<string>();
+      const members: { id: string; name: string; role: string }[] = [];
+      data.forEach((r: any) => {
+        if (r.users && !seen.has(r.users.id)) {
+          members.push({ id: r.users.id, name: r.users.name, role: r.users.role });
+          seen.add(r.users.id);
+        }
+      });
+      setAllTeamMembers(members);
+    }
+  }, [user]);
+
+  const loadExistingGroups = useCallback(async () => {
+    if (!user) return;
+    // Get agents under this TL
+    const { data: agentRoles } = await supabase
+      .from("campaign_agent_roles")
+      .select("agent_id")
+      .eq("tl_id", user.id);
+    if (!agentRoles || agentRoles.length === 0) { setExistingGroups([]); return; }
+    const agentIds = agentRoles.map((r: any) => r.agent_id);
+
+    const { data: gm } = await supabase
+      .from("group_members")
+      .select("agent_id, group_leader_id")
+      .in("agent_id", agentIds);
+
+    if (!gm || gm.length === 0) { setExistingGroups([]); return; }
+
+    const glIds = [...new Set(gm.map((g: any) => g.group_leader_id))];
+    const allIds = [...new Set([...glIds, ...gm.map((g: any) => g.agent_id)])];
+    const { data: users } = await supabase.from("users").select("id, name").in("id", allIds);
+    const userMap = new Map((users || []).map((u: any) => [u.id, u.name]));
+
+    const groups = glIds.map(glId => ({
+      leader: { id: glId, name: userMap.get(glId) || "Unknown" },
+      members: gm.filter((g: any) => g.group_leader_id === glId).map((g: any) => ({
+        id: g.agent_id, name: userMap.get(g.agent_id) || "Unknown"
+      }))
+    }));
+    setExistingGroups(groups);
+  }, [user]);
+
+  const loadGroupApprovals = useCallback(async () => {
+    if (!user) return;
+    let q = supabase.from("sa_approvals").select("*").eq("type", "group_creation").order("created_at", { ascending: false });
+    if (!isBDO) q = q.eq("requested_by", user.id);
+    const { data } = await q;
+    setGroupApprovals(data || []);
+  }, [user, isBDO]);
+
+  const handleSubmitGroup = async () => {
+    if (!user || selectedGroupMembers.size === 0 || !selectedGroupLeader) return;
+    setGroupSubmitting(true);
+    const memberIds = [...selectedGroupMembers].filter(id => id !== selectedGroupLeader);
+    const leaderName = allTeamMembers.find(m => m.id === selectedGroupLeader)?.name || "";
+    const memberNames = memberIds.map(id => allTeamMembers.find(m => m.id === id)?.name || "").filter(Boolean);
+
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "group_creation",
+      requested_by: user.id,
+      details: {
+        group_leader_id: selectedGroupLeader,
+        group_leader_name: leaderName,
+        member_ids: memberIds,
+        member_names: memberNames,
+        tl_id: user.id,
+        tl_name: user.name,
+      },
+    });
+
+    if (error) {
+      toast.error("গ্রুপ তৈরির অনুরোধ ব্যর্থ হয়েছে");
+    } else {
+      toast.success("গ্রুপ তৈরির অনুরোধ BDO-এর কাছে পাঠানো হয়েছে");
+      setGroupCreateOpen(false);
+      setSelectedGroupMembers(new Set());
+      setSelectedGroupLeader("");
+      loadGroupApprovals();
+    }
+    setGroupSubmitting(false);
+  };
+
+  const handleApproveGroup = async (approval: any) => {
+    const details = approval.details as any;
+    if (!details?.group_leader_id || !details?.member_ids) return;
+
+    // Insert into group_members
+    const inserts = details.member_ids.map((agentId: string) => ({
+      group_leader_id: details.group_leader_id,
+      agent_id: agentId,
+    }));
+    const { error: insertErr } = await supabase.from("group_members").insert(inserts);
+    if (insertErr) { toast.error("গ্রুপ তৈরি ব্যর্থ: " + insertErr.message); return; }
+
+    await supabase.from("sa_approvals").update({ status: "approved", decided_by: user?.id }).eq("id", approval.id);
+    toast.success("গ্রুপ অনুমোদন হয়েছে");
+    loadGroupApprovals();
+    loadExistingGroups();
+  };
+
+  const handleRejectGroup = async (approvalId: string) => {
+    await supabase.from("sa_approvals").update({ status: "rejected", decided_by: user?.id }).eq("id", approvalId);
+    toast.success("গ্রুপ প্রত্যাখ্যান করা হয়েছে");
+    loadGroupApprovals();
+  };
+
+  const handleDeleteGroup = async (leaderId: string) => {
+    await supabase.from("group_members").delete().eq("group_leader_id", leaderId);
+    toast.success("গ্রুপ মুছে ফেলা হয়েছে");
+    loadExistingGroups();
+  };
+
+
     if (!user) return;
     loadTLs();
     if (isBDO) loadOtherEmployees();
