@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target, ShoppingCart, Phone, Trash2, CheckCircle, TrendingUp } from "lucide-react";
+import GroupLeaderDashboard from "./GroupLeaderDashboard";
 
 interface CampaignOption {
   id: string;
@@ -15,6 +16,9 @@ const TLDashboard = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
+
+  // GL users on TL panel should see GroupLeaderDashboard
+  const isGL = user?.role === "Group Leader";
 
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
@@ -236,6 +240,8 @@ const TLDashboard = () => {
     { label: isBn ? "Delete Sheet" : "Delete Sheet", value: stats.deleteSheet, icon: Trash2, color: "text-red-400" },
     { label: isBn ? "Receive Ratio %" : "Receive Ratio %", value: `${stats.receiveRatio}%`, icon: TrendingUp, color: "text-emerald-400" },
   ];
+
+  if (isGL) return <GroupLeaderDashboard />;
 
   return (
     <div className="space-y-8">
