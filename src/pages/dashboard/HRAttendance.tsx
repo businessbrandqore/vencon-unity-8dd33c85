@@ -611,12 +611,19 @@ const HRAttendance = () => {
 
         {showEmpOffForm && (
           <div className="border border-border p-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
               <div>
                 <label className="font-body text-xs text-muted-foreground block mb-1">
                   {isBn ? "কর্মচারী *" : "Employee *"}
                 </label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <Select value={selectedEmployee} onValueChange={(v) => {
+                  setSelectedEmployee(v);
+                  // Pre-fill existing dates
+                  const existing = empOffs.filter(o => o.user_id === v).map(o => o.off_date);
+                  setEmpOffDate1(existing[0] || "");
+                  setEmpOffDate2(existing[1] || "");
+                  setEmpOffDate3(existing[2] || "");
+                }}>
                   <SelectTrigger className="bg-background border-border text-foreground w-full">
                     <SelectValue placeholder={isBn ? "কর্মচারী নির্বাচন" : "Select employee"} />
                   </SelectTrigger>
@@ -629,17 +636,39 @@ const HRAttendance = () => {
               </div>
               <div>
                 <label className="font-body text-xs text-muted-foreground block mb-1">
-                  {isBn ? "তারিখ *" : "Date *"}
+                  {isBn ? "ছুটি ১" : "Off 1"}
                 </label>
                 <Input
                   type="date"
-                  value={empOffDate}
-                  onChange={(e) => setEmpOffDate(e.target.value)}
+                  value={empOffDate1}
+                  onChange={(e) => setEmpOffDate1(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "ছুটি ২" : "Off 2"}
+                </label>
+                <Input
+                  type="date"
+                  value={empOffDate2}
+                  onChange={(e) => setEmpOffDate2(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "ছুটি ৩" : "Off 3"}
+                </label>
+                <Input
+                  type="date"
+                  value={empOffDate3}
+                  onChange={(e) => setEmpOffDate3(e.target.value)}
                   className="bg-background border-border text-foreground"
                 />
               </div>
               <div className="flex items-end">
-                <Button onClick={addEmpOff} size="sm" style={{ backgroundColor: BLUE }} className="text-white">
+                <Button onClick={addEmpOffs} size="sm" style={{ backgroundColor: BLUE }} className="text-white">
                   {isBn ? "বরাদ্দ করুন" : "Assign"}
                 </Button>
               </div>
