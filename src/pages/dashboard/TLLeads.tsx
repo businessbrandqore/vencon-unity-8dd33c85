@@ -53,16 +53,17 @@ const TLLeads = () => {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isGL = user?.role === "group_leader";
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
-  // Get the effective TL id for data queries (ATL uses their assigned TL's id)
+  // Get the effective TL id for data queries (ATL/GL uses their assigned TL's id)
   const getEffectiveTlId = useCallback((campaignId?: string) => {
-    if (!isATL || !user) return user?.id || "";
+    if ((!isATL && !isGL) || !user) return user?.id || "";
     if (campaignId && atlTlMap[campaignId]) return atlTlMap[campaignId];
     if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
     return user?.id || "";
-  }, [isATL, user, atlTlMap, selectedCampaign]);
+  }, [isATL, isGL, user, atlTlMap, selectedCampaign]);
 
   useEffect(() => {
     if (!user) return;
@@ -79,6 +80,33 @@ const TLLeads = () => {
         }
       } else if (isATL) {
         // ATL: fetch campaigns from campaign_agent_roles
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const tlMap: Record<string, string> = {};
+          const seen = new Set<string>();
+          const list = data
+            .filter((d: any) => d.campaigns)
+            .filter((d: any) => { 
+              if (seen.has(d.campaigns.id)) return false; 
+              seen.add(d.campaigns.id); 
+              return true; 
+            })
+            .map((d: any) => {
+              tlMap[d.campaigns.id] = d.tl_id;
+              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
+            });
+          setAtlTlMap(tlMap);
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) {
+            setSelectedCampaign(list[0].id);
+            setCampaignMode(list[0].data_mode);
+          }
+        }
+      } else if (isGL) {
+        // GL: fetch campaigns from campaign_agent_roles where they are an agent
         const { data } = await supabase
           .from("campaign_agent_roles")
           .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
