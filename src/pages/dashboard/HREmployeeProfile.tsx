@@ -151,8 +151,8 @@ const HREmployeeProfile = () => {
           await supabase.from("campaign_tls").delete().eq("tl_id", emp.id).eq("campaign_id", currentCampaignId);
         }
         // Add new
-        if (editCampaignId) {
-          await supabase.from("campaign_tls").insert({ campaign_id: editCampaignId, tl_id: emp.id });
+        if (effectiveCampaignId) {
+          await supabase.from("campaign_tls").insert({ campaign_id: effectiveCampaignId, tl_id: emp.id });
         }
       } else {
         // Remove old
@@ -160,16 +160,16 @@ const HREmployeeProfile = () => {
           await supabase.from("campaign_agent_roles").delete().eq("agent_id", emp.id).eq("campaign_id", currentCampaignId);
         }
         // Add new
-        if (editCampaignId) {
+        if (effectiveCampaignId) {
           const { data: campaignTl } = await supabase
             .from("campaign_tls")
             .select("tl_id")
-            .eq("campaign_id", editCampaignId)
+            .eq("campaign_id", effectiveCampaignId)
             .limit(1)
             .single();
           if (campaignTl) {
             await supabase.from("campaign_agent_roles").insert({
-              campaign_id: editCampaignId,
+              campaign_id: effectiveCampaignId,
               agent_id: emp.id,
               tl_id: campaignTl.tl_id,
               is_bronze: true,
@@ -178,8 +178,8 @@ const HREmployeeProfile = () => {
           }
         }
       }
-      changes.push(`campaign: ${currentCampaignId || 'none'} → ${editCampaignId || 'none'}`);
-      setCurrentCampaignId(editCampaignId);
+      changes.push(`campaign: ${currentCampaignId || 'none'} → ${effectiveCampaignId || 'none'}`);
+      setCurrentCampaignId(effectiveCampaignId);
     }
 
     if (Object.keys(updates).length > 0) {
