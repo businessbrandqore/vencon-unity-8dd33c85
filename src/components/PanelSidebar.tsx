@@ -164,13 +164,17 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center font-heading text-xs font-bold"
-              style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
-            >
-              V
-            </div>
-            <span className="font-heading text-sm font-bold text-foreground">VENCON</span>
+            {companyLogo ? (
+              <img src={companyLogo} alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
+            ) : (
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center font-heading text-xs font-bold"
+                style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
+              >
+                {companyName.charAt(0)}
+              </div>
+            )}
+            <span className="font-heading text-sm font-bold text-foreground">{companyName}</span>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
