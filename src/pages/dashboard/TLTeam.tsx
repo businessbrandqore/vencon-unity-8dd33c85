@@ -376,6 +376,82 @@ const TLTeam = () => {
   };
 
 
+  // GL Campaign Assignment functions
+  const loadGLCampaigns = useCallback(async () => {
+    if (!user) return;
+    // Load campaigns this TL is assigned to
+    const { data: ctData } = await supabase
+      .from("campaign_tls")
+      .select("campaign_id, campaigns!campaign_tls_campaign_id_fkey(id, name)")
+      .eq("tl_id", user.id);
+    if (ctData) {
+      setGlCampaigns(ctData.map((d: any) => ({ id: d.campaigns.id, name: d.campaigns.name })));
+    }
+  }, [user]);
+
+  const loadGLAssignApprovals = useCallback(async () => {
+    if (!user) return;
+    let q = supabase.from("sa_approvals").select("*").eq("type", "gl_campaign_assignment").order("created_at", { ascending: false });
+    if (!isBDO) q = q.eq("requested_by", user.id);
+    const { data } = await q;
+    setGlAssignApprovals(data || []);
+  }, [user, isBDO]);
+
+  const handleSubmitGLAssign = async () => {
+    if (!user || !glSelectedGL || !glSelectedCampaign) return;
+    setGlAssignSubmitting(true);
+    const glUser = existingGroups.find(g => g.leader.id === glSelectedGL)?.leader;
+    const campaign = glCampaigns.find(c => c.id === glSelectedCampaign);
+
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "gl_campaign_assignment",
+      requested_by: user.id,
+      details: {
+        group_leader_id: glSelectedGL,
+        group_leader_name: glUser?.name || "",
+        campaign_id: glSelectedCampaign,
+        campaign_name: campaign?.name || "",
+        tl_id: user.id,
+        tl_name: user.name,
+      },
+    });
+
+    if (error) {
+      toast.error("ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ ব্যর্থ হয়েছে");
+    } else {
+      toast.success("ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ BDO-এর কাছে পাঠানো হয়েছে");
+      setGlAssignOpen(false);
+      setGlSelectedGL("");
+      setGlSelectedCampaign("");
+      loadGLAssignApprovals();
+    }
+    setGlAssignSubmitting(false);
+  };
+
+  const handleApproveGLAssign = async (approval: any) => {
+    const details = approval.details as any;
+    if (!details?.group_leader_id || !details?.campaign_id || !details?.tl_id) return;
+
+    const { error } = await supabase.from("campaign_agent_roles").insert({
+      agent_id: details.group_leader_id,
+      campaign_id: details.campaign_id,
+      tl_id: details.tl_id,
+      is_bronze: false,
+      is_silver: false,
+    });
+    if (error) { toast.error("ক্যাম্পেইন অ্যাসাইনমেন্ট ব্যর্থ: " + error.message); return; }
+
+    await supabase.from("sa_approvals").update({ status: "approved", decided_by: user?.id }).eq("id", approval.id);
+    toast.success("গ্রুপ লিডার ক্যাম্পেইনে অ্যাসাইন হয়েছে");
+    loadGLAssignApprovals();
+  };
+
+  const handleRejectGLAssign = async (approvalId: string) => {
+    await supabase.from("sa_approvals").update({ status: "rejected", decided_by: user?.id }).eq("id", approvalId);
+    toast.success("ক্যাম্পেইন অ্যাসাইনমেন্ট প্রত্যাখ্যান হয়েছে");
+    loadGLAssignApprovals();
+  };
+
   // Initial load - only once
   useEffect(() => {
     if (!user || initializedRef.current) return;
