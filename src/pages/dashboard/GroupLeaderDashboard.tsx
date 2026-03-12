@@ -66,6 +66,7 @@ export default function GroupLeaderDashboard() {
   const [salaryData, setSalaryData] = useState<any>(null);
   const [myAttendance, setMyAttendance] = useState<any[]>([]);
   const [incentiveThreshold, setIncentiveThreshold] = useState(0);
+  const [campaignName, setCampaignName] = useState<string | null>(null);
 
   const now = new Date();
   const monthStart = useMemo(() => {
@@ -81,6 +82,17 @@ export default function GroupLeaderDashboard() {
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+
+    // Fetch GL's campaign from campaign_agent_roles
+    const { data: carData } = await supabase
+      .from("campaign_agent_roles")
+      .select("campaign_id, campaigns(id, name)")
+      .eq("agent_id", user.id)
+      .limit(1);
+    if (carData && carData.length > 0) {
+      const c = carData[0] as any;
+      setCampaignName(c.campaigns?.name || null);
+    }
 
     const { data: members } = await supabase
       .from("group_members")
@@ -258,10 +270,17 @@ export default function GroupLeaderDashboard() {
     <div className="space-y-6">
       {/* ═══ SECTION 1: TOP STATS ═══ */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-heading text-xl flex items-center gap-2">
-          <Users className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
-          গ্রুপ লিডার ড্যাশবোর্ড
-        </h1>
+        <div>
+          <h1 className="font-heading text-xl flex items-center gap-2">
+            <Users className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
+            গ্রুপ লিডার ড্যাশবোর্ড
+          </h1>
+          {campaignName && (
+            <p className="text-sm text-muted-foreground mt-1">
+              ক্যাম্পেইন: <span className="font-semibold text-foreground">{campaignName}</span>
+            </p>
+          )}
+        </div>
         <Button variant="outline" size="icon" onClick={loadData} disabled={loading}>
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
         </Button>
