@@ -241,6 +241,8 @@ const TLDashboard = () => {
     { label: isBn ? "Receive Ratio %" : "Receive Ratio %", value: `${stats.receiveRatio}%`, icon: TrendingUp, color: "text-emerald-400" },
   ];
 
+  if (isGL) return <GroupLeaderDashboard />;
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
