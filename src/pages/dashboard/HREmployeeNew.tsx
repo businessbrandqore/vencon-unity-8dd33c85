@@ -138,6 +138,36 @@ const HREmployeeNew = () => {
       return;
     }
 
+    // Assign to campaign if selected
+    if (form.campaignId) {
+      const isTLRole = ["Team Leader", "Assistant Team Leader"].includes(form.role);
+      if (isTLRole) {
+        await supabase.from("campaign_tls").insert({
+          campaign_id: form.campaignId,
+          tl_id: newUser.id,
+        });
+      } else {
+        // For agents and other roles, store campaign assignment in campaign_agent_roles
+        // TL will be assigned later or we find the campaign's TL
+        const { data: campaignTl } = await supabase
+          .from("campaign_tls")
+          .select("tl_id")
+          .eq("campaign_id", form.campaignId)
+          .limit(1)
+          .single();
+
+        if (campaignTl) {
+          await supabase.from("campaign_agent_roles").insert({
+            campaign_id: form.campaignId,
+            agent_id: newUser.id,
+            tl_id: campaignTl.tl_id,
+            is_bronze: true,
+            is_silver: false,
+          });
+        }
+      }
+    }
+
     if (isAgent) {
       // Create auth account immediately
       const { data: session } = await supabase.auth.getSession();
