@@ -587,6 +587,10 @@ const TLTeam = () => {
       crumbs.push({ label: isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests" });
     }
 
+    if (viewLevel === "group_management") {
+      crumbs.push({ label: isBn ? "গ্রুপ ম্যানেজমেন্ট" : "Group Management" });
+    }
+
     return (
       <div className="flex items-center gap-1 text-sm flex-wrap">
         {crumbs.map((c, i) => (
