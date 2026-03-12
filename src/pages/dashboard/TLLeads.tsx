@@ -232,7 +232,7 @@ const TLLeads = () => {
     } else {
       setGoldenData([]);
     }
-  }, [user, selectedCampaign, campaignMode]);
+  }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
