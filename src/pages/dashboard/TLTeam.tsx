@@ -137,19 +137,31 @@ const TLTeam = () => {
         setTlList(stats);
       }
     } else {
-      // Regular TL sees themselves - go directly to GL list
-      const { data: selfData } = await supabase.from("users").select("*").eq("id", user.id).single();
+      // Regular TL or ATL sees themselves - go directly to GL list
+      // For ATL, find the TL they're assigned under
+      let effectiveId = user.id;
+      if (isATL) {
+        const { data: carData } = await supabase
+          .from("campaign_agent_roles")
+          .select("tl_id")
+          .eq("agent_id", user.id)
+          .limit(1);
+        if (carData && carData.length > 0) {
+          effectiveId = carData[0].tl_id;
+        }
+      }
+      const { data: selfData } = await supabase.from("users").select("*").eq("id", effectiveId).single();
       if (selfData) {
-        const stats = await fetchPersonStats(user.id, selfData, false);
+        const stats = await fetchPersonStats(effectiveId, selfData, false);
         setSelectedTL(stats);
         if (!skipViewChange) setViewLevel("gl_list");
-        await loadGLs(user.id);
+        await loadGLs(effectiveId);
         setLoading(false);
         return;
       }
     }
     setLoading(false);
-  }, [user, isBDO, fetchPersonStats]);
+  }, [user, isBDO, isATL, fetchPersonStats]);
 
   // Load Group Leaders under a TL
   const loadGLs = useCallback(async (tlId: string) => {
