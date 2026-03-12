@@ -120,6 +120,7 @@ const App = () => (
               <Route path="/tl/data-requests" element={<TLDataRequests />} />
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/agent-assignment" element={<BDOAgentAssignment />} />
+              <Route path="/tl/atl-approvals" element={<TLATLApprovals />} />
               <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/settings" element={<ProfileSettings />} />
