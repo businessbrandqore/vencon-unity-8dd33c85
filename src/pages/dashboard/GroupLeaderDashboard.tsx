@@ -83,6 +83,17 @@ export default function GroupLeaderDashboard() {
     if (!user) return;
     setLoading(true);
 
+    // Fetch GL's campaign from campaign_agent_roles
+    const { data: carData } = await supabase
+      .from("campaign_agent_roles")
+      .select("campaign_id, campaigns(id, name)")
+      .eq("agent_id", user.id)
+      .limit(1);
+    if (carData && carData.length > 0) {
+      const c = carData[0] as any;
+      setCampaignName(c.campaigns?.name || null);
+    }
+
     const { data: members } = await supabase
       .from("group_members")
       .select("agent_id")
