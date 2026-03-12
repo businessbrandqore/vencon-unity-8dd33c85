@@ -36,6 +36,7 @@ const MONTHS_BN = ["", "জানুয়ারি", "ফেব্রুয়�
 type FilterType = "daily" | "monthly" | "yearly";
 
 const fmt = (v: number | null | undefined) => (v ?? 0).toLocaleString();
+const n = (v: number | null | undefined) => v ?? 0;
 
 export default function EmployeeSalary() {
   const { user } = useAuth();
@@ -114,13 +115,14 @@ export default function EmployeeSalary() {
   const isIncentiveRole = ["telesales_executive", "assistant_team_leader", "Assistant Team Leader", "team_leader", "group_leader"].includes(salary.role);
 
   const yearlyTotals = yearlySalaries.length > 0 ? {
-    basic: yearlySalaries.reduce((s, d) => s + d.basic_salary, 0),
-    incentive: yearlySalaries.reduce((s, d) => s + d.incentive, 0),
-    deductions: yearlySalaries.reduce((s, d) => s + d.total_deductions, 0),
-    net: yearlySalaries.reduce((s, d) => s + d.net_salary, 0),
+    basic: yearlySalaries.reduce((s, d) => s + n(d.basic_salary), 0),
+    incentive: yearlySalaries.reduce((s, d) => s + n(d.incentive), 0),
+    deductions: yearlySalaries.reduce((s, d) => s + n(d.total_deductions), 0),
+    net: yearlySalaries.reduce((s, d) => s + n(d.net_salary), 0),
   } : null;
 
   const currentYear = new Date().getFullYear();
+  const ratio = n(salary.receive_ratio);
 
   return (
     <div className="space-y-6">
@@ -184,7 +186,7 @@ export default function EmployeeSalary() {
           <Card className="border-[hsl(var(--panel-employee)/0.3)]">
             <CardContent className="pt-8 pb-8 text-center">
               <p className="text-sm text-muted-foreground mb-2">আজকের আনুমানিক আয়</p>
-              <p className="text-5xl font-heading text-[hsl(var(--panel-employee))]">৳{dailyData.net_today.toLocaleString()}</p>
+              <p className="text-5xl font-heading text-[hsl(var(--panel-employee))]">৳{fmt(dailyData.net_today)}</p>
               <p className="text-xs text-muted-foreground mt-2">{new Date().toLocaleDateString("bn-BD", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
             </CardContent>
           </Card>
@@ -195,7 +197,7 @@ export default function EmployeeSalary() {
                 <Wallet className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">দৈনিক বেসিক (÷২৭)</p>
-                  <p className="text-2xl font-heading">৳{dailyData.basic_per_day.toLocaleString()}</p>
+                  <p className="text-2xl font-heading">৳{fmt(dailyData.basic_per_day)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -205,7 +207,7 @@ export default function EmployeeSalary() {
                 <div>
                   <p className="text-xs text-muted-foreground">আজকের কর্তন</p>
                   <p className="text-2xl font-heading text-destructive">
-                    {dailyData.today_deductions > 0 ? `-৳${dailyData.today_deductions}` : "—"}
+                    {n(dailyData.today_deductions) > 0 ? `-৳${fmt(dailyData.today_deductions)}` : "—"}
                   </p>
                 </div>
               </CardContent>
@@ -216,7 +218,7 @@ export default function EmployeeSalary() {
                   <TrendingUp className="h-8 w-8 text-green-500" />
                   <div>
                     <p className="text-xs text-muted-foreground">আজকের অর্ডার</p>
-                    <p className="text-2xl font-heading text-green-500">{dailyData.today_orders}</p>
+                    <p className="text-2xl font-heading text-green-500">{n(dailyData.today_orders)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -231,7 +233,7 @@ export default function EmployeeSalary() {
           <Card className="border-[hsl(var(--panel-employee)/0.3)]">
             <CardContent className="pt-8 pb-8 text-center">
               <p className="text-sm text-muted-foreground mb-2">মোট নিট বেতন</p>
-              <p className="text-5xl font-heading text-[hsl(var(--panel-employee))]">৳{salary.net_salary.toLocaleString()}</p>
+              <p className="text-5xl font-heading text-[hsl(var(--panel-employee))]">৳{fmt(salary.net_salary)}</p>
               <p className="text-xs text-muted-foreground mt-2">{salary.name} — {MONTHS_BN[salary.month]} {salary.year}</p>
             </CardContent>
           </Card>
@@ -242,7 +244,7 @@ export default function EmployeeSalary() {
                 <Wallet className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">বেসিক বেতন</p>
-                  <p className="text-2xl font-heading">৳{salary.basic_salary.toLocaleString()}</p>
+                  <p className="text-2xl font-heading">৳{fmt(salary.basic_salary)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -252,7 +254,7 @@ export default function EmployeeSalary() {
                 <div>
                   <p className="text-xs text-muted-foreground">{isIncentiveRole ? "ইনসেনটিভ" : "প্রফিট শেয়ার"}</p>
                   <p className="text-2xl font-heading text-green-500">
-                    {salary.incentive > 0 ? `+৳${salary.incentive.toLocaleString()}` : "—"}
+                    {n(salary.incentive) > 0 ? `+৳${fmt(salary.incentive)}` : "—"}
                   </p>
                 </div>
               </CardContent>
@@ -263,7 +265,7 @@ export default function EmployeeSalary() {
                 <div>
                   <p className="text-xs text-muted-foreground">মোট কর্তন</p>
                   <p className="text-2xl font-heading text-destructive">
-                    {salary.total_deductions > 0 ? `-৳${salary.total_deductions.toLocaleString()}` : "—"}
+                    {n(salary.total_deductions) > 0 ? `-৳${fmt(salary.total_deductions)}` : "—"}
                   </p>
                 </div>
               </CardContent>
@@ -271,10 +273,10 @@ export default function EmployeeSalary() {
             {isIncentiveRole && (
               <Card>
                 <CardContent className="pt-6 flex items-center gap-3">
-                  <TrendingUp className={cn("h-8 w-8", salary.receive_ratio >= 50 ? "text-green-500" : "text-orange-400")} />
+                  <TrendingUp className={cn("h-8 w-8", ratio >= 50 ? "text-green-500" : "text-orange-400")} />
                   <div>
                     <p className="text-xs text-muted-foreground">রিসিভ রেশিও</p>
-                    <p className="text-2xl font-heading">{salary.receive_ratio}%</p>
+                    <p className="text-2xl font-heading">{ratio}%</p>
                   </div>
                 </CardContent>
               </Card>
@@ -284,26 +286,26 @@ export default function EmployeeSalary() {
           {/* Receive Ratio Warning */}
           {isIncentiveRole && (
             <div className="space-y-4">
-              {salary.receive_ratio < 60 ? (
+              {ratio < 60 ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
                     <div>
                       <p className="font-heading font-bold text-destructive">⚠ রিসিভ রেশিও ৬০% এর নিচে!</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-destructive">{salary.receive_ratio}%</strong>। মাস শেষে রিসিভ রেশিও ৬০% এর নিচে থাকলে বেতন <strong className="text-destructive">০ (শূন্য)</strong> হয়ে যাবে।
+                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-destructive">{ratio}%</strong>। মাস শেষে রিসিভ রেশিও ৬০% এর নিচে থাকলে বেতন <strong className="text-destructive">০ (শূন্য)</strong> হয়ে যাবে।
                       </p>
                     </div>
                   </div>
                 </div>
-              ) : salary.receive_ratio < 80 ? (
+              ) : ratio < 80 ? (
                 <div className="rounded-md border border-orange-300/50 bg-orange-50 dark:bg-orange-950/20 p-4">
                   <div className="flex items-start gap-3">
                     <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
                     <div>
                       <p className="font-heading font-bold text-orange-600 dark:text-orange-400">রিসিভ রেশিও মোটামুটি</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{salary.receive_ratio}%</strong>। আরও উন্নতি করলে ইনসেনটিভ বাড়বে।
+                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। আরও উন্নতি করলে ইনসেনটিভ বাড়বে।
                       </p>
                     </div>
                   </div>
@@ -315,7 +317,7 @@ export default function EmployeeSalary() {
                     <div>
                       <p className="font-heading font-bold text-green-700 dark:text-green-400">রিসিভ রেশিও চমৎকার! 🎉</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-green-600 dark:text-green-400">{salary.receive_ratio}%</strong>। দারুণ পারফরম্যান্স!
+                        আপনার বর্তমান রিসিভ রেশিও <strong className="text-green-600 dark:text-green-400">{ratio}%</strong>। দারুণ পারফরম্যান্স!
                       </p>
                     </div>
                   </div>
@@ -326,17 +328,17 @@ export default function EmployeeSalary() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-heading text-sm font-bold">রিসিভ রেশিও অগ্রগতি</p>
-                    <Badge variant={salary.receive_ratio >= 60 ? "default" : "destructive"}>
-                      {salary.receive_ratio}% / ৬০% মিনিমাম
+                    <Badge variant={ratio >= 60 ? "default" : "destructive"}>
+                      {ratio}% / ৬০% মিনিমাম
                     </Badge>
                   </div>
                   <Progress
-                    value={Math.min(salary.receive_ratio, 100)}
+                    value={Math.min(ratio, 100)}
                     className={cn(
                       "h-3",
-                      salary.receive_ratio < 60 && "[&>div]:bg-destructive",
-                      salary.receive_ratio >= 60 && salary.receive_ratio < 80 && "[&>div]:bg-orange-500",
-                      salary.receive_ratio >= 80 && "[&>div]:bg-green-500"
+                      ratio < 60 && "[&>div]:bg-destructive",
+                      ratio >= 60 && ratio < 80 && "[&>div]:bg-orange-500",
+                      ratio >= 80 && "[&>div]:bg-green-500"
                     )}
                   />
                 </CardContent>
@@ -351,23 +353,23 @@ export default function EmployeeSalary() {
               <div className="space-y-3">
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">বেসিক বেতন</span>
-                  <span className="font-medium">৳{salary.basic_salary.toLocaleString()}</span>
+                  <span className="font-medium">৳{fmt(salary.basic_salary)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">{isIncentiveRole ? "ইনসেনটিভ" : "প্রফিট শেয়ার"}</span>
-                  <span className="font-medium text-green-500">+৳{salary.incentive.toLocaleString()}</span>
+                  <span className="font-medium text-green-500">+৳{fmt(salary.incentive)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">দেরি/আগে চলে যাওয়া কর্তন</span>
-                  <span className="font-medium text-destructive">-৳{salary.attendance_deductions.toLocaleString()}</span>
+                  <span className="font-medium text-destructive">-৳{fmt(salary.attendance_deductions)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">আনপেইড ছুটি কর্তন</span>
-                  <span className="font-medium text-destructive">-৳{salary.unpaid_deductions.toLocaleString()}</span>
+                  <span className="font-medium text-destructive">-৳{fmt(salary.unpaid_deductions)}</span>
                 </div>
                 <div className="flex justify-between py-3 border-t-2 border-border font-bold text-lg">
                   <span>নিট বেতন</span>
-                  <span className="text-[hsl(var(--panel-employee))]">৳{salary.net_salary.toLocaleString()}</span>
+                  <span className="text-[hsl(var(--panel-employee))]">৳{fmt(salary.net_salary)}</span>
                 </div>
               </div>
             </CardContent>
@@ -382,7 +384,7 @@ export default function EmployeeSalary() {
             <Card className="border-[hsl(var(--panel-employee)/0.3)]">
               <CardContent className="pt-8 pb-8 text-center">
                 <p className="text-sm text-muted-foreground mb-2">বাৎসরিক মোট নিট বেতন — {selectedYear}</p>
-                <p className="text-5xl font-heading text-[hsl(var(--panel-employee))]">৳{yearlyTotals.net.toLocaleString()}</p>
+                <p className="text-5xl font-heading text-[hsl(var(--panel-employee))]">৳{fmt(yearlyTotals.net)}</p>
               </CardContent>
             </Card>
           )}
@@ -392,19 +394,19 @@ export default function EmployeeSalary() {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <p className="text-xs text-muted-foreground">মোট বেসিক</p>
-                  <p className="text-2xl font-heading">৳{yearlyTotals.basic.toLocaleString()}</p>
+                  <p className="text-2xl font-heading">৳{fmt(yearlyTotals.basic)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <p className="text-xs text-muted-foreground">মোট ইনসেনটিভ/শেয়ার</p>
-                  <p className="text-2xl font-heading text-green-500">+৳{yearlyTotals.incentive.toLocaleString()}</p>
+                  <p className="text-2xl font-heading text-green-500">+৳{fmt(yearlyTotals.incentive)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <p className="text-xs text-muted-foreground">মোট কর্তন</p>
-                  <p className="text-2xl font-heading text-destructive">-৳{yearlyTotals.deductions.toLocaleString()}</p>
+                  <p className="text-2xl font-heading text-destructive">-৳{fmt(yearlyTotals.deductions)}</p>
                 </CardContent>
               </Card>
             </div>
@@ -432,10 +434,10 @@ export default function EmployeeSalary() {
                       {yearlySalaries.map((s) => (
                         <tr key={s.month} className="border-b border-border/50">
                           <td className="py-2">{MONTHS_BN[s.month]}</td>
-                          <td className="text-right py-2">৳{s.basic_salary.toLocaleString()}</td>
-                          <td className="text-right py-2 text-green-500">+৳{s.incentive.toLocaleString()}</td>
-                          <td className="text-right py-2 text-destructive">-৳{s.total_deductions.toLocaleString()}</td>
-                          <td className="text-right py-2 font-bold">৳{s.net_salary.toLocaleString()}</td>
+                          <td className="text-right py-2">৳{fmt(s.basic_salary)}</td>
+                          <td className="text-right py-2 text-green-500">+৳{fmt(s.incentive)}</td>
+                          <td className="text-right py-2 text-destructive">-৳{fmt(s.total_deductions)}</td>
+                          <td className="text-right py-2 font-bold">৳{fmt(s.net_salary)}</td>
                         </tr>
                       ))}
                     </tbody>
