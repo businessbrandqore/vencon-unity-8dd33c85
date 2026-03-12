@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut } from "lucide-react";
-import { useDeductionConfig } from "@/hooks/useDeductionConfig";
+import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 
 interface AttendanceRow {
   id: string;
