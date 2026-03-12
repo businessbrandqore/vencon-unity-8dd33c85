@@ -716,14 +716,30 @@ const TLTeam = () => {
         </div>
       </div>
 
-      {/* Quick Actions for BDO */}
-      {isBDO && viewLevel === "tl_list" && (
+      {/* Quick Actions */}
+      {(isBDO ? viewLevel === "tl_list" : viewLevel === "gl_list") && (
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => setViewLevel("rankings")} className="gap-1.5">
-            <Trophy className="h-4 w-4" /> {isBn ? "সেরা পারফর্মার" : "Top Performers"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setViewLevel("other_employees")} className="gap-1.5">
-            <Briefcase className="h-4 w-4" /> {isBn ? "অন্যান্য কর্মী" : "Other Employees"}
+          {isBDO && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setViewLevel("rankings")} className="gap-1.5">
+                <Trophy className="h-4 w-4" /> {isBn ? "সেরা পারফর্মার" : "Top Performers"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setViewLevel("other_employees")} className="gap-1.5">
+                <Briefcase className="h-4 w-4" /> {isBn ? "অন্যান্য কর্মী" : "Other Employees"}
+              </Button>
+            </>
+          )}
+          <Button
+            variant={pendingRequestCount > 0 ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setViewLevel("data_requests"); loadDataRequests(); }}
+            className="gap-1.5"
+          >
+            <Database className="h-4 w-4" />
+            {isBn ? "ডাটা রিকোয়েস্ট" : "Data Requests"}
+            {pendingRequestCount > 0 && (
+              <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{pendingRequestCount}</Badge>
+            )}
           </Button>
         </div>
       )}
