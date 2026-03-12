@@ -45,6 +45,8 @@ const TLTeam = () => {
   const { t, roleName } = useLanguage();
   const isBn = t("vencon") === "VENCON";
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isATL = user?.role === "Assistant Team Leader";
+  const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
   const [viewLevel, setViewLevel] = useState<ViewLevel>("tl_list");
   const [selectedTL, setSelectedTL] = useState<PersonStats | null>(null);
