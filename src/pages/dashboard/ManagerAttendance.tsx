@@ -309,7 +309,6 @@ export default function ManagerAttendance() {
 
     setDistributing(true);
     try {
-      // Fetch unassigned leads for this campaign
       let q = supabase
         .from("leads")
         .select("id")
@@ -319,16 +318,21 @@ export default function ManagerAttendance() {
         .order("created_at", { ascending: true })
         .limit(count);
       if (!isBDO) q = q.eq("tl_id", user.id);
+      if (distDataMode === "processing") {
+        q = q.eq("import_source", "processing");
+      } else {
+        q = q.or("import_source.is.null,import_source.neq.processing");
+      }
 
       const { data: leads, error: fetchErr } = await q;
       if (fetchErr) throw fetchErr;
       if (!leads || leads.length === 0) { toast.error("কোনো ডাটা পাওয়া যায়নি"); return; }
 
-      // Assign each lead to the selected agent
       const ids = leads.map((l: any) => l.id);
+      const agentType = distDataMode === "processing" ? "processing" : "bronze";
       const { error: updateErr } = await supabase
         .from("leads")
-        .update({ assigned_to: distAgent, agent_type: "bronze" })
+        .update({ assigned_to: distAgent, agent_type: agentType })
         .in("id", ids);
 
       if (updateErr) throw updateErr;
