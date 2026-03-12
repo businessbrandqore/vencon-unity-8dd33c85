@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X } from "lucide-react";
+import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X, Pencil, Save } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -58,6 +58,15 @@ const HRCampaigns = () => {
   const [detailCampaign, setDetailCampaign] = useState<Campaign | null>(null);
   const [detailWebsites, setDetailWebsites] = useState<Website[]>([]);
   const [detailLeadStats, setDetailLeadStats] = useState<Record<string, number>>({});
+
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDataMode, setEditDataMode] = useState<"lead" | "processing">("lead");
+  const [editTLs, setEditTLs] = useState<string[]>([]);
+  const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
+  const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean }[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
@@ -150,17 +159,65 @@ const HRCampaigns = () => {
 
   const openDetail = async (id: string) => {
     setDetailId(id);
+    setEditing(false);
     setDetailCampaign(campaigns.find((c) => c.id === id) || null);
 
-    const [{ data: sites }, { data: leads }] = await Promise.all([
+    const [{ data: sites }, { data: leads }, { data: assignedTls }] = await Promise.all([
       supabase.from("campaign_websites").select("*").eq("campaign_id", id),
       supabase.from("leads").select("status").eq("campaign_id", id),
+      supabase.from("campaign_tls").select("tl_id, users!campaign_tls_tl_id_fkey(id, name)").eq("campaign_id", id),
     ]);
     setDetailWebsites((sites as Website[]) || []);
+
+    const assignedTlList = (assignedTls || []).map((t: any) => t.users).filter(Boolean);
+    setDetailTLs(assignedTlList);
 
     const stats: Record<string, number> = { total: 0 };
     (leads || []).forEach((l) => { stats.total++; const s = l.status || "fresh"; stats[s] = (stats[s] || 0) + 1; });
     setDetailLeadStats(stats);
+  };
+
+  const startEditing = () => {
+    if (!detailCampaign) return;
+    setEditName(detailCampaign.name);
+    setEditDataMode(detailCampaign.data_mode as "lead" | "processing");
+    setEditTLs(detailTLs.map((t) => t.id));
+    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active })));
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailId || !editName.trim()) return;
+    setSaving(true);
+
+    // Update campaign
+    await supabase.from("campaigns").update({ name: editName.trim(), data_mode: editDataMode }).eq("id", detailId);
+
+    // Update TL assignments: delete old, insert new
+    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
+    if (editTLs.length > 0) {
+      await supabase.from("campaign_tls").insert(editTLs.map((tlId) => ({ campaign_id: detailId, tl_id: tlId })));
+    }
+
+    // Update websites: delete removed, upsert existing/new
+    const existingIds = editWebsites.filter((w) => w.id).map((w) => w.id!);
+    const toDelete = detailWebsites.filter((w) => !existingIds.includes(w.id));
+    for (const d of toDelete) {
+      await supabase.from("campaign_websites").delete().eq("id", d.id);
+    }
+    for (const w of editWebsites) {
+      if (w.id) {
+        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active }).eq("id", w.id);
+      } else if (w.site_name.trim() && w.site_url.trim()) {
+        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active });
+      }
+    }
+
+    toast({ title: isBn ? "ক্যাম্পেইন আপডেট হয়েছে ✓" : "Campaign updated ✓" });
+    setSaving(false);
+    setEditing(false);
+    fetchCampaigns();
+    openDetail(detailId);
   };
 
   const copyText = (text: string) => {
@@ -428,124 +485,258 @@ const HRCampaigns = () => {
       </Dialog>
 
       {/* Detail Dialog */}
-      <Dialog open={!!detailId} onOpenChange={(o) => { if (!o) setDetailId(null); }}>
+      <Dialog open={!!detailId} onOpenChange={(o) => { if (!o) { setDetailId(null); setEditing(false); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading flex items-center gap-3">
               <Megaphone className="h-5 w-5 text-primary" />
-              {detailCampaign?.name || "Campaign"}
+              {editing ? (
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="font-heading font-bold" />
+              ) : (
+                detailCampaign?.name || "Campaign"
+              )}
             </DialogTitle>
           </DialogHeader>
           {detailCampaign && (
             <div className="space-y-5">
-              {/* Status + Mode */}
+              {/* Status + Mode + Edit Button */}
               <div className="flex items-center gap-3 flex-wrap">
                 <Badge className={statusColors[detailCampaign.status] || statusColors.draft}>
                   {detailCampaign.status}
                 </Badge>
-                <Badge variant="outline" className="border-primary/30 text-primary">
-                  {detailCampaign.data_mode === "lead" ? (isBn ? "🎯 লিড পদ্ধতি" : "🎯 Lead Mode") : (isBn ? "⚙️ প্রসেসিং" : "⚙️ Processing")}
-                </Badge>
-                {(detailCampaign.status === "active" || detailCampaign.status === "paused") && (
+                {editing ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant={editDataMode === "lead" ? "default" : "outline"} onClick={() => setEditDataMode("lead")}>
+                      🎯 {isBn ? "লিড" : "Lead"}
+                    </Button>
+                    <Button size="sm" variant={editDataMode === "processing" ? "default" : "outline"} onClick={() => setEditDataMode("processing")}>
+                      ⚙️ {isBn ? "প্রসেসিং" : "Processing"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="border-primary/30 text-primary">
+                    {detailCampaign.data_mode === "lead" ? (isBn ? "🎯 লিড পদ্ধতি" : "🎯 Lead Mode") : (isBn ? "⚙️ প্রসেসিং" : "⚙️ Processing")}
+                  </Badge>
+                )}
+                {(detailCampaign.status === "active" || detailCampaign.status === "paused") && !editing && (
                   <Button size="sm" variant="outline" onClick={() => { togglePause(detailCampaign); setDetailId(null); }}>
                     {detailCampaign.status === "active" ? (isBn ? "বিরতি" : "Pause") : (isBn ? "চালু" : "Resume")}
                   </Button>
                 )}
+                <div className="ml-auto flex gap-2">
+                  {editing ? (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                        {isBn ? "বাতিল" : "Cancel"}
+                      </Button>
+                      <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="bg-primary text-primary-foreground">
+                        <Save className="h-3.5 w-3.5 mr-1" />
+                        {saving ? (isBn ? "সেভ হচ্ছে..." : "Saving...") : (isBn ? "সেভ করুন" : "Save")}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={startEditing}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      {isBn ? "এডিট" : "Edit"}
+                    </Button>
+                  )}
+                </div>
               </div>
 
+              {/* Assigned TLs */}
+              {editing ? (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{isBn ? "টিম লিডার" : "Team Leaders"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {editTLs.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {editTLs.map((tlId) => {
+                          const tl = tlUsers.find((u) => u.id === tlId);
+                          return tl ? (
+                            <Badge key={tlId} variant="outline" className="border-primary/30 bg-primary/5 text-primary gap-1 pr-1">
+                              {tl.name}
+                              <button type="button" onClick={() => setEditTLs((prev) => prev.filter((x) => x !== tlId))}
+                                className="hover:bg-primary/20 rounded-full p-0.5">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between font-normal text-sm h-10">
+                          <span className={editTLs.length === 0 ? "text-muted-foreground" : "text-foreground"}>
+                            {editTLs.length === 0
+                              ? (isBn ? "টিম লিডার সিলেক্ট করুন..." : "Select Team Leaders...")
+                              : (isBn ? `${editTLs.length} জন সিলেক্ট করা হয়েছে` : `${editTLs.length} selected`)}
+                          </span>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                        <div className="max-h-52 overflow-y-auto">
+                          {tlUsers.map((tl) => {
+                            const isSelected = editTLs.includes(tl.id);
+                            return (
+                              <button key={tl.id} type="button"
+                                onClick={() => setEditTLs((prev) => prev.includes(tl.id) ? prev.filter((x) => x !== tl.id) : [...prev, tl.id])}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-accent"}`}>
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-primary bg-primary" : "border-muted-foreground/50"}`}>
+                                  {isSelected && <span className="text-primary-foreground text-[10px]">✓</span>}
+                                </div>
+                                {tl.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </CardContent>
+                </Card>
+              ) : detailTLs.length > 0 ? (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{isBn ? "অ্যাসাইন করা টিম লিডার" : "Assigned Team Leaders"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detailTLs.map((tl) => (
+                        <Badge key={tl.id} variant="outline" className="border-primary/30 text-primary">{tl.name}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+
               {/* Data Flow Visualization */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">{isBn ? "ডাটা ফ্লো" : "Data Flow"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {detailCampaign.data_mode === "lead" ? (
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-                      {["WordPress", "SA/HR/BDO", "TL", "Bronze Agent", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS", "TL (Silver)", "Silver Agent"].map((step, i) => (
-                        <span key={i} className="flex items-center gap-1.5">
-                          <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary font-medium">{step}</span>
-                          {i < 10 && <span className="text-muted-foreground">→</span>}
-                        </span>
-                      ))}
-                      <span className="text-muted-foreground ml-1">🔄</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-                      {["WordPress", "SA/HR/BDO", "TL", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS"].map((step, i) => (
-                        <span key={i} className="flex items-center gap-1.5">
-                          <span className="px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">{step}</span>
-                          {i < 7 && <span className="text-muted-foreground">→</span>}
-                        </span>
-                      ))}
-                      <span className="text-muted-foreground ml-1">🔄</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {!editing && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{isBn ? "ডাটা ফ্লো" : "Data Flow"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {detailCampaign.data_mode === "lead" ? (
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
+                        {["WordPress", "SA/HR/BDO", "TL", "Bronze Agent", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS", "TL (Silver)", "Silver Agent"].map((step, i) => (
+                          <span key={i} className="flex items-center gap-1.5">
+                            <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary font-medium">{step}</span>
+                            {i < 10 && <span className="text-muted-foreground">→</span>}
+                          </span>
+                        ))}
+                        <span className="text-muted-foreground ml-1">🔄</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
+                        {["WordPress", "SA/HR/BDO", "TL", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS"].map((step, i) => (
+                          <span key={i} className="flex items-center gap-1.5">
+                            <span className="px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">{step}</span>
+                            {i < 7 && <span className="text-muted-foreground">→</span>}
+                          </span>
+                        ))}
+                        <span className="text-muted-foreground ml-1">🔄</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Websites */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Globe className="h-4 w-4" />
-                    {isBn ? "সংযুক্ত ওয়েবসাইট" : "Connected Websites"} ({detailWebsites.length})
+                    {isBn ? "সংযুক্ত ওয়েবসাইট" : "Connected Websites"} ({editing ? editWebsites.length : detailWebsites.length})
+                    {editing && (
+                      <Button variant="ghost" size="sm" className="text-primary ml-auto"
+                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true }])}>
+                        <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
+                      </Button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {detailWebsites.map((site) => (
-                    <div key={site.id} className="p-3 rounded-lg border border-border bg-background">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${site.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
-                          <span className="font-heading font-bold text-sm text-foreground">{site.site_name}</span>
+                  {editing ? (
+                    editWebsites.map((site, i) => (
+                      <div key={i} className="p-3 rounded-lg border border-border bg-background space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">{isBn ? `সাইট #${i + 1}` : `Site #${i + 1}`}</span>
+                          {editWebsites.length > 1 && (
+                            <Button variant="ghost" size="sm" className="text-destructive h-7 px-2"
+                              onClick={() => setEditWebsites(editWebsites.filter((_, idx) => idx !== i))}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
-                        <a href={site.site_url} target="_blank" rel="noopener noreferrer" className="text-primary text-xs flex items-center gap-1 hover:underline">
-                          <ExternalLink className="h-3 w-3" /> {isBn ? "দেখুন" : "Visit"}
-                        </a>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground shrink-0">Webhook:</span>
-                          <code className="text-[11px] bg-muted px-2 py-1 rounded flex-1 truncate">
-                            {supabaseUrl}/functions/v1/import-leads/{detailCampaign.id}
-                          </code>
-                          <button onClick={() => copyText(`${supabaseUrl}/functions/v1/import-leads/${detailCampaign.id}`)}
-                            className="text-muted-foreground hover:text-primary">
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground shrink-0">Secret:</span>
-                          <code className="text-[11px] bg-muted px-2 py-1 rounded flex-1 truncate">
-                            {"•".repeat(16)}{site.webhook_secret.slice(-8)}
-                          </code>
-                          <button onClick={() => copyText(site.webhook_secret)}
-                            className="text-muted-foreground hover:text-primary">
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input value={site.site_name} placeholder={isBn ? "সাইটের নাম" : "Site Name"}
+                            onChange={(e) => { const c = [...editWebsites]; c[i].site_name = e.target.value; setEditWebsites(c); }} />
+                          <Input value={site.site_url} placeholder="https://..."
+                            onChange={(e) => { const c = [...editWebsites]; c[i].site_url = e.target.value; setEditWebsites(c); }} />
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    detailWebsites.map((site) => (
+                      <div key={site.id} className="p-3 rounded-lg border border-border bg-background">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${site.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
+                            <span className="font-heading font-bold text-sm text-foreground">{site.site_name}</span>
+                          </div>
+                          <a href={site.site_url} target="_blank" rel="noopener noreferrer" className="text-primary text-xs flex items-center gap-1 hover:underline">
+                            <ExternalLink className="h-3 w-3" /> {isBn ? "দেখুন" : "Visit"}
+                          </a>
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground shrink-0">Webhook:</span>
+                            <code className="text-[11px] bg-muted px-2 py-1 rounded flex-1 truncate">
+                              {supabaseUrl}/functions/v1/import-leads/{detailCampaign.id}
+                            </code>
+                            <button onClick={() => copyText(`${supabaseUrl}/functions/v1/import-leads/${detailCampaign.id}`)}
+                              className="text-muted-foreground hover:text-primary">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground shrink-0">Secret:</span>
+                            <code className="text-[11px] bg-muted px-2 py-1 rounded flex-1 truncate">
+                              {"•".repeat(16)}{site.webhook_secret.slice(-8)}
+                            </code>
+                            <button onClick={() => copyText(site.webhook_secret)}
+                              className="text-muted-foreground hover:text-primary">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
               {/* Lead Stats */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">{isBn ? "ডাটা পরিসংখ্যান" : "Data Statistics"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {Object.entries(detailLeadStats).map(([key, val]) => (
-                      <div key={key} className="bg-background rounded-lg p-3 text-center border border-border">
-                        <p className="text-[10px] text-muted-foreground capitalize">{key}</p>
-                        <p className="font-heading text-lg font-bold text-foreground">{val}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              {!editing && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{isBn ? "ডাটা পরিসংখ্যান" : "Data Statistics"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {Object.entries(detailLeadStats).map(([key, val]) => (
+                        <div key={key} className="bg-background rounded-lg p-3 text-center border border-border">
+                          <p className="text-[10px] text-muted-foreground capitalize">{key}</p>
+                          <p className="font-heading text-lg font-bold text-foreground">{val}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </DialogContent>
