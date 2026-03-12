@@ -83,14 +83,18 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
 
   const logoSection = (
     <div className="px-4 py-4 flex items-center gap-3">
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center font-heading text-sm font-bold"
-        style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
-      >
-        V
-      </div>
+      {companyLogo ? (
+        <img src={companyLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+      ) : (
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center font-heading text-sm font-bold"
+          style={{ backgroundColor: panelConfig?.color, color: "#0A0A0A" }}
+        >
+          {companyName.charAt(0)}
+        </div>
+      )}
       <div>
-        <span className="font-heading text-sm font-bold text-foreground tracking-wider">VENCON</span>
+        <span className="font-heading text-sm font-bold text-foreground tracking-wider">{companyName}</span>
         <p className="font-body text-[10px] text-muted-foreground">
           {user.role === "Business Development And Marketing Manager" ? t("bdo_panel") : user.role === "Assistant Team Leader" ? t("atl_panel") : (panelConfig ? t(panelConfig.nameKey) : "")}
         </p>
