@@ -35,7 +35,7 @@ const SAAllData = () => {
 
   useEffect(() => {
     loadData();
-  }, [tab, campaignFilter, statusFilter]);
+  }, [tab, campaignFilter, dataModeFilter, statusFilter]);
 
   const loadData = async () => {
     setLoading(true);
