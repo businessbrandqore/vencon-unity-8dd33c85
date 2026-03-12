@@ -1004,10 +1004,156 @@ const TLTeam = () => {
                   ))}
                 </div>
               )}
+              {viewLevel === "group_management" && (
+                <div className="space-y-6">
+                  {/* Create Group Button - only for TL, not BDO */}
+                  {!isBDO && (
+                    <Button onClick={() => { setGroupCreateOpen(true); loadTeamMembersForGroup(); }} className="gap-2">
+                      <Plus className="h-4 w-4" /> {isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}
+                    </Button>
+                  )}
+
+                  {/* Existing Groups */}
+                  <div>
+                    <h3 className="font-heading text-base font-semibold mb-3">{isBn ? "বর্তমান গ্রুপসমূহ" : "Existing Groups"}</h3>
+                    {existingGroups.length === 0 ? (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>{isBn ? "কোনো গ্রুপ নেই" : "No groups yet"}</p>
+                      </div>
+                    ) : existingGroups.map(g => (
+                      <div key={g.leader.id} className="p-4 rounded-lg border border-border mb-3 bg-secondary/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Crown className="h-4 w-4 text-amber-500" />
+                            <span className="font-semibold text-foreground">{g.leader.name}</span>
+                            <Badge variant="outline" className="text-[10px]">{isBn ? "গ্রুপ লিডার" : "Group Leader"}</Badge>
+                          </div>
+                          {!isBDO && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteGroup(g.leader.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.members.map(m => (
+                            <Badge key={m.id} variant="secondary" className="text-xs">{m.name}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Group Approvals */}
+                  <div>
+                    <h3 className="font-heading text-base font-semibold mb-3">
+                      {isBn ? "গ্রুপ অনুমোদন" : "Group Approvals"}
+                    </h3>
+                    {groupApprovals.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">{isBn ? "কোনো অনুমোদন নেই" : "No approvals"}</p>
+                    ) : groupApprovals.map(a => {
+                      const d = a.details as any;
+                      return (
+                        <div key={a.id} className={`p-4 rounded-lg border mb-3 ${a.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : a.status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-foreground">{d?.tl_name || "TL"}</span>
+                                <Badge variant={a.status === 'pending' ? 'outline' : a.status === 'approved' ? 'default' : 'destructive'} className="text-[10px]">
+                                  {a.status === 'pending' ? (isBn ? 'পেন্ডিং' : 'Pending') : a.status === 'approved' ? (isBn ? 'অনুমোদিত' : 'Approved') : (isBn ? 'প্রত্যাখ্যাত' : 'Rejected')}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-foreground">
+                                <Crown className="inline h-3 w-3 text-amber-500 mr-1" />
+                                {isBn ? "গ্রুপ লিডার:" : "Group Leader:"} <span className="font-medium">{d?.group_leader_name}</span>
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {(d?.member_names || []).map((name: string, i: number) => (
+                                  <Badge key={i} variant="secondary" className="text-[10px]">{name}</Badge>
+                                ))}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {new Date(a.created_at).toLocaleString("bn-BD")}
+                              </p>
+                            </div>
+                            {a.status === 'pending' && isBDO && (
+                              <div className="flex gap-1.5">
+                                <Button size="sm" variant="outline" onClick={() => handleApproveGroup(a)} className="gap-1 text-emerald-600 border-emerald-500/50 hover:bg-emerald-500/10">
+                                  <CheckCircle className="h-3.5 w-3.5" /> {isBn ? "অনুমোদন" : "Approve"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleRejectGroup(a.id)} className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10">
+                                  <XCircle className="h-3.5 w-3.5" /> {isBn ? "বাতিল" : "Reject"}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* Group Create Dialog */}
+      <Dialog open={groupCreateOpen} onOpenChange={setGroupCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "মেম্বার নির্বাচন করুন" : "Select Members"}</p>
+              <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
+                {allTeamMembers.map(m => (
+                  <label key={m.id} className="flex items-center gap-2 p-1.5 hover:bg-accent/50 rounded cursor-pointer">
+                    <Checkbox
+                      checked={selectedGroupMembers.has(m.id)}
+                      onCheckedChange={(c) => {
+                        const next = new Set(selectedGroupMembers);
+                        if (c) next.add(m.id); else { next.delete(m.id); if (selectedGroupLeader === m.id) setSelectedGroupLeader(""); }
+                        setSelectedGroupMembers(next);
+                      }}
+                    />
+                    <span className="text-sm text-foreground">{m.name}</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">{roleName(m.role)}</span>
+                  </label>
+                ))}
+                {allTeamMembers.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">{isBn ? "কোনো মেম্বার নেই" : "No members"}</p>}
+              </div>
+            </div>
+            {selectedGroupMembers.size > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">{isBn ? "গ্রুপ লিডার নির্বাচন করুন" : "Select Group Leader"}</p>
+                <Select value={selectedGroupLeader} onValueChange={setSelectedGroupLeader}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isBn ? "গ্রুপ লিডার বাছুন" : "Choose Group Leader"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...selectedGroupMembers].map(id => {
+                      const m = allTeamMembers.find(t => t.id === id);
+                      return m ? <SelectItem key={id} value={id}>{m.name}</SelectItem> : null;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGroupCreateOpen(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button
+              onClick={handleSubmitGroup}
+              disabled={selectedGroupMembers.size < 2 || !selectedGroupLeader || groupSubmitting}
+            >
+              {groupSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isBn ? "অনুমোদনের জন্য পাঠান" : "Send for Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
