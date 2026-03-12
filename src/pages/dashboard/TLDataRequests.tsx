@@ -175,7 +175,7 @@ export default function TLDataRequests() {
         .from("leads")
         .update({
           assigned_to: selectedAgent,
-          tl_id: user.id,
+          tl_id: getEffectiveTlId(),
           agent_type: agentType,
           status: distDataMode === "processing" ? "processing_assigned" : "assigned",
         })
