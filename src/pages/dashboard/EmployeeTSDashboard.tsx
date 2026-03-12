@@ -355,13 +355,14 @@ export default function EmployeeTSDashboard() {
       shiftDate.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
       if (new Date() > shiftDate) isLate = true;
     }
+    const lateAmt = deductionConfig.late_checkin_amount;
     if (todayAttendance) {
       await supabase.from("attendance").update({
         clock_in: now,
         mood_in: selectedMood,
         mood_note: moodNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       }).eq("id", todayAttendance.id);
     } else {
       await supabase.from("attendance").insert({
@@ -371,13 +372,13 @@ export default function EmployeeTSDashboard() {
         mood_in: selectedMood,
         mood_note: moodNote || null,
         is_late: isLate,
-        deduction_amount: isLate ? LATE_DEDUCTION : 0,
+        deduction_amount: isLate ? lateAmt : 0,
       });
     }
     setShowMoodInModal(false);
     setClockedIn(true);
     await loadAttendance();
-    toast.success(isLate ? "Check In হয়েছে (Late entry — ৳33 কর্তন)" : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (Late entry — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   const handleClockOut = async () => {
