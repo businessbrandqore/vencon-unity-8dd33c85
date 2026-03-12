@@ -657,7 +657,7 @@ export default function ManagerAttendance() {
             <>
               <div className="rounded-md bg-secondary p-3">
                 <p className="text-sm text-muted-foreground">
-                  অ্যাসাইন না হওয়া ডাটা: <span className="font-bold text-foreground">{availableLeads}</span> টি
+                  অ্যাসাইন না হওয়া {distDataMode === "processing" ? "প্রসেসিং" : "লিড"} ডাটা: <span className="font-bold text-foreground">{availableLeads}</span> টি
                 </p>
               </div>
 
