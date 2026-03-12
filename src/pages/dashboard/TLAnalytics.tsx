@@ -32,7 +32,7 @@ const TLAnalytics = () => {
           if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
       } else {
-        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+        const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name, data_mode)").eq("tl_id", user.id);
         if (data) {
           const list = data.map((d: any) => d.campaigns).filter(Boolean);
           setCampaigns(list);
