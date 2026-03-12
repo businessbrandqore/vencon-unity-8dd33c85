@@ -150,7 +150,7 @@ const TLLeads = () => {
     let freshQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .is("assigned_to", null).eq("status", "fresh").order("created_at", { ascending: false });
-    if (!isBDO) freshQ = freshQ.eq("tl_id", user.id);
+    if (!isBDO) freshQ = freshQ.eq("tl_id", getEffectiveTlId());
     const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
 
