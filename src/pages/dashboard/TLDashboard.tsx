@@ -100,7 +100,8 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending_cso");
-    if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+    if (isATL) ordersQ = ordersQ.eq("agent_id", user.id);
+    else if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
 
     const { count: confirmedOrders } = await ordersQ;
 
@@ -109,7 +110,8 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "call_done");
-    if (!isBDO) callQ = callQ.eq("tl_id", user.id);
+    if (isATL) callQ = callQ.eq("agent_id", user.id);
+    else if (!isBDO) callQ = callQ.eq("tl_id", user.id);
 
     const { count: callDoneQueue } = await callQ;
 
@@ -118,7 +120,8 @@ const TLDashboard = () => {
       .from("pre_orders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending");
-    if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    if (isATL) preQ = preQ.eq("agent_id", user.id);
+    else if (!isBDO) preQ = preQ.eq("tl_id", user.id);
 
     const { count: preOrders } = await preQ;
 
@@ -128,7 +131,8 @@ const TLDashboard = () => {
       .select("*", { count: "exact", head: true })
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5);
-    if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    if (isATL) delQ = delQ.eq("assigned_to", user.id);
+    else if (!isBDO) delQ = delQ.eq("tl_id", user.id);
 
     const { count: deleteSheet } = await delQ;
 
@@ -141,7 +145,8 @@ const TLDashboard = () => {
       .from("orders")
       .select("*", { count: "exact", head: true })
       .gte("created_at", startOfMonth.toISOString());
-    if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
+    if (isATL) totalQ = totalQ.eq("agent_id", user.id);
+    else if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
 
     const { count: totalOrders } = await totalQ;
 
@@ -150,7 +155,8 @@ const TLDashboard = () => {
       .select("*", { count: "exact", head: true })
       .eq("delivery_status", "delivered")
       .gte("created_at", startOfMonth.toISOString());
-    if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
+    if (isATL) delivQ = delivQ.eq("agent_id", user.id);
+    else if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
 
     const { count: deliveredOrders } = await delivQ;
 
@@ -166,7 +172,7 @@ const TLDashboard = () => {
       deleteSheet: deleteSheet || 0,
       receiveRatio: ratio,
     });
-  }, [user, selectedCampaign, isBDO]);
+  }, [user, selectedCampaign, isBDO, isATL]);
 
   useEffect(() => {
     fetchStats();
