@@ -124,7 +124,7 @@ export default function TLDataRequests() {
 
     const { count } = await q;
     setAvailableCount(count || 0);
-  }, [user, selectedCampaign, distDataMode, isBDO]);
+  }, [user, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
 
   // Send data to agent
   const handleSendData = async () => {
