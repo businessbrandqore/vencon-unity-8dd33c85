@@ -24,7 +24,7 @@ interface Campaign {
 }
 
 interface TLUser { id: string; name: string; }
-interface Website { id: string; site_name: string; site_url: string; webhook_secret: string; is_active: boolean; }
+interface Website { id: string; site_name: string; site_url: string; webhook_secret: string; is_active: boolean; data_mode?: string; }
 
 const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
