@@ -58,8 +58,6 @@ const TLTeam = () => {
   const [otherEmployees, setOtherEmployees] = useState<PersonStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [dataRequests, setDataRequests] = useState<DataRequest[]>([]);
-  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   // Group management state
   const [groupCreateOpen, setGroupCreateOpen] = useState(false);
