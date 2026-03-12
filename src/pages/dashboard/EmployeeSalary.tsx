@@ -127,7 +127,7 @@ export default function EmployeeSalary() {
   const ratio = n(salary.receive_ratio);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> বেতন বিবরণ
