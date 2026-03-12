@@ -132,7 +132,35 @@ const HRSettings = () => {
     setSaving(false);
   };
 
+  const uploadToCloudinary = async (file: File, folder: string): Promise<string | null> => {
+    const cloudName = settings.cloudinary_cloud_name;
+    const uploadPreset = settings.cloudinary_upload_preset;
+    if (!cloudName || !uploadPreset) {
+      toast({ title: isBn ? "Cloudinary কনফিগারেশন সেট করুন (API ট্যাবে)" : "Set Cloudinary config in API tab", variant: "destructive" });
+      return null;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+    formData.append("folder", folder);
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.secure_url) return data.secure_url;
+      toast({ title: data.error?.message || "Upload failed", variant: "destructive" });
+      return null;
+    } catch (err: any) {
+      toast({ title: err.message || "Upload failed", variant: "destructive" });
+      return null;
+    }
+  };
+
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    // Use Cloudinary if configured
+    if (settings.cloudinary_cloud_name && settings.cloudinary_upload_preset) {
+      return uploadToCloudinary(file, folder);
+    }
+    // Fallback to Supabase storage
     const ext = file.name.split(".").pop();
     const path = `${folder}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("app-assets").upload(path, file);
