@@ -441,75 +441,165 @@ export default function ManagerAttendance() {
     </div>
   );
 
-  const TeamAttendanceContent = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Badge variant="secondary" className="text-xs">
-          আজ: {todayStr()}
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          মোট সদস্য: {teamMembers.length}
-        </Badge>
-        <Badge variant="outline" className="text-xs text-green-400 border-green-600/50">
-          উপস্থিত: {teamAttendance.filter(a => a.clock_in).length}
-        </Badge>
-        <Badge variant="outline" className="text-xs text-red-400 border-red-600/50">
-          অনুপস্থিত: {teamMembers.length - teamAttendance.filter(a => a.clock_in).length}
-        </Badge>
-      </div>
+  const TeamAttendanceContent = () => {
+    const presentCount = teamFilter === "daily"
+      ? teamAttendance.filter(a => a.clock_in).length
+      : new Set(teamAttendance.filter(a => a.clock_in).map(a => a.user_id)).size;
 
-      {teamLoading ? (
-        <div className="py-8 text-center text-muted-foreground">লোড হচ্ছে...</div>
-      ) : (
-        <Card>
-          <CardContent className="pt-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th className="py-2 px-2 text-left">নাম</th>
-                    <th className="py-2 px-2 text-left">Check In</th>
-                    <th className="py-2 px-2 text-left">Check Out</th>
-                    <th className="py-2 px-2 text-center">মুড</th>
-                    <th className="py-2 px-2 text-center">স্ট্যাটাস</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamMembers.map((member) => {
-                    const att = teamAttendance.find(a => a.user_id === member.id);
-                    return (
-                      <tr key={member.id} className="border-b border-border">
-                        <td className="py-2 px-2 font-medium">{member.name}</td>
-                        <td className="py-2 px-2 text-xs">
-                          {att?.clock_in ? new Date(att.clock_in).toLocaleTimeString("bn-BD") : "—"}
-                        </td>
-                        <td className="py-2 px-2 text-xs">
-                          {att?.clock_out ? new Date(att.clock_out).toLocaleTimeString("bn-BD") : att?.clock_in ? <span className="text-blue-400">চলমান</span> : "—"}
-                        </td>
-                        <td className="py-2 px-2 text-center text-lg">
-                          {att?.mood_in ? MOOD_EMOJIS[att.mood_in] || "—" : "—"}
-                        </td>
-                        <td className="py-2 px-2 text-center">
-                          {att?.clock_in ? (
-                            <Badge variant="outline" className="text-green-400 border-green-600/50 text-xs">উপস্থিত</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-red-400 border-red-600/50 text-xs">অনুপস্থিত</Badge>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {teamMembers.length === 0 && (
-                    <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো টিম মেম্বার পাওয়া যায়নি</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+    const filterLabel = teamFilter === "daily"
+      ? format(teamFilterDate, "dd MMMM yyyy", { locale: bn })
+      : teamFilter === "monthly"
+        ? format(teamFilterDate, "MMMM yyyy", { locale: bn })
+        : format(teamFilterDate, "yyyy");
+
+    return (
+      <div className="space-y-4">
+        {/* Filter controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs value={teamFilter} onValueChange={(v) => setTeamFilter(v as any)} className="w-auto">
+            <TabsList className="h-8">
+              <TabsTrigger value="daily" className="text-xs px-3 h-7">দৈনিক</TabsTrigger>
+              <TabsTrigger value="monthly" className="text-xs px-3 h-7">মাসিক</TabsTrigger>
+              <TabsTrigger value="yearly" className="text-xs px-3 h-7">বাৎসরিক</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {filterLabel}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={teamFilterDate}
+                onSelect={(d) => d && setTeamFilterDate(d)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Button variant="ghost" size="sm" className="text-xs" onClick={() => setTeamFilterDate(new Date())}>
+            আজ
+          </Button>
+        </div>
+
+        {/* Summary badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs">{filterLabel}</Badge>
+          <Badge variant="outline" className="text-xs">মোট সদস্য: {teamMembers.length}</Badge>
+          {teamFilter === "daily" && (
+            <>
+              <Badge variant="outline" className="text-xs text-green-400 border-green-600/50">
+                উপস্থিত: {presentCount}
+              </Badge>
+              <Badge variant="outline" className="text-xs text-red-400 border-red-600/50">
+                অনুপস্থিত: {teamMembers.length - presentCount}
+              </Badge>
+            </>
+          )}
+          {teamFilter !== "daily" && (
+            <Badge variant="outline" className="text-xs">মোট রেকর্ড: {teamAttendance.length}</Badge>
+          )}
+        </div>
+
+        {teamLoading ? (
+          <div className="py-8 text-center text-muted-foreground">লোড হচ্ছে...</div>
+        ) : teamFilter === "daily" ? (
+          /* Daily view: one row per member */
+          <Card>
+            <CardContent className="pt-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="py-2 px-2 text-left">নাম</th>
+                      <th className="py-2 px-2 text-left">Check In</th>
+                      <th className="py-2 px-2 text-left">Check Out</th>
+                      <th className="py-2 px-2 text-center">মুড</th>
+                      <th className="py-2 px-2 text-center">স্ট্যাটাস</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamMembers.map((member) => {
+                      const att = teamAttendance.find(a => a.user_id === member.id);
+                      return (
+                        <tr key={member.id} className="border-b border-border">
+                          <td className="py-2 px-2 font-medium">{member.name}</td>
+                          <td className="py-2 px-2 text-xs">
+                            {att?.clock_in ? new Date(att.clock_in).toLocaleTimeString("bn-BD") : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-xs">
+                            {att?.clock_out ? new Date(att.clock_out).toLocaleTimeString("bn-BD") : att?.clock_in ? <span className="text-blue-400">চলমান</span> : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-center text-lg">
+                            {att?.mood_in ? MOOD_EMOJIS[att.mood_in] || "—" : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            {att?.clock_in ? (
+                              <Badge variant="outline" className="text-green-400 border-green-600/50 text-xs">উপস্থিত</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-red-400 border-red-600/50 text-xs">অনুপস্থিত</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {teamMembers.length === 0 && (
+                      <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো টিম মেম্বার পাওয়া যায়নি</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Monthly/Yearly view: summary per member + detail rows */
+          <Card>
+            <CardContent className="pt-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="py-2 px-2 text-left">নাম</th>
+                      <th className="py-2 px-2 text-center">উপস্থিত দিন</th>
+                      <th className="py-2 px-2 text-center">দেরি</th>
+                      <th className="py-2 px-2 text-center">আগে বের</th>
+                      <th className="py-2 px-2 text-right">মোট কর্তন</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamMembers.map((member) => {
+                      const memberAtt = teamAttendance.filter(a => a.user_id === member.id);
+                      const presentDays = memberAtt.filter(a => a.clock_in).length;
+                      const lateDays = memberAtt.filter(a => a.is_late).length;
+                      const earlyOuts = memberAtt.filter(a => a.is_early_out).length;
+                      const totalDeductions = memberAtt.reduce((sum, a) => sum + (a.deduction_amount || 0), 0);
+                      return (
+                        <tr key={member.id} className="border-b border-border">
+                          <td className="py-2 px-2 font-medium">{member.name}</td>
+                          <td className="py-2 px-2 text-center">{presentDays}</td>
+                          <td className="py-2 px-2 text-center">{lateDays > 0 ? <span className="text-orange-400">{lateDays}</span> : "0"}</td>
+                          <td className="py-2 px-2 text-center">{earlyOuts > 0 ? <span className="text-orange-400">{earlyOuts}</span> : "0"}</td>
+                          <td className="py-2 px-2 text-right">{totalDeductions > 0 ? <span className="text-destructive">৳{totalDeductions}</span> : <span className="text-green-400">৳০</span>}</td>
+                        </tr>
+                      );
+                    })}
+                    {teamMembers.length === 0 && (
+                      <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো টিম মেম্বার পাওয়া যায়নি</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   const DataDistributionContent = () => (
     <div className="space-y-4">
