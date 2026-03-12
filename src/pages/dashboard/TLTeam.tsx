@@ -231,41 +231,6 @@ const TLTeam = () => {
     setLoading(false);
   }, []);
 
-  // Load data requests
-  const loadDataRequests = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("data_requests")
-      .select("*")
-      .eq("tl_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      // Fetch requester names
-      const requesterIds = [...new Set(data.map((r: any) => r.requested_by))];
-      const { data: users } = await supabase.from("users").select("id, name, role").in("id", requesterIds);
-      const userMap = new Map((users || []).map((u: any) => [u.id, u]));
-
-      const enriched: DataRequest[] = data.map((r: any) => ({
-        ...r,
-        requester_name: userMap.get(r.requested_by)?.name || "Unknown",
-        requester_role: userMap.get(r.requested_by)?.role || "",
-      }));
-      setDataRequests(enriched);
-      setPendingRequestCount(enriched.filter(r => r.status === "pending").length);
-    }
-  }, [user]);
-
-  const handleFulfillRequest = async (requestId: string) => {
-    await supabase.from("data_requests").update({ status: "fulfilled", responded_at: new Date().toISOString() }).eq("id", requestId);
-    toast.success("রিকোয়েস্ট পূরণ হিসেবে মার্ক করা হয়েছে");
-    loadDataRequests();
-  };
-
-  const handleRejectRequest = async (requestId: string) => {
-    await supabase.from("data_requests").update({ status: "rejected", responded_at: new Date().toISOString() }).eq("id", requestId);
-    toast.success("রিকোয়েস্ট প্রত্যাখ্যান করা হয়েছে");
-    loadDataRequests();
   };
 
   // Group management functions
