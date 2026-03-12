@@ -40,6 +40,7 @@ import BDOAgentAssignment from "./pages/dashboard/BDOAgentAssignment";
 import TLTeam from "./pages/dashboard/TLTeam";
 import TLDataRequests from "./pages/dashboard/TLDataRequests";
 import TLAnalytics from "./pages/dashboard/TLAnalytics";
+import TLATLApprovals from "./pages/dashboard/TLATLApprovals";
 import EmployeeAttendance from "./pages/dashboard/EmployeeAttendance";
 import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
 import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
