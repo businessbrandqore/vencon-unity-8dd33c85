@@ -70,7 +70,8 @@ const TLTeam = () => {
   const [otherEmployees, setOtherEmployees] = useState<PersonStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [dataRequests, setDataRequests] = useState<DataRequest[]>([]);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const getDateRange = useCallback((period: TimePeriod) => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
