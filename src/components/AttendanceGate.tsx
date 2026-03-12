@@ -114,42 +114,52 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
 
   const handleClockIn = async () => {
     if (!user || !selectedMood) { toast.error("মুড নির্বাচন করুন"); return; }
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowISO = now.toISOString();
     let isLate = false;
+    let lateMinutes = 0;
     if (profile?.shift_start) {
       const parts = profile.shift_start.split(":");
       const shiftDate = new Date();
       shiftDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-      if (new Date() > shiftDate) isLate = true;
+      if (now > shiftDate) {
+        isLate = true;
+        lateMinutes = Math.ceil((now.getTime() - shiftDate.getTime()) / 60000);
+      }
     }
-    const lateAmt = deductionConfig.late_checkin_amount;
+    const lateAmt = isLate ? getDeductionAmount(deductionConfig.late_tiers, lateMinutes) : 0;
     if (todayAttendance) {
-      await supabase.from("attendance").update({ clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? lateAmt : 0 }).eq("id", todayAttendance.id);
+      await supabase.from("attendance").update({ clock_in: nowISO, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: lateAmt }).eq("id", todayAttendance.id);
     } else {
-      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), clock_in: now, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: isLate ? lateAmt : 0 });
+      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), clock_in: nowISO, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: lateAmt });
     }
     setClockedIn(true);
     await loadAttendance();
-    toast.success(isLate ? `Check In হয়েছে (Late — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
+    toast.success(isLate ? `Check In হয়েছে (${lateMinutes} মিনিট দেরি — ৳${lateAmt} কর্তন)` : "Check In সফল ✓");
   };
 
   const handleClockOut = async () => {
     if (!user || !clockOutMood) { toast.error("মুড নির্বাচন করুন"); return; }
     const now = new Date();
     let earlyOut = false;
+    let earlyMinutes = 0;
     let extraDeduction = 0;
     if (profile?.shift_end) {
       const parts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-      if (now < shiftEnd) { earlyOut = true; extraDeduction = deductionConfig.early_checkout_amount; }
+      if (now < shiftEnd) {
+        earlyOut = true;
+        earlyMinutes = Math.ceil((shiftEnd.getTime() - now.getTime()) / 60000);
+        extraDeduction = getDeductionAmount(deductionConfig.early_tiers, earlyMinutes);
+      }
     }
     if (todayAttendance) {
       await supabase.from("attendance").update({ clock_out: now.toISOString(), mood_out: clockOutMood, is_early_out: earlyOut, deduction_amount: (Number(todayAttendance.deduction_amount) || 0) + extraDeduction }).eq("id", todayAttendance.id);
     }
     setShowClockOutModal(false);
     await loadAttendance();
-    toast.success(earlyOut ? `Check Out হয়েছে (Early — ৳${deductionConfig.early_checkout_amount} কর্তন)` : "Check Out সফল ✓");
+    toast.success(earlyOut ? `Check Out হয়েছে (${earlyMinutes} মিনিট আগে — ৳${extraDeduction} কর্তন)` : "Check Out সফল ✓");
   };
 
   if (!profile || isWithinShift === null || loading) {
