@@ -319,6 +319,22 @@ const HREmployeeProfile = () => {
             <Input type="time" value={editShiftEnd} onChange={(e) => setEditShiftEnd(e.target.value)} className="bg-background border-border text-foreground" />
           </div>
         </div>
+        <div>
+          <label className="font-body text-xs text-muted-foreground block mb-1">
+            {isBn ? "ক্যাম্পেইন" : "Campaign"}
+          </label>
+          <Select value={editCampaignId} onValueChange={setEditCampaignId}>
+            <SelectTrigger className="bg-background border-border text-foreground w-full sm:w-64">
+              <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন করুন" : "Select campaign"} />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border-border max-h-60">
+              <SelectItem value="none">{isBn ? "কোনো ক্যাম্পেইন নেই" : "No campaign"}</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <button onClick={handleSave} className="px-4 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: BLUE }}>
           {isBn ? "সংরক্ষণ করুন" : "Save Changes"}
         </button>
