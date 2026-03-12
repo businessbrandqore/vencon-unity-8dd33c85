@@ -191,7 +191,7 @@ export default function TLDataRequests() {
     const { data } = await supabase
       .from("data_requests")
       .select("*")
-      .eq("tl_id", user.id)
+      .eq("tl_id", getEffectiveTlId())
       .order("created_at", { ascending: false });
 
     if (data) {
