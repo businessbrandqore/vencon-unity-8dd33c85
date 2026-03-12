@@ -300,6 +300,30 @@ export default function EmployeeSalary() {
                     </div>
                   </div>
                 </div>
+              ) : normalizedRole === "group_leader" && ratio < 60 ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-heading font-bold text-destructive">⚠ গ্রুপের গড় রিসিভ রেশিও ৬০% এর নিচে!</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        আপনার গ্রুপের এজেন্টদের গড় রিসিভ রেশিও <strong className="text-destructive">{ratio}%</strong>। থ্রেশহোল্ডের নিচে থাকলে ইনসেনটিভ পাওয়া যাবে না। গ্রুপের এজেন্টদের রিসিভ রেশিও উন্নত করুন।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : normalizedRole === "group_leader" && ratio < 80 ? (
+                <div className="rounded-md border border-orange-300/50 bg-orange-50 dark:bg-orange-950/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-heading font-bold text-orange-600 dark:text-orange-400">গ্রুপের গড় রিসিভ রেশিও মোটামুটি</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        আপনার গ্রুপের এজেন্টদের গড় রিসিভ রেশিও <strong className="text-orange-600 dark:text-orange-400">{ratio}%</strong>। আরও উন্নতি করলে ইনসেনটিভ বাড়বে।
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ) : !isTelesalesRole && ratio < 60 ? (
                 <div className="rounded-md border border-orange-300/50 bg-orange-50 dark:bg-orange-950/20 p-4">
                   <div className="flex items-start gap-3">
@@ -329,7 +353,9 @@ export default function EmployeeSalary() {
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-heading font-bold text-green-700 dark:text-green-400">রিসিভ রেশিও চমৎকার! 🎉</p>
+                      <p className="font-heading font-bold text-green-700 dark:text-green-400">
+                        {normalizedRole === "group_leader" ? "গ্রুপের গড় রিসিভ রেশিও চমৎকার! 🎉" : "রিসিভ রেশিও চমৎকার! 🎉"}
+                      </p>
                       <p className="text-sm text-muted-foreground mt-1">
                         আপনার বর্তমান রিসিভ রেশিও <strong className="text-green-600 dark:text-green-400">{ratio}%</strong>। দারুণ পারফরম্যান্স!
                       </p>
@@ -341,7 +367,9 @@ export default function EmployeeSalary() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-heading text-sm font-bold">রিসিভ রেশিও অগ্রগতি</p>
+                    <p className="font-heading text-sm font-bold">
+                      {normalizedRole === "group_leader" ? "গ্রুপের গড় রিসিভ রেশিও অগ্রগতি" : "রিসিভ রেশিও অগ্রগতি"}
+                    </p>
                     <Badge variant={ratio >= 60 ? "default" : "destructive"}>
                       {ratio}% / ৬০% মিনিমাম
                     </Badge>
