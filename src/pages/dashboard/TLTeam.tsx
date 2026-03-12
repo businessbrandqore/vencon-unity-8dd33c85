@@ -404,6 +404,7 @@ const TLTeam = () => {
   };
 
 
+  useEffect(() => {
     if (!user) return;
     loadTLs();
     if (isBDO) loadOtherEmployees();
