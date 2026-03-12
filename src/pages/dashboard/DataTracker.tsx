@@ -222,14 +222,14 @@ const DataTracker = () => {
 
   // Fetch agents for TL assignment
   const { data: agents } = useQuery({
-    queryKey: ["tracker-agents", user?.id, selectedCampaign],
+    queryKey: ["tracker-agents", user?.id, selectedCampaign, isATL, atlTlMap],
     queryFn: async () => {
+      const effectiveTlId = getEffectiveTlId();
       if (!user || !selectedCampaign || selectedCampaign === "all") {
-        // Get all agents under this TL across campaigns
         const { data } = await supabase
           .from("campaign_agent_roles")
           .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
-          .eq("tl_id", user!.id);
+          .eq("tl_id", effectiveTlId);
         if (!data) return { bronze: [], silver: [], all: [] };
         const seen = new Set<string>();
         const bronze: { id: string; name: string }[] = [];
@@ -247,7 +247,7 @@ const DataTracker = () => {
         .from("campaign_agent_roles")
         .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
         .eq("campaign_id", selectedCampaign)
-        .eq("tl_id", user!.id);
+        .eq("tl_id", effectiveTlId);
       if (!data) return { bronze: [], silver: [], all: [] };
       const bronze: { id: string; name: string }[] = [];
       const silver: { id: string; name: string }[] = [];

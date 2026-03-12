@@ -209,7 +209,7 @@ export default function TLDataRequests() {
       setDataRequests(enriched);
     }
     setLoading(false);
-  }, [user]);
+  }, [user, getEffectiveTlId]);
 
   useEffect(() => {
     loadDataRequests();
