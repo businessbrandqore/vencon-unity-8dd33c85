@@ -105,6 +105,33 @@ const TLLeads = () => {
             setCampaignMode(list[0].data_mode);
           }
         }
+      } else if (isGL) {
+        // GL: fetch campaigns from campaign_agent_roles where they are an agent
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const tlMap: Record<string, string> = {};
+          const seen = new Set<string>();
+          const list = data
+            .filter((d: any) => d.campaigns)
+            .filter((d: any) => { 
+              if (seen.has(d.campaigns.id)) return false; 
+              seen.add(d.campaigns.id); 
+              return true; 
+            })
+            .map((d: any) => {
+              tlMap[d.campaigns.id] = d.tl_id;
+              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
+            });
+          setAtlTlMap(tlMap);
+          setCampaigns(list);
+          if (list.length > 0 && !selectedCampaign) {
+            setSelectedCampaign(list[0].id);
+            setCampaignMode(list[0].data_mode);
+          }
+        }
       } else {
         const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name, data_mode)").eq("tl_id", user.id);
         if (data) {
