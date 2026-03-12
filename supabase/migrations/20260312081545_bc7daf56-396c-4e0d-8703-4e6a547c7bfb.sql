@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_websites ADD COLUMN IF NOT EXISTS data_mode text NOT NULL DEFAULT 'lead';
