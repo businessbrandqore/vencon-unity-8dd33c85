@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,94 +61,123 @@ const TLDashboard = () => {
     fetchCampaigns();
   }, [user]);
 
-  useEffect(() => {
+  const fetchStats = useCallback(async () => {
     if (!user || !selectedCampaign) return;
-    const fetchStats = async () => {
-      // New leads (fresh, unassigned in this campaign)
-      let leadsQ = supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("campaign_id", selectedCampaign)
-        .is("assigned_to", null)
-        .eq("status", "fresh");
-      if (!isBDO) leadsQ = leadsQ.eq("tl_id", user.id);
+    // New leads (fresh, unassigned in this campaign)
+    let leadsQ = supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("campaign_id", selectedCampaign)
+      .is("assigned_to", null)
+      .eq("status", "fresh");
+    if (!isBDO) leadsQ = leadsQ.eq("tl_id", user.id);
 
-      const { count: newLeads } = await leadsQ;
+    const { count: newLeads } = await leadsQ;
 
-      // Confirmed orders (pending CSO)
-      let ordersQ = supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending_cso");
-      if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+    // Confirmed orders (pending CSO)
+    let ordersQ = supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending_cso");
+    if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
 
-      const { count: confirmedOrders } = await ordersQ;
+    const { count: confirmedOrders } = await ordersQ;
 
-      // Call done queue
-      let callQ = supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "call_done");
-      if (!isBDO) callQ = callQ.eq("tl_id", user.id);
+    // Call done queue
+    let callQ = supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "call_done");
+    if (!isBDO) callQ = callQ.eq("tl_id", user.id);
 
-      const { count: callDoneQueue } = await callQ;
+    const { count: callDoneQueue } = await callQ;
 
-      // Pre-orders
-      let preQ = supabase
-        .from("pre_orders")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
-      if (!isBDO) preQ = preQ.eq("tl_id", user.id);
+    // Pre-orders
+    let preQ = supabase
+      .from("pre_orders")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending");
+    if (!isBDO) preQ = preQ.eq("tl_id", user.id);
 
-      const { count: preOrders } = await preQ;
+    const { count: preOrders } = await preQ;
 
-      // Delete sheet
-      let delQ = supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("campaign_id", selectedCampaign)
-        .gte("requeue_count", 5);
-      if (!isBDO) delQ = delQ.eq("tl_id", user.id);
+    // Delete sheet
+    let delQ = supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("campaign_id", selectedCampaign)
+      .gte("requeue_count", 5);
+    if (!isBDO) delQ = delQ.eq("tl_id", user.id);
 
-      const { count: deleteSheet } = await delQ;
+    const { count: deleteSheet } = await delQ;
 
-      // Receive ratio this month
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+    // Receive ratio this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
-      let totalQ = supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", startOfMonth.toISOString());
-      if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
+    let totalQ = supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", startOfMonth.toISOString());
+    if (!isBDO) totalQ = totalQ.eq("tl_id", user.id);
 
-      const { count: totalOrders } = await totalQ;
+    const { count: totalOrders } = await totalQ;
 
-      let delivQ = supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .eq("delivery_status", "delivered")
-        .gte("created_at", startOfMonth.toISOString());
-      if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
+    let delivQ = supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("delivery_status", "delivered")
+      .gte("created_at", startOfMonth.toISOString());
+    if (!isBDO) delivQ = delivQ.eq("tl_id", user.id);
 
-      const { count: deliveredOrders } = await delivQ;
+    const { count: deliveredOrders } = await delivQ;
 
-      const ratio = totalOrders && totalOrders > 0
-        ? Math.round(((deliveredOrders || 0) / totalOrders) * 100)
-        : 0;
+    const ratio = totalOrders && totalOrders > 0
+      ? Math.round(((deliveredOrders || 0) / totalOrders) * 100)
+      : 0;
 
-      setStats({
-        newLeads: newLeads || 0,
-        confirmedOrders: confirmedOrders || 0,
-        callDoneQueue: callDoneQueue || 0,
-        preOrders: preOrders || 0,
-        deleteSheet: deleteSheet || 0,
-        receiveRatio: ratio,
-      });
-    };
+    setStats({
+      newLeads: newLeads || 0,
+      confirmedOrders: confirmedOrders || 0,
+      callDoneQueue: callDoneQueue || 0,
+      preOrders: preOrders || 0,
+      deleteSheet: deleteSheet || 0,
+      receiveRatio: ratio,
+    });
+  }, [user, selectedCampaign, isBDO]);
+
+  useEffect(() => {
     fetchStats();
-  }, [user, selectedCampaign]);
+  }, [fetchStats]);
+
+  // Realtime: auto-refresh stats when leads/orders/pre_orders change
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('tl-dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchStats())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchStats())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pre_orders' }, () => fetchStats())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => {
+        // Re-fetch campaigns list
+        if (isBDO) {
+          supabase.from("campaigns").select("id, name").order("created_at", { ascending: false }).then(({ data }) => {
+            if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name })));
+          });
+        } else {
+          supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id).then(({ data }) => {
+            if (data) {
+              const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
+              setCampaigns(list);
+            }
+          });
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, isBDO, fetchStats]);
 
   if (!user) return null;
 

@@ -276,16 +276,44 @@ const TLTeam = () => {
     if (isBDO) loadOtherEmployees();
     loadDataRequests();
 
-    // Realtime subscription for data requests
+    // Realtime subscriptions for dynamic updates
     const channel = supabase
-      .channel('data-requests-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'data_requests', filter: `tl_id=eq.${user.id}` }, () => {
+      .channel('tl-team-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'data_requests' }, () => {
         loadDataRequests();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => {
+        // Team structure changed - reload current view
+        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
+        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
+        else loadTLs();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, () => {
+        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
+        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        // User data changed (new hire, profile update)
+        loadTLs();
+        if (isBDO) loadOtherEmployees();
+        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
+        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        // Performance stats changed
+        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
+        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
+        else loadTLs();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        if (viewLevel === 'gl_list' && selectedTL) loadGLs(selectedTL.id);
+        else if (viewLevel === 'agent_list' && selectedGL) loadAgents(selectedGL.id);
+        else loadTLs();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, viewLevel, selectedTL, selectedGL]);
 
   // Navigation handlers
   const navigateToTL = async (tl: PersonStats) => {
