@@ -58,7 +58,7 @@ const HRDataMonitor = () => {
 
   // Fetch leads
   const { data: leads, isLoading: leadsLoading } = useQuery({
-    queryKey: ["monitor-leads", selectedCampaign],
+    queryKey: ["monitor-leads", selectedCampaign, dataMode],
     queryFn: async () => {
       let q = supabase
         .from("leads")
@@ -68,7 +68,10 @@ const HRDataMonitor = () => {
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
       const { data, error } = await q;
       if (error) throw error;
-      return data;
+      let result = data || [];
+      if (dataMode === "lead") result = result.filter(l => l.source !== "processing" && l.import_source !== "processing");
+      if (dataMode === "processing") result = result.filter(l => l.source === "processing" || l.import_source === "processing");
+      return result;
     },
   });
 
