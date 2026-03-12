@@ -366,13 +366,14 @@ export default function EmployeeLeads() {
               </Button>
             )}
           </div>
-        <TabsContent value="bronze">
-          <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
-        </TabsContent>
-        <TabsContent value="silver">
-          <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(silverLeads)}</CardContent></Card>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="bronze">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
+          </TabsContent>
+          <TabsContent value="silver">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(silverLeads)}</CardContent></Card>
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Order Confirm Modal */}
       <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
