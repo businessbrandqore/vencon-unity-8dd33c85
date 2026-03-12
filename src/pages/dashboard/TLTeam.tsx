@@ -69,6 +69,8 @@ const TLTeam = () => {
   const [existingGroups, setExistingGroups] = useState<{ leader: { id: string; name: string }; members: { id: string; name: string }[] }[]>([]);
   const [groupApprovals, setGroupApprovals] = useState<any[]>([]);
   const [groupSubmitting, setGroupSubmitting] = useState(false);
+  const [groupCampaignFilter, setGroupCampaignFilter] = useState("");
+  const [tlCampaigns, setTlCampaigns] = useState<{ id: string; name: string }[]>([]);
 
   // GL Campaign Assignment state
   const [glAssignOpen, setGlAssignOpen] = useState(false);
@@ -254,13 +256,31 @@ const TLTeam = () => {
   }, []);
 
 
-  // Group management functions
-  const loadTeamMembersForGroup = useCallback(async () => {
+  // Load TL's campaigns
+  const loadTLCampaigns = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
-      .from("campaign_agent_roles")
-      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name, role)")
+      .from("campaign_tls")
+      .select("campaign_id, campaigns!campaign_tls_campaign_id_fkey(id, name)")
       .eq("tl_id", user.id);
+    if (data) {
+      setTlCampaigns(data.map((d: any) => ({ id: d.campaigns.id, name: d.campaigns.name })));
+    }
+  }, [user]);
+
+  // Group management functions
+  const loadTeamMembersForGroup = useCallback(async (campaignId?: string) => {
+    if (!user) return;
+    let query = supabase
+      .from("campaign_agent_roles")
+      .select("agent_id, campaign_id, users!campaign_agent_roles_agent_id_fkey(id, name, role)")
+      .eq("tl_id", user.id);
+    
+    if (campaignId) {
+      query = query.eq("campaign_id", campaignId);
+    }
+
+    const { data } = await query;
     if (data) {
       const seen = new Set<string>();
       const members: { id: string; name: string; role: string }[] = [];
@@ -460,20 +480,30 @@ const TLTeam = () => {
     if (isBDO) loadOtherEmployees();
   }, [user]);
 
-  // Realtime subscriptions - stable, no dependency on view state
+  // Realtime subscriptions
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
       .channel('tl-team-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, () => {
-        // Only reload groups on group_members change
         loadExistingGroups();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => {
+        // Reload team data when campaign_agent_roles changes (new hire assigned)
+        if (selectedTL) loadGLs(selectedTL.id);
+        loadTeamMembersForGroup();
+        loadExistingGroups();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        // Reload when user data changes
+        if (selectedTL) loadGLs(selectedTL.id);
+        loadTeamMembersForGroup();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, selectedTL]);
 
   // Navigation handlers
   const navigateToTL = async (tl: PersonStats) => {
@@ -921,7 +951,7 @@ const TLTeam = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); loadGLAssignApprovals(); }}
+            onClick={() => { setViewLevel("group_management"); loadTeamMembersForGroup(); loadExistingGroups(); loadGroupApprovals(); loadGLAssignApprovals(); loadTLCampaigns(); }}
             className="gap-1.5"
           >
             <Users className="h-4 w-4" />
@@ -977,7 +1007,7 @@ const TLTeam = () => {
                 <div className="space-y-6">
                   {/* Create Group Button - only for TL, not BDO */}
                   {!isBDO && (
-                    <Button onClick={() => { setGroupCreateOpen(true); loadTeamMembersForGroup(); }} className="gap-2">
+                    <Button onClick={() => { setGroupCreateOpen(true); setGroupCampaignFilter(""); loadTeamMembersForGroup(); loadTLCampaigns(); }} className="gap-2">
                       <Plus className="h-4 w-4" /> {isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}
                     </Button>
                   )}
@@ -1128,6 +1158,26 @@ const TLTeam = () => {
             <DialogTitle>{isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Campaign Filter */}
+            <div>
+              <p className="text-sm font-medium mb-2">{isBn ? "ক্যাম্পেইন অনুযায়ী ফিল্টার করুন" : "Filter by Campaign"}</p>
+              <Select value={groupCampaignFilter} onValueChange={(v) => {
+                setGroupCampaignFilter(v);
+                setSelectedGroupMembers(new Set());
+                setSelectedGroupLeader("");
+                loadTeamMembersForGroup(v === "all" ? undefined : v);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isBn ? "ক্যাম্পেইন বাছুন" : "Choose Campaign"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
+                  {tlCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <p className="text-sm font-medium mb-2">{isBn ? "মেম্বার নির্বাচন করুন" : "Select Members"}</p>
               <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
