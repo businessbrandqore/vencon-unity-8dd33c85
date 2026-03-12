@@ -123,7 +123,6 @@ export default function ManagerAttendance() {
     if (!user || (!isTL && !isBDO)) return;
     setTeamLoading(true);
 
-    // Get agents under this TL via campaign_agent_roles
     const { data: roles } = await supabase
       .from("campaign_agent_roles")
       .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name)")
@@ -131,30 +130,45 @@ export default function ManagerAttendance() {
 
     if (roles) {
       const members = roles.map((r: any) => ({ id: r.users.id, name: r.users.name }));
-      // Deduplicate
-      const unique = Array.from(new Map(members.map((m: any) => [m.id, m])).values());
+      const unique = Array.from(new Map(members.map((m: any) => [m.id, m])).values()) as { id: string; name: string }[];
       setTeamMembers(unique);
 
-      const agentIds = unique.map((m: any) => m.id);
+      const agentIds = unique.map((m) => m.id);
       if (agentIds.length > 0) {
-        const todayDate = todayStr();
+        let dateStart: string;
+        let dateEnd: string;
+
+        if (teamFilter === "daily") {
+          const d = format(teamFilterDate, "yyyy-MM-dd");
+          dateStart = d;
+          dateEnd = d;
+        } else if (teamFilter === "monthly") {
+          dateStart = format(startOfMonth(teamFilterDate), "yyyy-MM-dd");
+          dateEnd = format(endOfMonth(teamFilterDate), "yyyy-MM-dd");
+        } else {
+          dateStart = format(startOfYear(teamFilterDate), "yyyy-MM-dd");
+          dateEnd = format(endOfYear(teamFilterDate), "yyyy-MM-dd");
+        }
+
         const { data: attData } = await supabase
           .from("attendance")
           .select("*")
           .in("user_id", agentIds)
-          .eq("date", todayDate);
+          .gte("date", dateStart)
+          .lte("date", dateEnd)
+          .order("date", { ascending: false });
 
         if (attData) {
           const enriched = attData.map((a: any) => ({
             ...a,
-            userName: unique.find((m: any) => m.id === a.user_id)?.name || "Unknown",
+            userName: unique.find((m) => m.id === a.user_id)?.name || "Unknown",
           }));
           setTeamAttendance(enriched);
         }
       }
     }
     setTeamLoading(false);
-  }, [user, isTL, isBDO]);
+  }, [user, isTL, isBDO, teamFilter, teamFilterDate]);
 
   // Load campaigns for data distribution
   const loadCampaigns = useCallback(async () => {
