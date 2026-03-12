@@ -55,15 +55,19 @@ const TLDashboard = () => {
         // ATL sees campaigns they're assigned to as agent
         const { data } = await supabase
           .from("campaign_agent_roles")
-          .select("campaign_id, campaigns(id, name)")
+          .select("campaign_id, tl_id, campaigns(id, name)")
           .eq("agent_id", user.id);
         if (data) {
           const seen = new Set<string>();
+          const tlMap: Record<string, string> = {};
           const list = data
-            .map((d: any) => d.campaigns)
-            .filter(Boolean)
-            .filter((c: any) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })
-            .map((c: any) => ({ id: c.id, name: c.name }));
+            .filter((d: any) => d.campaigns)
+            .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
+            .map((d: any) => {
+              tlMap[d.campaigns.id] = d.tl_id;
+              return { id: d.campaigns.id, name: d.campaigns.name };
+            });
+          setAtlTlMap(tlMap);
           setCampaigns(list);
           if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
