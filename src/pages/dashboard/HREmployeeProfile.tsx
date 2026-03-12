@@ -67,6 +67,9 @@ const HREmployeeProfile = () => {
   const [editSalary, setEditSalary] = useState("");
   const [editShiftStart, setEditShiftStart] = useState("");
   const [editShiftEnd, setEditShiftEnd] = useState("");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [currentCampaignId, setCurrentCampaignId] = useState("");
+  const [editCampaignId, setEditCampaignId] = useState("");
 
   useEffect(() => {
     if (!id) return;
