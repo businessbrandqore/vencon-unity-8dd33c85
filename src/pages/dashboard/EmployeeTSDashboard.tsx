@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useDeductionConfig } from "@/hooks/useDeductionConfig";
+import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { CalendarIcon, Clock, AlertTriangle, LogOut } from "lucide-react";
 
 /* ───── types ───── */
