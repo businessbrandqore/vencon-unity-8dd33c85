@@ -1007,7 +1007,7 @@ const TLTeam = () => {
                 <div className="space-y-6">
                   {/* Create Group Button - only for TL, not BDO */}
                   {!isBDO && (
-                    <Button onClick={() => { setGroupCreateOpen(true); loadTeamMembersForGroup(); }} className="gap-2">
+                    <Button onClick={() => { setGroupCreateOpen(true); setGroupCampaignFilter(""); loadTeamMembersForGroup(); loadTLCampaigns(); }} className="gap-2">
                       <Plus className="h-4 w-4" /> {isBn ? "নতুন গ্রুপ তৈরি করুন" : "Create New Group"}
                     </Button>
                   )}
