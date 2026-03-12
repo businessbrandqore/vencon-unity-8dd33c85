@@ -26,6 +26,24 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string>("VENCON");
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ui_config")
+        .single();
+      if (data?.value) {
+        const val = data.value as Record<string, string>;
+        if (val.company_logo) setCompanyLogo(val.company_logo);
+        if (val.company_name) setCompanyName(val.company_name);
+      }
+    };
+    fetchBranding();
+  }, []);
 
   if (!user) return null;
 
