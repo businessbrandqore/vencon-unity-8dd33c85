@@ -224,7 +224,7 @@ const HRAttendance = () => {
       .from("users")
       .select("id, name")
       .eq("is_active", true)
-      .neq("panel", "sa")
+      .eq("panel", "employee")
       .order("name");
     setEmployees(data || []);
   };

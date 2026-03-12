@@ -34,6 +34,9 @@ interface Settings {
   ai_provider?: string;
   ai_api_key?: string;
   notification_sound?: string;
+  cloudinary_cloud_name?: string;
+  cloudinary_upload_preset?: string;
+  cloudinary_api_key?: string;
 }
 
 interface DeductionTier {
