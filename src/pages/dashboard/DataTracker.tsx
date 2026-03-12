@@ -76,19 +76,48 @@ const DataTracker = () => {
 
   const panel = user?.panel;
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
+  const isATL = user?.role === "Assistant Team Leader";
   const isTL = panel === "tl" && !isBDO; // BDO uses TL panel but gets global access
-  const canAssign = panel === "tl" && !isBDO; // Only actual TL can assign raw data
+  const canAssign = panel === "tl" && !isBDO && !isATL; // Only actual TL can assign raw data
+
+  // ATL → TL mapping per campaign
+  const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
+
+  const getEffectiveTlId = () => {
+    if (!isATL || !user) return user?.id || "";
+    if (selectedCampaign !== "all" && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
+    // If "all", return first TL id (best effort)
+    const vals = Object.values(atlTlMap);
+    return vals.length > 0 ? vals[0] : user?.id || "";
+  };
 
   // Fetch campaigns
   const { data: campaigns } = useQuery({
-    queryKey: ["tracker-campaigns", user?.id, isTL],
+    queryKey: ["tracker-campaigns", user?.id, isTL, isATL],
     queryFn: async () => {
-      if (isTL && user) {
+      if (isTL && !isATL && user) {
         const { data } = await supabase
           .from("campaign_tls")
           .select("campaign_id, campaigns(id, name, data_mode)")
           .eq("tl_id", user.id);
         return (data || []).map((d: any) => d.campaigns).filter(Boolean);
+      }
+      if (isATL && user) {
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .eq("agent_id", user.id);
+        if (data) {
+          const tlMap: Record<string, string> = {};
+          const seen = new Set<string>();
+          const list = data
+            .filter((d: any) => d.campaigns)
+            .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
+            .map((d: any) => { tlMap[d.campaigns.id] = d.tl_id; return d.campaigns; });
+          setAtlTlMap(tlMap);
+          return list;
+        }
+        return [];
       }
       const { data, error } = await supabase
         .from("campaigns")
