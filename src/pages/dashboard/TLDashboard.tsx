@@ -80,14 +80,18 @@ const TLDashboard = () => {
 
   const fetchStats = useCallback(async () => {
     if (!user || !selectedCampaign) return;
-    // New leads (fresh, unassigned in this campaign)
+    // New leads for ATL: show leads assigned to them
     let leadsQ = supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
-      .eq("campaign_id", selectedCampaign)
-      .is("assigned_to", null)
-      .eq("status", "fresh");
-    if (!isBDO) leadsQ = leadsQ.eq("tl_id", user.id);
+      .eq("campaign_id", selectedCampaign);
+    if (isATL) {
+      leadsQ = leadsQ.eq("assigned_to", user.id);
+    } else if (!isBDO) {
+      leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh").eq("tl_id", user.id);
+    } else {
+      leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh");
+    }
 
     const { count: newLeads } = await leadsQ;
 
