@@ -175,12 +175,12 @@ export default function ManagerAttendance() {
   const loadCampaigns = useCallback(async () => {
     if (!user || (!isTL && !isBDO)) return;
     if (isBDO) {
-      const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
-      if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name })));
+      const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
+      if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" })));
     } else {
-      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name, data_mode)").eq("tl_id", user.id);
       if (data) {
-        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
+        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
         setCampaigns(list);
       }
     }
