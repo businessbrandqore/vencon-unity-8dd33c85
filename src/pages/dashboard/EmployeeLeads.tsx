@@ -105,7 +105,34 @@ export default function EmployeeLeads() {
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
-  useEffect(() => { if (checkedIn) loadLeads(); }, [checkedIn, loadLeads]);
+  useEffect(() => { if (checkedIn) { loadLeads(); loadMyRequests(); } }, [checkedIn, loadLeads]);
+
+  const loadMyRequests = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("data_requests").select("*").eq("requested_by", user.id).order("created_at", { ascending: false }).limit(5);
+    if (data) setPendingRequests(data);
+  };
+
+  const handleDataRequest = async () => {
+    if (!user) return;
+    setDataRequestLoading(true);
+    // Find the TL who assigned leads to this agent
+    const { data: leadData } = await supabase.from("leads").select("tl_id").eq("assigned_to", user.id).not("tl_id", "is", null).limit(1);
+    const tlId = leadData?.[0]?.tl_id;
+    if (!tlId) {
+      // Try campaign_agent_roles
+      const { data: carData } = await supabase.from("campaign_agent_roles").select("tl_id, campaign_id").eq("agent_id", user.id).limit(1);
+      if (!carData?.[0]?.tl_id) { toast.error("টিম লিডার পাওয়া যায়নি"); setDataRequestLoading(false); return; }
+      await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: carData[0].tl_id, campaign_id: carData[0].campaign_id, message: dataRequestMsg || null });
+    } else {
+      await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: tlId, message: dataRequestMsg || null });
+    }
+    toast.success("ডাটা রিকোয়েস্ট পাঠানো হয়েছে ✓");
+    setShowDataRequestModal(false);
+    setDataRequestMsg("");
+    setDataRequestLoading(false);
+    loadMyRequests();
+  };
 
   useEffect(() => {
     (async () => {
