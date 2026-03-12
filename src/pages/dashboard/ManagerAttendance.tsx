@@ -83,8 +83,9 @@ export default function ManagerAttendance() {
   const [teamFilterDate, setTeamFilterDate] = useState<Date>(new Date());
 
   // Data distribution state
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [distDataMode, setDistDataMode] = useState<"lead" | "processing">("lead");
   const [campaignAgents, setCampaignAgents] = useState<{ id: string; name: string }[]>([]);
   const [distAgent, setDistAgent] = useState("");
   const [distCount, setDistCount] = useState("");
@@ -174,12 +175,12 @@ export default function ManagerAttendance() {
   const loadCampaigns = useCallback(async () => {
     if (!user || (!isTL && !isBDO)) return;
     if (isBDO) {
-      const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
-      if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name })));
+      const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
+      if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" })));
     } else {
-      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
+      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name, data_mode)").eq("tl_id", user.id);
       if (data) {
-        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
+        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }));
         setCampaigns(list);
       }
     }
@@ -189,20 +190,24 @@ export default function ManagerAttendance() {
   const loadCampaignAgents = useCallback(async () => {
     if (!user || !selectedCampaign) { setCampaignAgents([]); setAvailableLeads(0); return; }
 
+    // Filter agents by bronze (lead) or silver (processing) based on distDataMode
     let q = supabase
       .from("campaign_agent_roles")
-      .select("agent_id, users!campaign_agent_roles_agent_id_fkey(id, name)")
+      .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
       .eq("campaign_id", selectedCampaign);
     if (!isBDO) q = q.eq("tl_id", user.id);
 
     const { data: roles } = await q;
     if (roles) {
-      const agents = roles.map((r: any) => ({ id: r.users.id, name: r.users.name }));
+      const filtered = distDataMode === "lead"
+        ? roles.filter((r: any) => r.is_bronze)
+        : roles.filter((r: any) => r.is_silver);
+      const agents = filtered.map((r: any) => ({ id: r.users.id, name: r.users.name }));
       const unique = Array.from(new Map(agents.map((a: any) => [a.id, a])).values());
       setCampaignAgents(unique);
     }
 
-    // Count available unassigned leads
+    // Count available unassigned leads filtered by import_source for processing
     let leadQ = supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
@@ -210,9 +215,14 @@ export default function ManagerAttendance() {
       .is("assigned_to", null)
       .eq("status", "fresh");
     if (!isBDO) leadQ = leadQ.eq("tl_id", user.id);
+    if (distDataMode === "processing") {
+      leadQ = leadQ.eq("import_source", "processing");
+    } else {
+      leadQ = leadQ.or("import_source.is.null,import_source.neq.processing");
+    }
     const { count } = await leadQ;
     setAvailableLeads(count || 0);
-  }, [user, selectedCampaign, isBDO]);
+  }, [user, selectedCampaign, isBDO, distDataMode]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { if (isTL || isBDO) { loadTeamAttendance(); loadCampaigns(); } }, [loadTeamAttendance, loadCampaigns, isTL, isBDO]);
@@ -299,7 +309,6 @@ export default function ManagerAttendance() {
 
     setDistributing(true);
     try {
-      // Fetch unassigned leads for this campaign
       let q = supabase
         .from("leads")
         .select("id")
@@ -309,16 +318,21 @@ export default function ManagerAttendance() {
         .order("created_at", { ascending: true })
         .limit(count);
       if (!isBDO) q = q.eq("tl_id", user.id);
+      if (distDataMode === "processing") {
+        q = q.eq("import_source", "processing");
+      } else {
+        q = q.or("import_source.is.null,import_source.neq.processing");
+      }
 
       const { data: leads, error: fetchErr } = await q;
       if (fetchErr) throw fetchErr;
       if (!leads || leads.length === 0) { toast.error("কোনো ডাটা পাওয়া যায়নি"); return; }
 
-      // Assign each lead to the selected agent
       const ids = leads.map((l: any) => l.id);
+      const agentType = distDataMode === "processing" ? "processing" : "bronze";
       const { error: updateErr } = await supabase
         .from("leads")
-        .update({ assigned_to: distAgent, agent_type: "bronze" })
+        .update({ assigned_to: distAgent, agent_type: agentType })
         .in("id", ids);
 
       if (updateErr) throw updateErr;
@@ -610,26 +624,40 @@ export default function ManagerAttendance() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Campaign select */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">ক্যাম্পেইন</Label>
-            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-              <SelectTrigger className="border-border">
-                <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
-              </SelectTrigger>
-              <SelectContent>
-                {campaigns.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Campaign + Data Mode filter row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">ক্যাম্পেইন</Label>
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                <SelectTrigger className="border-border">
+                  <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">ডাটা মোড</Label>
+              <Select value={distDataMode} onValueChange={(v) => setDistDataMode(v as "lead" | "processing")}>
+                <SelectTrigger className="border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lead">📞 লিড মোড</SelectItem>
+                  <SelectItem value="processing">⚙️ প্রসেসিং মোড</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {selectedCampaign && (
             <>
               <div className="rounded-md bg-secondary p-3">
                 <p className="text-sm text-muted-foreground">
-                  অ্যাসাইন না হওয়া ডাটা: <span className="font-bold text-foreground">{availableLeads}</span> টি
+                  অ্যাসাইন না হওয়া {distDataMode === "processing" ? "প্রসেসিং" : "লিড"} ডাটা: <span className="font-bold text-foreground">{availableLeads}</span> টি
                 </p>
               </div>
 
