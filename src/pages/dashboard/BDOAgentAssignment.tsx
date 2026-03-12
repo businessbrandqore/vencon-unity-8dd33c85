@@ -4,172 +4,158 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Users, UserPlus, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-
-interface Campaign { id: string; name: string; }
-interface TL { id: string; name: string; }
-interface Employee { id: string; name: string; role: string; }
-interface AgentRole { id: string; agent_id: string; tl_id: string; is_bronze: boolean; is_silver: boolean; agent_name: string; tl_name: string; }
+import { CheckCircle, XCircle, Clock, Eye, ShieldCheck, Users, Target, Crown } from "lucide-react";
+import { format } from "date-fns";
 
 const BDOAgentAssignment = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState("");
-  const [tls, setTLs] = useState<TL[]>([]);
-  const [selectedTL, setSelectedTL] = useState("");
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [assignedAgents, setAssignedAgents] = useState<AgentRole[]>([]);
-  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
-  const [assignAsBronze, setAssignAsBronze] = useState(true);
-  const [assignAsSilver, setAssignAsSilver] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("pending");
+  const [selectedApproval, setSelectedApproval] = useState<any>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
 
-  // Load campaigns
-  useEffect(() => {
+  const fetchApprovals = useCallback(async () => {
     if (!user) return;
-    const fetchCampaigns = async () => {
-      const { data } = await supabase.from("campaigns").select("id, name").eq("status", "active").order("name");
-      if (data) setCampaigns(data);
-    };
-    fetchCampaigns();
+    setLoading(true);
+    const { data } = await supabase
+      .from("sa_approvals")
+      .select("*, requester:users!sa_approvals_requested_by_fkey(name, role)")
+      .in("type", ["group_creation", "gl_campaign_assignment"])
+      .order("created_at", { ascending: false });
+    setApprovals(data || []);
+    setLoading(false);
   }, [user]);
 
-  // Load TLs for selected campaign
+  useEffect(() => { fetchApprovals(); }, [fetchApprovals]);
+
+  // Realtime
   useEffect(() => {
-    if (!selectedCampaign) { setTLs([]); setSelectedTL(""); return; }
-    const fetchTLs = async () => {
-      const { data } = await supabase
-        .from("campaign_tls")
-        .select("tl_id, users!campaign_tls_tl_id_fkey(id, name)")
-        .eq("campaign_id", selectedCampaign);
-      if (data) {
-        const tlList = data.map((d: any) => ({ id: d.users.id, name: d.users.name }));
-        setTLs(tlList);
-        if (tlList.length > 0) setSelectedTL(tlList[0].id);
-      }
-    };
-    fetchTLs();
-  }, [selectedCampaign]);
+    if (!user) return;
+    const channel = supabase
+      .channel("bdo-approvals-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sa_approvals" }, () => fetchApprovals())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchApprovals]);
 
-  // Load assigned agents for campaign
-  const loadAssignedAgents = useCallback(async () => {
-    if (!selectedCampaign) return;
-    const { data } = await supabase
-      .from("campaign_agent_roles")
-      .select("id, agent_id, tl_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(name), tl:users!campaign_agent_roles_tl_id_fkey(name)")
-      .eq("campaign_id", selectedCampaign);
-    if (data) {
-      setAssignedAgents(data.map((d: any) => ({
-        id: d.id,
-        agent_id: d.agent_id,
-        tl_id: d.tl_id,
-        is_bronze: d.is_bronze,
-        is_silver: d.is_silver,
-        agent_name: d.users?.name || "Unknown",
-        tl_name: d.tl?.name || "Unknown",
-      })));
-    }
-  }, [selectedCampaign]);
+  const handleApproveGroup = async (approval: any) => {
+    const details = approval.details as any;
+    if (!details?.group_leader_id || !details?.member_ids) return;
 
-  // Load all assignable users (employee panel agents + TL panel ATLs)
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      // Fetch employee panel agents
-      const { data: empData } = await supabase
-        .from("users")
-        .select("id, name, role")
-        .eq("panel", "employee")
-        .eq("is_active", true)
-        .in("role", ["telesales_executive", "assistant_team_leader", "group_leader"])
-        .order("name");
-
-      // Fetch ATLs from TL panel
-      const { data: atlData } = await supabase
-        .from("users")
-        .select("id, name, role")
-        .eq("panel", "tl")
-        .eq("is_active", true)
-        .eq("role", "Assistant Team Leader")
-        .order("name");
-
-      const combined = [...(empData || []), ...(atlData || [])];
-      // Deduplicate by id
-      const unique = Array.from(new Map(combined.map(e => [e.id, e])).values());
-      setEmployees(unique);
-    };
-    fetchEmployees();
-  }, []);
-
-  useEffect(() => { loadAssignedAgents(); }, [loadAssignedAgents]);
-
-  const assignedIds = new Set(assignedAgents.filter(a => a.tl_id === selectedTL).map(a => a.agent_id));
-
-  const filteredEmployees = employees.filter(e =>
-    !assignedIds.has(e.id) &&
-    (searchQuery === "" || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const toggleEmployee = (id: string) => {
-    setSelectedEmployees(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const assignAgents = async () => {
-    if (!selectedCampaign || !selectedTL || selectedEmployees.size === 0) return;
-    setSaving(true);
-    const rows = Array.from(selectedEmployees).map(agentId => ({
-      campaign_id: selectedCampaign,
-      tl_id: selectedTL,
+    const inserts = details.member_ids.map((agentId: string) => ({
+      group_leader_id: details.group_leader_id,
       agent_id: agentId,
-      is_bronze: assignAsBronze,
-      is_silver: assignAsSilver,
     }));
-    const { error } = await supabase.from("campaign_agent_roles").insert(rows);
-    if (error) {
-      toast.error(isBn ? "এজেন্ট অ্যাসাইন করতে ব্যর্থ" : "Failed to assign agents");
-    } else {
-      toast.success(isBn ? `${rows.length}জন এজেন্ট অ্যাসাইন হয়েছে` : `${rows.length} agents assigned`);
-      setSelectedEmployees(new Set());
-      loadAssignedAgents();
+    const { error: insertErr } = await supabase.from("group_members").insert(inserts);
+    if (insertErr) { toast.error("গ্রুপ তৈরি ব্যর্থ: " + insertErr.message); return; }
+
+    await supabase.from("sa_approvals").update({ status: "approved", decided_by: user?.id }).eq("id", approval.id);
+
+    // Notify TL
+    if (details.tl_id) {
+      await supabase.rpc("notify_user", {
+        _user_id: details.tl_id,
+        _title: "গ্রুপ অনুমোদিত ✅",
+        _message: `আপনার গ্রুপ (লিডার: ${details.group_leader_name}) অনুমোদিত হয়েছে।`,
+        _type: "approval",
+      });
     }
-    setSaving(false);
+
+    toast.success("গ্রুপ অনুমোদন হয়েছে");
+    fetchApprovals();
   };
 
-  const removeAgent = async (roleId: string) => {
-    const { error } = await supabase.from("campaign_agent_roles").delete().eq("id", roleId);
-    if (error) {
-      toast.error(isBn ? "রিমুভ করতে ব্যর্থ" : "Failed to remove");
-    } else {
-      toast.success(isBn ? "এজেন্ট রিমুভ হয়েছে" : "Agent removed");
-      loadAssignedAgents();
+  const handleApproveGLAssign = async (approval: any) => {
+    const details = approval.details as any;
+    if (!details?.group_leader_id || !details?.campaign_id || !details?.tl_id) return;
+
+    const { error } = await supabase.from("campaign_agent_roles").insert({
+      agent_id: details.group_leader_id,
+      campaign_id: details.campaign_id,
+      tl_id: details.tl_id,
+      is_bronze: false,
+      is_silver: false,
+    });
+    if (error) { toast.error("ক্যাম্পেইন অ্যাসাইনমেন্ট ব্যর্থ: " + error.message); return; }
+
+    await supabase.from("sa_approvals").update({ status: "approved", decided_by: user?.id }).eq("id", approval.id);
+
+    // Notify TL
+    if (details.tl_id) {
+      await supabase.rpc("notify_user", {
+        _user_id: details.tl_id,
+        _title: "GL ক্যাম্পেইন অ্যাসাইনমেন্ট অনুমোদিত ✅",
+        _message: `${details.group_leader_name} কে ${details.campaign_name} ক্যাম্পেইনে অ্যাসাইন অনুমোদিত হয়েছে।`,
+        _type: "approval",
+      });
+    }
+
+    toast.success("গ্রুপ লিডার ক্যাম্পেইনে অ্যাসাইন হয়েছে");
+    fetchApprovals();
+  };
+
+  const handleApprove = async (approval: any) => {
+    if (approval.type === "group_creation") {
+      await handleApproveGroup(approval);
+    } else if (approval.type === "gl_campaign_assignment") {
+      await handleApproveGLAssign(approval);
     }
   };
 
-  const toggleRole = async (roleId: string, field: "is_bronze" | "is_silver", value: boolean) => {
-    const { error } = await supabase.from("campaign_agent_roles").update({ [field]: value }).eq("id", roleId);
-    if (error) {
-      toast.error(isBn ? "আপডেট করতে ব্যর্থ" : "Failed to update");
-    } else {
-      loadAssignedAgents();
+  const handleReject = async () => {
+    if (!selectedApproval) return;
+    await supabase.from("sa_approvals").update({
+      status: "rejected",
+      decided_by: user?.id,
+      rejection_reason: rejectionReason || null,
+    }).eq("id", selectedApproval.id);
+
+    const details = selectedApproval.details as any;
+    if (details?.tl_id) {
+      const typeLabel = selectedApproval.type === "group_creation" ? "গ্রুপ তৈরি" : "GL ক্যাম্পেইন অ্যাসাইনমেন্ট";
+      await supabase.rpc("notify_user", {
+        _user_id: details.tl_id,
+        _title: `${typeLabel} প্রত্যাখ্যাত ❌`,
+        _message: `আপনার অনুরোধ প্রত্যাখ্যাত হয়েছে।${rejectionReason ? ` কারণ: ${rejectionReason}` : ""}`,
+        _type: "approval",
+      });
     }
+
+    toast.success("প্রত্যাখ্যান করা হয়েছে");
+    setShowRejectDialog(false);
+    setRejectionReason("");
+    setSelectedApproval(null);
+    fetchApprovals();
   };
 
-  const roleLabel = (role: string) => {
-    const key = `role_${role}` as any;
-    return t(key) || role;
+  const filtered = approvals.filter(a => {
+    if (tab === "pending") return a.status === "pending";
+    return a.status !== "pending";
+  });
+
+  const pendingCount = approvals.filter(a => a.status === "pending").length;
+
+  const getTypeIcon = (type: string) => {
+    if (type === "group_creation") return <Users className="h-4 w-4 text-amber-500" />;
+    return <Target className="h-4 w-4 text-primary" />;
+  };
+
+  const getTypeLabel = (type: string) => {
+    if (type === "group_creation") return isBn ? "গ্রুপ তৈরি" : "Group Creation";
+    if (type === "gl_campaign_assignment") return isBn ? "GL ক্যাম্পেইন অ্যাসাইনমেন্ট" : "GL Campaign Assignment";
+    return type;
   };
 
   if (!user) return null;
@@ -177,191 +163,210 @@ const BDOAgentAssignment = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-heading text-2xl font-bold text-foreground">
-          {isBn ? "এজেন্ট অ্যাসাইনমেন্ট" : "Agent Assignment"}
+        <h2 className="font-heading text-2xl font-bold text-foreground flex items-center gap-2">
+          <ShieldCheck className="h-6 w-6 text-primary" />
+          {isBn ? "TL অনুরোধ অনুমোদন" : "TL Request Approvals"}
         </h2>
         <p className="text-muted-foreground text-sm mt-1">
-          {isBn ? "ক্যাম্পেইনে এজেন্টদের Bronze/Silver হিসেবে অ্যাসাইন করুন" : "Assign agents as Bronze/Silver to campaigns"}
+          {isBn ? "টিম লিডারদের পাঠানো গ্রুপ তৈরি এবং ক্যাম্পেইন অ্যাসাইনমেন্ট অনুরোধ পরিচালনা করুন" : "Manage group creation and campaign assignment requests from Team Leaders"}
         </p>
       </div>
 
-      {/* Campaign & TL Selection */}
-      <div className="flex flex-wrap gap-4">
-        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-64 border-primary/30">
-            <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন করুন" : "Select Campaign"} />
-          </SelectTrigger>
-          <SelectContent>
-            {campaigns.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="pending">
+            {isBn ? "অপেক্ষমাণ" : "Pending"}
+            {pendingCount > 0 && (
+              <Badge className="ml-2 bg-yellow-500/20 text-yellow-500">{pendingCount}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="decided">{isBn ? "সিদ্ধান্ত নেওয়া" : "Decided"}</TabsTrigger>
+        </TabsList>
 
-        <Select value={selectedTL} onValueChange={setSelectedTL} disabled={tls.length === 0}>
-          <SelectTrigger className="w-64 border-primary/30">
-            <SelectValue placeholder={isBn ? "TL নির্বাচন করুন" : "Select TL"} />
-          </SelectTrigger>
-          <SelectContent>
-            {tls.map(tl => (
-              <SelectItem key={tl.id} value={tl.id}>{tl.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {selectedCampaign && selectedTL && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Available Employees */}
+        <TabsContent value={tab}>
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-heading flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-primary" />
-                {isBn ? "উপলব্ধ কর্মী" : "Available Employees"} ({filteredEmployees.length})
-              </CardTitle>
-              <div className="relative mt-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={isBn ? "নাম দিয়ে খুঁজুন..." : "Search by name..."}
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={assignAsBronze} onCheckedChange={(v) => setAssignAsBronze(!!v)} />
-                  <span className="text-orange-600 font-medium">🥉 Bronze</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={assignAsSilver} onCheckedChange={(v) => setAssignAsSilver(!!v)} />
-                  <span className="text-gray-600 font-medium">🥈 Silver</span>
-                </label>
-              </div>
-
-              <div className="max-h-[400px] overflow-y-auto border rounded-md">
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-8 text-center text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  <ShieldCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p>{tab === "pending" ? (isBn ? "কোনো অপেক্ষমাণ অনুরোধ নেই" : "No pending requests") : (isBn ? "কোনো রেকর্ড নেই" : "No records")}</p>
+                </div>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10"></TableHead>
-                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead>{isBn ? "রোল" : "Role"}</TableHead>
+                      <TableHead>{isBn ? "ধরন" : "Type"}</TableHead>
+                      <TableHead>{isBn ? "অনুরোধকারী (TL)" : "Requester (TL)"}</TableHead>
+                      <TableHead>{isBn ? "বিস্তারিত" : "Details"}</TableHead>
+                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                      <TableHead>{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
+                      <TableHead>{isBn ? "অ্যাকশন" : "Action"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEmployees.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          {isBn ? "কোনো কর্মী পাওয়া যায়নি" : "No employees found"}
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredEmployees.map(emp => (
-                      <TableRow key={emp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => toggleEmployee(emp.id)}>
-                        <TableCell>
-                          <Checkbox checked={selectedEmployees.has(emp.id)} />
-                        </TableCell>
-                        <TableCell className="font-medium">{emp.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">{roleLabel(emp.role)}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filtered.map(a => {
+                      const d = a.details as any;
+                      return (
+                        <TableRow key={a.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getTypeIcon(a.type)}
+                              <span className="text-sm font-medium">{getTypeLabel(a.type)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{d?.tl_name || a.requester?.name || "—"}</TableCell>
+                          <TableCell className="max-w-[250px]">
+                            {a.type === "group_creation" ? (
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">{isBn ? "লিডার:" : "Leader:"} </span>
+                                <span className="font-medium">{d?.group_leader_name}</span>
+                                <span className="text-muted-foreground ml-2">({(d?.member_names || []).length} {isBn ? "জন" : "members"})</span>
+                              </div>
+                            ) : (
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">{isBn ? "GL:" : "GL:"} </span>
+                                <span className="font-medium">{d?.group_leader_name}</span>
+                                <span className="text-muted-foreground ml-1">→ {d?.campaign_name}</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">{format(new Date(a.created_at), "dd MMM, HH:mm")}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                a.status === "pending" ? "text-yellow-500 border-yellow-500" :
+                                a.status === "approved" ? "text-green-500 border-green-500" :
+                                "text-red-500 border-red-500"
+                              }
+                            >
+                              {a.status === "pending" ? <Clock className="h-3 w-3 mr-1" /> :
+                               a.status === "approved" ? <CheckCircle className="h-3 w-3 mr-1" /> :
+                               <XCircle className="h-3 w-3 mr-1" />}
+                              {a.status === "pending" ? (isBn ? "অপেক্ষমাণ" : "Pending") :
+                               a.status === "approved" ? (isBn ? "অনুমোদিত" : "Approved") :
+                               (isBn ? "প্রত্যাখ্যাত" : "Rejected")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1.5">
+                              <Button size="sm" variant="ghost" onClick={() => { setSelectedApproval(a); setShowDetailDialog(true); }}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {a.status === "pending" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-green-500 border-green-500 hover:bg-green-500/10"
+                                    onClick={() => handleApprove(a)}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />{isBn ? "অনুমোদন" : "Approve"}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-500 border-red-500 hover:bg-red-500/10"
+                                    onClick={() => { setSelectedApproval(a); setShowRejectDialog(true); }}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />{isBn ? "বাতিল" : "Reject"}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
-              </div>
-
-              {selectedEmployees.size > 0 && (
-                <Button onClick={assignAgents} disabled={saving} className="mt-3 w-full">
-                  {saving
-                    ? (isBn ? "অ্যাসাইন হচ্ছে..." : "Assigning...")
-                    : (isBn ? `${selectedEmployees.size}জন এজেন্ট অ্যাসাইন করুন` : `Assign ${selectedEmployees.size} Agents`)}
-                </Button>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+      </Tabs>
 
-          {/* Currently Assigned Agents */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-heading flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                {isBn ? "অ্যাসাইনকৃত এজেন্ট" : "Assigned Agents"} ({assignedAgents.filter(a => a.tl_id === selectedTL).length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-[500px] overflow-y-auto border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead>Bronze</TableHead>
-                      <TableHead>Silver</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignedAgents.filter(a => a.tl_id === selectedTL).length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                          {isBn ? "এই TL-এর অধীনে কোনো এজেন্ট নেই" : "No agents under this TL"}
-                        </TableCell>
-                      </TableRow>
-                    ) : assignedAgents.filter(a => a.tl_id === selectedTL).map(agent => (
-                      <TableRow key={agent.id}>
-                        <TableCell className="font-medium">{agent.agent_name}</TableCell>
-                        <TableCell>
-                          <Checkbox
-                            checked={agent.is_bronze}
-                            onCheckedChange={(v) => toggleRole(agent.id, "is_bronze", !!v)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox
-                            checked={agent.is_silver}
-                            onCheckedChange={(v) => toggleRole(agent.id, "is_silver", !!v)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="destructive" onClick={() => removeAgent(agent.id)}>
-                            {isBn ? "রিমুভ" : "Remove"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+      {/* Detail Dialog */}
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isBn ? "অনুরোধের বিস্তারিত" : "Request Details"}</DialogTitle>
+          </DialogHeader>
+          {selectedApproval && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">{isBn ? "ধরন:" : "Type:"}</span>{" "}
+                <Badge variant="secondary">{getTypeLabel(selectedApproval.type)}</Badge>
               </div>
-
-              {/* All TLs summary */}
-              {tls.length > 1 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">{isBn ? "সকল TL সারাংশ:" : "All TLs Summary:"}</p>
-                  {tls.map(tl => {
-                    const count = assignedAgents.filter(a => a.tl_id === tl.id).length;
-                    return (
-                      <div key={tl.id} className="flex items-center justify-between text-sm px-2 py-1 bg-muted/50 rounded">
-                        <span className={tl.id === selectedTL ? "font-bold text-primary" : ""}>{tl.name}</span>
-                        <Badge variant="secondary">{count} {isBn ? "জন" : "agents"}</Badge>
-                      </div>
-                    );
-                  })}
+              <div>
+                <span className="text-muted-foreground">{isBn ? "অনুরোধকারী:" : "Requester:"}</span>{" "}
+                <span className="font-medium">{selectedApproval.details?.tl_name || "—"}</span>
+              </div>
+              {selectedApproval.type === "group_creation" && (
+                <>
+                  <div>
+                    <span className="text-muted-foreground">{isBn ? "গ্রুপ লিডার:" : "Group Leader:"}</span>{" "}
+                    <span className="font-medium flex items-center gap-1 inline-flex">
+                      <Crown className="h-3 w-3 text-amber-500" />
+                      {selectedApproval.details?.group_leader_name}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{isBn ? "মেম্বার:" : "Members:"}</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(selectedApproval.details?.member_names || []).map((name: string, i: number) => (
+                        <Badge key={i} variant="secondary" className="text-xs">{name}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              {selectedApproval.type === "gl_campaign_assignment" && (
+                <>
+                  <div>
+                    <span className="text-muted-foreground">{isBn ? "গ্রুপ লিডার:" : "Group Leader:"}</span>{" "}
+                    <span className="font-medium">{selectedApproval.details?.group_leader_name}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{isBn ? "ক্যাম্পেইন:" : "Campaign:"}</span>{" "}
+                    <span className="font-medium">{selectedApproval.details?.campaign_name}</span>
+                  </div>
+                </>
+              )}
+              <div>
+                <span className="text-muted-foreground">{isBn ? "তারিখ:" : "Date:"}</span>{" "}
+                <span>{format(new Date(selectedApproval.created_at), "dd MMM yyyy, HH:mm")}</span>
+              </div>
+              {selectedApproval.rejection_reason && (
+                <div>
+                  <span className="text-muted-foreground">{isBn ? "প্রত্যাখ্যানের কারণ:" : "Rejection reason:"}</span>{" "}
+                  <span className="text-red-400">{selectedApproval.rejection_reason}</span>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
-      {!selectedCampaign && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p>{isBn ? "উপরে একটি ক্যাম্পেইন নির্বাচন করুন" : "Select a campaign above to manage agent assignments"}</p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Reject Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isBn ? "প্রত্যাখ্যান করুন" : "Reject Request"}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder={isBn ? "প্রত্যাখ্যানের কারণ (ঐচ্ছিক)" : "Rejection reason (optional)"}
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button variant="destructive" onClick={handleReject}>{isBn ? "প্রত্যাখ্যান করুন" : "Reject"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
