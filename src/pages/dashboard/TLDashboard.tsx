@@ -18,6 +18,7 @@ const TLDashboard = () => {
 
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({
     newLeads: 0,
     confirmedOrders: 0,
@@ -29,6 +30,12 @@ const TLDashboard = () => {
 
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
   const isATL = user?.role === "Assistant Team Leader";
+
+  const getEffectiveTlId = useCallback(() => {
+    if (!isATL || !user) return user?.id || "";
+    if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
+    return user?.id || "";
+  }, [isATL, user, atlTlMap, selectedCampaign]);
 
   useEffect(() => {
     if (!user) return;
