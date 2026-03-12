@@ -321,6 +321,22 @@ const HREmployeeNew = () => {
               </p>
             )}
           </div>
+          {/* Campaign Selection */}
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "ক্যাম্পেইন" : "Campaign"}
+            </label>
+            <Select value={form.campaignId} onValueChange={(v) => set("campaignId", v)}>
+              <SelectTrigger className={`${fieldClass} w-full`}>
+                <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন করুন (ঐচ্ছিক)" : "Select campaign (optional)"} />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border max-h-60">
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Work Details */}
