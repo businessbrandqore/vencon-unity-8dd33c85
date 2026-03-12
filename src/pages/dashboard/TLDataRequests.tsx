@@ -175,7 +175,7 @@ export default function TLDataRequests() {
         .from("leads")
         .update({
           assigned_to: selectedAgent,
-          tl_id: user.id,
+          tl_id: getEffectiveTlId(),
           agent_type: agentType,
           status: distDataMode === "processing" ? "processing_assigned" : "assigned",
         })
@@ -199,7 +199,7 @@ export default function TLDataRequests() {
       const { count: newCount } = await reloadQ;
       setAvailableCount(newCount || 0);
     } catch (err: any) {
-      toast.error(err.message || "Failed to send data");
+      toast.error(isBn ? "ডাটা পাঠাতে সমস্যা হয়েছে: " + (err.message || "") : "Failed to send data: " + (err.message || ""));
     }
     setSending(false);
   };
