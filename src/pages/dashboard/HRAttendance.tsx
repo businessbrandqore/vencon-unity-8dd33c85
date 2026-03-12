@@ -256,31 +256,50 @@ const HRAttendance = () => {
     })));
   };
 
-  const addEmpOff = async () => {
-    if (!selectedEmployee || !empOffDate || !user) return;
+  const addEmpOffs = async () => {
+    if (!selectedEmployee || !user) return;
     const [yr, mo] = selectedMonth.split("-").map(Number);
-
-    // Check limit: max 3 per employee per month
-    const existing = empOffs.filter((o) => o.user_id === selectedEmployee);
-    if (existing.length >= 3) {
-      toast({ title: isBn ? "এই মাসে এই কর্মচারীর জন্য সর্বোচ্চ ৩ দিন ছুটি দেওয়া যায়" : "Max 3 off days per employee per month", variant: "destructive" });
+    const dates = [empOffDate1, empOffDate2, empOffDate3].filter(Boolean);
+    
+    if (dates.length === 0) {
+      toast({ title: isBn ? "অন্তত একটি তারিখ নির্বাচন করুন" : "Select at least one date", variant: "destructive" });
       return;
     }
 
-    const { error } = await (supabase.from("employee_monthly_offs") as any).insert({
+    // Check limit: max 3 per employee per month
+    const existing = empOffs.filter((o) => o.user_id === selectedEmployee);
+    const remaining = 3 - existing.length;
+    if (dates.length > remaining) {
+      toast({ title: isBn ? `এই কর্মচারীর জন্য আর ${remaining} দিন ছুটি দেওয়া যাবে` : `Only ${remaining} more off days allowed`, variant: "destructive" });
+      return;
+    }
+
+    // Check duplicates
+    const existingDates = new Set(existing.map(o => o.off_date));
+    const uniqueDates = dates.filter(d => !existingDates.has(d));
+    if (uniqueDates.length === 0) {
+      toast({ title: isBn ? "এই তারিখগুলো আগেই বরাদ্দ করা হয়েছে" : "These dates are already assigned", variant: "destructive" });
+      return;
+    }
+
+    const inserts = uniqueDates.map(d => ({
       user_id: selectedEmployee,
-      off_date: empOffDate,
+      off_date: d,
       month: mo,
       year: yr,
       assigned_by: user.id,
-    });
+    }));
+
+    const { error } = await (supabase.from("employee_monthly_offs") as any).insert(inserts);
     if (error) {
       toast({ title: error.message, variant: "destructive" });
       return;
     }
-    setEmpOffDate("");
+    setEmpOffDate1("");
+    setEmpOffDate2("");
+    setEmpOffDate3("");
     fetchEmpOffs();
-    toast({ title: isBn ? "ছুটি বরাদ্দ হয়েছে ✓" : "Off day assigned ✓" });
+    toast({ title: isBn ? `${uniqueDates.length} দিন ছুটি বরাদ্দ হয়েছে ✓` : `${uniqueDates.length} off days assigned ✓` });
   };
 
   const removeEmpOff = async (id: string) => {
