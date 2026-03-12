@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
@@ -66,6 +67,8 @@ export default function GroupLeaderDashboard() {
   const [salaryData, setSalaryData] = useState<any>(null);
   const [myAttendance, setMyAttendance] = useState<any[]>([]);
   const [incentiveThreshold, setIncentiveThreshold] = useState(0);
+  const [campaignOptions, setCampaignOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all");
   const [campaignName, setCampaignName] = useState<string | null>(null);
 
   const now = new Date();
@@ -83,126 +86,209 @@ export default function GroupLeaderDashboard() {
     if (!user) return;
     setLoading(true);
 
-    // Fetch GL's campaign from campaign_agent_roles
-    const { data: carData } = await supabase
-      .from("campaign_agent_roles")
-      .select("campaign_id, campaigns(id, name)")
-      .eq("agent_id", user.id)
-      .limit(1);
-    if (carData && carData.length > 0) {
-      const c = carData[0] as any;
-      setCampaignName(c.campaigns?.name || null);
-    }
-
-    const { data: members } = await supabase
-      .from("group_members")
-      .select("agent_id")
-      .eq("group_leader_id", user.id);
-
-    if (!members || members.length === 0) {
-      setAgents([]);
-      setLoading(false);
-      return;
-    }
-
-    const agentIds = members.map((m) => m.agent_id);
     const today = todayStr();
 
-    const [
-      usersRes, leadsAllRes, ordersMonthRes, attTodayRes, leavesRes, incentiveRes,
-    ] = await Promise.all([
-      supabase.from("users").select("id, name, phone, shift_start, shift_end").in("id", agentIds).eq("is_active", true),
-      supabase.from("leads").select("id, assigned_to, status, agent_type, updated_at, called_date").in("assigned_to", agentIds),
-      supabase.from("orders").select("id, agent_id, delivery_status, status, created_at").in("agent_id", agentIds).gte("created_at", monthStart).lte("created_at", monthEnd),
-      supabase.from("attendance").select("user_id, clock_in, clock_out, mood_in, mood_note, is_late").in("user_id", agentIds).eq("date", today),
-      supabase.from("leave_requests").select("user_id, status, start_date, end_date").in("user_id", agentIds).eq("status", "approved").lte("start_date", today).gte("end_date", today),
-      supabase.from("incentive_config").select("minimum_threshold").eq("role", "group_leader").eq("status", "approved").limit(1),
-    ]);
+    try {
+      const { data: members } = await supabase
+        .from("group_members")
+        .select("agent_id")
+        .eq("group_leader_id", user.id);
 
-    const threshold = incentiveRes.data?.[0]?.minimum_threshold || 0;
-    setIncentiveThreshold(threshold);
+      const groupAgentIds = (members || []).map((m) => m.agent_id);
+      const relatedUserIds = Array.from(new Set([user.id, ...groupAgentIds]));
 
-    const attMap: Record<string, any> = {};
-    (attTodayRes.data || []).forEach((a) => { if (a.user_id) attMap[a.user_id] = a; });
+      const { data: roleRows } = relatedUserIds.length > 0
+        ? await supabase
+            .from("campaign_agent_roles")
+            .select("agent_id, campaign_id, campaigns(id, name)")
+            .in("agent_id", relatedUserIds)
+        : { data: [] as any[] };
 
-    const leaveSet = new Set((leavesRes.data || []).map((l) => l.user_id));
-
-    const agentList: AgentData[] = (usersRes.data || []).map((u) => {
-      const att = attMap[u.id];
-      const agentLeads = (leadsAllRes.data || []).filter((l) => l.assigned_to === u.id);
-      const todayLeads = agentLeads.filter((l) => l.updated_at && l.updated_at.slice(0, 10) === today && l.status !== "fresh");
-      const calledToday = agentLeads.filter((l) => l.called_date && l.called_date.slice(0, 10) === today);
-      const bronzeLeads = agentLeads.filter((l) => l.agent_type === "bronze").length;
-      const silverLeads = agentLeads.filter((l) => l.agent_type === "silver").length;
-
-      const agentOrders = (ordersMonthRes.data || []).filter((o) => o.agent_id === u.id);
-      const confirmedMonth = agentOrders.filter((o) => o.status !== "rejected").length;
-      const deliveredMonth = agentOrders.filter((o) => o.delivery_status === "delivered").length;
-      const cancelledMonth = agentOrders.filter((o) => o.status === "rejected" || o.delivery_status === "returned").length;
-      const todayOrders = agentOrders.filter((o) => o.created_at && o.created_at.slice(0, 10) === today);
-
-      return {
-        id: u.id,
-        name: u.name,
-        phone: u.phone,
-        bronzeLeads,
-        silverLeads,
-        leadsToday: todayLeads.length,
-        calledToday: calledToday.length,
-        confirmedToday: todayOrders.length,
-        confirmedMonth,
-        deliveredMonth,
-        cancelledMonth,
-        totalLeadsMonth: agentLeads.filter((l) => l.updated_at && l.updated_at >= monthStart).length,
-        calledMonth: agentLeads.filter((l) => l.called_date && l.called_date >= monthStart.slice(0, 10)).length,
-        ratioMonth: confirmedMonth > 0 ? Math.round((deliveredMonth / confirmedMonth) * 100 * 10) / 10 : 0,
-        moodToday: att?.mood_in || null,
-        clockIn: att?.clock_in || null,
-        clockOut: att?.clock_out || null,
-        isLate: att?.is_late || false,
-        shiftStart: u.shift_start,
-        shiftEnd: u.shift_end,
-        moodNote: att?.mood_note || null,
-        hasLeaveToday: leaveSet.has(u.id),
-      };
-    });
-
-    setAgents(agentList);
-
-    // 7-day trend
-    const trend: DailyTrend[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const ds = d.toISOString().slice(0, 10);
-      const dayOrders = (ordersMonthRes.data || []).filter((o) => o.created_at?.slice(0, 10) === ds);
-      trend.push({
-        day: d.toLocaleDateString("bn-BD", { weekday: "short" }),
-        confirmed: dayOrders.filter((o) => o.status !== "rejected").length,
-        delivered: dayOrders.filter((o) => o.delivery_status === "delivered").length,
+      const campaignMap = new Map<string, string>();
+      (roleRows || []).forEach((row: any) => {
+        if (row.campaigns?.id && row.campaigns?.name) {
+          campaignMap.set(row.campaigns.id, row.campaigns.name);
+        }
       });
+      const options = Array.from(campaignMap.entries()).map(([id, name]) => ({ id, name }));
+      setCampaignOptions(options);
+
+      let activeCampaignId = selectedCampaignId;
+      if (activeCampaignId !== "all" && !options.some((c) => c.id === activeCampaignId)) {
+        activeCampaignId = "all";
+      }
+      if (activeCampaignId !== selectedCampaignId) {
+        setSelectedCampaignId(activeCampaignId);
+      }
+
+      const selectedCampaign = options.find((c) => c.id === activeCampaignId);
+      setCampaignName(activeCampaignId === "all" ? null : selectedCampaign?.name || null);
+
+      const scopedAgentIds = activeCampaignId === "all"
+        ? groupAgentIds
+        : groupAgentIds.filter((agentId) =>
+            (roleRows || []).some((row: any) => row.agent_id === agentId && row.campaign_id === activeCampaignId),
+          );
+
+      const usersPromise = scopedAgentIds.length > 0
+        ? supabase
+            .from("users")
+            .select("id, name, phone, shift_start, shift_end")
+            .in("id", scopedAgentIds)
+            .eq("is_active", true)
+        : Promise.resolve({ data: [] as any[] });
+
+      let leadsQuery = supabase
+        .from("leads")
+        .select("id, assigned_to, status, agent_type, updated_at, called_date, campaign_id")
+        .in("assigned_to", scopedAgentIds);
+      if (activeCampaignId !== "all") {
+        leadsQuery = leadsQuery.eq("campaign_id", activeCampaignId);
+      }
+
+      const leadsPromise = scopedAgentIds.length > 0
+        ? leadsQuery
+        : Promise.resolve({ data: [] as any[] });
+
+      const ordersPromise = scopedAgentIds.length > 0
+        ? supabase
+            .from("orders")
+            .select("id, agent_id, lead_id, delivery_status, status, created_at")
+            .in("agent_id", scopedAgentIds)
+            .gte("created_at", monthStart)
+            .lte("created_at", monthEnd)
+        : Promise.resolve({ data: [] as any[] });
+
+      const attendancePromise = scopedAgentIds.length > 0
+        ? supabase
+            .from("attendance")
+            .select("user_id, clock_in, clock_out, mood_in, mood_note, is_late")
+            .in("user_id", scopedAgentIds)
+            .eq("date", today)
+        : Promise.resolve({ data: [] as any[] });
+
+      const leavesPromise = scopedAgentIds.length > 0
+        ? supabase
+            .from("leave_requests")
+            .select("user_id, status, start_date, end_date")
+            .in("user_id", scopedAgentIds)
+            .eq("status", "approved")
+            .lte("start_date", today)
+            .gte("end_date", today)
+        : Promise.resolve({ data: [] as any[] });
+
+      const [
+        usersRes,
+        leadsAllRes,
+        ordersMonthRes,
+        attTodayRes,
+        leavesRes,
+        incentiveRes,
+        salRes,
+        myAttRes,
+      ] = await Promise.all([
+        usersPromise,
+        leadsPromise,
+        ordersPromise,
+        attendancePromise,
+        leavesPromise,
+        supabase
+          .from("incentive_config")
+          .select("minimum_threshold")
+          .eq("role", "group_leader")
+          .eq("status", "approved")
+          .limit(1),
+        supabase.rpc("calculate_salary", {
+          _user_id: user.id,
+          _year: now.getFullYear(),
+          _month: now.getMonth() + 1,
+        }),
+        supabase
+          .from("attendance")
+          .select("date, clock_in, clock_out, is_late, is_early_out, deduction_amount")
+          .eq("user_id", user.id)
+          .gte("date", monthStart.slice(0, 10))
+          .lte("date", today),
+      ]);
+
+      const threshold = incentiveRes.data?.[0]?.minimum_threshold || 0;
+      setIncentiveThreshold(threshold);
+
+      if (salRes.data) setSalaryData(salRes.data);
+      setMyAttendance(myAttRes.data || []);
+
+      const attMap: Record<string, any> = {};
+      (attTodayRes.data || []).forEach((a) => {
+        if (a.user_id) attMap[a.user_id] = a;
+      });
+
+      const leaveSet = new Set((leavesRes.data || []).map((l) => l.user_id));
+      const scopedLeadIds = new Set((leadsAllRes.data || []).map((l) => l.id));
+      const monthOrders = (ordersMonthRes.data || []).filter((o) =>
+        activeCampaignId === "all" ? true : !!o.lead_id && scopedLeadIds.has(o.lead_id),
+      );
+
+      const agentList: AgentData[] = (usersRes.data || []).map((u) => {
+        const att = attMap[u.id];
+        const agentLeads = (leadsAllRes.data || []).filter((l) => l.assigned_to === u.id);
+        const todayLeads = agentLeads.filter(
+          (l) => l.updated_at && l.updated_at.slice(0, 10) === today && l.status !== "fresh",
+        );
+        const calledToday = agentLeads.filter((l) => l.called_date && l.called_date.slice(0, 10) === today);
+        const bronzeLeads = agentLeads.filter((l) => l.agent_type === "bronze").length;
+        const silverLeads = agentLeads.filter((l) => l.agent_type === "silver").length;
+
+        const agentOrders = monthOrders.filter((o) => o.agent_id === u.id);
+        const confirmedMonth = agentOrders.filter((o) => o.status !== "rejected").length;
+        const deliveredMonth = agentOrders.filter((o) => o.delivery_status === "delivered").length;
+        const cancelledMonth = agentOrders.filter((o) => o.status === "rejected" || o.delivery_status === "returned").length;
+        const todayOrders = agentOrders.filter((o) => o.created_at && o.created_at.slice(0, 10) === today);
+
+        return {
+          id: u.id,
+          name: u.name,
+          phone: u.phone,
+          bronzeLeads,
+          silverLeads,
+          leadsToday: todayLeads.length,
+          calledToday: calledToday.length,
+          confirmedToday: todayOrders.length,
+          confirmedMonth,
+          deliveredMonth,
+          cancelledMonth,
+          totalLeadsMonth: agentLeads.filter((l) => l.updated_at && l.updated_at >= monthStart).length,
+          calledMonth: agentLeads.filter((l) => l.called_date && l.called_date >= monthStart.slice(0, 10)).length,
+          ratioMonth: confirmedMonth > 0 ? Math.round((deliveredMonth / confirmedMonth) * 100 * 10) / 10 : 0,
+          moodToday: att?.mood_in || null,
+          clockIn: att?.clock_in || null,
+          clockOut: att?.clock_out || null,
+          isLate: att?.is_late || false,
+          shiftStart: u.shift_start,
+          shiftEnd: u.shift_end,
+          moodNote: att?.mood_note || null,
+          hasLeaveToday: leaveSet.has(u.id),
+        };
+      });
+
+      setAgents(agentList);
+
+      const trend: DailyTrend[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        const dayOrders = monthOrders.filter((o) => o.created_at?.slice(0, 10) === ds);
+        trend.push({
+          day: d.toLocaleDateString("bn-BD", { weekday: "short" }),
+          confirmed: dayOrders.filter((o) => o.status !== "rejected").length,
+          delivered: dayOrders.filter((o) => o.delivery_status === "delivered").length,
+        });
+      }
+      setDailyTrend(trend);
+    } finally {
+      setLoading(false);
     }
-    setDailyTrend(trend);
-
-    // Salary
-    const { data: salData } = await supabase.rpc("calculate_salary", {
-      _user_id: user.id,
-      _year: now.getFullYear(),
-      _month: now.getMonth() + 1,
-    });
-    if (salData) setSalaryData(salData);
-
-    // My attendance this month
-    const { data: myAtt } = await supabase
-      .from("attendance")
-      .select("date, clock_in, clock_out, is_late, is_early_out, deduction_amount")
-      .eq("user_id", user.id)
-      .gte("date", monthStart.slice(0, 10))
-      .lte("date", today);
-    setMyAttendance(myAtt || []);
-
-    setLoading(false);
-  }, [user, monthStart, monthEnd]);
+  }, [user, monthStart, monthEnd, selectedCampaignId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -269,21 +355,40 @@ export default function GroupLeaderDashboard() {
   return (
     <div className="space-y-6">
       {/* ═══ SECTION 1: TOP STATS ═══ */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-heading text-xl flex items-center gap-2">
             <Users className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
             গ্রুপ লিডার ড্যাশবোর্ড
           </h1>
-          {campaignName && (
-            <p className="text-sm text-muted-foreground mt-1">
-              ক্যাম্পেইন: <span className="font-semibold text-foreground">{campaignName}</span>
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-1">
+            {campaignName ? (
+              <>ক্যাম্পেইন: <span className="font-semibold text-foreground">{campaignName}</span></>
+            ) : (
+              "ক্যাম্পেইন: সব"
+            )}
+          </p>
         </div>
-        <Button variant="outline" size="icon" onClick={loadData} disabled={loading}>
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="ক্যাম্পেইন নির্বাচন করুন" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaignOptions.map((campaign) => (
+                <SelectItem key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" size="icon" onClick={loadData} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
