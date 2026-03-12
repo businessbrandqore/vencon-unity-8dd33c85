@@ -209,9 +209,9 @@ const HRCampaigns = () => {
     }
     for (const w of editWebsites) {
       if (w.id) {
-        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active }).eq("id", w.id);
+        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode } as any).eq("id", w.id);
       } else if (w.site_name.trim() && w.site_url.trim()) {
-        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active });
+        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode } as any);
       }
     }
 
