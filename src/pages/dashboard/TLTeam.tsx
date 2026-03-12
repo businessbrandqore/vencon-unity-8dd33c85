@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Search, Users, Target, TrendingUp, RefreshCw, Filter, Shield, UserCheck, ChevronRight, Trophy, Star, ArrowLeft, Phone, Mail, Calendar, DollarSign, Award, Crown, Briefcase, Database, CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
 
 type TimePeriod = "daily" | "monthly" | "yearly";
-type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "data_requests";
+type ViewLevel = "tl_list" | "gl_list" | "agent_list" | "profile" | "other_employees" | "rankings" | "data_requests" | "group_management";
 
 interface DataRequest {
   id: string;
