@@ -307,6 +307,51 @@ export type Database = {
           },
         ]
       }
+      campaign_data_operations: {
+        Row: {
+          campaign_id: string
+          created_by: string | null
+          data_mode: string
+          fields_config: Json
+          id: string
+          routing_rules: Json
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_by?: string | null
+          data_mode?: string
+          fields_config?: Json
+          id?: string
+          routing_rules?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_by?: string | null
+          data_mode?: string
+          fields_config?: Json
+          id?: string
+          routing_rules?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_data_operations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_data_operations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_tls: {
         Row: {
           campaign_id: string

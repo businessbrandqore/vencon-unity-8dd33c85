@@ -57,6 +57,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "approvals", icon: CheckSquare, path: "/hr/approvals" },
     { titleKey: "campaigns", icon: Megaphone, path: "/hr/campaigns" },
     { titleKey: "employees", icon: Users, path: "/hr/employees" },
+    { titleKey: "data_operations", icon: Settings, path: "/hr/data-operations" },
     { titleKey: "data_monitor", icon: Target, path: "/hr/data-monitor" },
     { titleKey: "data_tracker", icon: BarChart3, path: "/hr/data-tracker" },
     { titleKey: "warehouse", icon: Package, path: "/hr/warehouse" },
