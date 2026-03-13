@@ -187,6 +187,12 @@ export default function ProfileSettings() {
         </CardContent>
       </Card>
 
+      {/* Monthly Offs */}
+      <MonthlyOffsSection userId={profile.id} />
+
+      {/* Complaints */}
+      <ComplaintSection userId={profile.id} />
+
       {/* Preferences */}
       <Card>
         <CardHeader><CardTitle className="text-sm font-heading">পছন্দসমূহ</CardTitle></CardHeader>
