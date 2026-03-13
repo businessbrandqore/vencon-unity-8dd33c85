@@ -506,19 +506,18 @@ const HRCampaigns = () => {
                 <Badge className={statusColors[detailCampaign.status] || statusColors.draft}>
                   {detailCampaign.status}
                 </Badge>
-                {editing ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant={editDataMode === "lead" ? "default" : "outline"} onClick={() => setEditDataMode("lead")}>
-                      🎯 {isBn ? "লিড" : "Lead"}
-                    </Button>
-                    <Button size="sm" variant={editDataMode === "processing" ? "default" : "outline"} onClick={() => setEditDataMode("processing")}>
-                      ⚙️ {isBn ? "প্রসেসিং" : "Processing"}
-                    </Button>
+                {!editing && (
+                  <div className="flex gap-1.5">
+                    {detailWebsites.some(w => w.data_mode === "lead" || !w.data_mode) && (
+                      <Badge variant="outline" className="border-primary/30 text-primary">🎯 {isBn ? "লিড" : "Lead"}</Badge>
+                    )}
+                    {detailWebsites.some(w => w.data_mode === "processing") && (
+                      <Badge variant="outline" className="border-primary/30 text-primary">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</Badge>
+                    )}
+                    {detailWebsites.length === 0 && (
+                      <Badge variant="outline" className="text-muted-foreground">{isBn ? "ওয়েবসাইট নেই" : "No websites"}</Badge>
+                    )}
                   </div>
-                ) : (
-                  <Badge variant="outline" className="border-primary/30 text-primary">
-                    {detailCampaign.data_mode === "lead" ? (isBn ? "🎯 লিড পদ্ধতি" : "🎯 Lead Mode") : (isBn ? "⚙️ প্রসেসিং" : "⚙️ Processing")}
-                  </Badge>
                 )}
                 {(detailCampaign.status === "active" || detailCampaign.status === "paused") && !editing && (
                   <Button size="sm" variant="outline" onClick={() => { togglePause(detailCampaign); setDetailId(null); }}>
