@@ -681,6 +681,9 @@ export default function HRDataOperations() {
                               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colorClasses[s.color || "gray"] || colorClasses.gray}`}
                             >
                               {s.label_bn || s.label || s.value}
+                              {(s.next_panel || s.next_location) && (
+                                <span className="ml-1 opacity-70">({(s.next_panel || "—").toUpperCase()}/{s.next_location || "—"})</span>
+                              )}
                             </span>
                           ))}
                         </div>
