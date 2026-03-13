@@ -138,7 +138,7 @@ export default function CSExecutiveDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-heading">Delivered Orders — Follow-Up Pending ({orders.length})</CardTitle>
+          <CardTitle className="text-sm font-heading">ডেলিভারড ডাটা — কল পেন্ডিং ({orders.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
