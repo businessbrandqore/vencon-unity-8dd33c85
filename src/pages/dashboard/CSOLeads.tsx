@@ -479,7 +479,7 @@ export default function CSOLeads() {
                         </td>
                       </tr>
                     ))}
-                    {approvedOrders.length === 0 && (
+                    {filteredApproved.length === 0 && (
                       <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">কোনো approved অর্ডার নেই</td></tr>
                     )}
                   </tbody>
