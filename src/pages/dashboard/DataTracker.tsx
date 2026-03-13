@@ -400,7 +400,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "orders",
+    placeholderData: keepPreviousData,
   });
 
   // Fetch agents for TL assignment
