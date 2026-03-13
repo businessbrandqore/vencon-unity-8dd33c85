@@ -394,7 +394,6 @@ const DataTracker = () => {
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
     enabled: !!user,
-    placeholderData: keepPreviousData,
   });
 
   // Fetch agents for TL assignment
