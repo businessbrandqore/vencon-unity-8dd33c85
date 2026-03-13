@@ -107,6 +107,7 @@ const App = () => (
               <Route path="/hr/warehouse" element={<HRWarehouse />} />
               <Route path="/hr/data-monitor" element={<HRDataMonitor />} />
               <Route path="/hr/data-tracker" element={<DataTracker />} />
+              <Route path="/hr/data-operations" element={<HRDataOperations />} />
               <Route path="/hr/my-attendance" element={<ManagerAttendance />} />
               <Route path="/hr/feedback" element={<HRFeedback />} />
               <Route path="/hr/documentation" element={<WebhookDocumentation />} />
