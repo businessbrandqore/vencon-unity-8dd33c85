@@ -725,6 +725,9 @@ const HRCampaigns = () => {
                           <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${site.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
                             <span className="font-heading font-bold text-sm text-foreground">{site.site_name}</span>
+                            <Badge variant={site.data_mode === "lead" || !site.data_mode ? "default" : "secondary"} className="text-[10px]">
+                              {site.data_mode === "processing" ? "Processing" : "Lead"}
+                            </Badge>
                           </div>
                           <a href={site.site_url} target="_blank" rel="noopener noreferrer" className="text-primary text-xs flex items-center gap-1 hover:underline">
                             <ExternalLink className="h-3 w-3" /> {isBn ? "দেখুন" : "Visit"}
