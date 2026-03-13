@@ -238,11 +238,16 @@ export default function EmployeeLeads() {
 
   const handlePreOrderSubmit = async () => {
     if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
+    if (!preOrderProduct) { toast.error("Product নির্বাচন করুন"); return; }
     await supabase.from("pre_orders").insert({
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
-    await supabase.from("leads").update({ status: "pre_order", called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
+    // Update lead with district/thana/address info
+    await supabase.from("leads").update({
+      status: "pre_order", called_date: new Date().toISOString(),
+      address: [preOrderDistrict, preOrderThana, preOrderAddress].filter(Boolean).join(", ") || currentPreOrderLead.address,
+    }).eq("id", currentPreOrderLead.id);
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
     loadLeads();
