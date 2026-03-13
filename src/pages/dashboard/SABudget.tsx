@@ -18,6 +18,7 @@ const SABudget = () => {
   const [allocations, setAllocations] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [fundRequests, setFundRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal
