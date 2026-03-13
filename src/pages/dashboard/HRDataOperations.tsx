@@ -348,14 +348,29 @@ function ColumnCard({
     <Card className="flex-1 min-w-[280px] max-w-[400px]">
       <CardHeader className="pb-2 pt-3 px-3">
         <div className="flex items-center gap-2">
-          <Columns3 className="h-4 w-4 text-primary flex-shrink-0" />
+          {column.type === "note" ? (
+            <FileText className="h-4 w-4 text-orange-500 flex-shrink-0" />
+          ) : (
+            <Columns3 className="h-4 w-4 text-primary flex-shrink-0" />
+          )}
           <div className="flex-1 space-y-1">
-            <Input
-              value={column.name}
-              onChange={(e) => onUpdateColumn({ name: e.target.value })}
-              placeholder="কলামের নাম (EN)"
-              className="h-7 text-xs font-semibold"
-            />
+            <div className="flex gap-1.5">
+              <Input
+                value={column.name}
+                onChange={(e) => onUpdateColumn({ name: e.target.value })}
+                placeholder="কলামের নাম (EN)"
+                className="h-7 text-xs font-semibold flex-1"
+              />
+              <Select value={column.type} onValueChange={(v) => onUpdateColumn({ type: v as ColumnType })}>
+                <SelectTrigger className="h-7 w-[100px] text-[10px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dropdown">ড্রপডাউন</SelectItem>
+                  <SelectItem value="note">নোট</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Input
               value={column.name_bn}
               onChange={(e) => onUpdateColumn({ name_bn: e.target.value })}
@@ -374,37 +389,56 @@ function ColumnCard({
 
       {!collapsed && (
         <CardContent className="px-3 pb-3 space-y-1.5">
-          {column.options.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
-              কোনো ভ্যালু নেই
-            </p>
-          )}
-          {column.options.map((opt, optIdx) => (
-            <OptionRow
-              key={opt.id}
-              option={opt}
-              onUpdate={(updates) => onUpdateOption(optIdx, updates)}
-              onRemove={() => onRemoveOption(optIdx)}
-              expanded={expandedOptions.has(opt.id)}
-              onToggle={() => onToggleOption(opt.id)}
-            />
-          ))}
-          <Button variant="outline" size="sm" className="w-full h-7 text-xs mt-1" onClick={onAddOption}>
-            <Plus className="h-3 w-3 mr-1" /> ভ্যালু যোগ করুন
-          </Button>
-
-          {/* Preview chips */}
-          {column.options.filter(o => o.value).length > 0 && (
-            <div className="pt-1.5 border-t mt-2">
-              <p className="text-[10px] text-muted-foreground mb-1">প্রিভিউ:</p>
-              <div className="flex flex-wrap gap-1">
-                {column.options.filter(o => o.value).map(o => (
-                  <span key={o.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${getColorClasses(o.color || "gray")}`}>
-                    {o.label_bn || o.label || o.value}
-                  </span>
-                ))}
+          {column.type === "note" ? (
+            /* ─── Note type: just a preview ─── */
+            <div className="border border-dashed rounded-md p-3 space-y-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                <span className="text-xs">কর্মী এখানে ফ্রি-টেক্সট নোট লিখতে পারবে</span>
+              </div>
+              <div className="bg-muted/50 rounded-md p-2">
+                <p className="text-[10px] text-muted-foreground mb-1">প্রিভিউ:</p>
+                <div className="border rounded-md bg-background px-2.5 py-1.5 text-xs text-muted-foreground">
+                  {column.name_bn || column.name || "নোট"} লিখুন...
+                </div>
               </div>
             </div>
+          ) : (
+            /* ─── Dropdown type: multiple options ─── */
+            <>
+              {column.options.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
+                  কোনো ভ্যালু নেই
+                </p>
+              )}
+              {column.options.map((opt, optIdx) => (
+                <OptionRow
+                  key={opt.id}
+                  option={opt}
+                  onUpdate={(updates) => onUpdateOption(optIdx, updates)}
+                  onRemove={() => onRemoveOption(optIdx)}
+                  expanded={expandedOptions.has(opt.id)}
+                  onToggle={() => onToggleOption(opt.id)}
+                />
+              ))}
+              <Button variant="outline" size="sm" className="w-full h-7 text-xs mt-1" onClick={onAddOption}>
+                <Plus className="h-3 w-3 mr-1" /> ভ্যালু যোগ করুন
+              </Button>
+
+              {/* Preview chips */}
+              {column.options.filter(o => o.value).length > 0 && (
+                <div className="pt-1.5 border-t mt-2">
+                  <p className="text-[10px] text-muted-foreground mb-1">প্রিভিউ:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {column.options.filter(o => o.value).map(o => (
+                      <span key={o.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${getColorClasses(o.color || "gray")}`}>
+                        {o.label_bn || o.label || o.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       )}
