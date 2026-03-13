@@ -76,6 +76,8 @@ export default function EmployeeLeads() {
   const [orderPaymentMethod, setOrderPaymentMethod] = useState("");
   const [orderCardName, setOrderCardName] = useState("");
   const [orderMedia, setOrderMedia] = useState("");
+  const [orderUpsell, setOrderUpsell] = useState("");
+  const [orderSuccessRatio, setOrderSuccessRatio] = useState<number | "">("")
 
   const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
