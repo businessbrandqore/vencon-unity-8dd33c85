@@ -632,6 +632,7 @@ export default function CSOLeads() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
             <div>
               <label className="text-sm font-medium mb-1 block">মেসেজ</label>
               <Textarea
