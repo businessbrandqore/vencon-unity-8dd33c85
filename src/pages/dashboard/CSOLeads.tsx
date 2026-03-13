@@ -78,34 +78,51 @@ export default function CSOLeads() {
   const loadOrders = useCallback(async () => {
     if (!user) return;
 
+    const selectFields = "id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note, lead_id";
+
     const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note")
+        .select(selectFields)
         .eq("status", "pending_cso")
         .order("created_at", { ascending: true }),
       supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note")
+        .select(selectFields)
         .eq("status", "send_today")
         .eq("cso_id", user.id)
         .order("cso_approved_at", { ascending: false })
         .limit(50),
       supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note")
+        .select(selectFields)
         .eq("status", "rejected")
         .eq("cso_id", user.id)
         .order("cso_approved_at", { ascending: false })
         .limit(50),
     ]);
 
+    const allOrders = [...(pendingRes.data || []), ...(approvedRes.data || []), ...(rejectedRes.data || [])] as OrderRow[];
+
+    // Get lead -> campaign mapping
+    const leadIds = [...new Set(allOrders.map(o => o.lead_id).filter(Boolean))] as string[];
+    if (leadIds.length > 0) {
+      const { data: leadsData } = await supabase
+        .from("leads")
+        .select("id, campaign_id")
+        .in("id", leadIds);
+      if (leadsData) {
+        const lcMap: Record<string, string> = {};
+        leadsData.forEach(l => { if (l.campaign_id) lcMap[l.id] = l.campaign_id; });
+        setLeadCampaignMap(lcMap);
+      }
+    }
+
     setPendingOrders((pendingRes.data || []) as OrderRow[]);
     setApprovedOrders((approvedRes.data || []) as OrderRow[]);
     setRejectedOrders((rejectedRes.data || []) as OrderRow[]);
 
     // Get agent names
-    const allOrders = [...(pendingRes.data || []), ...(approvedRes.data || []), ...(rejectedRes.data || [])] as OrderRow[];
     const agentIds = [...new Set(allOrders.map(o => o.agent_id).filter(Boolean))] as string[];
     if (agentIds.length > 0) {
       const { data: agents } = await supabase.from("users").select("id, name").in("id", agentIds);
@@ -118,6 +135,16 @@ export default function CSOLeads() {
 
     setLoading(false);
   }, [user]);
+
+  // Load campaigns
+  const loadCampaigns = useCallback(async () => {
+    const { data } = await supabase
+      .from("campaigns")
+      .select("id, name")
+      .eq("status", "active")
+      .order("name");
+    if (data) setCampaigns(data);
+  }, []);
 
   // Load TL options for data request
   const loadTLs = useCallback(async () => {
@@ -135,7 +162,7 @@ export default function CSOLeads() {
     if (!user) return;
     const { data } = await supabase
       .from("data_requests")
-      .select("id, message, status, created_at, responded_at, response_note, tl_id")
+      .select("id, message, status, created_at, responded_at, response_note, tl_id, campaign_id")
       .eq("requested_by", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -144,9 +171,10 @@ export default function CSOLeads() {
 
   useEffect(() => {
     loadOrders();
+    loadCampaigns();
     loadTLs();
     loadMyRequests();
-  }, [loadOrders, loadTLs, loadMyRequests]);
+  }, [loadOrders, loadCampaigns, loadTLs, loadMyRequests]);
 
   // Realtime
   useEffect(() => {
