@@ -156,6 +156,7 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
           id: crypto.randomUUID?.() || `col_migrated`,
           name: "Call Status",
           name_bn: "কল স্ট্যাটাস",
+          type: "dropdown" as ColumnType,
           options: item.statuses.map((s: any) => ({
             id: s.id || crypto.randomUUID?.() || `opt_${Date.now()}`,
             value: s.value || "",
