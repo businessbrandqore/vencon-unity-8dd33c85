@@ -116,11 +116,12 @@ export default function MaintenanceOfficerDashboard() {
     const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
     const todayStr = format(now, "yyyy-MM-dd");
 
-    const [budgetRes, expensesRes, logisticsRes, fundRes] = await Promise.all([
+    const [budgetRes, expensesRes, logisticsRes, fundRes, deskRes] = await Promise.all([
       supabase.from("maintenance_budget").select("amount"),
       supabase.from("maintenance_expenses").select("*").eq("officer_id", user.id).gte("expense_date", monthStart).order("created_at", { ascending: false }),
       supabase.from("logistics_items").select("*").eq("officer_id", user.id).order("created_at", { ascending: false }).limit(500),
       supabase.from("fund_requests").select("*").eq("officer_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("attendance").select("id, date, desk_number, desk_condition, clock_in, user_id").not("desk_condition", "is", null).order("date", { ascending: false }).limit(200),
     ]);
 
     if (budgetRes.data) setTotalBudget(budgetRes.data.reduce((s, b) => s + (Number(b.amount) || 0), 0));
@@ -130,6 +131,18 @@ export default function MaintenanceOfficerDashboard() {
     }
     if (logisticsRes.data) setLogistics(logisticsRes.data as unknown as LogisticsItem[]);
     if (fundRes.data) setFundRequests(fundRes.data as FundRequest[]);
+
+    // Load desk reports with user names
+    if (deskRes.data && deskRes.data.length > 0) {
+      const userIds = [...new Set(deskRes.data.map(d => d.user_id).filter(Boolean))] as string[];
+      const { data: usersData } = await supabase.from("users").select("id, name").in("id", userIds);
+      const userMap = new Map((usersData || []).map(u => [u.id, u.name]));
+      setDeskReports(deskRes.data.map(d => ({
+        ...d,
+        user_name: d.user_id ? userMap.get(d.user_id) || "Unknown" : "Unknown",
+      })) as DeskReport[]);
+    }
+
     setLoading(false);
   }, [user]);
 
