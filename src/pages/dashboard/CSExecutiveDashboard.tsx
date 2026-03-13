@@ -87,11 +87,14 @@ export default function CSExecutiveDashboard() {
         cs_rating: rating || null,
       }).eq("id", order.id);
 
+      // Progress lead: bronze→silver, silver→golden
+      await supabase.rpc("progress_lead_after_cs", { _order_id: order.id });
+
       // Notify TL
       if (order.tl_id) {
         await supabase.from("notifications").insert({
           user_id: order.tl_id,
-          title: "Call Done — Silver assignment ready",
+          title: "Call Done — পরবর্তী ধাপে পাঠানো হয়েছে",
           message: `Customer: ${order.customer_name} — Product: ${order.product}`,
           type: "info",
         });
@@ -106,7 +109,7 @@ export default function CSExecutiveDashboard() {
         details: { cs_note: note, cs_rating: rating },
       });
 
-      toast.success("Call Done ✓ — TL-এ পাঠানো হয়েছে");
+      toast.success("Call Done ✓ — ডাটা পরবর্তী ধাপে পাঠানো হয়েছে");
     } else {
       await supabase.from("orders").update({
         cs_note: note || null,
