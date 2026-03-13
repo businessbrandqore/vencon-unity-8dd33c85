@@ -199,6 +199,7 @@ export default function EmployeeLeads() {
     if (newStatus === "Pre Order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
+      setPreOrderDistrict(""); setPreOrderThana(""); setPreOrderAddress(lead.address || ""); setPreOrderProduct("");
       setShowPreOrderModal(true); return;
     }
 
