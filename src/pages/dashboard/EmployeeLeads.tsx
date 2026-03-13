@@ -211,12 +211,16 @@ export default function EmployeeLeads() {
 
   const handleOrderConfirm = async () => {
     if (!currentOrderLead || !user || !orderProduct) { toast.error("Product নির্বাচন করুন"); return; }
+    if (!orderPrice || orderPrice <= 0) { toast.error("মূল্য দিন"); return; }
     const { error } = await supabase.from("orders").insert({
       customer_name: currentOrderLead.name, phone: currentOrderLead.phone, address: orderAddress,
       product: orderProduct, quantity: orderQty, price: orderPrice, agent_id: user.id,
       tl_id: currentOrderLead.tl_id, lead_id: currentOrderLead.id, status: "pending_cso",
-    });
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); return; }
+      district: orderDistrict || null, thana: orderThana || null, gift_name: orderGiftName || null,
+      advance_payment: orderAdvancePayment || 0, payment_method: orderPaymentMethod || null,
+      card_name: orderCardName || null, order_media: orderMedia || null,
+    } as any);
+    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     await supabase.from("leads").update({ status: "order_confirm", called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
