@@ -76,6 +76,7 @@ export default function MaintenanceOfficerDashboard() {
   const [loading, setLoading] = useState(true);
   const [deskReports, setDeskReports] = useState<DeskReport[]>([]);
   const [deskFilter, setDeskFilter] = useState("all");
+  const [deskDate, setDeskDate] = useState<Date | undefined>(undefined);
 
 
   // Modals
@@ -555,22 +556,39 @@ export default function MaintenanceOfficerDashboard() {
             <h2 className="font-heading text-sm flex items-center gap-2">
               <Monitor className="h-4 w-4" /> কর্মীদের ডেস্ক রিপোর্ট
             </h2>
-            <Select value={deskFilter} onValueChange={setDeskFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="সব স্ট্যাটাস" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">সব স্ট্যাটাস</SelectItem>
-                <SelectItem value="clean">✅ পরিষ্কার</SelectItem>
-                <SelectItem value="moderate">⚠️ মোটামুটি</SelectItem>
-                <SelectItem value="dirty">❌ অপরিষ্কার</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2 flex-wrap">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left text-xs", !deskDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {deskDate ? format(deskDate, "dd MMM yyyy") : "তারিখ ফিল্টার"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar mode="single" selected={deskDate} onSelect={setDeskDate} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              {deskDate && <Button variant="ghost" size="sm" className="text-xs" onClick={() => setDeskDate(undefined)}>✕ রিসেট</Button>}
+              <Select value={deskFilter} onValueChange={setDeskFilter}>
+                <SelectTrigger className="w-[150px]"><SelectValue placeholder="সব স্ট্যাটাস" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব স্ট্যাটাস</SelectItem>
+                  <SelectItem value="clean">✅ পরিষ্কার</SelectItem>
+                  <SelectItem value="moderate">⚠️ মোটামুটি</SelectItem>
+                  <SelectItem value="dirty">❌ অপরিষ্কার</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Summary cards */}
           {(() => {
-            const clean = deskReports.filter(d => d.desk_condition === "clean").length;
-            const moderate = deskReports.filter(d => d.desk_condition === "moderate").length;
-            const dirty = deskReports.filter(d => d.desk_condition === "dirty").length;
+            const dateFiltered = deskDate
+              ? deskReports.filter(d => d.date === format(deskDate, "yyyy-MM-dd"))
+              : deskReports;
+            const clean = dateFiltered.filter(d => d.desk_condition === "clean").length;
+            const moderate = dateFiltered.filter(d => d.desk_condition === "moderate").length;
+            const dirty = dateFiltered.filter(d => d.desk_condition === "dirty").length;
             return (
               <div className="grid grid-cols-3 gap-3">
                 <Card className="border-green-500/30">
@@ -608,7 +626,7 @@ export default function MaintenanceOfficerDashboard() {
                   </tr></thead>
                   <tbody>
                     {deskReports
-                      .filter(d => deskFilter === "all" || d.desk_condition === deskFilter)
+                      .filter(d => (deskFilter === "all" || d.desk_condition === deskFilter) && (!deskDate || d.date === format(deskDate, "yyyy-MM-dd")))
                       .map(d => (
                         <tr key={d.id} className="border-b border-border">
                           <td className="py-2 px-2 text-xs">{d.date}</td>
@@ -626,7 +644,7 @@ export default function MaintenanceOfficerDashboard() {
                           <td className="py-2 px-2 text-xs">{d.clock_in ? new Date(d.clock_in).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                         </tr>
                       ))}
-                    {deskReports.filter(d => deskFilter === "all" || d.desk_condition === deskFilter).length === 0 && (
+                    {deskReports.filter(d => (deskFilter === "all" || d.desk_condition === deskFilter) && (!deskDate || d.date === format(deskDate, "yyyy-MM-dd"))).length === 0 && (
                       <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো ডেস্ক রিপোর্ট নেই</td></tr>
                     )}
                   </tbody>
