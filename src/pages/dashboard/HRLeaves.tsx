@@ -81,6 +81,19 @@ const HRLeaves = () => {
 
     setPending(mapRows(pendingRes.data || []));
     setHistory(mapRows(historyRes.data || []));
+
+    // Fetch off-day appeals
+    const { data: appeals } = await supabase
+      .from("off_day_appeals" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    setOffAppeals((appeals as any) || []);
+    
+    // Map names for appeals
+    const appealUserIds = [...new Set(((appeals as any) || []).map((a: any) => a.user_id))];
+    const nameMap: Record<string, string> = { ...userMap };
+    setAppealNames(nameMap);
+
     setLoading(false);
   };
 
