@@ -1,7 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { PanelType } from "@/lib/panelConfig";
 import TopNav from "@/components/TopNav";
 import PanelSidebar from "@/components/PanelSidebar";
@@ -13,8 +12,7 @@ interface DashboardLayoutInnerProps {
 }
 
 const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
-  const { user, loading } = useAuth();
-  const { t } = useLanguage();
+  const { user } = useAuth();
 
   const storageKey = `vencon_sidebar_${panel}`;
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -28,14 +26,6 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const closeSidebar = () => setSidebarOpen(false);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="font-body text-sm text-muted-foreground">{t("checking_access")}</p>
-      </div>
-    );
-  }
 
   if (!user) return null;
 
