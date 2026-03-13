@@ -24,6 +24,7 @@ import {
   BookOpen,
   ShieldCheck,
   Send,
+  Truck,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
