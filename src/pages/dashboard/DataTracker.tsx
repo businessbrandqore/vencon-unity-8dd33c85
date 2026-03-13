@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
 
 import { supabase } from "@/integrations/supabase/client";
@@ -123,14 +123,15 @@ const DataTracker = () => {
 
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
-  // Debounce search
+  // Debounce search with proper cleanup
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const handleSearchChange = useCallback((val: string) => {
     setSearch(val);
-    // Reset pages on search
     setRawPage(1); setSilverPage(1); setGoldenPage(1); setAllPage(1); setChangedPage(1); setOrdersPage(1);
-    const t = setTimeout(() => setDebouncedSearch(val), 400);
-    return () => clearTimeout(t);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 400);
   }, []);
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   const getEffectiveTlId = () => {
     if (!isATL || !user) return user?.id || "";
@@ -225,7 +226,8 @@ const DataTracker = () => {
       };
     },
     enabled: !!user,
-    refetchInterval: 30000, // Refresh every 30s
+    refetchInterval: 30000,
+    placeholderData: keepPreviousData,
   });
 
   const pipelineSummary = pipelineCounts || {
@@ -272,7 +274,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "raw_data",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED SILVER DATA =====
@@ -295,7 +298,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "silver_data",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED GOLDEN DATA =====
@@ -318,7 +322,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "golden_data",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED ALL DATA =====
@@ -345,7 +350,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "all_leads",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED STATUS CHANGED =====
@@ -370,7 +376,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "agent_changed",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED ORDERS =====
@@ -393,7 +400,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "orders",
+    placeholderData: keepPreviousData,
   });
 
   // Fetch agents for TL assignment
