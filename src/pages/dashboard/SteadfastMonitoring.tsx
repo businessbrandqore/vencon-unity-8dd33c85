@@ -25,6 +25,13 @@ interface OrderRow {
   rider_name: string | null;
   rider_phone: string | null;
   created_at: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
 }
 
 const DELIVERY_STATUSES = [
@@ -61,16 +68,33 @@ export default function SteadfastMonitoring() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignFilter, setCampaignFilter] = useState("all");
+
+  // Load campaigns
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("campaigns").select("id, name").eq("status", "active");
+      if (data) setCampaigns(data);
+    })();
+  }, []);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
       .from("orders")
-      .select("id, customer_name, phone, address, product, quantity, price, steadfast_consignment_id, delivery_status, status, warehouse_sent_at, rider_name, rider_phone, created_at")
+      .select("id, customer_name, phone, address, product, quantity, price, steadfast_consignment_id, delivery_status, status, warehouse_sent_at, rider_name, rider_phone, created_at, lead_id, leads(campaign_id, campaigns(id, name))")
       .in("status", ["dispatched", "send_today"])
       .order("warehouse_sent_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
-    if (data) setOrders(data as OrderRow[]);
+    if (data) {
+      const mapped = data.map((o: any) => ({
+        ...o,
+        campaign_id: o.leads?.campaign_id || null,
+        campaign_name: o.leads?.campaigns?.name || null,
+      })) as OrderRow[];
+      setOrders(mapped);
+    }
     setLoading(false);
   }, []);
 
@@ -100,18 +124,24 @@ export default function SteadfastMonitoring() {
     setSyncing(false);
   };
 
+  // Apply campaign filter first, then compute stats & filtered
+  const campaignFiltered = useMemo(() => {
+    if (campaignFilter === "all") return orders;
+    return orders.filter(o => o.campaign_id === campaignFilter);
+  }, [orders, campaignFilter]);
+
   const stats = useMemo(() => {
     const counts: Record<string, number> = { pending: 0, in_transit: 0, delivered: 0, partial_delivered: 0, returned: 0, cancelled: 0 };
-    orders.forEach(o => {
+    campaignFiltered.forEach(o => {
       const s = o.delivery_status || "pending";
       if (counts[s] !== undefined) counts[s]++;
       else counts.pending++;
     });
     return counts;
-  }, [orders]);
+  }, [campaignFiltered]);
 
   const filtered = useMemo(() => {
-    let result = filter === "all" ? orders : orders.filter(o => (o.delivery_status || "pending") === filter);
+    let result = filter === "all" ? campaignFiltered : campaignFiltered.filter(o => (o.delivery_status || "pending") === filter);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(o =>
@@ -122,7 +152,7 @@ export default function SteadfastMonitoring() {
       );
     }
     return result;
-  }, [orders, filter, search]);
+  }, [campaignFiltered, filter, search]);
 
   const statCards = [
     { key: "pending", label: "পেন্ডিং", icon: Clock, color: "text-yellow-400" },
@@ -143,10 +173,21 @@ export default function SteadfastMonitoring() {
           <Truck className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
           স্টিডফাস্ট মনিটরিং
         </h1>
-        <Button variant="outline" size="sm" onClick={handleSyncSteadfast} disabled={syncing} className="gap-2">
-          <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
-          {syncing ? "সিংক হচ্ছে..." : "স্টিডফাস্ট সিংক"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+            <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="ক্যাম্পেইন" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaigns.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={handleSyncSteadfast} disabled={syncing} className="gap-2">
+            <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
+            {syncing ? "সিংক হচ্ছে..." : "স্টিডফাস্ট সিংক"}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -179,10 +220,10 @@ export default function SteadfastMonitoring() {
       {/* Summary bar */}
       <Card>
         <CardContent className="py-3 px-4 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">মোট অর্ডার: <strong className="text-foreground">{orders.length}</strong></span>
+          <span className="text-muted-foreground">মোট অর্ডার: <strong className="text-foreground">{campaignFiltered.length}</strong></span>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>ডেলিভারি রেট: <strong className="text-green-400">{orders.length > 0 ? ((stats.delivered / orders.length) * 100).toFixed(1) : 0}%</strong></span>
-            <span>রিটার্ন রেট: <strong className="text-red-400">{orders.length > 0 ? ((stats.returned / orders.length) * 100).toFixed(1) : 0}%</strong></span>
+            <span>ডেলিভারি রেট: <strong className="text-green-400">{campaignFiltered.length > 0 ? ((stats.delivered / campaignFiltered.length) * 100).toFixed(1) : 0}%</strong></span>
+            <span>রিটার্ন রেট: <strong className="text-red-400">{campaignFiltered.length > 0 ? ((stats.returned / campaignFiltered.length) * 100).toFixed(1) : 0}%</strong></span>
           </div>
         </CardContent>
       </Card>
