@@ -76,6 +76,7 @@ export default function MaintenanceOfficerDashboard() {
   const [loading, setLoading] = useState(true);
   const [deskReports, setDeskReports] = useState<DeskReport[]>([]);
   const [deskFilter, setDeskFilter] = useState("all");
+  const [deskDate, setDeskDate] = useState<Date | undefined>(undefined);
 
 
   // Modals
