@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Save, Settings2, Activity, X } from "lucide-react";
+import { Plus, Save, Settings2, Activity, X, GripVertical, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 
 /* ─── Types ─── */
 type AppPanel = "sa" | "hr" | "tl" | "employee";
@@ -24,9 +25,9 @@ interface StatusOption {
   label: string;
   label_bn: string;
   color?: string;
-  next_status?: string;
   next_panel?: AppPanel | "";
   next_location?: string;
+  note?: string;
 }
 
 interface RoleStatusConfig {
@@ -58,14 +59,14 @@ const SALES_ROLES = [
   { value: "delivery_coordinator", label: "Delivery Coordinator" },
 ];
 
-const STATUS_COLORS = [
-  { value: "blue", label: "নীল" },
-  { value: "green", label: "সবুজ" },
-  { value: "yellow", label: "হলুদ" },
-  { value: "red", label: "লাল" },
-  { value: "purple", label: "বেগুনি" },
-  { value: "orange", label: "কমলা" },
-  { value: "gray", label: "ধূসর" },
+const STATUS_COLORS: { value: string; label: string; bg: string; text: string }[] = [
+  { value: "red", label: "লাল", bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-300" },
+  { value: "green", label: "সবুজ", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300" },
+  { value: "blue", label: "নীল", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-300" },
+  { value: "yellow", label: "হলুদ", bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-700 dark:text-yellow-300" },
+  { value: "purple", label: "বেগুনি", bg: "bg-purple-100 dark:bg-purple-900/30", text: "text-purple-700 dark:text-purple-300" },
+  { value: "orange", label: "কমলা", bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-300" },
+  { value: "gray", label: "ধূসর", bg: "bg-muted", text: "text-muted-foreground" },
 ];
 
 const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
@@ -101,47 +102,204 @@ const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string 
   ],
 };
 
-const colorClasses: Record<string, string> = {
-  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  red: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  orange: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  gray: "bg-muted text-muted-foreground",
-};
+const getColorInfo = (color: string) => STATUS_COLORS.find((c) => c.value === color) || STATUS_COLORS[6];
 
 /* ─── Helpers ─── */
 const panelSet = new Set<AppPanel>(["sa", "hr", "tl", "employee"]);
 
 const parseRoleConfigs = (raw: unknown): RoleStatusConfig[] => {
   if (!Array.isArray(raw)) return [];
-
-  return raw.map((item: any, roleIndex: number) => ({
+  return raw.map((item: any, ri: number) => ({
     role: item.role || "",
     statuses: Array.isArray(item.statuses)
-      ? item.statuses.map((s: any, statusIndex: number) => {
-          const nextPanel = panelSet.has(s.next_panel) ? s.next_panel : "";
-          const validLocations = nextPanel ? PANEL_DESTINATIONS[nextPanel] : [];
-          const nextLocation = validLocations.some((loc) => loc.value === s.next_location)
-            ? s.next_location
-            : "";
-
+      ? item.statuses.map((s: any, si: number) => {
+          const np = panelSet.has(s.next_panel) ? s.next_panel : "";
+          const vl = np ? (PANEL_DESTINATIONS[np] || []) : [];
           return {
-            id: s.id || `${item.role || "role"}_${roleIndex}_${statusIndex}_${s.value || "status"}`,
+            id: s.id || `${item.role}_${ri}_${si}`,
             value: s.value || "",
             label: s.label || "",
             label_bn: s.label_bn || "",
             color: s.color || "gray",
-            next_status: s.next_status || "",
-            next_panel: nextPanel,
-            next_location: nextLocation,
+            next_panel: np,
+            next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
+            note: s.note || "",
           };
         })
       : [],
   }));
 };
 
+/* ─── Status Card Component ─── */
+function StatusCard({
+  status,
+  index,
+  onUpdate,
+  onRemove,
+  expanded,
+  onToggle,
+}: {
+  status: StatusOption;
+  index: number;
+  onUpdate: (updates: Partial<StatusOption>) => void;
+  onRemove: () => void;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const colorInfo = getColorInfo(status.color || "gray");
+  const panelLocations = status.next_panel ? (PANEL_DESTINATIONS[status.next_panel] || []) : [];
+  const panelLabel = PANEL_OPTIONS.find((p) => p.value === status.next_panel)?.label;
+  const locationLabel = panelLocations.find((l) => l.value === status.next_location)?.label;
+
+  return (
+    <div className={`border rounded-lg overflow-hidden ${colorInfo.bg}`}>
+      {/* Header - always visible */}
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+        onClick={onToggle}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+        <span className={`font-semibold text-sm flex-1 ${colorInfo.text}`}>
+          {status.label_bn || status.label || status.value || `স্ট্যাটাস #${index + 1}`}
+        </span>
+        {status.next_panel && (
+          <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+            <ArrowRight className="h-3 w-3" />
+            {panelLabel}{locationLabel ? ` / ${locationLabel}` : ""}
+          </span>
+        )}
+        {status.note && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">নোট</Badge>
+        )}
+        <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 flex-shrink-0 text-destructive hover:text-destructive"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 bg-background/80 border-t space-y-3">
+          {/* Row 1: Names */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Value (key)</Label>
+              <Input
+                value={status.value}
+                onChange={(e) => onUpdate({ value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                placeholder="order_confirm"
+                className="h-8 text-sm font-mono mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Label (EN)</Label>
+              <Input
+                value={status.label}
+                onChange={(e) => {
+                  const updates: Partial<StatusOption> = { label: e.target.value };
+                  if (!status.value) updates.value = e.target.value.toLowerCase().replace(/\s+/g, "_");
+                  onUpdate(updates);
+                }}
+                placeholder="Order Confirm"
+                className="h-8 text-sm mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Label (বাংলা)</Label>
+              <Input
+                value={status.label_bn}
+                onChange={(e) => onUpdate({ label_bn: e.target.value })}
+                placeholder="অর্ডার কনফার্ম"
+                className="h-8 text-sm mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Color + Routing */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">রঙ</Label>
+              <Select value={status.color || "gray"} onValueChange={(v) => onUpdate({ color: v })}>
+                <SelectTrigger className="h-8 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_COLORS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      <span className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${c.bg} border`} />
+                        {c.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">ডাটা কোন প্যানেলে যাবে</Label>
+              <Select
+                value={status.next_panel || NO_OPTION}
+                onValueChange={(v) => {
+                  const panel = v === NO_OPTION ? "" : (v as AppPanel);
+                  onUpdate({ next_panel: panel, next_location: "" });
+                }}
+              >
+                <SelectTrigger className="h-8 mt-1">
+                  <SelectValue placeholder="সিলেক্ট করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_OPTION}>— নির্বাচন করুন —</SelectItem>
+                  {PANEL_OPTIONS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">প্যানেলের কোথায় যাবে</Label>
+              <Select
+                value={status.next_location || NO_OPTION}
+                onValueChange={(v) => onUpdate({ next_location: v === NO_OPTION ? "" : v })}
+                disabled={!status.next_panel}
+              >
+                <SelectTrigger className="h-8 mt-1">
+                  <SelectValue placeholder={status.next_panel ? "সিলেক্ট করুন" : "আগে প্যানেল সিলেক্ট করুন"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_OPTION}>— নির্বাচন করুন —</SelectItem>
+                  {panelLocations.map((loc) => (
+                    <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3: Note */}
+          <div>
+            <Label className="text-xs text-muted-foreground">নোট (ঐচ্ছিক)</Label>
+            <Textarea
+              value={status.note || ""}
+              onChange={(e) => onUpdate({ note: e.target.value })}
+              placeholder="এই স্ট্যাটাসের বিশেষ নির্দেশনা..."
+              className="mt-1 text-sm min-h-[60px]"
+              rows={2}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Component ─── */
 export default function HRDataOperations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -152,6 +310,16 @@ export default function HRDataOperations() {
   const [activeTab, setActiveTab] = useState("config");
   const [roleConfigs, setRoleConfigs] = useState<RoleStatusConfig[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  const toggleCard = (id: string) => {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // ─── Queries ───
   const { data: campaigns } = useQuery({
@@ -188,7 +356,7 @@ export default function HRDataOperations() {
   });
 
   const { data: liveLeads = [], isLoading: liveLoading } = useQuery({
-    queryKey: ["hr-live-ops", selectedCampaign, selectedMode],
+    queryKey: ["hr-live-ops", selectedCampaign],
     queryFn: async () => {
       if (!selectedCampaign) return [] as LiveLeadRow[];
       const { data, error } = await supabase
@@ -205,105 +373,50 @@ export default function HRDataOperations() {
     refetchOnWindowFocus: false,
   });
 
-  const normalizedConfig = useMemo(
-    () => parseRoleConfigs(existingConfig?.fields_config),
-    [existingConfig?.fields_config],
-  );
-  const configFingerprint = useMemo(
-    () => JSON.stringify(normalizedConfig),
-    [normalizedConfig],
-  );
-  const lastAppliedConfigRef = useRef("");
+  // ─── Config sync ───
+  const normalizedConfig = useMemo(() => parseRoleConfigs(existingConfig?.fields_config), [existingConfig?.fields_config]);
+  const configFP = useMemo(() => JSON.stringify(normalizedConfig), [normalizedConfig]);
+  const lastAppliedRef = useRef("");
 
-  // ─── Sync config → state (without clobbering active edits) ───
   useEffect(() => {
     setHasChanges(false);
-    lastAppliedConfigRef.current = "";
+    lastAppliedRef.current = "";
   }, [selectedCampaign, selectedMode]);
 
   useEffect(() => {
-    if (!selectedCampaign) {
-      setRoleConfigs([]);
-      return;
-    }
-
+    if (!selectedCampaign) { setRoleConfigs([]); return; }
     if (hasChanges) return;
-    if (lastAppliedConfigRef.current === configFingerprint) return;
-
+    if (lastAppliedRef.current === configFP) return;
     setRoleConfigs(normalizedConfig);
-    lastAppliedConfigRef.current = configFingerprint;
-  }, [selectedCampaign, normalizedConfig, configFingerprint, hasChanges]);
+    lastAppliedRef.current = configFP;
+  }, [selectedCampaign, normalizedConfig, configFP, hasChanges]);
 
-  // ─── Current role config ───
-  const currentRoleConfig = useMemo(
-    () => roleConfigs.find((rc) => rc.role === selectedRole),
-    [roleConfigs, selectedRole],
-  );
-
+  // ─── Current role ───
+  const currentRoleConfig = useMemo(() => roleConfigs.find((rc) => rc.role === selectedRole), [roleConfigs, selectedRole]);
   const currentStatuses = currentRoleConfig?.statuses || [];
-
-  // ─── All unique statuses across all roles (for "next_status" dropdown) ───
-  const allStatusValues = useMemo(() => {
-    const set = new Set<string>();
-    roleConfigs.forEach((rc) => rc.statuses.forEach((s) => { if (s.value) set.add(s.value); }));
-    return Array.from(set);
-  }, [roleConfigs]);
-
-  const getPanelLocations = (panel?: AppPanel | "") => {
-    if (!panel) return [];
-    return PANEL_DESTINATIONS[panel] || [];
-  };
 
   // ─── Mutations ───
   const updateRoleStatuses = (statuses: StatusOption[]) => {
     setRoleConfigs((prev) => {
       const exists = prev.find((rc) => rc.role === selectedRole);
-      if (exists) {
-        return prev.map((rc) => rc.role === selectedRole ? { ...rc, statuses } : rc);
-      }
+      if (exists) return prev.map((rc) => rc.role === selectedRole ? { ...rc, statuses } : rc);
       return [...prev, { role: selectedRole, statuses }];
     });
     setHasChanges(true);
   };
 
   const addStatus = () => {
-    const id = typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `status_${Date.now()}`;
-
+    const id = crypto.randomUUID?.() || `s_${Date.now()}`;
     updateRoleStatuses([
       ...currentStatuses,
-      {
-        id,
-        value: "",
-        label: "",
-        label_bn: "",
-        color: "gray",
-        next_status: "",
-        next_panel: "",
-        next_location: "",
-      },
+      { id, value: "", label: "", label_bn: "", color: "gray", next_panel: "", next_location: "", note: "" },
     ]);
+    setExpandedCards((prev) => new Set(prev).add(id));
   };
 
   const updateStatus = (idx: number, updates: Partial<StatusOption>) => {
     const updated = [...currentStatuses];
-    const current = updated[idx];
-    const merged = { ...current, ...updates };
-
-    if (updates.label && !current.value) {
-      merged.value = updates.label.toLowerCase().replace(/\s+/g, "_");
-    }
-
-    if (Object.prototype.hasOwnProperty.call(updates, "next_panel")) {
-      const panel = updates.next_panel || "";
-      const validLocations = panel ? getPanelLocations(panel) : [];
-      if (!validLocations.some((loc) => loc.value === merged.next_location)) {
-        merged.next_location = "";
-      }
-    }
-
-    updated[idx] = merged;
+    updated[idx] = { ...updated[idx], ...updates };
     updateRoleStatuses(updated);
   };
 
@@ -314,7 +427,6 @@ export default function HRDataOperations() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selectedCampaign || !user) throw new Error("Missing data");
-
       const payload = {
         campaign_id: selectedCampaign,
         data_mode: selectedMode,
@@ -323,75 +435,60 @@ export default function HRDataOperations() {
         created_by: user.id,
         updated_at: new Date().toISOString(),
       };
-
       if (existingConfig?.id) {
-        const { data, error } = await supabase
-          .from("campaign_data_operations")
-          .update(payload)
-          .eq("id", existingConfig.id)
-          .select("*")
-          .single();
-
+        const { data, error } = await supabase.from("campaign_data_operations").update(payload).eq("id", existingConfig.id).select("*").single();
         if (error) throw error;
         return data;
       }
-
-      const { data, error } = await supabase
-        .from("campaign_data_operations")
-        .insert(payload)
-        .select("*")
-        .single();
-
+      const { data, error } = await supabase.from("campaign_data_operations").insert(payload).select("*").single();
       if (error) throw error;
       return data;
     },
-    onSuccess: (savedConfig) => {
+    onSuccess: (saved) => {
       toast.success("কনফিগারেশন সেভ হয়েছে!");
       setHasChanges(false);
-      queryClient.setQueryData(
-        ["data-operations-config", selectedCampaign, selectedMode],
-        savedConfig,
-      );
-      lastAppliedConfigRef.current = JSON.stringify(parseRoleConfigs(savedConfig?.fields_config));
+      queryClient.setQueryData(["data-operations-config", selectedCampaign, selectedMode], saved);
+      lastAppliedRef.current = JSON.stringify(parseRoleConfigs(saved?.fields_config));
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // ─── Live tab: count by status ───
+  // ─── Live tab helpers ───
   const statusCounts = useMemo(() => {
     const map: Record<string, number> = {};
-    liveLeads.forEach((l) => {
-      const s = l.status || "unknown";
-      map[s] = (map[s] || 0) + 1;
-    });
+    liveLeads.forEach((l) => { const s = l.status || "unknown"; map[s] = (map[s] || 0) + 1; });
     return map;
   }, [liveLeads]);
 
-  // Find color for a status value
-  const getStatusColor = (statusValue: string) => {
+  const getStatusColor = (sv: string) => {
     for (const rc of roleConfigs) {
-      const found = rc.statuses.find((s) => s.value === statusValue);
-      if (found?.color) return found.color;
+      const f = rc.statuses.find((s) => s.value === sv);
+      if (f?.color) return f.color;
     }
     return "gray";
   };
 
+  const getColorClasses = (color: string) => {
+    const c = getColorInfo(color);
+    return `${c.bg} ${c.text}`;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Settings2 className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-primary" />
             ডাটা অপারেশন
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            প্রতিটি পদের জন্য লিডের স্ট্যাটাস অপশন নির্ধারণ করুন
+          <p className="text-muted-foreground text-xs mt-0.5">
+            কর্মীদের লিডের স্ট্যাটাস অপশন ও রাউটিং নির্ধারণ করুন
           </p>
         </div>
         {hasChanges && (
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Save className="h-4 w-4 mr-1.5" />
             {saveMutation.isPending ? "সেভ হচ্ছে..." : "সেভ করুন"}
           </Button>
         )}
@@ -399,12 +496,12 @@ export default function HRDataOperations() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>ক্যাম্পেইন</Label>
+        <CardContent className="pt-4 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs">ক্যাম্পেইন</Label>
               <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                <SelectTrigger><SelectValue placeholder="সিলেক্ট করুন..." /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="সিলেক্ট করুন..." /></SelectTrigger>
                 <SelectContent>
                   {campaigns?.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -412,20 +509,20 @@ export default function HRDataOperations() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>ডাটা মোড</Label>
+            <div>
+              <Label className="text-xs">ডাটা মোড</Label>
               <Select value={selectedMode} onValueChange={setSelectedMode}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lead">লিড</SelectItem>
                   <SelectItem value="processing">প্রসেসিং</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>পদ সিলেক্ট করুন</Label>
+            <div>
+              <Label className="text-xs">পদ</Label>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SALES_ROLES.map((r) => (
                     <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -434,260 +531,117 @@ export default function HRDataOperations() {
               </Select>
             </div>
           </div>
-          {configLoading && <p className="text-xs text-muted-foreground mt-3">লোড হচ্ছে...</p>}
+          {configLoading && <p className="text-xs text-muted-foreground mt-2">লোড হচ্ছে...</p>}
         </CardContent>
       </Card>
 
-      {/* Main content */}
+      {/* Main Tabs */}
       {selectedCampaign && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
           <TabsList>
             <TabsTrigger value="config">
               <Settings2 className="h-3.5 w-3.5 mr-1" />
               স্ট্যাটাস কনফিগ ({currentStatuses.length})
             </TabsTrigger>
-            <TabsTrigger value="overview">
-              সব পদের সারাংশ
-            </TabsTrigger>
+            <TabsTrigger value="overview">সব পদের সারাংশ</TabsTrigger>
             <TabsTrigger value="live">
               <Activity className="h-3.5 w-3.5 mr-1" />
-              লাইভ ডাটা
+              লাইভ
             </TabsTrigger>
           </TabsList>
 
           {/* ─── Config Tab ─── */}
-          <TabsContent value="config" className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    {SALES_ROLES.find((r) => r.value === selectedRole)?.label} — স্ট্যাটাস অপশন
-                  </CardTitle>
-                  <Button variant="outline" size="sm" onClick={addStatus}>
-                    <Plus className="h-4 w-4 mr-1" /> স্ট্যাটাস যোগ করুন
+          <TabsContent value="config" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
+                {SALES_ROLES.find((r) => r.value === selectedRole)?.label} — স্ট্যাটাস তালিকা
+              </h3>
+              <Button size="sm" variant="outline" onClick={addStatus}>
+                <Plus className="h-4 w-4 mr-1" /> নতুন স্ট্যাটাস
+              </Button>
+            </div>
+
+            {currentStatuses.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-10 text-center text-muted-foreground">
+                  <p className="text-sm">এই পদের জন্য কোনো স্ট্যাটাস নেই</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={addStatus}>
+                    <Plus className="h-4 w-4 mr-1" /> প্রথম স্ট্যাটাস যোগ করুন
                   </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-0">
-                {currentStatuses.length === 0 ? (
-                  <div className="py-12 text-center text-muted-foreground border border-dashed rounded-lg">
-                    এই পদের জন্য কোনো স্ট্যাটাস অপশন নেই।<br />
-                    <Button variant="outline" size="sm" className="mt-3" onClick={addStatus}>
-                      <Plus className="h-4 w-4 mr-1" /> প্রথম স্ট্যাটাস যোগ করুন
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]">#</TableHead>
-                          <TableHead>ভ্যালু (key)</TableHead>
-                          <TableHead>লেবেল (EN)</TableHead>
-                          <TableHead>লেবেল (বাংলা)</TableHead>
-                          <TableHead>রঙ</TableHead>
-                          <TableHead>পরবর্তী স্ট্যাটাস</TableHead>
-                          <TableHead>পরবর্তী প্যানেল</TableHead>
-                          <TableHead>প্যানেলের ভেতরে কোথায় যাবে</TableHead>
-                          <TableHead>প্রিভিউ</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentStatuses.map((status, idx) => {
-                          const panelLocations = getPanelLocations(status.next_panel);
-
-                          return (
-                            <TableRow key={status.id}>
-                              <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                              <TableCell>
-                                <Input
-                                  value={status.value}
-                                  onChange={(e) => updateStatus(idx, { value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
-                                  placeholder="order_confirm"
-                                  className="h-8 text-sm font-mono"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={status.label}
-                                  onChange={(e) => updateStatus(idx, { label: e.target.value })}
-                                  placeholder="Order Confirm"
-                                  className="h-8 text-sm"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={status.label_bn}
-                                  onChange={(e) => updateStatus(idx, { label_bn: e.target.value })}
-                                  placeholder="অর্ডার কনফার্ম"
-                                  className="h-8 text-sm"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={status.color || "gray"}
-                                  onValueChange={(v) => updateStatus(idx, { color: v })}
-                                >
-                                  <SelectTrigger className="h-8 w-24">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {STATUS_COLORS.map((c) => (
-                                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={status.next_status || NO_OPTION}
-                                  onValueChange={(v) => updateStatus(idx, { next_status: v === NO_OPTION ? "" : v })}
-                                >
-                                  <SelectTrigger className="h-8 w-36">
-                                    <SelectValue placeholder="নেই" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value={NO_OPTION}>নেই</SelectItem>
-                                    {allStatusValues
-                                      .filter((sv) => sv !== status.value)
-                                      .map((sv) => (
-                                        <SelectItem key={sv} value={sv}>{sv}</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={status.next_panel || NO_OPTION}
-                                  onValueChange={(v) => updateStatus(idx, { next_panel: v === NO_OPTION ? "" : (v as AppPanel) })}
-                                >
-                                  <SelectTrigger className="h-8 w-36">
-                                    <SelectValue placeholder="প্যানেল" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value={NO_OPTION}>নির্বাচন করুন</SelectItem>
-                                    {PANEL_OPTIONS.map((panel) => (
-                                      <SelectItem key={panel.value} value={panel.value}>{panel.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={status.next_location || NO_OPTION}
-                                  onValueChange={(v) => updateStatus(idx, { next_location: v === NO_OPTION ? "" : v })}
-                                  disabled={!status.next_panel}
-                                >
-                                  <SelectTrigger className="h-8 w-44">
-                                    <SelectValue placeholder="সেকশন" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value={NO_OPTION}>নির্বাচন করুন</SelectItem>
-                                    {panelLocations.map((location) => (
-                                      <SelectItem key={location.value} value={location.value}>{location.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                {status.value && (
-                                  <div className="space-y-1">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[status.color || "gray"] || colorClasses.gray}`}>
-                                      {status.label_bn || status.label || status.value}
-                                    </span>
-                                    {(status.next_panel || status.next_location) && (
-                                      <p className="text-[11px] text-muted-foreground">
-                                        {(status.next_panel || "—").toUpperCase()} / {status.next_location || "—"}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => removeStatus(idx)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick preview of all statuses for this role */}
-            {currentStatuses.length > 0 && (
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    এই পদের কর্মী যে স্ট্যাটাসগুলো দেখতে পাবে (এবং কোন প্যানেলে রাউট হবে):
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {currentStatuses.map((s) => (
-                      <span
-                        key={s.id}
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClasses[s.color || "gray"] || colorClasses.gray}`}
-                      >
-                        {s.label_bn || s.label || s.value}
-                        {s.next_status && (
-                          <span className="ml-1 opacity-60 text-xs">→ {s.next_status}</span>
-                        )}
-                        {(s.next_panel || s.next_location) && (
-                          <span className="ml-1 opacity-70 text-xs">({(s.next_panel || "—").toUpperCase()}/{s.next_location || "—"})</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
+            ) : (
+              <div className="space-y-2">
+                {currentStatuses.map((status, idx) => (
+                  <StatusCard
+                    key={status.id}
+                    status={status}
+                    index={idx}
+                    onUpdate={(updates) => updateStatus(idx, updates)}
+                    onRemove={() => removeStatus(idx)}
+                    expanded={expandedCards.has(status.id)}
+                    onToggle={() => toggleCard(status.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Quick summary chips */}
+            {currentStatuses.length > 0 && (
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-2">কর্মী এই অপশনগুলো দেখবে:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentStatuses.filter((s) => s.value).map((s) => (
+                    <span
+                      key={s.id}
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getColorClasses(s.color || "gray")}`}
+                    >
+                      {s.label_bn || s.label || s.value}
+                      {s.next_panel && (
+                        <span className="ml-1 opacity-60 text-[10px]">
+                          → {PANEL_OPTIONS.find((p) => p.value === s.next_panel)?.label || s.next_panel}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </TabsContent>
 
           {/* ─── Overview Tab ─── */}
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" className="space-y-3">
             {roleConfigs.length === 0 ? (
               <Card className="border-dashed">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  কোনো পদের জন্য স্ট্যাটাস কনফিগার করা হয়নি।
+                <CardContent className="py-10 text-center text-muted-foreground text-sm">
+                  কোনো পদের জন্য স্ট্যাটাস কনফিগার করা হয়নি
                 </CardContent>
               </Card>
             ) : (
               roleConfigs.map((rc) => {
                 const roleInfo = SALES_ROLES.find((r) => r.value === rc.role);
+                if (rc.statuses.length === 0) return null;
                 return (
                   <Card key={rc.role}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold">
-                        {roleInfo?.label || rc.role}
-                      </CardTitle>
+                    <CardHeader className="pb-2 pt-3 px-4">
+                      <CardTitle className="text-sm">{roleInfo?.label || rc.role}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      {rc.statuses.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">কোনো স্ট্যাটাস নেই</p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {rc.statuses.map((s) => (
-                            <span
-                              key={s.id}
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colorClasses[s.color || "gray"] || colorClasses.gray}`}
-                            >
-                              {s.label_bn || s.label || s.value}
-                              {(s.next_panel || s.next_location) && (
-                                <span className="ml-1 opacity-70">({(s.next_panel || "—").toUpperCase()}/{s.next_location || "—"})</span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                    <CardContent className="px-4 pb-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {rc.statuses.map((s) => (
+                          <span
+                            key={s.id}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getColorClasses(s.color || "gray")}`}
+                          >
+                            {s.label_bn || s.label || s.value}
+                            {s.next_panel && (
+                              <span className="ml-1 opacity-60 text-[10px]">
+                                → {(s.next_panel).toUpperCase()}/{s.next_location || "—"}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -696,28 +650,23 @@ export default function HRDataOperations() {
           </TabsContent>
 
           {/* ─── Live Tab ─── */}
-          <TabsContent value="live" className="space-y-4">
-            {/* Status counts */}
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(statusCounts).map(([status, count]) => (
-                <Badge
-                  key={status}
-                  className={`text-xs ${colorClasses[getStatusColor(status)] || colorClasses.gray}`}
-                >
-                  {status}: {count}
+          <TabsContent value="live" className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(statusCounts).map(([s, c]) => (
+                <Badge key={s} className={`text-xs ${getColorClasses(getStatusColor(s))}`}>
+                  {s}: {c}
                 </Badge>
               ))}
               <Badge variant="outline" className="text-xs">মোট: {liveLeads.length}</Badge>
             </div>
-
             <Card>
-              <CardContent className="pt-4">
+              <CardContent className="pt-3 pb-2">
                 {liveLoading ? (
-                  <p className="text-sm text-muted-foreground py-8 text-center">ডাটা লোড হচ্ছে...</p>
+                  <p className="text-sm text-muted-foreground py-8 text-center">লোড হচ্ছে...</p>
                 ) : liveLeads.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">কোনো ডাটা নেই</p>
                 ) : (
-                  <div className="max-h-[500px] overflow-auto">
+                  <div className="max-h-[400px] overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -725,28 +674,24 @@ export default function HRDataOperations() {
                           <TableHead>ফোন</TableHead>
                           <TableHead>স্ট্যাটাস</TableHead>
                           <TableHead>টায়ার</TableHead>
-                          <TableHead>আপডেট</TableHead>
+                          <TableHead>সময়</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {liveLeads.map((lead) => (
                           <TableRow key={lead.id}>
-                            <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                            <TableCell className="font-medium text-sm">{lead.name || "—"}</TableCell>
                             <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[getStatusColor(lead.status || "")] || colorClasses.gray}`}>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getColorClasses(getStatusColor(lead.status || ""))}`}>
                                 {lead.status || "—"}
                               </span>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="secondary" className="text-xs">
-                                {lead.agent_type || "—"}
-                              </Badge>
+                              <Badge variant="secondary" className="text-xs">{lead.agent_type || "—"}</Badge>
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {lead.updated_at
-                                ? new Date(lead.updated_at).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" })
-                                : "—"}
+                              {lead.updated_at ? new Date(lead.updated_at).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}
                             </TableCell>
                           </TableRow>
                         ))}
