@@ -317,13 +317,13 @@ const TLLeads = () => {
     setSelectedLeads(new Set()); setBulkAgent(""); loadData();
   };
 
-  const assignSilver = async (orderId: string, agentId: string) => {
+  const assignSilver = async (leadId: string, agentId: string) => {
     await executeOrRequestApproval(
       "lead_assign",
-      { orderId, agentId, type: "silver" },
+      { leadId, agentId, type: "silver" },
       isBn ? "সিলভার এজেন্ট অ্যাসাইন" : "Silver agent assignment",
       async () => {
-        await supabase.from("orders").update({ status: "silver_assigned", agent_id: agentId }).eq("id", orderId);
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", tl_id: user?.id }).eq("id", leadId);
         toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned");
       }
     );
