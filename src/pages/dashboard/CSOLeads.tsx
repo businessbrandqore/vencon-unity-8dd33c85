@@ -56,10 +56,16 @@ export default function CSOLeads() {
   const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Campaign filter
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [leadCampaignMap, setLeadCampaignMap] = useState<Record<string, string>>({});
+
   // Data Request state
   const [showDataRequest, setShowDataRequest] = useState(false);
   const [dataRequestMsg, setDataRequestMsg] = useState("");
   const [dataRequestTlId, setDataRequestTlId] = useState("");
+  const [dataRequestCampaignId, setDataRequestCampaignId] = useState("");
   const [tlOptions, setTlOptions] = useState<TLOption[]>([]);
   const [sendingRequest, setSendingRequest] = useState(false);
 
