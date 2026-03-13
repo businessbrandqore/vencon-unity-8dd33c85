@@ -23,6 +23,7 @@ import {
   Star,
   BookOpen,
   ShieldCheck,
+  Send,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
