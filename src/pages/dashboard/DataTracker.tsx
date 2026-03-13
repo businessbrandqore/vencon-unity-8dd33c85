@@ -123,14 +123,15 @@ const DataTracker = () => {
 
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
-  // Debounce search
+  // Debounce search with proper cleanup
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const handleSearchChange = useCallback((val: string) => {
     setSearch(val);
-    // Reset pages on search
     setRawPage(1); setSilverPage(1); setGoldenPage(1); setAllPage(1); setChangedPage(1); setOrdersPage(1);
-    const t = setTimeout(() => setDebouncedSearch(val), 400);
-    return () => clearTimeout(t);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 400);
   }, []);
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   const getEffectiveTlId = () => {
     if (!isATL || !user) return user?.id || "";
