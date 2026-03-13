@@ -132,6 +132,47 @@ export default function EmployeeLeads() {
   const [dataRequestLoading, setDataRequestLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
+  // Load dynamic config from campaign_data_operations
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      // Get agent's campaign
+      const { data: carData } = await supabase.from("campaign_agent_roles")
+        .select("campaign_id, is_bronze, is_silver").eq("agent_id", user.id).limit(1).maybeSingle();
+      if (!carData?.campaign_id) { setConfigLoaded(true); return; }
+
+      // Load config
+      const { data: configData } = await supabase.from("campaign_data_operations")
+        .select("fields_config").eq("campaign_id", carData.campaign_id).maybeSingle();
+      if (!configData?.fields_config) { setConfigLoaded(true); return; }
+
+      // Determine role key
+      const roleKey = carData.is_silver ? "silver_agent" : "telesales_executive";
+      const configs = configData.fields_config as unknown as RoleColumnConfig[];
+      const roleConfig = configs.find(c => c.role === roleKey) || configs[0];
+      if (roleConfig?.columns?.length) {
+        setDynamicColumns(roleConfig.columns);
+      }
+      setConfigLoaded(true);
+    })();
+  }, [user]);
+
+  // Compute available statuses from dynamic config or fallback
+  const availableStatuses = useMemo(() => {
+    if (dynamicColumns.length > 0) {
+      // Find the first dropdown column and use its options as statuses
+      const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
+      if (dropdownCol?.options?.length) {
+        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location }));
+      }
+    }
+    // Fallback
+    return FALLBACK_STATUSES.map(s => ({ value: s, label: s, label_bn: s, next_panel: undefined, next_location: undefined }));
+  }, [dynamicColumns]);
+
+  // Note columns from dynamic config
+  const noteColumns = useMemo(() => dynamicColumns.filter(c => c.type === "note"), [dynamicColumns]);
+
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(iv);
