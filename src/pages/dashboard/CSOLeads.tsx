@@ -477,9 +477,8 @@ export default function CSOLeads() {
             <CardContent>
               {myRequests.length === 0 ? (
                 <EmptyState
-                  icon={MessageSquare}
-                  title="কোনো রিকোয়েস্ট নেই"
-                  description="TL এর কাছে ডাটা চাইতে নতুন রিকোয়েস্ট পাঠান"
+                  icon={<MessageSquare className="h-10 w-10" />}
+                  message="কোনো রিকোয়েস্ট নেই — TL এর কাছে ডাটা চাইতে নতুন রিকোয়েস্ট পাঠান"
                 />
               ) : (
                 <div className="space-y-3">
