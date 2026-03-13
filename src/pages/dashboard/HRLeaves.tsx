@@ -189,6 +189,9 @@ const HRLeaves = () => {
           <TabsTrigger value="history" className="data-[state=active]:bg-background font-body text-sm">
             {isBn ? "ইতিহাস" : "History"}
           </TabsTrigger>
+          <TabsTrigger value="off_appeals" className="data-[state=active]:bg-background font-body text-sm">
+            {isBn ? "ছুটির আপিল" : "Off-day Appeals"} ({pendingAppeals.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-4">
