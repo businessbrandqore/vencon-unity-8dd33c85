@@ -124,18 +124,24 @@ export default function SteadfastMonitoring() {
     setSyncing(false);
   };
 
+  // Apply campaign filter first, then compute stats & filtered
+  const campaignFiltered = useMemo(() => {
+    if (campaignFilter === "all") return orders;
+    return orders.filter(o => o.campaign_id === campaignFilter);
+  }, [orders, campaignFilter]);
+
   const stats = useMemo(() => {
     const counts: Record<string, number> = { pending: 0, in_transit: 0, delivered: 0, partial_delivered: 0, returned: 0, cancelled: 0 };
-    orders.forEach(o => {
+    campaignFiltered.forEach(o => {
       const s = o.delivery_status || "pending";
       if (counts[s] !== undefined) counts[s]++;
       else counts.pending++;
     });
     return counts;
-  }, [orders]);
+  }, [campaignFiltered]);
 
   const filtered = useMemo(() => {
-    let result = filter === "all" ? orders : orders.filter(o => (o.delivery_status || "pending") === filter);
+    let result = filter === "all" ? campaignFiltered : campaignFiltered.filter(o => (o.delivery_status || "pending") === filter);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(o =>
@@ -146,7 +152,7 @@ export default function SteadfastMonitoring() {
       );
     }
     return result;
-  }, [orders, filter, search]);
+  }, [campaignFiltered, filter, search]);
 
   const statCards = [
     { key: "pending", label: "পেন্ডিং", icon: Clock, color: "text-yellow-400" },
