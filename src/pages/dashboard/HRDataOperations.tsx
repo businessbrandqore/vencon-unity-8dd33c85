@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,6 +84,8 @@ const ACTION_TYPES = [
   { value: "notify", label: "নোটিফিকেশন পাঠাও" },
 ];
 
+const NO_TARGET_ROLE = "__none__";
+
 const normalizeFields = (raw: unknown): FieldConfig[] => {
   if (!Array.isArray(raw)) return [];
 
@@ -118,7 +120,7 @@ const normalizeRules = (raw: unknown): RoutingRule[] => {
 
     return {
       id: rule.id || `rule_${index + 1}`,
-      field: rule.field || "",
+      field: rule.field || "status",
       value: rule.value || "",
       action:
         rule.action === "create_order" ||
@@ -158,6 +160,9 @@ export default function HRDataOperations() {
   const [hasChanges, setHasChanges] = useState(false);
   const [liveEvents, setLiveEvents] = useState<LiveOperationEvent[]>([]);
 
+  const liveTabActive = activeTab === "live";
+  const lastEventAtRef = useRef(0);
+
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns-for-ops"],
     queryFn: async () => {
@@ -169,6 +174,8 @@ export default function HRDataOperations() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: existingConfig, isLoading: configLoading } = useQuery({
@@ -210,7 +217,9 @@ export default function HRDataOperations() {
       if (error) throw error;
       return (data || []) as LiveLeadRow[];
     },
-    enabled: !!selectedCampaign,
+    enabled: !!selectedCampaign && liveTabActive,
+    refetchOnWindowFocus: false,
+    staleTime: 60 * 1000,
   });
 
   useEffect(() => {
@@ -229,7 +238,7 @@ export default function HRDataOperations() {
   }, [selectedCampaign, selectedMode]);
 
   useEffect(() => {
-    if (!selectedCampaign) return;
+    if (!selectedCampaign || !liveTabActive) return;
 
     const channel = supabase
       .channel(`hr-data-operations-live-${selectedCampaign}-${selectedMode}`)
@@ -251,9 +260,13 @@ export default function HRDataOperations() {
           if (selectedMode === "lead" && !isLeadModeRow) return;
           if (selectedMode === "processing" && isLeadModeRow) return;
 
+          const now = Date.now();
+          if (now - lastEventAtRef.current < 200) return;
+          lastEventAtRef.current = now;
+
           setLiveEvents((prev) => [
             {
-              id: `${payload.eventType}-${row.id || "unknown"}-${Date.now()}`,
+              id: `${payload.eventType}-${row.id || "unknown"}-${now}`,
               leadId: row.id || "unknown",
               eventType: payload.eventType,
               status: row.status || "—",
@@ -263,9 +276,26 @@ export default function HRDataOperations() {
             ...prev,
           ].slice(0, 30));
 
-          queryClient.invalidateQueries({
-            queryKey: ["hr-live-operations-data", selectedCampaign, selectedMode],
-          });
+          queryClient.setQueryData<LiveLeadRow[]>(
+            ["hr-live-operations-data", selectedCampaign, selectedMode],
+            (previous = []) => {
+              const listWithoutCurrent = previous.filter((item) => item.id !== row.id);
+              const shouldKeep = row.id && payload.eventType !== "DELETE";
+
+              if (!shouldKeep) return listWithoutCurrent.slice(0, 50);
+
+              const nextRow: LiveLeadRow = {
+                id: row.id || "",
+                name: row.name || null,
+                phone: row.phone || null,
+                status: row.status || null,
+                agent_type: row.agent_type || null,
+                updated_at: row.updated_at || new Date().toISOString(),
+              };
+
+              return [nextRow, ...listWithoutCurrent].slice(0, 50);
+            }
+          );
         }
       )
       .subscribe();
@@ -273,7 +303,7 @@ export default function HRDataOperations() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, selectedCampaign, selectedMode]);
+  }, [liveTabActive, queryClient, selectedCampaign, selectedMode]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -376,7 +406,7 @@ export default function HRDataOperations() {
       ...rules,
       {
         id: `rule_${Date.now()}`,
-        field: "",
+        field: "status",
         value: "",
         action: "set_status",
         target_status: "",
@@ -685,13 +715,16 @@ export default function HRDataOperations() {
                           <div className="space-y-1">
                             <Label className="text-xs">টার্গেট পদ</Label>
                             <Select
-                              value={rule.target_role || ""}
-                              onValueChange={(value) => updateRule(index, { target_role: value })}
+                              value={rule.target_role || NO_TARGET_ROLE}
+                              onValueChange={(value) =>
+                                updateRule(index, { target_role: value === NO_TARGET_ROLE ? "" : value })
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="পদ সিলেক্ট করুন..." />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value={NO_TARGET_ROLE}>নির্বাচিত নয়</SelectItem>
                                 {SALES_ROLES.map((role) => (
                                   <SelectItem key={role.value} value={role.value}>
                                     {role.label}
