@@ -14,6 +14,7 @@ const WebhookDocumentation = () => {
   const { toast } = useToast();
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string>("");
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -49,12 +50,15 @@ const WebhookDocumentation = () => {
   });
 
   const selectedCampaign = campaigns?.find((c) => c.id === selectedCampaignId);
+  const selectedWebsite = campaignWebsites?.find((w) => w.id === selectedWebsiteId);
   const webhookUrl = selectedCampaignId
     ? `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}`
     : "";
 
-  const maskedSecret = selectedCampaign?.webhook_secret
-    ? "•".repeat(Math.max(0, selectedCampaign.webhook_secret.length - 8)) + selectedCampaign.webhook_secret.slice(-8)
+  // Use website-specific secret if selected, otherwise campaign secret
+  const activeSecret = selectedWebsite?.webhook_secret || selectedCampaign?.webhook_secret || "";
+  const maskedSecret = activeSecret
+    ? "•".repeat(Math.max(0, activeSecret.length - 8)) + activeSecret.slice(-8)
     : "";
 
   const copyText = (text: string) => {
@@ -63,7 +67,7 @@ const WebhookDocumentation = () => {
   };
 
   const handleTestConnection = async () => {
-    if (!selectedCampaign?.webhook_secret) return;
+    if (!activeSecret) return;
     setTesting(true);
     setTestResult(null);
     try {
@@ -71,7 +75,7 @@ const WebhookDocumentation = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Webhook-Secret": selectedCampaign.webhook_secret,
+          "X-Webhook-Secret": activeSecret,
         },
         body: JSON.stringify({
           customer_name: "Test Customer",
@@ -265,26 +269,84 @@ function send_order_to_crm_${dataMode}(\$order_id) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select value={selectedCampaignId} onValueChange={(v) => { setSelectedCampaignId(v); setShowSecret(false); setTestResult(null); }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={isBn ? "— ক্যাম্পেইন বেছে নিন —" : "— Choose a campaign —"} />
-            </SelectTrigger>
-            <SelectContent>
-              {campaigns?.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  <span className="flex items-center gap-2">
-                    {c.name}
-                    <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[10px] ml-1">
-                      {c.status}
-                    </Badge>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Campaign selector */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+              {isBn ? "ক্যাম্পেইন সিলেক্ট করুন" : "Select Campaign"}
+            </label>
+            <Select value={selectedCampaignId} onValueChange={(v) => { setSelectedCampaignId(v); setSelectedWebsiteId(""); setShowSecret(false); setTestResult(null); }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={isBn ? "— ক্যাম্পেইন বেছে নিন —" : "— Choose a campaign —"} />
+              </SelectTrigger>
+              <SelectContent>
+                {campaigns?.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="flex items-center gap-2">
+                      {c.name}
+                      <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[10px] ml-1">
+                        {c.status}
+                      </Badge>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
+          {/* Website (Lead/Processing) selector */}
+          {selectedCampaign && campaignWebsites && campaignWebsites.length > 0 && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                {isBn ? "ওয়েবসাইট সিলেক্ট করুন (Lead / Processing)" : "Select Website (Lead / Processing)"}
+              </label>
+              <Select value={selectedWebsiteId} onValueChange={(v) => { setSelectedWebsiteId(v); setShowSecret(false); setTestResult(null); }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={isBn ? "— ওয়েবসাইট বেছে নিন —" : "— Choose a website —"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaignWebsites.map((ws) => (
+                    <SelectItem key={ws.id} value={ws.id}>
+                      <span className="flex items-center gap-2">
+                        <Globe className="h-3.5 w-3.5 text-primary" />
+                        {ws.site_name}
+                        <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
+                          {ws.data_mode === "lead" ? "Lead" : "Processing"}
+                        </Badge>
+                        {ws.is_active ? (
+                          <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">Active</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Show credentials when campaign (and optionally website) is selected */}
           {selectedCampaign && (
             <div className="space-y-4 pt-2">
+              {/* Selected info summary */}
+              {selectedWebsite && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-foreground">{selectedWebsite.site_name}</span>
+                    <Badge variant={selectedWebsite.data_mode === "lead" ? "default" : "secondary"}>
+                      {selectedWebsite.data_mode === "lead" ? "Lead Data" : "Processing Data"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">→ {selectedWebsite.site_url}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isBn 
+                      ? `এই ওয়েবসাইট থেকে আসা ডাটা "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}" হিসেবে সেভ হবে।`
+                      : `Data from this website will be saved as "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}".`}
+                  </p>
+                </div>
+              )}
+
               {/* Webhook URL */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Webhook URL</label>
@@ -296,57 +358,31 @@ function send_order_to_crm_${dataMode}(\$order_id) {
                 </div>
               </div>
 
-              {/* Campaign-level Secret Key */}
+              {/* Secret Key */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground block mb-1">
-                  {isBn ? "ক্যাম্পেইন Secret Key (সব ওয়েবসাইটের জন্য কাজ করবে)" : "Campaign Secret Key (works for all websites)"}
+                  {selectedWebsite 
+                    ? (isBn ? `Secret Key — ${selectedWebsite.site_name} (${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'})` : `Secret Key — ${selectedWebsite.site_name} (${selectedWebsite.data_mode})`)
+                    : (isBn ? "Campaign Secret Key" : "Campaign Secret Key")}
                 </label>
                 <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted border border-border">
                   <code className="text-xs text-foreground flex-1 break-all font-mono">
-                    {showSecret ? selectedCampaign.webhook_secret : maskedSecret}
+                    {showSecret ? activeSecret : maskedSecret}
                   </code>
                   <button onClick={() => setShowSecret(!showSecret)} className="text-muted-foreground hover:text-primary shrink-0">
                     {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
-                  <button onClick={() => copyText(selectedCampaign.webhook_secret || "")} className="text-muted-foreground hover:text-primary shrink-0">
+                  <button onClick={() => copyText(activeSecret)} className="text-muted-foreground hover:text-primary shrink-0">
                     <Copy className="h-4 w-4" />
                   </button>
                 </div>
+                {!selectedWebsite && campaignWebsites && campaignWebsites.length > 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    {isBn ? "⚠️ ওয়েবসাইট সিলেক্ট করুন — প্রতিটি সাইটের নিজস্ব Secret Key আছে যা ডাটা মোড (Lead/Processing) নির্ধারণ করে।" 
+                          : "⚠️ Select a website — each site has its own Secret Key that determines data mode (Lead/Processing)."}
+                  </p>
+                )}
               </div>
-
-              {/* Per-Website Secrets (if any) */}
-              {campaignWebsites && campaignWebsites.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  <label className="text-xs font-semibold text-foreground block">
-                    {isBn ? "📌 ওয়েবসাইট-ভিত্তিক Secret Key (প্রতিটি সাইটে আলাদা কী ব্যবহার করুন)" : "📌 Per-Website Secret Keys (use each site's own key)"}
-                  </label>
-                  {campaignWebsites.map((ws) => (
-                    <div key={ws.id} className="p-3 rounded-lg border border-border bg-background space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">{ws.site_name}</span>
-                        <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
-                          {ws.data_mode === "lead" ? "Lead" : "Processing"}
-                        </Badge>
-                        {ws.is_active ? (
-                          <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">Active</Badge>
-                        ) : (
-                          <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{ws.site_url}</div>
-                      <div className="flex items-center gap-2 p-2 rounded bg-muted border border-border">
-                        <code className="text-[11px] text-foreground flex-1 break-all font-mono">
-                          {ws.webhook_secret}
-                        </code>
-                        <button onClick={() => copyText(ws.webhook_secret)} className="text-muted-foreground hover:text-primary shrink-0">
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {/* Test Button */}
               <div className="flex items-center gap-3 pt-2">
@@ -449,36 +485,47 @@ function send_order_to_crm_${dataMode}(\$order_id) {
             </div>
           </div>
 
-          {/* Per-website code blocks */}
-          {campaignWebsites && campaignWebsites.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-sm text-foreground font-medium">
+          {/* Show code for selected website */}
+          {selectedWebsite ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-3">
+                <Globe className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">{selectedWebsite.site_name}</span>
+                <Badge variant={selectedWebsite.data_mode === "lead" ? "default" : "secondary"}>
+                  {selectedWebsite.data_mode === "lead" ? "Lead Data" : "Processing Data"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
                 {isBn 
-                  ? `📌 এই ক্যাম্পেইনে ${campaignWebsites.length}টি ওয়েবসাইট আছে। প্রতিটি সাইটে নিজ নিজ কোড ব্যবহার করুন:` 
-                  : `📌 This campaign has ${campaignWebsites.length} website(s). Use the specific code for each:`}
+                  ? `📋 নিচের PHP কোডটি "${selectedWebsite.site_name}" ওয়েবসাইটে যোগ করুন। এই কোড ব্যবহার করলে ডাটা "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}" হিসেবে CRM-এ আসবে।`
+                  : `📋 Add the PHP code below to "${selectedWebsite.site_name}". Data will arrive as "${selectedWebsite.data_mode}" in the CRM.`}
               </p>
-              {campaignWebsites.map((ws) => (
-                <div key={ws.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">{ws.site_name}</span>
-                    <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
-                      {ws.data_mode === "lead" ? "Lead Data" : "Processing Data"}
-                    </Badge>
-                  </div>
-                  <div className="relative p-3 rounded-lg bg-muted border border-border overflow-x-auto">
-                    <button
-                      onClick={() => copyText(generatePerWebsitePhpSnippet(ws.webhook_secret, ws.site_url, ws.site_name, ws.data_mode))}
-                      className="absolute top-2 right-2 text-muted-foreground hover:text-primary"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                    <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
-                      {generatePerWebsitePhpSnippet(ws.webhook_secret, ws.site_url, ws.site_name, ws.data_mode)}
-                    </pre>
-                  </div>
-                </div>
-              ))}
+              <div className="relative p-3 rounded-lg bg-muted border border-border overflow-x-auto">
+                <button
+                  onClick={() => copyText(generatePerWebsitePhpSnippet(selectedWebsite.webhook_secret, selectedWebsite.site_url, selectedWebsite.site_name, selectedWebsite.data_mode))}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-primary"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
+                  {generatePerWebsitePhpSnippet(selectedWebsite.webhook_secret, selectedWebsite.site_url, selectedWebsite.site_name, selectedWebsite.data_mode)}
+                </pre>
+              </div>
+            </div>
+          ) : selectedCampaign && campaignWebsites && campaignWebsites.length > 0 ? (
+            <div className="text-center py-6 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {isBn 
+                  ? "👆 উপরে থেকে একটি ওয়েবসাইট (Lead / Processing) সিলেক্ট করুন — তাহলে সেই সাইটের জন্য নির্দিষ্ট PHP কোড দেখাবে।" 
+                  : "👆 Select a website (Lead / Processing) above to see the specific PHP code for that site."}
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {campaignWebsites.map((ws) => (
+                  <Badge key={ws.id} variant="outline" className="cursor-pointer hover:bg-primary/10" onClick={() => setSelectedWebsiteId(ws.id)}>
+                    {ws.site_name} — {ws.data_mode === "lead" ? "Lead" : "Processing"}
+                  </Badge>
+                ))}
+              </div>
             </div>
           ) : selectedCampaign ? (
             <div className="space-y-2">
