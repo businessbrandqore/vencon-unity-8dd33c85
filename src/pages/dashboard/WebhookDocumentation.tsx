@@ -602,33 +602,109 @@ function send_order_to_crm_${dataMode}(\$order_id) {
             <div className="space-y-6">
               <p className="text-sm text-muted-foreground">
                 {isBn 
-                  ? "📋 প্রতিটি ওয়েবসাইটের জন্য আলাদা PHP কোড দেওয়া হয়েছে। প্রতিটি কোড সংশ্লিষ্ট WordPress সাইটে যোগ করুন।"
-                  : "📋 Separate PHP code is provided for each website. Add the respective code to each WordPress site."}
+                  ? "📋 প্রতিটি ওয়েবসাইটের জন্য আলাদা PHP কোড। AI দিয়ে ফর্ম এনালাইজ করে কাস্টমাইজড কোড পেতে পারেন।"
+                  : "📋 Separate PHP code per website. Use AI to analyze the checkout form for customized code."}
               </p>
               {campaignWebsites.map((ws) => {
                 const isLead = ws.data_mode === "lead";
                 const snippet = generatePerWebsitePhpSnippet(ws.webhook_secret, ws.site_url, ws.site_name, ws.data_mode);
+                const analyzed = analyzedResults[ws.id];
+                const isAnalyzing = analyzingWebsiteId === ws.id;
                 return (
                   <div key={ws.id} className={`rounded-xl border-2 overflow-hidden ${isLead ? "border-primary/30" : "border-purple-500/30"}`}>
-                    <div className={`px-4 py-2 flex items-center gap-2 ${isLead ? "bg-primary/10" : "bg-purple-500/10"}`}>
+                    <div className={`px-4 py-2 flex items-center gap-2 flex-wrap ${isLead ? "bg-primary/10" : "bg-purple-500/10"}`}>
                       <Globe className="h-4 w-4 text-primary" />
                       <span className="text-sm font-bold text-foreground">{ws.site_name}</span>
                       <Badge variant={isLead ? "default" : "secondary"} className="text-[10px]">
                         {isLead ? "Lead" : "Processing"}
                       </Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">{ws.site_url}</span>
+                      <span className="text-xs text-muted-foreground ml-auto hidden sm:inline">{ws.site_url}</span>
                     </div>
-                    <div className="relative p-3 overflow-x-auto">
-                      <button
-                        onClick={() => copyText(snippet)}
-                        className="absolute top-2 right-2 text-muted-foreground hover:text-primary z-10"
+
+                    {/* AI Analyze Button */}
+                    <div className="px-4 py-2 border-b border-border bg-background flex items-center gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant={analyzed ? "outline" : "default"}
+                        className="text-xs gap-1.5"
+                        disabled={isAnalyzing}
+                        onClick={() => handleAnalyzeCheckout(ws)}
                       >
-                        <Copy className="h-4 w-4" />
-                      </button>
-                      <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
-                        {snippet}
-                      </pre>
+                        {isAnalyzing ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" />{isBn ? "ফর্ম এনালাইজ হচ্ছে..." : "Analyzing..."}</>
+                        ) : analyzed ? (
+                          <><ScanSearch className="h-3.5 w-3.5" />{isBn ? "🔄 পুনরায় এনালাইজ করুন" : "🔄 Re-analyze"}</>
+                        ) : (
+                          <><Sparkles className="h-3.5 w-3.5" />{isBn ? "🤖 AI দিয়ে ফর্ম এনালাইজ করুন" : "🤖 AI Analyze Form"}</>
+                        )}
+                      </Button>
+                      {analyzed && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">
+                            {analyzed.formFound 
+                              ? (isBn ? "✅ ফর্ম পাওয়া গেছে" : "✅ Form found") 
+                              : (isBn ? "⚡ ইউনিভার্সাল কোড" : "⚡ Universal code")}
+                          </Badge>
+                          {analyzed.fields.length > 0 && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {analyzed.fields.length} {isBn ? "টি ফিল্ড" : " fields"}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground w-full">
+                        {isBn 
+                          ? "AI আপনার সাইটের চেক-আউট পেজ ভিজিট করে ফর্ম ফিল্ড খুঁজে বের করবে এবং সেই অনুসারে PHP কোড বানাবে"
+                          : "AI will visit your checkout page, detect form fields, and generate tailored PHP code"}
+                      </p>
                     </div>
+
+                    {/* Show AI-generated code if available, otherwise default */}
+                    {analyzed ? (
+                      <div className="space-y-0">
+                        {/* Detected fields */}
+                        {analyzed.fields.length > 0 && (
+                          <div className="px-4 py-2 border-b border-border bg-muted/50">
+                            <p className="text-[11px] font-medium text-muted-foreground mb-1.5">
+                              {isBn ? "🔍 ডিটেক্টেড ফিল্ড:" : "🔍 Detected fields:"}
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {analyzed.fields.map((f) => (
+                                <Badge key={f} variant="outline" className="text-[9px] font-mono">{f}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {/* AI-generated PHP code */}
+                        <div className="relative p-3 overflow-x-auto">
+                          <div className="absolute top-2 right-2 flex gap-1 z-10">
+                            <Badge className="bg-primary/10 text-primary border-0 text-[9px]">
+                              <Sparkles className="h-2.5 w-2.5 mr-0.5" /> AI Generated
+                            </Badge>
+                            <button onClick={() => copyText(analyzed.code)} className="text-muted-foreground hover:text-primary">
+                              <Copy className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
+                            {analyzed.code}
+                          </pre>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative p-3 overflow-x-auto">
+                        <div className="absolute top-2 right-2 flex gap-1 z-10">
+                          <Badge variant="outline" className="text-[9px]">
+                            {isBn ? "ডিফল্ট" : "Default"}
+                          </Badge>
+                          <button onClick={() => copyText(snippet)} className="text-muted-foreground hover:text-primary">
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
+                          {snippet}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 );
               })}
