@@ -350,7 +350,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "all_leads",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED STATUS CHANGED =====
