@@ -619,6 +619,61 @@ export type Database = {
           },
         ]
       }
+      employee_complaints: {
+        Row: {
+          complainant_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          reason: string
+          status: string
+          target_id: string
+        }
+        Insert: {
+          complainant_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason: string
+          status?: string
+          target_id: string
+        }
+        Update: {
+          complainant_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason?: string
+          status?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_complaints_complainant_id_fkey"
+            columns: ["complainant_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_complaints_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_complaints_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_monthly_offs: {
         Row: {
           assigned_by: string | null
@@ -1211,6 +1266,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      off_day_appeals: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          off_id: string
+          reason: string
+          requested_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          off_id: string
+          reason: string
+          requested_date: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          off_id?: string
+          reason?: string
+          requested_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "off_day_appeals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "off_day_appeals_off_id_fkey"
+            columns: ["off_id"]
+            isOneToOne: false
+            referencedRelation: "employee_monthly_offs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "off_day_appeals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"

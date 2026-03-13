@@ -10,6 +10,8 @@ import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { User, Volume2, Globe, Camera, Loader2 } from "lucide-react";
+import MonthlyOffsSection from "@/components/profile/MonthlyOffsSection";
+import ComplaintSection from "@/components/profile/ComplaintSection";
 
 interface UserProfile {
   id: string;
@@ -184,6 +186,12 @@ export default function ProfileSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Monthly Offs */}
+      <MonthlyOffsSection userId={profile.id} />
+
+      {/* Complaints */}
+      <ComplaintSection userId={profile.id} />
 
       {/* Preferences */}
       <Card>

@@ -35,6 +35,7 @@ import HRWarehouse from "./pages/dashboard/HRWarehouse";
 import HRDataMonitor from "./pages/dashboard/HRDataMonitor";
 import HRFeedback from "./pages/dashboard/HRFeedback";
 import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
+import HRComplaints from "./pages/dashboard/HRComplaints";
 import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
 import TLDashboard from "./pages/dashboard/TLDashboard";
 import TLLeads from "./pages/dashboard/TLLeads";
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="/hr/my-attendance" element={<ManagerAttendance />} />
               <Route path="/hr/feedback" element={<HRFeedback />} />
               <Route path="/hr/documentation" element={<WebhookDocumentation />} />
+              <Route path="/hr/complaints" element={<HRComplaints />} />
               <Route path="/hr/settings" element={<HRSettings />} />
               <Route path="/hr/notifications" element={<NotificationsPage />} />
               <Route path="/hr/profile" element={<ProfileSettings />} />

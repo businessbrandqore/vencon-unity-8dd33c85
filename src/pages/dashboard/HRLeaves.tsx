@@ -11,6 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, X } from "lucide-react";
+import { format } from "date-fns";
+import { bn as bnLocale } from "date-fns/locale";
 
 const BLUE = "#1D4ED8";
 
@@ -37,6 +42,8 @@ const HRLeaves = () => {
   const [loading, setLoading] = useState(true);
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [offAppeals, setOffAppeals] = useState<any[]>([]);
+  const [appealNames, setAppealNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchAll();
@@ -74,6 +81,19 @@ const HRLeaves = () => {
 
     setPending(mapRows(pendingRes.data || []));
     setHistory(mapRows(historyRes.data || []));
+
+    // Fetch off-day appeals
+    const { data: appeals } = await supabase
+      .from("off_day_appeals" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    setOffAppeals((appeals as any) || []);
+    
+    // Map names for appeals
+    const appealUserIds = [...new Set(((appeals as any) || []).map((a: any) => a.user_id))];
+    const nameMap: Record<string, string> = { ...userMap };
+    setAppealNames(nameMap);
+
     setLoading(false);
   };
 
@@ -136,6 +156,21 @@ const HRLeaves = () => {
     fetchAll();
   };
 
+  const handleAppealDecision = async (appeal: any, decision: "approved" | "rejected") => {
+    if (!user) return;
+    if (decision === "approved") {
+      await supabase.from("employee_monthly_offs").update({ off_date: appeal.requested_date }).eq("id", appeal.off_id);
+    }
+    await supabase
+      .from("off_day_appeals" as any)
+      .update({ status: decision, decided_by: user.id, decided_at: new Date().toISOString() } as any)
+      .eq("id", appeal.id);
+    toast({ title: decision === "approved" ? "আপিল অনুমোদিত ✓" : "আপিল প্রত্যাখ্যাত" });
+    fetchAll();
+  };
+
+  const pendingAppeals = offAppeals.filter((a) => a.status === "pending");
+
   const filteredHistory = filterEmployee === "all"
     ? history
     : history.filter((h) => h.user_id === filterEmployee);
@@ -153,6 +188,9 @@ const HRLeaves = () => {
           </TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:bg-background font-body text-sm">
             {isBn ? "ইতিহাস" : "History"}
+          </TabsTrigger>
+          <TabsTrigger value="off_appeals" className="data-[state=active]:bg-background font-body text-sm">
+            {isBn ? "ছুটির আপিল" : "Off-day Appeals"} ({pendingAppeals.length})
           </TabsTrigger>
         </TabsList>
 
@@ -277,6 +315,60 @@ const HRLeaves = () => {
               </tbody>
             </table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="off_appeals" className="mt-4">
+          {offAppeals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8 border border-border">
+              {isBn ? "কোনো ছুটির আপিল নেই" : "No off-day appeals"}
+            </p>
+          ) : (
+            <div className="border border-border">
+              <table className="w-full text-sm font-body">
+                <thead>
+                  <tr className="bg-secondary text-muted-foreground text-[11px]">
+                    <th className="text-left p-3">{isBn ? "নাম" : "Name"}</th>
+                    <th className="text-left p-3">{isBn ? "বর্তমান তারিখ" : "Current Date"}</th>
+                    <th className="text-left p-3">{isBn ? "নতুন তারিখ" : "New Date"}</th>
+                    <th className="text-left p-3">{isBn ? "কারণ" : "Reason"}</th>
+                    <th className="text-left p-3">{isBn ? "স্ট্যাটাস" : "Status"}</th>
+                    <th className="text-center p-3">{isBn ? "কার্যক্রম" : "Action"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {offAppeals.map((a: any) => (
+                    <tr key={a.id} className="border-t border-border hover:bg-secondary/50">
+                      <td className="p-3 font-medium">{appealNames[a.user_id] || "..."}</td>
+                      <td className="p-3 text-muted-foreground">—</td>
+                      <td className="p-3">{format(new Date(a.requested_date), "dd MMM yyyy", { locale: bnLocale })}</td>
+                      <td className="p-3 text-muted-foreground max-w-[200px] truncate">{a.reason}</td>
+                      <td className="p-3">
+                        {a.status === "approved" ? (
+                          <Badge className="bg-green-600 text-white">অনুমোদিত</Badge>
+                        ) : a.status === "rejected" ? (
+                          <Badge variant="destructive">প্রত্যাখ্যাত</Badge>
+                        ) : (
+                          <Badge variant="secondary">অপেক্ষমান</Badge>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {a.status === "pending" && (
+                          <div className="flex gap-1 justify-center">
+                            <Button size="sm" onClick={() => handleAppealDecision(a, "approved")} className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white">
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleAppealDecision(a, "rejected")} className="h-7 px-2">
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
