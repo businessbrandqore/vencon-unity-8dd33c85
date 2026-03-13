@@ -73,6 +73,7 @@ export default function MaintenanceOfficerDashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [logistics, setLogistics] = useState<LogisticsItem[]>([]);
   const [fundRequests, setFundRequests] = useState<FundRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deskReports, setDeskReports] = useState<DeskReport[]>([]);
   const [deskFilter, setDeskFilter] = useState("all");
 
