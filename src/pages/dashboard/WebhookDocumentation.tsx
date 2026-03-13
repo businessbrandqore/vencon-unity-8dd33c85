@@ -98,33 +98,46 @@ const WebhookDocumentation = () => {
     }
   };
 
-  // Generate PHP snippet for the selected campaign
+  // Generate universal PHP snippet that works with ANY checkout (WooCommerce, CartFlows, FunnelKit, Custom)
   const generatePhpSnippet = (url: string, secret: string, websiteName?: string) => {
     return `// functions.php বা custom plugin এ যোগ করুন
-// WooCommerce Checkout Order → CRM Webhook
+// ✅ যেকোনো Checkout এ কাজ করবে: WooCommerce, CartFlows, FunnelKit, Custom Form
 add_action('woocommerce_thankyou', 'send_order_to_crm', 10, 1);
 
 function send_order_to_crm(\$order_id) {
     \$order = wc_get_order(\$order_id);
-    if (!$order) return;
+    if (!\$order) return;
 
     // একবারই পাঠানো নিশ্চিত করুন
     if (\$order->get_meta('_crm_webhook_sent')) return;
 
-    \$body = array(
-        'customer_name' => \$order->get_billing_first_name() . ' ' . \$order->get_billing_last_name(),
-        'phone'         => \$order->get_billing_phone(),
-        'address'       => \$order->get_billing_address_1() . ', ' . \$order->get_billing_city(),
-        'extra_fields'  => array(
-            'email'        => \$order->get_billing_email(),
-            'order_id'     => \$order_id,
-            'order_total'  => \$order->get_total(),
-            'product'      => '',
-            'quantity'     => 0,${websiteName ? `\n            'website'      => '${websiteName}',` : ''}
-        ),
-    );
+    // === সব ধরনের Billing ফিল্ড ডাইনামিক্যালি নেওয়া ===
+    \$billing_data = \$order->get_data()['billing'] ?? array();
+    
+    // নাম তৈরি করুন (যেভাবেই সেভ হোক)
+    \$name_parts = array_filter(array(
+        \$billing_data['first_name'] ?? '',
+        \$billing_data['last_name'] ?? '',
+    ));
+    \$customer_name = !empty(\$name_parts) ? implode(' ', \$name_parts) : (\$order->get_formatted_billing_full_name() ?: 'Unknown');
 
-    // প্রোডাক্ট তথ্য নিন
+    // ফোন নম্বর (billing_phone বা custom meta থেকে)
+    \$phone = \$billing_data['phone'] ?? '';
+    if (empty(\$phone)) {
+        \$phone = \$order->get_meta('_billing_phone') ?: \$order->get_meta('billing_phone') ?: '';
+    }
+
+    // ঠিকানা তৈরি করুন
+    \$address_parts = array_filter(array(
+        \$billing_data['address_1'] ?? '',
+        \$billing_data['address_2'] ?? '',
+        \$billing_data['city'] ?? '',
+        \$billing_data['state'] ?? '',
+        \$billing_data['postcode'] ?? '',
+    ));
+    \$address = !empty(\$address_parts) ? implode(', ', \$address_parts) : '';
+
+    // === প্রোডাক্ট তথ্য ===
     \$items = \$order->get_items();
     \$product_names = array();
     \$total_qty = 0;
@@ -132,8 +145,31 @@ function send_order_to_crm(\$order_id) {
         \$product_names[] = \$item->get_name();
         \$total_qty += \$item->get_quantity();
     }
-    \$body['extra_fields']['product']  = implode(', ', \$product_names);
-    \$body['extra_fields']['quantity'] = \$total_qty;
+
+    // === সব কাস্টম মেটা ফিল্ড সংগ্রহ (CartFlows / কাস্টম ফর্মের extra fields) ===
+    \$custom_fields = array();
+    \$meta_data = \$order->get_meta_data();
+    foreach (\$meta_data as \$meta) {
+        \$key = \$meta->key;
+        // Internal WooCommerce meta বাদ দিন
+        if (strpos(\$key, '_') === 0 && strpos(\$key, '_billing') !== 0 && strpos(\$key, '_shipping') !== 0) continue;
+        \$custom_fields[\$key] = \$meta->value;
+    }
+
+    \$body = array(
+        'customer_name' => \$customer_name,
+        'phone'         => \$phone,
+        'address'       => \$address,
+        'extra_fields'  => array_merge(array(
+            'email'    => \$billing_data['email'] ?? '',
+            'order_id' => \$order_id,
+            'product'  => implode(', ', \$product_names),
+            'quantity' => \$total_qty,
+            'total'    => \$order->get_total(),
+            'currency' => \$order->get_currency(),
+            'payment'  => \$order->get_payment_method_title(),${websiteName ? `\n            'website'  => '${websiteName}',` : ''}
+        ), \$custom_fields),
+    );
 
     \$response = wp_remote_post('${url}', array(
         'method'  => 'POST',
@@ -145,21 +181,20 @@ function send_order_to_crm(\$order_id) {
         'body' => wp_json_encode(\$body),
     ));
 
-    // সফল হলে মার্ক করুন
     if (!is_wp_error(\$response) && wp_remote_retrieve_response_code(\$response) === 200) {
         \$order->update_meta_data('_crm_webhook_sent', 'yes');
         \$order->save();
     } else {
-        // ত্রুটি লগ করুন
         error_log('CRM Webhook Error: ' . print_r(\$response, true));
     }
 }`;
   };
 
-  // Generate per-website PHP snippet
+  // Generate per-website PHP snippet (universal)
   const generatePerWebsitePhpSnippet = (websiteSecret: string, websiteUrl: string, siteName: string, dataMode: string) => {
     const perSiteUrl = `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}`;
     return `// === ${siteName} (${dataMode === 'lead' ? 'Lead' : 'Processing'} ডাটা) ===
+// ✅ যেকোনো Checkout এ কাজ করবে: WooCommerce, CartFlows, FunnelKit, Custom
 // functions.php বা custom plugin এ যোগ করুন
 
 add_action('woocommerce_thankyou', 'send_order_to_crm_${dataMode}', 10, 1);
@@ -169,6 +204,30 @@ function send_order_to_crm_${dataMode}(\$order_id) {
     if (!\$order) return;
     if (\$order->get_meta('_crm_webhook_sent')) return;
 
+    // === ডাইনামিক Billing ডাটা ===
+    \$billing_data = \$order->get_data()['billing'] ?? array();
+    
+    \$name_parts = array_filter(array(
+        \$billing_data['first_name'] ?? '',
+        \$billing_data['last_name'] ?? '',
+    ));
+    \$customer_name = !empty(\$name_parts) ? implode(' ', \$name_parts) : (\$order->get_formatted_billing_full_name() ?: 'Unknown');
+
+    \$phone = \$billing_data['phone'] ?? '';
+    if (empty(\$phone)) {
+        \$phone = \$order->get_meta('_billing_phone') ?: \$order->get_meta('billing_phone') ?: '';
+    }
+
+    \$address_parts = array_filter(array(
+        \$billing_data['address_1'] ?? '',
+        \$billing_data['address_2'] ?? '',
+        \$billing_data['city'] ?? '',
+        \$billing_data['state'] ?? '',
+        \$billing_data['postcode'] ?? '',
+    ));
+    \$address = !empty(\$address_parts) ? implode(', ', \$address_parts) : '';
+
+    // === প্রোডাক্ট ===
     \$items = \$order->get_items();
     \$product_names = array();
     \$total_qty = 0;
@@ -177,18 +236,28 @@ function send_order_to_crm_${dataMode}(\$order_id) {
         \$total_qty += \$item->get_quantity();
     }
 
+    // === কাস্টম মেটা ফিল্ড (CartFlows, FunnelKit, Custom Fields) ===
+    \$custom_fields = array();
+    foreach (\$order->get_meta_data() as \$meta) {
+        \$key = \$meta->key;
+        if (strpos(\$key, '_') === 0 && strpos(\$key, '_billing') !== 0 && strpos(\$key, '_shipping') !== 0) continue;
+        \$custom_fields[\$key] = \$meta->value;
+    }
+
     \$body = array(
-        'customer_name' => \$order->get_billing_first_name() . ' ' . \$order->get_billing_last_name(),
-        'phone'         => \$order->get_billing_phone(),
-        'address'       => \$order->get_billing_address_1() . ', ' . \$order->get_billing_city(),
-        'extra_fields'  => array(
-            'email'    => \$order->get_billing_email(),
+        'customer_name' => \$customer_name,
+        'phone'         => \$phone,
+        'address'       => \$address,
+        'extra_fields'  => array_merge(array(
+            'email'    => \$billing_data['email'] ?? '',
             'order_id' => \$order_id,
             'product'  => implode(', ', \$product_names),
             'quantity' => \$total_qty,
             'total'    => \$order->get_total(),
+            'currency' => \$order->get_currency(),
+            'payment'  => \$order->get_payment_method_title(),
             'website'  => '${siteName}',
-        ),
+        ), \$custom_fields),
     );
 
     \$response = wp_remote_post('${perSiteUrl}', array(
@@ -240,9 +309,16 @@ function send_order_to_crm_${dataMode}(\$order_id) {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
             {isBn
-              ? "আপনার WordPress/WooCommerce সাইটে কেউ চেক-আউট ফর্ম পূরণ করে অর্ডার করলে, সেই অর্ডারের তথ্য (নাম, ফোন, ঠিকানা, প্রোডাক্ট) অটোমেটিক আমাদের CRM সিস্টেমে চলে আসবে — Lead অথবা Processing ডাটা হিসেবে। কোনো ম্যানুয়াল কাজ লাগবে না।"
-              : "When someone places an order via your WooCommerce checkout, the order data (name, phone, address, product) is automatically sent to our CRM as Lead or Processing data. No manual work needed."}
+              ? "আপনার WordPress/WooCommerce সাইটে কেউ চেক-আউট ফর্ম পূরণ করে অর্ডার করলে, সেই অর্ডারের সব তথ্য অটোমেটিক আমাদের CRM সিস্টেমে চলে আসবে। ফর্ম যেভাবেই বানানো হোক — স্ট্যান্ডার্ড WooCommerce, CartFlows, FunnelKit, বা কাস্টম — সব কাজ করবে।"
+              : "When someone places an order via your WooCommerce checkout, all order data is automatically sent to our CRM. Works with ANY checkout: standard WooCommerce, CartFlows, FunnelKit, or custom forms."}
           </p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {["WooCommerce", "CartFlows", "FunnelKit", "Custom Checkout"].map((name) => (
+              <Badge key={name} variant="outline" className="text-xs border-primary/30 text-primary">
+                ✅ {name}
+              </Badge>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-body">
             {[
               isBn ? "🛒 কাস্টমার চেক-আউট করে" : "🛒 Customer checks out",
