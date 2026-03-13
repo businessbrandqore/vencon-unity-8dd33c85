@@ -19,6 +19,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+let cachedUser: UserData | null = null;
 
 export const AuthProvider = ({
   children,
@@ -27,10 +28,15 @@ export const AuthProvider = ({
   children: ReactNode;
   requiredPanel: PanelType;
 }) => {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const panelConfig = getPanelByType(requiredPanel);
+  const loginPath = panelConfig?.loginPath || "/";
+
+  const hasValidCache =
+    !!cachedUser && cachedUser.panel === requiredPanel;
+
+  const [user, setUser] = useState<UserData | null>(hasValidCache ? cachedUser : null);
+  const [loading, setLoading] = useState(!hasValidCache);
 
   useEffect(() => {
     let mounted = true;
@@ -41,8 +47,23 @@ export const AuthProvider = ({
       } = await supabase.auth.getSession();
 
       if (!session) {
-        navigate(panelConfig?.loginPath || "/");
+        cachedUser = null;
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        navigate(loginPath, { replace: true });
         return;
+      }
+
+      if (
+        cachedUser &&
+        cachedUser.authId === session.user.id &&
+        cachedUser.panel === requiredPanel &&
+        mounted
+      ) {
+        setUser(cachedUser);
+        setLoading(false);
       }
 
       const { data: userData, error } = await supabase
@@ -52,30 +73,39 @@ export const AuthProvider = ({
         .single();
 
       if (error || !userData) {
+        cachedUser = null;
         await supabase.auth.signOut();
-        navigate(panelConfig?.loginPath || "/");
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        navigate(loginPath, { replace: true });
         return;
       }
 
       if (userData.panel !== requiredPanel) {
+        cachedUser = null;
         const correctPanel = getPanelByType(userData.panel as PanelType);
         if (correctPanel) {
-          navigate(correctPanel.loginPath);
+          navigate(correctPanel.loginPath, { replace: true });
         } else {
-          navigate("/");
+          navigate("/", { replace: true });
         }
         return;
       }
 
+      const mappedUser: UserData = {
+        id: userData.id,
+        authId: userData.auth_id,
+        name: userData.name,
+        email: userData.email,
+        panel: userData.panel as PanelType,
+        role: userData.role,
+      };
+
+      cachedUser = mappedUser;
       if (mounted) {
-        setUser({
-          id: userData.id,
-          authId: userData.auth_id,
-          name: userData.name,
-          email: userData.email,
-          panel: userData.panel as PanelType,
-          role: userData.role,
-        });
+        setUser(mappedUser);
         setLoading(false);
       }
     };
@@ -86,8 +116,10 @@ export const AuthProvider = ({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session && mounted) {
+        cachedUser = null;
         setUser(null);
-        navigate(panelConfig?.loginPath || "/");
+        setLoading(false);
+        navigate(loginPath, { replace: true });
       }
     });
 
@@ -95,11 +127,12 @@ export const AuthProvider = ({
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, requiredPanel, panelConfig]);
+  }, [navigate, requiredPanel, loginPath]);
 
   const signOut = async () => {
+    cachedUser = null;
     await supabase.auth.signOut();
-    navigate(panelConfig?.loginPath || "/");
+    navigate(loginPath, { replace: true });
   };
 
   return (
