@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
-import { Wrench, Plus, CalendarIcon, FileText, ArrowDownToLine, ArrowUpFromLine, Wallet, Send, TrendingUp, TrendingDown, Package } from "lucide-react";
+import { Wrench, Plus, CalendarIcon, FileText, ArrowDownToLine, ArrowUpFromLine, Wallet, Send, TrendingUp, TrendingDown, Package, Monitor } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface Expense {
@@ -50,6 +50,16 @@ interface FundRequest {
   decided_at: string | null;
 }
 
+interface DeskReport {
+  id: string;
+  date: string;
+  desk_number: string | null;
+  desk_condition: string | null;
+  clock_in: string | null;
+  user_id: string | null;
+  user_name?: string;
+}
+
 const CATEGORIES = ["Office Supplies", "Equipment", "Repair", "Transport", "Logistics", "Other"];
 const LOGISTICS_CATEGORIES = ["Electronics", "Furniture", "Stationery", "Equipment", "Packaging", "Other"];
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--accent))"];
@@ -64,6 +74,9 @@ export default function MaintenanceOfficerDashboard() {
   const [logistics, setLogistics] = useState<LogisticsItem[]>([]);
   const [fundRequests, setFundRequests] = useState<FundRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deskReports, setDeskReports] = useState<DeskReport[]>([]);
+  const [deskFilter, setDeskFilter] = useState("all");
+
 
   // Modals
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -103,11 +116,12 @@ export default function MaintenanceOfficerDashboard() {
     const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
     const todayStr = format(now, "yyyy-MM-dd");
 
-    const [budgetRes, expensesRes, logisticsRes, fundRes] = await Promise.all([
+    const [budgetRes, expensesRes, logisticsRes, fundRes, deskRes] = await Promise.all([
       supabase.from("maintenance_budget").select("amount"),
       supabase.from("maintenance_expenses").select("*").eq("officer_id", user.id).gte("expense_date", monthStart).order("created_at", { ascending: false }),
       supabase.from("logistics_items").select("*").eq("officer_id", user.id).order("created_at", { ascending: false }).limit(500),
       supabase.from("fund_requests").select("*").eq("officer_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("attendance").select("id, date, desk_number, desk_condition, clock_in, user_id").not("desk_condition", "is", null).order("date", { ascending: false }).limit(200),
     ]);
 
     if (budgetRes.data) setTotalBudget(budgetRes.data.reduce((s, b) => s + (Number(b.amount) || 0), 0));
@@ -117,6 +131,18 @@ export default function MaintenanceOfficerDashboard() {
     }
     if (logisticsRes.data) setLogistics(logisticsRes.data as unknown as LogisticsItem[]);
     if (fundRes.data) setFundRequests(fundRes.data as FundRequest[]);
+
+    // Load desk reports with user names
+    if (deskRes.data && deskRes.data.length > 0) {
+      const userIds = [...new Set(deskRes.data.map(d => d.user_id).filter(Boolean))] as string[];
+      const { data: usersData } = await supabase.from("users").select("id, name").in("id", userIds);
+      const userMap = new Map((usersData || []).map(u => [u.id, u.name]));
+      setDeskReports(deskRes.data.map(d => ({
+        ...d,
+        user_name: d.user_id ? userMap.get(d.user_id) || "Unknown" : "Unknown",
+      })) as DeskReport[]);
+    }
+
     setLoading(false);
   }, [user]);
 
@@ -349,10 +375,11 @@ export default function MaintenanceOfficerDashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="logistics" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="logistics">📦 লজিস্টিক</TabsTrigger>
           <TabsTrigger value="expenses">💰 Expenses</TabsTrigger>
           <TabsTrigger value="funds">🏦 ফান্ড</TabsTrigger>
+          <TabsTrigger value="desk">🖥️ ডেস্ক</TabsTrigger>
           <TabsTrigger value="phone">📱 ফোন</TabsTrigger>
         </TabsList>
 
@@ -515,6 +542,93 @@ export default function MaintenanceOfficerDashboard() {
                       </tr>
                     ))}
                     {fundRequests.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">কোনো আবেদন নেই</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Desk Reports Tab */}
+        <TabsContent value="desk" className="space-y-4">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h2 className="font-heading text-sm flex items-center gap-2">
+              <Monitor className="h-4 w-4" /> কর্মীদের ডেস্ক রিপোর্ট
+            </h2>
+            <Select value={deskFilter} onValueChange={setDeskFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="সব স্ট্যাটাস" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সব স্ট্যাটাস</SelectItem>
+                <SelectItem value="clean">✅ পরিষ্কার</SelectItem>
+                <SelectItem value="moderate">⚠️ মোটামুটি</SelectItem>
+                <SelectItem value="dirty">❌ অপরিষ্কার</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Summary cards */}
+          {(() => {
+            const clean = deskReports.filter(d => d.desk_condition === "clean").length;
+            const moderate = deskReports.filter(d => d.desk_condition === "moderate").length;
+            const dirty = deskReports.filter(d => d.desk_condition === "dirty").length;
+            return (
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="border-green-500/30">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-2xl font-heading text-green-500">{clean}</p>
+                    <p className="text-xs text-muted-foreground">পরিষ্কার</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-yellow-500/30">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-2xl font-heading text-yellow-500">{moderate}</p>
+                    <p className="text-xs text-muted-foreground">মোটামুটি</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-destructive/30">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-2xl font-heading text-destructive">{dirty}</p>
+                    <p className="text-xs text-muted-foreground">অপরিষ্কার</p>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
+          <Card>
+            <CardContent className="pt-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border text-muted-foreground">
+                    <th className="py-2 px-2 text-left">তারিখ</th>
+                    <th className="py-2 px-2 text-left">কর্মী</th>
+                    <th className="py-2 px-2 text-center">ডেস্ক নং</th>
+                    <th className="py-2 px-2 text-center">অবস্থা</th>
+                    <th className="py-2 px-2 text-left">চেক ইন</th>
+                  </tr></thead>
+                  <tbody>
+                    {deskReports
+                      .filter(d => deskFilter === "all" || d.desk_condition === deskFilter)
+                      .map(d => (
+                        <tr key={d.id} className="border-b border-border">
+                          <td className="py-2 px-2 text-xs">{d.date}</td>
+                          <td className="py-2 px-2">{d.user_name}</td>
+                          <td className="py-2 px-2 text-center">{d.desk_number || "—"}</td>
+                          <td className="py-2 px-2 text-center">
+                            <Badge variant="outline" className={cn("text-xs",
+                              d.desk_condition === "clean" ? "text-green-500 border-green-600/50" :
+                              d.desk_condition === "moderate" ? "text-yellow-500 border-yellow-500/50" :
+                              "text-destructive border-destructive/50"
+                            )}>
+                              {d.desk_condition === "clean" ? "✅ পরিষ্কার" : d.desk_condition === "moderate" ? "⚠️ মোটামুটি" : "❌ অপরিষ্কার"}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-2 text-xs">{d.clock_in ? new Date(d.clock_in).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
+                        </tr>
+                      ))}
+                    {deskReports.filter(d => deskFilter === "all" || d.desk_condition === deskFilter).length === 0 && (
+                      <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো ডেস্ক রিপোর্ট নেই</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
