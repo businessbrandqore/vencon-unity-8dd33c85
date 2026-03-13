@@ -128,6 +128,7 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
           id: col.id || crypto.randomUUID?.() || `col_${Date.now()}`,
           name: col.name || "",
           name_bn: col.name_bn || "",
+          type: (col.type === "note" ? "note" : "dropdown") as ColumnType,
           options: Array.isArray(col.options)
             ? col.options.map((s: any) => {
                 const np = panelSet.has(s.next_panel) ? s.next_panel : "";
