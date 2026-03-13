@@ -506,7 +506,7 @@ export default function HRDataOperations() {
 
   const addColumn = () => {
     const id = crypto.randomUUID?.() || `col_${Date.now()}`;
-    updateRoleColumns([...currentColumns, { id, name: "", name_bn: "", options: [] }]);
+    updateRoleColumns([...currentColumns, { id, name: "", name_bn: "", type: "dropdown", options: [] }]);
   };
 
   const updateColumn = (colIdx: number, updates: Partial<StatusColumn>) => {
