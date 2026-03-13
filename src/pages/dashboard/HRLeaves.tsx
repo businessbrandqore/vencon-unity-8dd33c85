@@ -316,6 +316,60 @@ const HRLeaves = () => {
             </table>
           </div>
         </TabsContent>
+
+        <TabsContent value="off_appeals" className="mt-4">
+          {offAppeals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8 border border-border">
+              {isBn ? "কোনো ছুটির আপিল নেই" : "No off-day appeals"}
+            </p>
+          ) : (
+            <div className="border border-border">
+              <table className="w-full text-sm font-body">
+                <thead>
+                  <tr className="bg-secondary text-muted-foreground text-[11px]">
+                    <th className="text-left p-3">{isBn ? "নাম" : "Name"}</th>
+                    <th className="text-left p-3">{isBn ? "বর্তমান তারিখ" : "Current Date"}</th>
+                    <th className="text-left p-3">{isBn ? "নতুন তারিখ" : "New Date"}</th>
+                    <th className="text-left p-3">{isBn ? "কারণ" : "Reason"}</th>
+                    <th className="text-left p-3">{isBn ? "স্ট্যাটাস" : "Status"}</th>
+                    <th className="text-center p-3">{isBn ? "কার্যক্রম" : "Action"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {offAppeals.map((a: any) => (
+                    <tr key={a.id} className="border-t border-border hover:bg-secondary/50">
+                      <td className="p-3 font-medium">{appealNames[a.user_id] || "..."}</td>
+                      <td className="p-3 text-muted-foreground">—</td>
+                      <td className="p-3">{format(new Date(a.requested_date), "dd MMM yyyy", { locale: bnLocale })}</td>
+                      <td className="p-3 text-muted-foreground max-w-[200px] truncate">{a.reason}</td>
+                      <td className="p-3">
+                        {a.status === "approved" ? (
+                          <Badge className="bg-green-600 text-white">অনুমোদিত</Badge>
+                        ) : a.status === "rejected" ? (
+                          <Badge variant="destructive">প্রত্যাখ্যাত</Badge>
+                        ) : (
+                          <Badge variant="secondary">অপেক্ষমান</Badge>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {a.status === "pending" && (
+                          <div className="flex gap-1 justify-center">
+                            <Button size="sm" onClick={() => handleAppealDecision(a, "approved")} className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white">
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleAppealDecision(a, "rejected")} className="h-7 px-2">
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
