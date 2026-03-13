@@ -664,6 +664,54 @@ export type Database = {
           },
         ]
       }
+      fund_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          officer_id: string
+          reason: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          officer_id: string
+          reason: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          officer_id?: string
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_requests_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           agent_id: string
@@ -968,6 +1016,56 @@ export type Database = {
           {
             foreignKeyName: "leave_requests_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          item_date: string
+          item_name: string
+          note: string | null
+          officer_id: string | null
+          quantity: number
+          total_price: number | null
+          type: string
+          unit_price: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          item_date?: string
+          item_name: string
+          note?: string | null
+          officer_id?: string | null
+          quantity?: number
+          total_price?: number | null
+          type?: string
+          unit_price?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          item_date?: string
+          item_name?: string
+          note?: string | null
+          officer_id?: string | null
+          quantity?: number
+          total_price?: number | null
+          type?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_items_officer_id_fkey"
+            columns: ["officer_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
