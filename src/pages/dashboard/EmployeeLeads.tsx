@@ -242,10 +242,11 @@ export default function EmployeeLeads() {
       setShowPreOrderConfirmModal(true); return;
     }
 
+    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
     const updatePayload: Record<string, unknown> = {
-      status: newStatus.toLowerCase().replace(/\s+/g, "_"), called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
+      status: statusKey, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
-    if (REQUEUE_STATUSES.includes(newStatus)) {
+    if (REQUEUE_STATUS_VALUES.includes(statusKey)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
