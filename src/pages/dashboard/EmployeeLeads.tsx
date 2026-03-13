@@ -40,14 +40,45 @@ interface InventoryItem {
   unit_price: number | null;
 }
 
-const LEAD_STATUSES = [
+// Dynamic config types (from campaign_data_operations)
+type AppPanel = "sa" | "hr" | "tl" | "employee";
+interface ColumnOption {
+  id: string;
+  value: string;
+  label: string;
+  label_bn: string;
+  color?: string;
+  next_panel?: AppPanel | "";
+  next_location?: string;
+  note?: string;
+}
+type ColumnType = "dropdown" | "note";
+interface StatusColumn {
+  id: string;
+  name: string;
+  name_bn: string;
+  type: ColumnType;
+  options: ColumnOption[];
+}
+interface RoleColumnConfig {
+  role: string;
+  columns: StatusColumn[];
+}
+
+// Fallback hardcoded statuses (used when no dynamic config exists)
+const FALLBACK_STATUSES = [
   "Order Confirm", "Pre Order", "Pre Order Confirm", "Phone Off", "Positive", "Customer Reschedule",
   "Do Not Pick", "No Response", "Busy Now", "Number Busy", "Negative",
   "Not Interested", "Cancelled", "Wrong Number", "Duplicate", "Already Ordered",
 ];
 
-const REQUEUE_STATUSES = ["Phone Off", "Positive", "Customer Reschedule", "Do Not Pick", "No Response", "Busy Now", "Number Busy"];
+// Statuses that trigger requeue
+const REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_reschedule", "do_not_pick", "no_response", "busy_now", "number_busy"];
 const REQUEUE_MINUTES = 40;
+const DELETE_SHEET_THRESHOLD = 5;
+
+// Statuses that trigger special modals
+const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
 const DELETE_SHEET_THRESHOLD = 5;
 
 export default function EmployeeLeads() {
