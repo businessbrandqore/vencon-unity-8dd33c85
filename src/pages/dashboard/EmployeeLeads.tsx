@@ -40,15 +40,45 @@ interface InventoryItem {
   unit_price: number | null;
 }
 
-const LEAD_STATUSES = [
+// Dynamic config types (from campaign_data_operations)
+type AppPanel = "sa" | "hr" | "tl" | "employee";
+interface ColumnOption {
+  id: string;
+  value: string;
+  label: string;
+  label_bn: string;
+  color?: string;
+  next_panel?: AppPanel | "";
+  next_location?: string;
+  note?: string;
+}
+type ColumnType = "dropdown" | "note";
+interface StatusColumn {
+  id: string;
+  name: string;
+  name_bn: string;
+  type: ColumnType;
+  options: ColumnOption[];
+}
+interface RoleColumnConfig {
+  role: string;
+  columns: StatusColumn[];
+}
+
+// Fallback hardcoded statuses (used when no dynamic config exists)
+const FALLBACK_STATUSES = [
   "Order Confirm", "Pre Order", "Pre Order Confirm", "Phone Off", "Positive", "Customer Reschedule",
   "Do Not Pick", "No Response", "Busy Now", "Number Busy", "Negative",
   "Not Interested", "Cancelled", "Wrong Number", "Duplicate", "Already Ordered",
 ];
 
-const REQUEUE_STATUSES = ["Phone Off", "Positive", "Customer Reschedule", "Do Not Pick", "No Response", "Busy Now", "Number Busy"];
+// Statuses that trigger requeue
+const REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_reschedule", "do_not_pick", "no_response", "busy_now", "number_busy"];
 const REQUEUE_MINUTES = 40;
 const DELETE_SHEET_THRESHOLD = 5;
+
+// Statuses that trigger special modals
+const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
 
 export default function EmployeeLeads() {
   const { user } = useAuth();
@@ -56,6 +86,8 @@ export default function EmployeeLeads() {
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkedIn, setCheckedIn] = useState(false);
+  const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
   const [leadCalledTimes, setLeadCalledTimes] = useState<Record<string, number>>({});
@@ -99,6 +131,47 @@ export default function EmployeeLeads() {
   const [dataRequestMsg, setDataRequestMsg] = useState("");
   const [dataRequestLoading, setDataRequestLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  // Load dynamic config from campaign_data_operations
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      // Get agent's campaign
+      const { data: carData } = await supabase.from("campaign_agent_roles")
+        .select("campaign_id, is_bronze, is_silver").eq("agent_id", user.id).limit(1).maybeSingle();
+      if (!carData?.campaign_id) { setConfigLoaded(true); return; }
+
+      // Load config
+      const { data: configData } = await supabase.from("campaign_data_operations")
+        .select("fields_config").eq("campaign_id", carData.campaign_id).maybeSingle();
+      if (!configData?.fields_config) { setConfigLoaded(true); return; }
+
+      // Determine role key
+      const roleKey = carData.is_silver ? "silver_agent" : "telesales_executive";
+      const configs = configData.fields_config as unknown as RoleColumnConfig[];
+      const roleConfig = configs.find(c => c.role === roleKey) || configs[0];
+      if (roleConfig?.columns?.length) {
+        setDynamicColumns(roleConfig.columns);
+      }
+      setConfigLoaded(true);
+    })();
+  }, [user]);
+
+  // Compute available statuses from dynamic config or fallback
+  const availableStatuses = useMemo(() => {
+    if (dynamicColumns.length > 0) {
+      // Find the first dropdown column and use its options as statuses
+      const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
+      if (dropdownCol?.options?.length) {
+        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location }));
+      }
+    }
+    // Fallback
+    return FALLBACK_STATUSES.map(s => ({ value: s, label: s, label_bn: s, next_panel: undefined, next_location: undefined }));
+  }, [dynamicColumns]);
+
+  // Note columns from dynamic config
+  const noteColumns = useMemo(() => dynamicColumns.filter(c => c.type === "note"), [dynamicColumns]);
 
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 60_000);
@@ -212,10 +285,11 @@ export default function EmployeeLeads() {
       setShowPreOrderConfirmModal(true); return;
     }
 
+    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
     const updatePayload: Record<string, unknown> = {
-      status: newStatus.toLowerCase().replace(/\s+/g, "_"), called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
+      status: statusKey, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
-    if (REQUEUE_STATUSES.includes(newStatus)) {
+    if (REQUEUE_STATUS_VALUES.includes(statusKey)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
@@ -327,7 +401,7 @@ export default function EmployeeLeads() {
                     <Select value={leadStatuses[lead.id] || ""} onValueChange={v => setLeadStatuses(p => ({ ...p, [lead.id]: v }))}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
                       <SelectContent>
-                        {LEAD_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {availableStatuses.map(s => <SelectItem key={s.value} value={s.label}>{s.label_bn || s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}

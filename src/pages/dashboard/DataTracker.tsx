@@ -33,6 +33,7 @@ const getLeadPosition = (lead: any, isBn: boolean): { label: string; color: stri
     return { label: isBn ? "এজেন্ট — ফলো আপ" : "Agent — Follow Up", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400", step: 2 };
   if (s === "order_confirmed" || s === "order_confirm") return { label: isBn ? "CSO — রিভিউ পেন্ডিং" : "CSO — Review Pending", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400", step: 3 };
   if (s === "pre_order") return { label: isBn ? "প্রি-অর্ডার" : "Pre-Order", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400", step: 2 };
+  if (s === "pre_order_confirm") return { label: isBn ? "প্রি-অর্ডার কনফার্ম — CSO পেন্ডিং" : "Pre-Order Confirm — CSO Pending", color: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400", step: 3 };
   if (["not_interested", "negative", "wrong_number", "duplicate", "cancelled", "already_ordered", "out_of_coverage", "switch_off", "not_reachable", "phone_off"].includes(s))
     return { label: isBn ? "বাদ দেওয়া হয়েছে" : "Dropped", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400", step: 0 };
   if (s === "processing_assigned") return { label: isBn ? "এজেন্ট — প্রসেসিং" : "Agent — Processing", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400", step: 2 };
@@ -62,6 +63,7 @@ const statusColorMap: Record<string, string> = {
   callback: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
   order_confirmed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
   order_confirm: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  pre_order_confirm: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
   processing_assigned: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
 };
 
