@@ -50,6 +50,16 @@ interface FundRequest {
   decided_at: string | null;
 }
 
+interface DeskReport {
+  id: string;
+  date: string;
+  desk_number: string | null;
+  desk_condition: string | null;
+  clock_in: string | null;
+  user_id: string | null;
+  user_name?: string;
+}
+
 const CATEGORIES = ["Office Supplies", "Equipment", "Repair", "Transport", "Logistics", "Other"];
 const LOGISTICS_CATEGORIES = ["Electronics", "Furniture", "Stationery", "Equipment", "Packaging", "Other"];
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--accent))"];
