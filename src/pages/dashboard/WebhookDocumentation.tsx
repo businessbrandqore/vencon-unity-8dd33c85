@@ -312,6 +312,13 @@ function send_order_to_crm_${dataMode}(\$order_id) {
               ? "আপনার WordPress/WooCommerce সাইটে কেউ চেক-আউট ফর্ম পূরণ করে অর্ডার করলে, সেই অর্ডারের সব তথ্য অটোমেটিক আমাদের CRM সিস্টেমে চলে আসবে। ফর্ম যেভাবেই বানানো হোক — স্ট্যান্ডার্ড WooCommerce, CartFlows, FunnelKit, বা কাস্টম — সব কাজ করবে।"
               : "When someone places an order via your WooCommerce checkout, all order data is automatically sent to our CRM. Works with ANY checkout: standard WooCommerce, CartFlows, FunnelKit, or custom forms."}
           </p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {["WooCommerce", "CartFlows", "FunnelKit", "Custom Checkout"].map((name) => (
+              <Badge key={name} variant="outline" className="text-xs border-primary/30 text-primary">
+                ✅ {name}
+              </Badge>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-body">
             {[
               isBn ? "🛒 কাস্টমার চেক-আউট করে" : "🛒 Customer checks out",
