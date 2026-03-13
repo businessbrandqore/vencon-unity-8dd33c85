@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Send,
   Truck,
+  AlertTriangle,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
