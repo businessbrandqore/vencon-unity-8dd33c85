@@ -636,6 +636,176 @@ function send_order_to_crm_${dataMode}(\$order_id) {
         </CardContent>
       </Card>
 
+      {/* Customization Guide — When & How to Change */}
+      <Card className="border-amber-500/20">
+        <CardHeader>
+          <CardTitle className="font-heading text-lg flex items-center gap-2">
+            <Code className="h-5 w-5 text-primary" />
+            {isBn ? "🔧 কোড কি চেঞ্জ করতে হবে?" : "🔧 Do You Need to Change the Code?"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* No change needed */}
+          <div className="p-4 rounded-xl border-2 border-green-500/30 bg-green-500/5 space-y-3">
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              {isBn ? "বেশিরভাগ ক্ষেত্রে কোনো চেঞ্জ লাগবে না ✅" : "No changes needed in most cases ✅"}
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {isBn
+                ? "জেনারেট করা PHP কোড ডাইনামিক — এটি অটোমেটিকভাবে WooCommerce অর্ডার অবজেক্ট থেকে সব Billing ফিল্ড, প্রোডাক্ট তথ্য, এবং কাস্টম মেটা ফিল্ড ক্যাপচার করে। CartFlows, FunnelKit, Checkout Field Editor, বা কাস্টম ফর্ম — যেটাই ব্যবহার করুন, কোড একই থাকবে কারণ সব প্লাগিন শেষ পর্যন্ত WooCommerce Order তৈরি করে।"
+                : "The generated PHP code is dynamic — it automatically captures all billing fields, product info, and custom meta fields from the WooCommerce order object. Whether you use CartFlows, FunnelKit, Checkout Field Editor, or custom forms — the code stays the same."}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {[
+                { form: isBn ? "স্ট্যান্ডার্ড WooCommerce" : "Standard WooCommerce", change: isBn ? "কোনো চেঞ্জ নেই" : "No change" },
+                { form: "CartFlows", change: isBn ? "কোনো চেঞ্জ নেই" : "No change" },
+                { form: "FunnelKit", change: isBn ? "কোনো চেঞ্জ নেই" : "No change" },
+                { form: "Checkout Field Editor", change: isBn ? "কোনো চেঞ্জ নেই" : "No change" },
+              ].map((item) => (
+                <div key={item.form} className="flex items-center justify-between p-2 rounded-lg bg-background border border-border">
+                  <span className="text-foreground font-medium">{item.form}</span>
+                  <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">✅ {item.change}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* When changes needed */}
+          <div className="p-4 rounded-xl border-2 border-amber-500/30 bg-amber-500/5 space-y-3">
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              {isBn ? "যখন চেঞ্জ করতে হবে (বিরল ক্ষেত্রে)" : "When Changes Are Needed (Rare Cases)"}
+            </p>
+            <div className="space-y-3">
+              {/* Case 1: Custom phone field */}
+              <div className="p-3 rounded-lg bg-background border border-border space-y-2">
+                <p className="text-xs font-semibold text-foreground">
+                  {isBn ? "🔹 কেস ১: ফোন নম্বর কাস্টম ফিল্ডে আছে" : "🔹 Case 1: Phone is in a custom field"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isBn
+                    ? "যদি আপনার চেক-আউট ফর্মে ফোন নম্বর 'billing_phone' ছাড়া অন্য ফিল্ড নামে থাকে (যেমন: 'custom_phone', 'mobile_number'):"
+                    : "If your checkout uses a different field name for phone (e.g., 'custom_phone', 'mobile_number'):"}
+                </p>
+                <div className="p-2 rounded bg-muted border border-border">
+                  <pre className="text-[11px] text-foreground font-mono whitespace-pre-wrap">{isBn
+                    ? `// নিচের লাইনটি খুঁজুন:
+$phone = $billing_data['phone'] ?? '';
+
+// এভাবে পরিবর্তন করুন:
+$phone = $billing_data['phone'] ?? '';
+if (empty($phone)) {
+    $phone = $order->get_meta('custom_phone')
+          ?: $order->get_meta('mobile_number')
+          ?: '';
+}`
+                    : `// Find this line:
+$phone = $billing_data['phone'] ?? '';
+
+// Change to:
+$phone = $billing_data['phone'] ?? '';
+if (empty($phone)) {
+    $phone = $order->get_meta('custom_phone')
+          ?: $order->get_meta('mobile_number')
+          ?: '';
+}`}</pre>
+                </div>
+              </div>
+
+              {/* Case 2: Custom name field */}
+              <div className="p-3 rounded-lg bg-background border border-border space-y-2">
+                <p className="text-xs font-semibold text-foreground">
+                  {isBn ? "🔹 কেস ২: নাম একটি ফিল্ডে আছে (first/last আলাদা নেই)" : "🔹 Case 2: Name is a single field (no first/last)"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isBn
+                    ? "যদি ফর্মে 'আপনার নাম লিখুন' শুধু একটি ফিল্ড থাকে এবং সেটা কাস্টম ফিল্ড নামে সেভ হয়:"
+                    : "If the form has just one 'Name' field saved as a custom meta:"}
+                </p>
+                <div className="p-2 rounded bg-muted border border-border">
+                  <pre className="text-[11px] text-foreground font-mono whitespace-pre-wrap">{isBn
+                    ? `// নিচের লাইনগুলো খুঁজুন:
+$name_parts = array_filter(array(
+    $billing_data['first_name'] ?? '',
+    $billing_data['last_name'] ?? '',
+));
+
+// এর পরে যোগ করুন:
+if (empty($name_parts)) {
+    $customer_name = $order->get_meta('billing_full_name')
+                  ?: $order->get_meta('your_custom_name_field')
+                  ?: 'Unknown';
+}`
+                    : `// Find these lines:
+$name_parts = array_filter(array(
+    $billing_data['first_name'] ?? '',
+    $billing_data['last_name'] ?? '',
+));
+
+// Add after:
+if (empty($name_parts)) {
+    $customer_name = $order->get_meta('billing_full_name')
+                  ?: $order->get_meta('your_custom_name_field')
+                  ?: 'Unknown';
+}`}</pre>
+                </div>
+              </div>
+
+              {/* Case 3: Specific extra fields */}
+              <div className="p-3 rounded-lg bg-background border border-border space-y-2">
+                <p className="text-xs font-semibold text-foreground">
+                  {isBn ? "🔹 কেস ৩: নির্দিষ্ট Extra ফিল্ড আলাদাভাবে পাঠাতে চান" : "🔹 Case 3: Send specific extra fields explicitly"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isBn
+                    ? "কাস্টম মেটা অটো-ক্যাপচার হচ্ছে, কিন্তু যদি কোনো নির্দিষ্ট ফিল্ড নাম দিয়ে পাঠাতে চান:"
+                    : "Custom meta is auto-captured, but if you want to send specific fields with clear names:"}
+                </p>
+                <div className="p-2 rounded bg-muted border border-border">
+                  <pre className="text-[11px] text-foreground font-mono whitespace-pre-wrap">{isBn
+                    ? `// extra_fields array-তে নিচেরগুলো যোগ করুন:
+'extra_fields' => array_merge(array(
+    // ... আগের ফিল্ডগুলো ...
+    'district'    => $order->get_meta('billing_district'),
+    'thana'       => $order->get_meta('billing_thana'),
+    'delivery_note' => $order->get_meta('order_comments'),
+), $custom_fields),`
+                    : `// Add to the extra_fields array:
+'extra_fields' => array_merge(array(
+    // ... existing fields ...
+    'district'    => $order->get_meta('billing_district'),
+    'thana'       => $order->get_meta('billing_thana'),
+    'delivery_note' => $order->get_meta('order_comments'),
+), $custom_fields),`}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* How to find field names */}
+          <div className="p-4 rounded-xl border-2 border-primary/20 bg-primary/5 space-y-3">
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Eye className="h-4 w-4 text-primary" />
+              {isBn ? "💡 কাস্টম ফিল্ড নাম কিভাবে বের করবেন?" : "💡 How to Find Custom Field Names?"}
+            </p>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>{isBn ? "আপনার সাইটে একটি টেস্ট অর্ডার দেওয়ার পর:" : "After placing a test order on your site:"}</p>
+              <div className="space-y-1.5 ml-2">
+                <p>1. {isBn ? "WordPress Dashboard → WooCommerce → Orders → টেস্ট অর্ডারটি খুলুন" : "WordPress Dashboard → WooCommerce → Orders → Open the test order"}</p>
+                <p>2. {isBn ? "নিচে \"Custom Fields\" বা \"Order Meta\" সেকশনে সব ফিল্ড নাম দেখতে পাবেন" : "Scroll down to 'Custom Fields' or 'Order Meta' section to see all field names"}</p>
+                <p>3. {isBn ? "যেকোনো ফিল্ডের নাম (key) ব্যবহার করে $order->get_meta('field_name') দিয়ে ডাটা পেতে পারবেন" : "Use any field key with $order->get_meta('field_name') to get the data"}</p>
+              </div>
+              <div className="p-2 rounded bg-background border border-border mt-2">
+                <p className="text-[11px] font-medium text-foreground">
+                  {isBn ? "🎯 টিপস: আমাদের কোড ইতিমধ্যেই সব কাস্টম মেটা অটো-ক্যাপচার করে extra_fields এ পাঠায়। তাই বেশিরভাগ ক্ষেত্রে কোনো চেঞ্জ লাগবে না!" : "🎯 Tip: Our code already auto-captures all custom meta into extra_fields. So in most cases, no changes needed!"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Data Format */}
       <Card>
         <CardHeader>
@@ -653,19 +823,23 @@ function send_order_to_crm_${dataMode}(\$order_id) {
               extra_fields: {
                 email: "rahim@example.com",
                 order_id: 1234,
-                product: "Premium Package",
-                quantity: 2,
-                total: "4500.00",
-                website: "my-site.com"
+                product: "Special Perfume Combo",
+                quantity: 1,
+                total: "319.00",
+                currency: "BDT",
+                payment: "Cash On Delivery",
+                website: "my-site.com",
+                "_billing_district": "Dhaka",
+                "custom_field_1": "value (অটো-ক্যাপচার)"
               }
             }, null, 2)}</pre>
           </div>
           <div className="mt-3 space-y-1">
             <p className="text-[11px] text-muted-foreground">
-              {isBn ? "⚠️ আবশ্যক ফিল্ড: customer_name, phone" : "⚠️ Required fields: customer_name, phone"}
+              {isBn ? "⚠️ আবশ্যক ফিল্ড: customer_name, phone — বাকি সব ঐচ্ছিক" : "⚠️ Required: customer_name, phone — everything else is optional"}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              {isBn ? "💡 extra_fields এর সব কিছু ঐচ্ছিক কিন্তু ট্র্যাকিং এর জন্য রাখা ভালো" : "💡 Everything in extra_fields is optional but useful for tracking"}
+              {isBn ? "💡 কাস্টম মেটা ফিল্ড অটোমেটিক extra_fields এ যোগ হয় — আলাদা কিছু করতে হবে না" : "💡 Custom meta fields are automatically added to extra_fields"}
             </p>
           </div>
         </CardContent>
