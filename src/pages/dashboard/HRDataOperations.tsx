@@ -406,7 +406,7 @@ export default function HRDataOperations() {
       ...rules,
       {
         id: `rule_${Date.now()}`,
-        field: "",
+        field: "status",
         value: "",
         action: "set_status",
         target_status: "",
