@@ -254,50 +254,35 @@ const TLLeads = () => {
       setProcessingLeads(proc || []);
     }
 
-    // Silver data: Bronze orders that got delivered via Steadfast → show original user data
+    // Silver data: leads that have been progressed to silver (agent_type='silver')
+    // These are fresh silver leads waiting for TL to assign to silver agents
     let silverQ = supabase
-      .from("orders")
-      .select("id, customer_name, phone, address, product, price, created_at, delivery_status, lead_id, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at)")
-      .eq("delivery_status", "delivered")
-      .order("created_at", { ascending: false });
-    if (!isBDO) silverQ = silverQ.eq("tl_id", getEffectiveTlId());
-    const { data: silverOrders } = await silverQ;
-    const silverItems: SilverGoldenLead[] = (silverOrders || []).map((o: any) => ({
-      id: o.id,
-      name: o.leads?.name || o.customer_name,
-      phone: o.leads?.phone || o.phone,
-      address: o.leads?.address || o.address,
-      source: o.leads?.source || null,
-      created_at: o.leads?.created_at || o.created_at,
-      product: o.product,
-      price: o.price,
-    }));
-    setSilverData(silverItems);
-
-    // Golden data: Silver agent leads that got delivered again
-    let goldenLeadsQ = supabase
       .from("leads")
       .select("id, name, phone, address, source, created_at, agent_type")
       .eq("agent_type", "silver")
+      .eq("status", "fresh")
+      .is("assigned_to", null)
       .order("created_at", { ascending: false });
-    if (selectedCampaign) goldenLeadsQ = goldenLeadsQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", getEffectiveTlId());
-    const { data: silverAssignedLeads } = await goldenLeadsQ;
+    if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
+    if (!isBDO) silverQ = silverQ.eq("tl_id", null); // Silver leads have tl_id cleared by progress_lead_after_cs, but campaign_id remains
+    const { data: silverLeadsData } = await silverQ;
+    setSilverData((silverLeadsData || []).map(l => ({
+      id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
+    })));
 
-    if (silverAssignedLeads && silverAssignedLeads.length > 0) {
-      const silverLeadIds = silverAssignedLeads.map(l => l.id);
-      const { data: deliveredFromSilver } = await supabase
-        .from("orders")
-        .select("lead_id")
-        .in("lead_id", silverLeadIds)
-        .eq("delivery_status", "delivered");
-      const deliveredIds = new Set((deliveredFromSilver || []).map(o => o.lead_id));
-      setGoldenData(silverAssignedLeads.filter(l => deliveredIds.has(l.id)).map(l => ({
-        id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
-      })));
-    } else {
-      setGoldenData([]);
-    }
+    // Golden data: leads that have been progressed to golden (agent_type='golden')
+    let goldenQ = supabase
+      .from("leads")
+      .select("id, name, phone, address, source, created_at, agent_type")
+      .eq("agent_type", "golden")
+      .eq("status", "fresh")
+      .is("assigned_to", null)
+      .order("created_at", { ascending: false });
+    if (selectedCampaign) goldenQ = goldenQ.eq("campaign_id", selectedCampaign);
+    const { data: goldenLeadsData } = await goldenQ;
+    setGoldenData((goldenLeadsData || []).map(l => ({
+      id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
+    })));
   }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
