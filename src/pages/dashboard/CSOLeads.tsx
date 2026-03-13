@@ -331,7 +331,7 @@ export default function CSOLeads() {
             <CheckCircle className="h-8 w-8 text-emerald-500" />
             <div>
               <p className="text-xs text-muted-foreground">Approved</p>
-              <p className="text-2xl font-heading">{approvedOrders.length}</p>
+              <p className="text-2xl font-heading">{filteredApproved.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -340,7 +340,7 @@ export default function CSOLeads() {
             <XCircle className="h-8 w-8 text-destructive" />
             <div>
               <p className="text-xs text-muted-foreground">Rejected</p>
-              <p className="text-2xl font-heading">{rejectedOrders.length}</p>
+              <p className="text-2xl font-heading">{filteredRejected.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -349,13 +349,13 @@ export default function CSOLeads() {
       <Tabs defaultValue="pending">
         <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="pending">
-            Pending ({pendingOrders.length})
+            Pending ({filteredPending.length})
           </TabsTrigger>
           <TabsTrigger value="approved">
-            Approved ({approvedOrders.length})
+            Approved ({filteredApproved.length})
           </TabsTrigger>
           <TabsTrigger value="rejected">
-            Rejected ({rejectedOrders.length})
+            Rejected ({filteredRejected.length})
           </TabsTrigger>
           <TabsTrigger value="requests">
             রিকোয়েস্ট ({myRequests.length})
