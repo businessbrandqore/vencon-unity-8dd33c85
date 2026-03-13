@@ -1406,8 +1406,10 @@ export type Database = {
           status: string | null
           steadfast_consignment_id: string | null
           steadfast_send_failed: boolean | null
+          success_ratio: number | null
           thana: string | null
           tl_id: string | null
+          upsell: string | null
           warehouse_sent_at: string | null
           warehouse_sent_by: string | null
         }
@@ -1440,8 +1442,10 @@ export type Database = {
           status?: string | null
           steadfast_consignment_id?: string | null
           steadfast_send_failed?: boolean | null
+          success_ratio?: number | null
           thana?: string | null
           tl_id?: string | null
+          upsell?: string | null
           warehouse_sent_at?: string | null
           warehouse_sent_by?: string | null
         }
@@ -1474,8 +1478,10 @@ export type Database = {
           status?: string | null
           steadfast_consignment_id?: string | null
           steadfast_send_failed?: boolean | null
+          success_ratio?: number | null
           thana?: string | null
           tl_id?: string | null
+          upsell?: string | null
           warehouse_sent_at?: string | null
           warehouse_sent_by?: string | null
         }

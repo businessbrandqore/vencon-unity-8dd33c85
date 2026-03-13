@@ -76,6 +76,8 @@ export default function EmployeeLeads() {
   const [orderPaymentMethod, setOrderPaymentMethod] = useState("");
   const [orderCardName, setOrderCardName] = useState("");
   const [orderMedia, setOrderMedia] = useState("");
+  const [orderUpsell, setOrderUpsell] = useState("");
+  const [orderSuccessRatio, setOrderSuccessRatio] = useState<number | "">("")
 
   const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
@@ -187,6 +189,7 @@ export default function EmployeeLeads() {
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
       setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
       setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+      setOrderUpsell(""); setOrderSuccessRatio("");
       setShowOrderModal(true); return;
     }
     if (newStatus === "Pre Order") {
@@ -219,6 +222,7 @@ export default function EmployeeLeads() {
       district: orderDistrict || null, thana: orderThana || null, gift_name: orderGiftName || null,
       advance_payment: orderAdvancePayment || 0, payment_method: orderPaymentMethod || null,
       card_name: orderCardName || null, order_media: orderMedia || null,
+      upsell: orderUpsell || null, success_ratio: orderSuccessRatio || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     await supabase.from("leads").update({ status: "order_confirm", called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
@@ -474,6 +478,27 @@ export default function EmployeeLeads() {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Upsell & Success Ratio */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Upsell</Label>
+                <Select value={orderUpsell} onValueChange={setOrderUpsell}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select upsell" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="01_to_02">০১ থেকে ০২</SelectItem>
+                    <SelectItem value="02_to_03">০২ থেকে ০৩</SelectItem>
+                    <SelectItem value="03_to_04">০৩ থেকে ০৪</SelectItem>
+                    <SelectItem value="04_to_05">০৪ থেকে ০৫</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Success Ratio (1-100) *</Label>
+                <Input type="number" min={1} max={100} value={orderSuccessRatio} onChange={e => setOrderSuccessRatio(e.target.value ? Number(e.target.value) : "")} className="mt-1" placeholder="1-100" />
               </div>
             </div>
 
