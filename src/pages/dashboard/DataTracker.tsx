@@ -135,7 +135,7 @@ const DataTracker = () => {
     queryFn: async () => {
       let q = supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time, special_note")
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
@@ -463,49 +463,142 @@ const DataTracker = () => {
               </p>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">#</TableHead>
-                      <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
-                      <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
-                      <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leadsLoading ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
-                    ) : filterBySearch(displayRawLeads).length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                        {isBn ? "কোনো র ডাটা নেই — সব ডাটা অপারেশনে আছে ✅" : "No raw data — all data is in operation ✅"}
-                      </TableCell></TableRow>
-                    ) : filterBySearch(displayRawLeads).map((lead, i) => (
-                      <TableRow key={lead.id}>
-                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="text-sm font-medium">
-                          <div className="flex items-center gap-1.5">
-                            <User className="h-3.5 w-3.5 text-muted-foreground" />
-                            {lead.name || "—"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{lead.address || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px]">
-                            {lead.source || lead.import_source || "—"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              {(() => {
+                // Parse special_note JSON from all raw leads to build dynamic columns
+                const filteredRaw = filterBySearch(displayRawLeads);
+                const parsedRows = filteredRaw.map((lead) => {
+                  let parsed: Record<string, unknown> = {};
+                  try {
+                    if (lead.special_note) parsed = JSON.parse(lead.special_note);
+                  } catch { /* ignore */ }
+                  return { lead, parsed };
+                });
+
+                // Collect all unique keys from parsed data (excluding nested objects/arrays for column headers)
+                const skipKeys = new Set(["webhook_secret", "secret", "x-webhook-secret"]);
+                const allKeys: string[] = [];
+                const keySet = new Set<string>();
+                parsedRows.forEach(({ parsed }) => {
+                  const flatten = (obj: any, prefix = "") => {
+                    if (!obj || typeof obj !== "object") return;
+                    for (const [k, v] of Object.entries(obj)) {
+                      const fullKey = prefix ? `${prefix}.${k}` : k;
+                      if (skipKeys.has(k.toLowerCase())) continue;
+                      if (v && typeof v === "object" && !Array.isArray(v)) {
+                        flatten(v, fullKey);
+                      } else if (Array.isArray(v)) {
+                        // For arrays (like line_items), stringify them
+                        if (!keySet.has(fullKey)) { keySet.add(fullKey); allKeys.push(fullKey); }
+                      } else {
+                        if (!keySet.has(fullKey)) { keySet.add(fullKey); allKeys.push(fullKey); }
+                      }
+                    }
+                  };
+                  flatten(parsed);
+                });
+
+                // Get value from nested key like "billing.city"
+                const getNestedValue = (obj: any, key: string): string => {
+                  const parts = key.split(".");
+                  let current = obj;
+                  for (const part of parts) {
+                    if (current == null || typeof current !== "object") return "";
+                    current = current[part];
+                  }
+                  if (current == null) return "";
+                  if (Array.isArray(current)) {
+                    // Format array items nicely (e.g. line_items)
+                    return current.map((item: any) => {
+                      if (typeof item === "object") {
+                        const name = item.name || item.product_name || item.title || "";
+                        const qty = item.quantity || item.qty || "";
+                        const price = item.total || item.price || item.subtotal || "";
+                        if (name) return `${name}${qty ? ` ×${qty}` : ""}${price ? ` ৳${price}` : ""}`;
+                        return JSON.stringify(item);
+                      }
+                      return String(item);
+                    }).join(", ");
+                  }
+                  return String(current);
+                };
+
+                // Pretty label for key
+                const prettyLabel = (key: string): string => {
+                  const last = key.split(".").pop() || key;
+                  return last.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                };
+
+                const dynamicCols = allKeys.length > 0;
+                const colCount = dynamicCols ? allKeys.length + 3 : 6; // +3 for #, source, date
+
+                return (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">#</TableHead>
+                          {dynamicCols ? (
+                            <>
+                              {allKeys.map(key => (
+                                <TableHead key={key} className="text-xs whitespace-nowrap">{prettyLabel(key)}</TableHead>
+                              ))}
+                            </>
+                          ) : (
+                            <>
+                              <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
+                              <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                              <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                            </>
+                          )}
+                          <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
+                          <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {leadsLoading ? (
+                          <TableRow><TableCell colSpan={colCount} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell></TableRow>
+                        ) : filteredRaw.length === 0 ? (
+                          <TableRow><TableCell colSpan={colCount} className="text-center py-12 text-muted-foreground">
+                            {isBn ? "কোনো র ডাটা নেই — সব ডাটা অপারেশনে আছে ✅" : "No raw data — all data is in operation ✅"}
+                          </TableCell></TableRow>
+                        ) : parsedRows.map(({ lead, parsed }, i) => (
+                          <TableRow key={lead.id}>
+                            <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                            {dynamicCols ? (
+                              <>
+                                {allKeys.map(key => (
+                                  <TableCell key={key} className="text-xs max-w-[200px] truncate" title={getNestedValue(parsed, key)}>
+                                    {getNestedValue(parsed, key) || "—"}
+                                  </TableCell>
+                                ))}
+                              </>
+                            ) : (
+                              <>
+                                <TableCell className="text-sm font-medium">
+                                  <div className="flex items-center gap-1.5">
+                                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                    {lead.name || "—"}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{lead.address || "—"}</TableCell>
+                              </>
+                            )}
+                            <TableCell>
+                              <Badge variant="outline" className="text-[10px]">
+                                {lead.source || lead.import_source || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
