@@ -678,13 +678,11 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
                     <TableHead>CS Note</TableHead>
                     <TableHead>CS Rating</TableHead>
-                    {!isProcessing && <TableHead>Silver Agent</TableHead>}
-                    {!isProcessing && <TableHead></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {callDoneOrders.length === 0 ? (
-                    <TableRow><TableCell colSpan={isProcessing ? 6 : 8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো call done order নেই" : "No call done orders"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো call done order নেই" : "No call done orders"}</TableCell></TableRow>
                   ) : callDoneOrders.map((o) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-mono text-xs">{o.id.slice(0, 8)}</TableCell>
@@ -693,25 +691,13 @@ const TLLeads = () => {
                       <TableCell>{o.product || "—"}</TableCell>
                       <TableCell>{o.cs_note || "—"}</TableCell>
                       <TableCell>{o.cs_rating || "—"}</TableCell>
-                      {!isProcessing && (
-                        <>
-                          <TableCell>
-                            <Select value={silverAssignments[o.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [o.id]: v }))}>
-                              <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                              <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" disabled={!silverAssignments[o.id]} onClick={() => assignSilver(o.id, silverAssignments[o.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                              {isBn ? "সেন্ড" : "Send"}
-                            </Button>
-                          </TableCell>
-                        </>
-                      )}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              <p className="text-xs text-muted-foreground mt-3">
+                {isBn ? "💡 Call Done হওয়ার পর ডাটা স্বয়ংক্রিয়ভাবে Silver/Golden ট্যাবে চলে যায়" : "💡 After Call Done, data auto-progresses to Silver/Golden tabs"}
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
