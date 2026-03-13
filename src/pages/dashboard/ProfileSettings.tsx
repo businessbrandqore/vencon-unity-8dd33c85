@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { User, Volume2, Globe, Camera, Loader2 } from "lucide-react";
+import WarningLights from "@/components/profile/WarningLights";
 import MonthlyOffsSection from "@/components/profile/MonthlyOffsSection";
 import ComplaintSection from "@/components/profile/ComplaintSection";
 
