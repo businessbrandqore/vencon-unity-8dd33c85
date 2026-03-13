@@ -220,10 +220,10 @@ export default function SteadfastMonitoring() {
       {/* Summary bar */}
       <Card>
         <CardContent className="py-3 px-4 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">মোট অর্ডার: <strong className="text-foreground">{orders.length}</strong></span>
+          <span className="text-muted-foreground">মোট অর্ডার: <strong className="text-foreground">{campaignFiltered.length}</strong></span>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>ডেলিভারি রেট: <strong className="text-green-400">{orders.length > 0 ? ((stats.delivered / orders.length) * 100).toFixed(1) : 0}%</strong></span>
-            <span>রিটার্ন রেট: <strong className="text-red-400">{orders.length > 0 ? ((stats.returned / orders.length) * 100).toFixed(1) : 0}%</strong></span>
+            <span>ডেলিভারি রেট: <strong className="text-green-400">{campaignFiltered.length > 0 ? ((stats.delivered / campaignFiltered.length) * 100).toFixed(1) : 0}%</strong></span>
+            <span>রিটার্ন রেট: <strong className="text-red-400">{campaignFiltered.length > 0 ? ((stats.returned / campaignFiltered.length) * 100).toFixed(1) : 0}%</strong></span>
           </div>
         </CardContent>
       </Card>
