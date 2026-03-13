@@ -619,28 +619,30 @@ const HRCampaigns = () => {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">{isBn ? "ডাটা ফ্লো" : "Data Flow"}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {detailCampaign.data_mode === "lead" ? (
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-foreground mb-1.5">🎯 {isBn ? "লিড ডাটা ফ্লো" : "Lead Data Flow"}</p>
                       <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-                        {["WordPress", "SA/HR/BDO", "TL", "Bronze Agent", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS", "TL (Silver)", "Silver Agent"].map((step, i) => (
+                        {["WordPress", "SA/HR/BDO", "TL", "Bronze Agent", "CSO", "Warehouse", "Steadfast", "DC", "CS", "TL (Silver)", "Silver Agent"].map((step, i) => (
                           <span key={i} className="flex items-center gap-1.5">
                             <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary font-medium">{step}</span>
                             {i < 10 && <span className="text-muted-foreground">→</span>}
                           </span>
                         ))}
-                        <span className="text-muted-foreground ml-1">🔄</span>
+                        <span className="text-muted-foreground ml-1">🔄 → Golden</span>
                       </div>
-                    ) : (
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-foreground mb-1.5">⚙️ {isBn ? "প্রসেসিং ডাটা ফ্লো" : "Processing Data Flow"}</p>
                       <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-                        {["WordPress", "SA/HR/BDO", "TL", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS"].map((step, i) => (
+                        {["WordPress", "SA/HR/BDO", "TL", "CSO", "Warehouse", "Steadfast", "DC", "CS"].map((step, i) => (
                           <span key={i} className="flex items-center gap-1.5">
                             <span className="px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">{step}</span>
                             {i < 7 && <span className="text-muted-foreground">→</span>}
                           </span>
                         ))}
-                        <span className="text-muted-foreground ml-1">🔄</span>
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
