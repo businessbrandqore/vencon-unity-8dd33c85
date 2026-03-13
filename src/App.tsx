@@ -44,6 +44,8 @@ import TLATLApprovals from "./pages/dashboard/TLATLApprovals";
 import EmployeeAttendance from "./pages/dashboard/EmployeeAttendance";
 import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
 import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
+import EmployeeLeadsRouter from "./pages/dashboard/EmployeeLeadsRouter";
+import CSOLeads from "./pages/dashboard/CSOLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
 import DataTracker from "./pages/dashboard/DataTracker";
@@ -131,7 +133,7 @@ const App = () => (
             {/* Employee Panel Routes */}
             <Route element={<DashboardLayout panel="employee" />}>
               <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
-              <Route path="/employee/leads" element={<EmployeeLeads />} />
+              <Route path="/employee/leads" element={<EmployeeLeadsRouter />} />
               <Route path="/employee/my-orders" element={<EmployeeMyOrders />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
