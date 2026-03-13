@@ -375,10 +375,11 @@ export default function MaintenanceOfficerDashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="logistics" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="logistics">📦 লজিস্টিক</TabsTrigger>
           <TabsTrigger value="expenses">💰 Expenses</TabsTrigger>
           <TabsTrigger value="funds">🏦 ফান্ড</TabsTrigger>
+          <TabsTrigger value="desk">🖥️ ডেস্ক</TabsTrigger>
           <TabsTrigger value="phone">📱 ফোন</TabsTrigger>
         </TabsList>
 
