@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
-import { Wrench, Plus, CalendarIcon, FileText, ArrowDownToLine, ArrowUpFromLine, Wallet, Send, TrendingUp, TrendingDown, Package } from "lucide-react";
+import { Wrench, Plus, CalendarIcon, FileText, ArrowDownToLine, ArrowUpFromLine, Wallet, Send, TrendingUp, TrendingDown, Package, Monitor } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface Expense {
