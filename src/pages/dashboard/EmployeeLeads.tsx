@@ -276,6 +276,8 @@ export default function EmployeeLeads() {
     loadLeads();
   };
 
+  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+
   if (!checkedIn) {
     return (
       <div className="space-y-6">
