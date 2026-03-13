@@ -12,7 +12,7 @@ import MaintenanceOfficerDashboard from "./MaintenanceOfficerDashboard";
 import OfficeAssistantDashboard from "./OfficeAssistantDashboard";
 
 // Roles that bypass AttendanceGate (warehouse roles work on dispatch floor, not desk)
-const GATE_EXEMPT_ROLES = ["warehouse_assistant", "warehouse_supervisor", "inventory_manager", "maintenance_officer"];
+const GATE_EXEMPT_ROLES = ["warehouse_assistant", "warehouse_supervisor", "inventory_manager", "maintenance_officer", "office_assistant"];
 
 export default function EmployeeDashboardRouter() {
   const { user } = useAuth();
