@@ -80,48 +80,81 @@ Deno.serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are a WooCommerce/WordPress PHP expert. Your job is to analyze a checkout form and generate the perfect PHP webhook code.
+    const systemPrompt = `You are a WooCommerce PHP expert. Generate CLEAN, MINIMAL PHP code for a webhook.
 
-CRITICAL RULES:
-1. Output ONLY valid PHP code, no markdown, no explanation
-2. The function must use woocommerce_thankyou hook
-3. Must send data via wp_remote_post to the given webhook URL
-4. Must include x-webhook-secret header
-5. Must include _crm_webhook_sent meta check to prevent double-sending
-6. Must capture ALL form fields found in the checkout
-7. The JSON body MUST have: customer_name, phone, address, extra_fields
-8. Use $order->get_data()['billing'] for standard fields
-9. Use $order->get_meta('field_name') for custom fields
-10. All custom/extra fields go inside extra_fields array
-11. Add Bengali comments explaining each section
-12. Function name must be: send_order_to_crm_${data_mode}`;
+STRICT RULES:
+1. Output ONLY valid PHP code. No markdown. No \`\`\`. No explanation text.
+2. Keep the code SHORT and SIMPLE — under 80 lines total
+3. Use woocommerce_thankyou hook
+4. Function name: send_order_to_crm_${data_mode}
+5. Include _crm_webhook_sent meta check (prevent double send)
+6. JSON body MUST have exactly: customer_name, phone, address, extra_fields
+7. ONLY capture fields that actually exist in the checkout form
+8. Do NOT add massive exclusion/filter lists
+9. Do NOT add hundreds of meta key exclusions
+10. For custom meta: just loop get_meta_data() and skip keys starting with _ (internal WooCommerce keys)
+11. Add short Bengali comments
+12. Use wp_remote_post with x-webhook-secret header
+13. address should be a single string, NOT an array
+
+EXAMPLE of CLEAN code structure:
+add_action('woocommerce_thankyou', 'send_order_to_crm_lead', 10, 1);
+function send_order_to_crm_lead($order_id) {
+    $order = wc_get_order($order_id);
+    if (!$order) return;
+    if ($order->get_meta('_crm_webhook_sent')) return;
+    
+    // Get billing data
+    $billing = $order->get_data()['billing'];
+    $customer_name = trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? ''));
+    $phone = $billing['phone'] ?? '';
+    $address = implode(', ', array_filter([$billing['address_1'] ?? '', $billing['city'] ?? '']));
+    
+    // Products
+    $products = []; $qty = 0;
+    foreach ($order->get_items() as $item) { $products[] = $item->get_name(); $qty += $item->get_quantity(); }
+    
+    $body = ['customer_name'=>$customer_name, 'phone'=>$phone, 'address'=>$address, 'extra_fields'=>[
+        'order_id'=>$order_id, 'product'=>implode(', ',$products), 'quantity'=>$qty, 'total'=>$order->get_total()
+    ]];
+    
+    wp_remote_post($url, ['headers'=>['Content-Type'=>'application/json','x-webhook-secret'=>$secret], 'body'=>wp_json_encode($body)]);
+    $order->update_meta_data('_crm_webhook_sent','yes'); $order->save();
+}
+
+Keep it THIS simple. Match field names to what the form actually has.`;
 
     const userPrompt = formContext
-      ? `Analyze this checkout form HTML and generate PHP code.
+      ? `Analyze this checkout form HTML. Generate CLEAN PHP code that captures ONLY the fields in this form.
 
 Website: ${site_name} (${site_url})
 Data Mode: ${data_mode === "lead" ? "Lead" : "Processing"}
 Webhook URL: ${webhook_url}
 Secret Key: ${webhook_secret}
 
-CHECKOUT FORM HTML:
+FORM HTML (analyze the input/select fields):
 ${formContext}
 
-Generate a complete PHP function that captures ALL the fields found in this form. Map each form field to the appropriate WooCommerce order getter. Include comments in Bengali explaining what each field is.`
-      : `Generate a universal PHP webhook code for a WooCommerce site.
+IMPORTANT: 
+- Look at the input names, placeholders, and labels to identify what fields exist
+- Map ONLY those fields to WooCommerce order getters
+- If the form has just name/address/phone, the code should be very simple
+- Do NOT add complex meta filtering or hundreds of exclusion keys
+- Keep it under 60 lines`
+      : `Generate a simple universal PHP webhook code.
 
 Website: ${site_name} (${site_url})
 Data Mode: ${data_mode === "lead" ? "Lead" : "Processing"}
 Webhook URL: ${webhook_url}
 Secret Key: ${webhook_secret}
 
-I could not fetch the checkout page HTML, so generate a universal code that:
-1. Captures ALL billing data dynamically from $order->get_data()['billing']
-2. Captures ALL custom meta fields from $order->get_meta_data()
-3. Captures product names and quantities
-4. Sends everything to the webhook
+Could not fetch the checkout page. Generate clean universal code that:
+1. Gets name, phone, address from billing data
+2. Gets product names and quantities
+3. Gets order total and payment method
+4. Sends to webhook
+Keep it simple and under 50 lines.`;
 
-Add Bengali comments explaining the code. Note: The checkout page could not be fetched (possibly requires cart items or blocks direct access), so the code should be as universal as possible.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
