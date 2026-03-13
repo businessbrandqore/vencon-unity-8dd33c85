@@ -14,6 +14,7 @@ const WebhookDocumentation = () => {
   const { toast } = useToast();
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string>("");
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
