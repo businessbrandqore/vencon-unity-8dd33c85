@@ -65,7 +65,6 @@ const HRCampaigns = () => {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editTLs, setEditTLs] = useState<string[]>([]);
-  const [editTLs, setEditTLs] = useState<string[]>([]);
   const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
   const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean; data_mode: string }[]>([]);
   const [saving, setSaving] = useState(false);
