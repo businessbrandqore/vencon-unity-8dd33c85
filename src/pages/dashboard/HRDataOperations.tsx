@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Save, Settings2, Activity, X, ChevronDown, ChevronUp, ArrowRight, Columns3 } from "lucide-react";
+import { Plus, Save, Settings2, Activity, X, ChevronDown, ChevronUp, ArrowRight, Columns3, FileText } from "lucide-react";
 
 /* ─── Types ─── */
 type AppPanel = "sa" | "hr" | "tl" | "employee";
