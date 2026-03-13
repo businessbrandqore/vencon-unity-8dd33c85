@@ -69,6 +69,13 @@ export default function EmployeeLeads() {
   const [orderQty, setOrderQty] = useState(1);
   const [orderPrice, setOrderPrice] = useState(0);
   const [orderNote, setOrderNote] = useState("");
+  const [orderDistrict, setOrderDistrict] = useState("");
+  const [orderThana, setOrderThana] = useState("");
+  const [orderGiftName, setOrderGiftName] = useState("");
+  const [orderAdvancePayment, setOrderAdvancePayment] = useState(0);
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState("");
+  const [orderCardName, setOrderCardName] = useState("");
+  const [orderMedia, setOrderMedia] = useState("");
 
   const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
@@ -178,6 +185,8 @@ export default function EmployeeLeads() {
     if (newStatus === "Order Confirm") {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+      setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
+      setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
       setShowOrderModal(true); return;
     }
     if (newStatus === "Pre Order") {
@@ -202,12 +211,16 @@ export default function EmployeeLeads() {
 
   const handleOrderConfirm = async () => {
     if (!currentOrderLead || !user || !orderProduct) { toast.error("Product নির্বাচন করুন"); return; }
+    if (!orderPrice || orderPrice <= 0) { toast.error("মূল্য দিন"); return; }
     const { error } = await supabase.from("orders").insert({
       customer_name: currentOrderLead.name, phone: currentOrderLead.phone, address: orderAddress,
       product: orderProduct, quantity: orderQty, price: orderPrice, agent_id: user.id,
       tl_id: currentOrderLead.tl_id, lead_id: currentOrderLead.id, status: "pending_cso",
-    });
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); return; }
+      district: orderDistrict || null, thana: orderThana || null, gift_name: orderGiftName || null,
+      advance_payment: orderAdvancePayment || 0, payment_method: orderPaymentMethod || null,
+      card_name: orderCardName || null, order_media: orderMedia || null,
+    } as any);
+    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     await supabase.from("leads").update({ status: "order_confirm", called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
@@ -377,26 +390,98 @@ export default function EmployeeLeads() {
 
       {/* Order Confirm Modal */}
       <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>অর্ডার নিশ্চিত করুন</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Order Confirmation</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>কাস্টমার</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>ফোন</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>ঠিকানা</Label><Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} className="mt-1" /></div>
-            <div>
-              <Label>প্রোডাক্ট</Label>
-              <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="প্রোডাক্ট নির্বাচন" /></SelectTrigger>
-                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+            {/* Name & Phone */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>পরিমাণ</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
-              <div><Label>মূল্য</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>Name *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>Phone *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
+
+            {/* District & Thana */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>District</Label>
+                <Input value={orderDistrict} onChange={e => setOrderDistrict(e.target.value)} className="mt-1" placeholder="জেলা লিখুন" />
+              </div>
+              <div>
+                <Label>Thana</Label>
+                <Input value={orderThana} onChange={e => setOrderThana(e.target.value)} className="mt-1" placeholder="থানা লিখুন" />
+              </div>
+            </div>
+
+            {/* Location / Address */}
+            <div>
+              <Label>Location</Label>
+              <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} className="mt-1" placeholder="সম্পূর্ণ ঠিকানা" />
+            </div>
+
+            {/* Product & Gift */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Product Name *</Label>
+                <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Gift Name</Label>
+                <Input value={orderGiftName} onChange={e => setOrderGiftName(e.target.value)} className="mt-1" placeholder="Select gift" />
+              </div>
+            </div>
+
+            {/* Amount & Advance */}
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Amount *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
+              <div><Label>Advance Payment</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
+            </div>
+
+            {/* Payment Method & Card */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Payment Method</Label>
+                <Select value={orderPaymentMethod} onValueChange={setOrderPaymentMethod}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cod">Cash on Delivery</SelectItem>
+                    <SelectItem value="bkash">বিকাশ</SelectItem>
+                    <SelectItem value="nagad">নগদ</SelectItem>
+                    <SelectItem value="rocket">রকেট</SelectItem>
+                    <SelectItem value="bank">ব্যাংক ট্রান্সফার</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Card Name</Label>
+                <Input value={orderCardName} onChange={e => setOrderCardName(e.target.value)} className="mt-1" placeholder="Select card" />
+              </div>
+            </div>
+
+            {/* Quantity & Order Media */}
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Quantity</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
+              <div>
+                <Label>Order Media</Label>
+                <Select value={orderMedia} onValueChange={setOrderMedia}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select media" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="phone_call">Phone Call</SelectItem>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="website">Website</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Note */}
             <div><Label>নোট</Label><Textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrderModal(false)}>বাতিল</Button>
             <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">নিশ্চিত করুন</Button>
           </DialogFooter>
         </DialogContent>
