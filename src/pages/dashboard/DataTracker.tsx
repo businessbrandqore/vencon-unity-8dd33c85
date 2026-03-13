@@ -589,14 +589,16 @@ const DataTracker = () => {
                                 {lead.source || lead.import_source || "—"}
                               </Badge>
                             </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
