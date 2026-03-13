@@ -256,12 +256,23 @@ export default function CSOLeads() {
     loadMyRequests();
   };
 
+  const campaignFilter = (o: OrderRow) => {
+    if (selectedCampaign === "all") return true;
+    const campId = o.lead_id ? leadCampaignMap[o.lead_id] : null;
+    return campId === selectedCampaign;
+  };
+
   const filteredPending = pendingOrders.filter(o =>
-    !search ||
-    o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    o.phone?.includes(search) ||
-    o.id.includes(search)
+    campaignFilter(o) && (
+      !search ||
+      o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      o.phone?.includes(search) ||
+      o.id.includes(search)
+    )
   );
+
+  const filteredApproved = approvedOrders.filter(campaignFilter);
+  const filteredRejected = rejectedOrders.filter(campaignFilter);
 
   const statusBadge = (s: string) => {
     switch (s) {
