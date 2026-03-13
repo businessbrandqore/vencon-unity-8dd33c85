@@ -67,7 +67,7 @@ const WebhookDocumentation = () => {
   };
 
   const handleTestConnection = async () => {
-    if (!selectedCampaign?.webhook_secret) return;
+    if (!activeSecret) return;
     setTesting(true);
     setTestResult(null);
     try {
@@ -75,7 +75,7 @@ const WebhookDocumentation = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Webhook-Secret": selectedCampaign.webhook_secret,
+          "X-Webhook-Secret": activeSecret,
         },
         body: JSON.stringify({
           customer_name: "Test Customer",
