@@ -130,7 +130,7 @@ const HRCampaigns = () => {
 
     // Insert websites
     const siteInserts = validSites.map((s) => ({
-      campaign_id: camp.id, site_name: s.name.trim(), site_url: s.url.trim(),
+      campaign_id: camp.id, site_name: s.name.trim(), site_url: s.url.trim(), data_mode: s.dataMode,
     }));
     await supabase.from("campaign_websites").insert(siteInserts);
 
