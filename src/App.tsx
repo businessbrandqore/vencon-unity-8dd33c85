@@ -48,6 +48,7 @@ import EmployeeLeadsRouter from "./pages/dashboard/EmployeeLeadsRouter";
 import CSOLeads from "./pages/dashboard/CSOLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
+import WarehouseDispatchPage from "./pages/dashboard/WarehouseDispatchPage";
 import DataTracker from "./pages/dashboard/DataTracker";
 import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
@@ -135,6 +136,7 @@ const App = () => (
               <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
               <Route path="/employee/leads" element={<EmployeeLeadsRouter />} />
               <Route path="/employee/my-orders" element={<EmployeeMyOrders />} />
+              <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
               <Route path="/employee/chat" element={<ChatPage />} />

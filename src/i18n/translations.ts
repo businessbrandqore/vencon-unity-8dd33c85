@@ -70,6 +70,7 @@ export const translations: TranslationMap = {
   agent_assignment: { bn: "এজেন্ট অ্যাসাইনমেন্ট", en: "Agent Assignment" },
   tl_approvals_bdo: { bn: "TL অনুরোধ", en: "TL Requests" },
   atl_approvals: { bn: "ATL এপ্রোভাল", en: "ATL Approvals" },
+  order_dispatch: { bn: "অর্ডার ডিসপ্যাচ", en: "Order Dispatch" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },
