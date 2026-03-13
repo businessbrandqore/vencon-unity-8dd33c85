@@ -160,6 +160,9 @@ export default function HRDataOperations() {
   const [hasChanges, setHasChanges] = useState(false);
   const [liveEvents, setLiveEvents] = useState<LiveOperationEvent[]>([]);
 
+  const liveTabActive = activeTab === "live";
+  const lastEventAtRef = useRef(0);
+
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns-for-ops"],
     queryFn: async () => {
@@ -171,6 +174,8 @@ export default function HRDataOperations() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: existingConfig, isLoading: configLoading } = useQuery({
