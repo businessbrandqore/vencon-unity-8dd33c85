@@ -156,6 +156,21 @@ const HRLeaves = () => {
     fetchAll();
   };
 
+  const handleAppealDecision = async (appeal: any, decision: "approved" | "rejected") => {
+    if (!user) return;
+    if (decision === "approved") {
+      await supabase.from("employee_monthly_offs").update({ off_date: appeal.requested_date }).eq("id", appeal.off_id);
+    }
+    await supabase
+      .from("off_day_appeals" as any)
+      .update({ status: decision, decided_by: user.id, decided_at: new Date().toISOString() } as any)
+      .eq("id", appeal.id);
+    toast({ title: decision === "approved" ? "আপিল অনুমোদিত ✓" : "আপিল প্রত্যাখ্যাত" });
+    fetchAll();
+  };
+
+  const pendingAppeals = offAppeals.filter((a) => a.status === "pending");
+
   const filteredHistory = filterEmployee === "all"
     ? history
     : history.filter((h) => h.user_id === filterEmployee);
