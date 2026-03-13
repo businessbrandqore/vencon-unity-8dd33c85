@@ -135,7 +135,7 @@ const DataTracker = () => {
     queryFn: async () => {
       let q = supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time, special_note")
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
