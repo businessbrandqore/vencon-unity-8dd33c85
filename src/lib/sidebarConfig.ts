@@ -63,6 +63,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "attendance_leaves", icon: Clock, path: "/hr/attendance" },
     { titleKey: "my_attendance", icon: Clock, path: "/hr/my-attendance" },
     { titleKey: "customer_feedback", icon: Star, path: "/hr/feedback" },
+    { titleKey: "complaints", icon: AlertTriangle, path: "/hr/complaints" },
     { titleKey: "chat", icon: MessageSquare, path: "/hr/chat" },
     { titleKey: "notifications", icon: Bell, path: "/hr/notifications" },
     { titleKey: "documentation", icon: BookOpen, path: "/hr/documentation" },
