@@ -18,6 +18,8 @@ const WebhookDocumentation = () => {
   const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [analyzingWebsiteId, setAnalyzingWebsiteId] = useState<string | null>(null);
+  const [analyzedResults, setAnalyzedResults] = useState<Record<string, { code: string; fields: string[]; formFound: boolean }>>({});
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
