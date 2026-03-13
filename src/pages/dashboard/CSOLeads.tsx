@@ -227,12 +227,16 @@ export default function CSOLeads() {
       return;
     }
     setSendingRequest(true);
-    const { error } = await supabase.from("data_requests").insert({
+    const insertData: any = {
       requested_by: user.id,
       tl_id: dataRequestTlId,
       message: dataRequestMsg.trim(),
       status: "pending",
-    });
+    };
+    if (dataRequestCampaignId && dataRequestCampaignId !== "all") {
+      insertData.campaign_id = dataRequestCampaignId;
+    }
+    const { error } = await supabase.from("data_requests").insert(insertData);
 
     if (error) {
       toast.error("রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে");
