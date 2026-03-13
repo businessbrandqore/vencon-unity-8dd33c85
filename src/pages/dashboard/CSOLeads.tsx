@@ -621,6 +621,18 @@ export default function CSOLeads() {
               </Select>
             </div>
             <div>
+              <label className="text-sm font-medium mb-1 block">ক্যাম্পেইন (ঐচ্ছিক)</label>
+              <Select value={dataRequestCampaignId} onValueChange={setDataRequestCampaignId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="ক্যাম্পেইন বাছাই করুন..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            <div>
               <label className="text-sm font-medium mb-1 block">মেসেজ</label>
               <Textarea
                 value={dataRequestMsg}
