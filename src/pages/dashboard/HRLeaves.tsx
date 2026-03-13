@@ -42,6 +42,8 @@ const HRLeaves = () => {
   const [loading, setLoading] = useState(true);
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [offAppeals, setOffAppeals] = useState<any[]>([]);
+  const [appealNames, setAppealNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchAll();
