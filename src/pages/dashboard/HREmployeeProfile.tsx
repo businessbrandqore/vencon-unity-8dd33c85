@@ -268,9 +268,12 @@ const HREmployeeProfile = () => {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-2xl font-bold text-foreground">{emp.name}</h2>
-          <p className="font-body text-sm text-muted-foreground">{emp.role} • {emp.email}</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="font-heading text-2xl font-bold text-foreground">{emp.name}</h2>
+            <p className="font-body text-sm text-muted-foreground">{emp.role} • {emp.email}</p>
+          </div>
+          <WarningLights targetUserId={emp.id} canView={true} />
         </div>
         <button onClick={() => navigate("/hr/employees")} className="text-xs px-3 py-1.5 border border-border text-foreground hover:bg-secondary">
           {isBn ? "← তালিকা" : "← Back"}
