@@ -309,8 +309,8 @@ function send_order_to_crm_${dataMode}(\$order_id) {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
             {isBn
-              ? "আপনার WordPress/WooCommerce সাইটে কেউ চেক-আউট ফর্ম পূরণ করে অর্ডার করলে, সেই অর্ডারের তথ্য (নাম, ফোন, ঠিকানা, প্রোডাক্ট) অটোমেটিক আমাদের CRM সিস্টেমে চলে আসবে — Lead অথবা Processing ডাটা হিসেবে। কোনো ম্যানুয়াল কাজ লাগবে না।"
-              : "When someone places an order via your WooCommerce checkout, the order data (name, phone, address, product) is automatically sent to our CRM as Lead or Processing data. No manual work needed."}
+              ? "আপনার WordPress/WooCommerce সাইটে কেউ চেক-আউট ফর্ম পূরণ করে অর্ডার করলে, সেই অর্ডারের সব তথ্য অটোমেটিক আমাদের CRM সিস্টেমে চলে আসবে। ফর্ম যেভাবেই বানানো হোক — স্ট্যান্ডার্ড WooCommerce, CartFlows, FunnelKit, বা কাস্টম — সব কাজ করবে।"
+              : "When someone places an order via your WooCommerce checkout, all order data is automatically sent to our CRM. Works with ANY checkout: standard WooCommerce, CartFlows, FunnelKit, or custom forms."}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-xs font-body">
             {[
