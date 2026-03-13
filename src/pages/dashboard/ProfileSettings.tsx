@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { User, Volume2, Globe, Camera, Loader2 } from "lucide-react";
+import WarningLights from "@/components/profile/WarningLights";
 import MonthlyOffsSection from "@/components/profile/MonthlyOffsSection";
 import ComplaintSection from "@/components/profile/ComplaintSection";
 
@@ -158,7 +159,13 @@ export default function ProfileSettings() {
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">নাম</Label>
-                <p className="font-medium mt-1">{profile.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="font-medium">{profile.name}</p>
+                  <WarningLights
+                    targetUserId={profile.id}
+                    canView={!!user && (user.panel === "sa" || user.panel === "hr" || user.panel === "tl" || user.role === "Business Development And Marketing Manager")}
+                  />
+                </div>
               </div>
               <div>
                 <Label className="text-muted-foreground">ইমেইল</Label>
