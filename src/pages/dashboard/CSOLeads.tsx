@@ -519,7 +519,7 @@ export default function CSOLeads() {
                         </td>
                       </tr>
                     ))}
-                    {rejectedOrders.length === 0 && (
+                    {filteredRejected.length === 0 && (
                       <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো rejected অর্ডার নেই</td></tr>
                     )}
                   </tbody>
