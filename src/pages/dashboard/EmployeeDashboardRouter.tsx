@@ -5,6 +5,7 @@ import WarehouseAssistantDashboard from "./WarehouseAssistantDashboard";
 import WarehouseSupervisorDashboard from "./WarehouseSupervisorDashboard";
 import InventoryManagerDashboard from "./InventoryManagerDashboard";
 import CSExecutiveDashboard from "./CSExecutiveDashboard";
+import CSODashboard from "./CSODashboard";
 import DeliveryCoordinatorDashboard from "./DeliveryCoordinatorDashboard";
 import GroupLeaderDashboard from "./GroupLeaderDashboard";
 import MaintenanceOfficerDashboard from "./MaintenanceOfficerDashboard";
@@ -30,6 +31,8 @@ export default function EmployeeDashboardRouter() {
         return <InventoryManagerDashboard />;
       case "cs_executive":
         return <CSExecutiveDashboard />;
+      case "cso":
+        return <CSODashboard />;
       case "delivery_coordinator":
         return <DeliveryCoordinatorDashboard />;
       case "group_leader":
