@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,16 +13,20 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Settings2, Activity, X } from "lucide-react";
+import { Plus, Save, Settings2, Activity, X } from "lucide-react";
 
 /* ─── Types ─── */
+type AppPanel = "sa" | "hr" | "tl" | "employee";
+
 interface StatusOption {
   id: string;
   value: string;
   label: string;
   label_bn: string;
   color?: string;
-  next_status?: string; // auto-progress after this
+  next_status?: string;
+  next_panel?: AppPanel | "";
+  next_location?: string;
 }
 
 interface RoleStatusConfig {
@@ -41,6 +45,8 @@ interface LiveLeadRow {
 }
 
 /* ─── Constants ─── */
+const NO_OPTION = "__none__";
+
 const SALES_ROLES = [
   { value: "telesales_executive", label: "টেলিসেলস (Bronze)" },
   { value: "silver_agent", label: "সিলভার এজেন্ট" },
@@ -62,6 +68,39 @@ const STATUS_COLORS = [
   { value: "gray", label: "ধূসর" },
 ];
 
+const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
+  { value: "employee", label: "Employee Panel" },
+  { value: "tl", label: "TL Panel" },
+  { value: "hr", label: "HR Panel" },
+  { value: "sa", label: "SA Panel" },
+];
+
+const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string }>> = {
+  employee: [
+    { value: "leads", label: "Leads" },
+    { value: "cs-leads", label: "CS Leads" },
+    { value: "my-orders", label: "My Orders" },
+    { value: "dispatch", label: "Dispatch" },
+    { value: "steadfast", label: "Steadfast Monitoring" },
+  ],
+  tl: [
+    { value: "leads", label: "TL Leads" },
+    { value: "my-leads", label: "My Leads" },
+    { value: "data-requests", label: "Data Requests" },
+    { value: "my-team", label: "Team" },
+  ],
+  hr: [
+    { value: "data-monitor", label: "Data Monitor" },
+    { value: "data-tracker", label: "Data Tracker" },
+    { value: "approvals", label: "Approvals" },
+  ],
+  sa: [
+    { value: "all-data", label: "All Data" },
+    { value: "data-tracker", label: "Data Tracker" },
+    { value: "approvals", label: "Approvals" },
+  ],
+};
+
 const colorClasses: Record<string, string> = {
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
   green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
@@ -73,19 +112,32 @@ const colorClasses: Record<string, string> = {
 };
 
 /* ─── Helpers ─── */
+const panelSet = new Set<AppPanel>(["sa", "hr", "tl", "employee"]);
+
 const parseRoleConfigs = (raw: unknown): RoleStatusConfig[] => {
   if (!Array.isArray(raw)) return [];
-  return raw.map((item: any) => ({
+
+  return raw.map((item: any, roleIndex: number) => ({
     role: item.role || "",
     statuses: Array.isArray(item.statuses)
-      ? item.statuses.map((s: any, i: number) => ({
-          id: s.id || `s_${Date.now()}_${i}`,
-          value: s.value || "",
-          label: s.label || "",
-          label_bn: s.label_bn || "",
-          color: s.color || "gray",
-          next_status: s.next_status || "",
-        }))
+      ? item.statuses.map((s: any, statusIndex: number) => {
+          const nextPanel = panelSet.has(s.next_panel) ? s.next_panel : "";
+          const validLocations = nextPanel ? PANEL_DESTINATIONS[nextPanel] : [];
+          const nextLocation = validLocations.some((loc) => loc.value === s.next_location)
+            ? s.next_location
+            : "";
+
+          return {
+            id: s.id || `${item.role || "role"}_${roleIndex}_${statusIndex}_${s.value || "status"}`,
+            value: s.value || "",
+            label: s.label || "",
+            label_bn: s.label_bn || "",
+            color: s.color || "gray",
+            next_status: s.next_status || "",
+            next_panel: nextPanel,
+            next_location: nextLocation,
+          };
+        })
       : [],
   }));
 };
