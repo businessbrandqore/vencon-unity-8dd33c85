@@ -1,26 +1,34 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, GripVertical, ArrowRight, Settings2 } from "lucide-react";
+import { Plus, Trash2, Save, GripVertical, ArrowRight, Settings2, Activity } from "lucide-react";
 
 interface FieldConfig {
+  id: string;
   key: string;
   label: string;
   label_bn: string;
   type: "text" | "number" | "select" | "textarea";
   options?: string[];
   required?: boolean;
-  visible_to?: string[]; // roles that can see this field
+  visible_to?: string[];
 }
 
 interface RoutingRule {
@@ -31,6 +39,24 @@ interface RoutingRule {
   target_status?: string;
   target_role?: string;
   description: string;
+}
+
+interface LiveLeadRow {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  status: string | null;
+  agent_type: string | null;
+  updated_at: string | null;
+}
+
+interface LiveOperationEvent {
+  id: string;
+  leadId: string;
+  eventType: string;
+  status: string;
+  position: string;
+  happenedAt: string;
 }
 
 const SALES_ROLES = [
@@ -58,18 +84,80 @@ const ACTION_TYPES = [
   { value: "notify", label: "নোটিফিকেশন পাঠাও" },
 ];
 
+const normalizeFields = (raw: unknown): FieldConfig[] => {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((item, index) => {
+    const field = (item ?? {}) as Partial<FieldConfig>;
+    const safeKey = field.key?.trim() || `field_${index + 1}`;
+
+    return {
+      id: field.id || `${safeKey}_${index}`,
+      key: safeKey,
+      label: field.label || "",
+      label_bn: field.label_bn || "",
+      type:
+        field.type === "number" ||
+        field.type === "select" ||
+        field.type === "textarea" ||
+        field.type === "text"
+          ? field.type
+          : "text",
+      options: Array.isArray(field.options) ? field.options.filter(Boolean) : [],
+      required: Boolean(field.required),
+      visible_to: Array.isArray(field.visible_to) ? field.visible_to.filter(Boolean) : [],
+    };
+  });
+};
+
+const normalizeRules = (raw: unknown): RoutingRule[] => {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((item, index) => {
+    const rule = (item ?? {}) as Partial<RoutingRule>;
+
+    return {
+      id: rule.id || `rule_${index + 1}`,
+      field: rule.field || "",
+      value: rule.value || "",
+      action:
+        rule.action === "create_order" ||
+        rule.action === "archive" ||
+        rule.action === "notify" ||
+        rule.action === "set_status"
+          ? rule.action
+          : "set_status",
+      target_status: rule.target_status || "",
+      target_role: rule.target_role || "",
+      description: rule.description || "",
+    };
+  });
+};
+
+const formatDateTime = (value: string | null) => {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("bn-BD", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(value));
+};
+
 export default function HRDataOperations() {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const [selectedMode, setSelectedMode] = useState<string>("lead");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("fields");
   const [fields, setFields] = useState<FieldConfig[]>([]);
   const [rules, setRules] = useState<RoutingRule[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [liveEvents, setLiveEvents] = useState<LiveOperationEvent[]>([]);
 
-  // Fetch campaigns
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns-for-ops"],
     queryFn: async () => {
@@ -83,7 +171,6 @@ export default function HRDataOperations() {
     },
   });
 
-  // Fetch existing config
   const { data: existingConfig, isLoading: configLoading } = useQuery({
     queryKey: ["data-operations-config", selectedCampaign, selectedMode],
     queryFn: async () => {
@@ -98,13 +185,38 @@ export default function HRDataOperations() {
       return data;
     },
     enabled: !!selectedCampaign,
+    refetchOnWindowFocus: false,
   });
 
-  // Load config when fetched
+  const { data: liveLeads = [], isLoading: liveLoading } = useQuery({
+    queryKey: ["hr-live-operations-data", selectedCampaign, selectedMode],
+    queryFn: async () => {
+      if (!selectedCampaign) return [] as LiveLeadRow[];
+
+      let leadsQuery = supabase
+        .from("leads")
+        .select("id, name, phone, status, agent_type, updated_at")
+        .eq("campaign_id", selectedCampaign)
+        .order("updated_at", { ascending: false })
+        .limit(50);
+
+      if (selectedMode === "lead") {
+        leadsQuery = leadsQuery.eq("status", "fresh");
+      } else {
+        leadsQuery = leadsQuery.neq("status", "fresh");
+      }
+
+      const { data, error } = await leadsQuery;
+      if (error) throw error;
+      return (data || []) as LiveLeadRow[];
+    },
+    enabled: !!selectedCampaign,
+  });
+
   useEffect(() => {
     if (existingConfig) {
-      setFields((existingConfig.fields_config as unknown as FieldConfig[]) || []);
-      setRules((existingConfig.routing_rules as unknown as RoutingRule[]) || []);
+      setFields(normalizeFields(existingConfig.fields_config));
+      setRules(normalizeRules(existingConfig.routing_rules));
     } else {
       setFields([]);
       setRules([]);
@@ -112,7 +224,57 @@ export default function HRDataOperations() {
     setHasChanges(false);
   }, [existingConfig]);
 
-  // Save mutation
+  useEffect(() => {
+    setLiveEvents([]);
+  }, [selectedCampaign, selectedMode]);
+
+  useEffect(() => {
+    if (!selectedCampaign) return;
+
+    const channel = supabase
+      .channel(`hr-data-operations-live-${selectedCampaign}-${selectedMode}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "leads",
+          filter: `campaign_id=eq.${selectedCampaign}`,
+        },
+        (payload) => {
+          const row = ((payload.new as Partial<LiveLeadRow>) ||
+            (payload.old as Partial<LiveLeadRow>) || {}) as Partial<LiveLeadRow>;
+
+          const rowStatus = row.status || "";
+          const isLeadModeRow = rowStatus === "fresh";
+
+          if (selectedMode === "lead" && !isLeadModeRow) return;
+          if (selectedMode === "processing" && isLeadModeRow) return;
+
+          setLiveEvents((prev) => [
+            {
+              id: `${payload.eventType}-${row.id || "unknown"}-${Date.now()}`,
+              leadId: row.id || "unknown",
+              eventType: payload.eventType,
+              status: row.status || "—",
+              position: row.agent_type || "—",
+              happenedAt: new Date().toISOString(),
+            },
+            ...prev,
+          ].slice(0, 30));
+
+          queryClient.invalidateQueries({
+            queryKey: ["hr-live-operations-data", selectedCampaign, selectedMode],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, selectedCampaign, selectedMode]);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selectedCampaign || !user) throw new Error("Missing data");
@@ -142,22 +304,58 @@ export default function HRDataOperations() {
     onSuccess: () => {
       toast.success("কনফিগারেশন সেভ হয়েছে!");
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ["data-operations-config"] });
+      queryClient.invalidateQueries({ queryKey: ["data-operations-config", selectedCampaign, selectedMode] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Field management
+  const visibleFieldRows = useMemo(
+    () =>
+      fields
+        .map((field, index) => ({ field, index }))
+        .filter(({ field }) =>
+          selectedRole === "all"
+            ? true
+            : !field.visible_to?.length || field.visible_to.includes(selectedRole)
+        ),
+    [fields, selectedRole]
+  );
+
+  const visibleRuleRows = useMemo(
+    () =>
+      rules
+        .map((rule, index) => ({ rule, index }))
+        .filter(({ rule }) =>
+          selectedRole === "all" ? true : !rule.target_role || rule.target_role === selectedRole
+        ),
+    [rules, selectedRole]
+  );
+
+  const selectableFields = useMemo(
+    () =>
+      fields.filter(
+        (field) =>
+          field.type === "select" &&
+          (selectedRole === "all" || !field.visible_to?.length || field.visible_to.includes(selectedRole))
+      ),
+    [fields, selectedRole]
+  );
+
   const addField = () => {
-    setFields([...fields, {
-      key: `field_${Date.now()}`,
-      label: "",
-      label_bn: "",
-      type: "text",
-      options: [],
-      required: false,
-      visible_to: [],
-    }]);
+    const id = `field_${Date.now()}`;
+    setFields([
+      ...fields,
+      {
+        id,
+        key: id,
+        label: "",
+        label_bn: "",
+        type: "text",
+        options: [],
+        required: false,
+        visible_to: selectedRole === "all" ? [] : [selectedRole],
+      },
+    ]);
     setHasChanges(true);
   };
 
@@ -173,17 +371,19 @@ export default function HRDataOperations() {
     setHasChanges(true);
   };
 
-  // Rule management
   const addRule = () => {
-    setRules([...rules, {
-      id: `rule_${Date.now()}`,
-      field: "",
-      value: "",
-      action: "set_status",
-      target_status: "",
-      target_role: "",
-      description: "",
-    }]);
+    setRules([
+      ...rules,
+      {
+        id: `rule_${Date.now()}`,
+        field: "",
+        value: "",
+        action: "set_status",
+        target_status: "",
+        target_role: selectedRole === "all" ? "" : selectedRole,
+        description: "",
+      },
+    ]);
     setHasChanges(true);
   };
 
@@ -201,7 +401,6 @@ export default function HRDataOperations() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -209,7 +408,7 @@ export default function HRDataOperations() {
             ডাটা অপারেশন কনফিগারেশন
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            ক্যাম্পেইন অনুযায়ী এজেন্টদের ডাটা ফিল্ড এবং রাউটিং রুল কনফিগার করুন
+            ক্যাম্পেইন অনুযায়ী ফিল্ড, রাউটিং রুল এবং লাইভ অপারেশন মনিটর করুন
           </p>
         </div>
         {hasChanges && (
@@ -220,10 +419,9 @@ export default function HRDataOperations() {
         )}
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>ক্যাম্পেইন নির্বাচন করুন</Label>
               <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
@@ -231,9 +429,9 @@ export default function HRDataOperations() {
                   <SelectValue placeholder="ক্যাম্পেইন সিলেক্ট করুন..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {campaigns?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                  {campaigns?.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -251,42 +449,60 @@ export default function HRDataOperations() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>পদ/রোল</Label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব পদ</SelectItem>
+                  {SALES_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          {configLoading && (
+            <p className="text-xs text-muted-foreground mt-3">কনফিগারেশন লোড হচ্ছে...</p>
+          )}
         </CardContent>
       </Card>
 
       {selectedCampaign && (
-        <Tabs defaultValue="fields" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="fields">
-              কাস্টম ফিল্ড ({fields.length})
-            </TabsTrigger>
-            <TabsTrigger value="routing">
-              রাউটিং রুল ({rules.length})
+            <TabsTrigger value="fields">কাস্টম ফিল্ড ({visibleFieldRows.length})</TabsTrigger>
+            <TabsTrigger value="routing">রাউটিং রুল ({visibleRuleRows.length})</TabsTrigger>
+            <TabsTrigger value="live" className="flex items-center gap-1">
+              <Activity className="h-3 w-3" />
+              লাইভ ({liveEvents.length})
             </TabsTrigger>
           </TabsList>
 
-          {/* Fields Tab */}
           <TabsContent value="fields" className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                এজেন্টদের কাজের ইন্টারফেসে অতিরিক্ত ফিল্ড যোগ করুন। ওয়েবসাইটের আসল ডাটা অক্ষত থাকবে।
+                এজেন্টদের কাজের ইন্টারফেসে অতিরিক্ত ফিল্ড যোগ করুন (মূল ওয়েবসাইট ডাটা অক্ষত থাকবে)
               </p>
               <Button variant="outline" size="sm" onClick={addField}>
                 <Plus className="h-4 w-4 mr-1" /> ফিল্ড যোগ করুন
               </Button>
             </div>
 
-            {fields.length === 0 && (
+            {visibleFieldRows.length === 0 && (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  কোনো কাস্টম ফিল্ড নেই। "ফিল্ড যোগ করুন" বাটনে ক্লিক করুন।
+                  এই পদের জন্য কোনো কাস্টম ফিল্ড নেই। "ফিল্ড যোগ করুন" বাটনে ক্লিক করুন।
                 </CardContent>
               </Card>
             )}
 
-            {fields.map((field, idx) => (
-              <Card key={field.key} className="relative">
+            {visibleFieldRows.map(({ field, index }) => (
+              <Card key={field.id} className="relative">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
                     <GripVertical className="h-5 w-5 text-muted-foreground mt-2 shrink-0" />
@@ -295,7 +511,7 @@ export default function HRDataOperations() {
                         <Label className="text-xs">ফিল্ড নাম (EN)</Label>
                         <Input
                           value={field.label}
-                          onChange={(e) => updateField(idx, { label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                          onChange={(e) => updateField(index, { label: e.target.value })}
                           placeholder="e.g. Product"
                         />
                       </div>
@@ -303,7 +519,7 @@ export default function HRDataOperations() {
                         <Label className="text-xs">ফিল্ড নাম (বাংলা)</Label>
                         <Input
                           value={field.label_bn}
-                          onChange={(e) => updateField(idx, { label_bn: e.target.value })}
+                          onChange={(e) => updateField(index, { label_bn: e.target.value })}
                           placeholder="e.g. প্রোডাক্ট"
                         />
                       </div>
@@ -311,14 +527,16 @@ export default function HRDataOperations() {
                         <Label className="text-xs">ফিল্ড টাইপ</Label>
                         <Select
                           value={field.type}
-                          onValueChange={(v) => updateField(idx, { type: v as FieldConfig["type"] })}
+                          onValueChange={(value) => updateField(index, { type: value as FieldConfig["type"] })}
                         >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {FIELD_TYPES.map((ft) => (
-                              <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>
+                            {FIELD_TYPES.map((fieldType) => (
+                              <SelectItem key={fieldType.value} value={fieldType.value}>
+                                {fieldType.label}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -327,32 +545,44 @@ export default function HRDataOperations() {
                         <Label className="text-xs">দৃশ্যমান (রোল)</Label>
                         <Select
                           value={field.visible_to?.[0] || "all"}
-                          onValueChange={(v) => updateField(idx, { visible_to: v === "all" ? [] : [v] })}
+                          onValueChange={(value) =>
+                            updateField(index, { visible_to: value === "all" ? [] : [value] })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">সবাই</SelectItem>
-                            {SALES_ROLES.map((r) => (
-                              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                            {SALES_ROLES.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Select options */}
                       {field.type === "select" && (
                         <div className="col-span-full space-y-1">
                           <Label className="text-xs">অপশনসমূহ (কমা দিয়ে আলাদা করুন)</Label>
                           <Input
                             value={field.options?.join(", ") || ""}
-                            onChange={(e) => updateField(idx, { options: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
+                            onChange={(e) =>
+                              updateField(index, {
+                                options: e.target.value
+                                  .split(",")
+                                  .map((value) => value.trim())
+                                  .filter(Boolean),
+                              })
+                            }
                             placeholder="e.g. Product A, Product B, Product C"
                           />
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {field.options?.map((opt, oi) => (
-                              <Badge key={oi} variant="secondary" className="text-xs">{opt}</Badge>
+                            {field.options?.map((option, optionIndex) => (
+                              <Badge key={optionIndex} variant="secondary" className="text-xs">
+                                {option}
+                              </Badge>
                             ))}
                           </div>
                         </div>
@@ -362,7 +592,7 @@ export default function HRDataOperations() {
                       variant="ghost"
                       size="icon"
                       className="shrink-0 text-destructive hover:text-destructive"
-                      onClick={() => removeField(idx)}
+                      onClick={() => removeField(index)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -372,26 +602,25 @@ export default function HRDataOperations() {
             ))}
           </TabsContent>
 
-          {/* Routing Rules Tab */}
           <TabsContent value="routing" className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                এজেন্ট কোনো ভ্যালু সিলেক্ট করলে ডাটা কোথায় যাবে তা নির্ধারণ করুন।
+                ভ্যালু-ভিত্তিক রাউটিং কনফিগার করুন (পদ সিলেক্ট করে দ্রুত পরিবর্তন করা যাবে)
               </p>
               <Button variant="outline" size="sm" onClick={addRule}>
                 <Plus className="h-4 w-4 mr-1" /> রুল যোগ করুন
               </Button>
             </div>
 
-            {rules.length === 0 && (
+            {visibleRuleRows.length === 0 && (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  কোনো রাউটিং রুল নেই। "রুল যোগ করুন" বাটনে ক্লিক করুন।
+                  এই পদের জন্য কোনো রাউটিং রুল নেই। "রুল যোগ করুন" বাটনে ক্লিক করুন।
                 </CardContent>
               </Card>
             )}
 
-            {rules.map((rule, idx) => (
+            {visibleRuleRows.map(({ rule, index }) => (
               <Card key={rule.id}>
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
@@ -399,17 +628,16 @@ export default function HRDataOperations() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div className="space-y-1">
                           <Label className="text-xs">কোন ফিল্ডে</Label>
-                          <Select
-                            value={rule.field}
-                            onValueChange={(v) => updateRule(idx, { field: v })}
-                          >
+                          <Select value={rule.field} onValueChange={(value) => updateRule(index, { field: value })}>
                             <SelectTrigger>
                               <SelectValue placeholder="ফিল্ড সিলেক্ট..." />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="status">স্ট্যাটাস (Lead Status)</SelectItem>
-                              {fields.filter(f => f.type === "select").map((f) => (
-                                <SelectItem key={f.key} value={f.key}>{f.label || f.key}</SelectItem>
+                              {selectableFields.map((field) => (
+                                <SelectItem key={field.key} value={field.key}>
+                                  {field.label || field.key}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -418,7 +646,7 @@ export default function HRDataOperations() {
                           <Label className="text-xs">কোন ভ্যালু হলে</Label>
                           <Input
                             value={rule.value}
-                            onChange={(e) => updateRule(idx, { value: e.target.value })}
+                            onChange={(e) => updateRule(index, { value: e.target.value })}
                             placeholder="e.g. confirmed"
                           />
                         </div>
@@ -426,14 +654,16 @@ export default function HRDataOperations() {
                           <Label className="text-xs">কী হবে</Label>
                           <Select
                             value={rule.action}
-                            onValueChange={(v) => updateRule(idx, { action: v as RoutingRule["action"] })}
+                            onValueChange={(value) => updateRule(index, { action: value as RoutingRule["action"] })}
                           >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {ACTION_TYPES.map((a) => (
-                                <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                              {ACTION_TYPES.map((action) => (
+                                <SelectItem key={action.value} value={action.value}>
+                                  {action.label}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -446,24 +676,26 @@ export default function HRDataOperations() {
                             <Label className="text-xs">টার্গেট স্ট্যাটাস</Label>
                             <Input
                               value={rule.target_status || ""}
-                              onChange={(e) => updateRule(idx, { target_status: e.target.value })}
+                              onChange={(e) => updateRule(index, { target_status: e.target.value })}
                               placeholder="e.g. pending_cso"
                             />
                           </div>
                         )}
                         {(rule.action === "notify" || rule.action === "create_order") && (
                           <div className="space-y-1">
-                            <Label className="text-xs">টার্গেট রোল</Label>
+                            <Label className="text-xs">টার্গেট পদ</Label>
                             <Select
                               value={rule.target_role || ""}
-                              onValueChange={(v) => updateRule(idx, { target_role: v })}
+                              onValueChange={(value) => updateRule(index, { target_role: value })}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="রোল..." />
+                                <SelectValue placeholder="পদ সিলেক্ট করুন..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {SALES_ROLES.map((r) => (
-                                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                                {SALES_ROLES.map((role) => (
+                                  <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -473,25 +705,38 @@ export default function HRDataOperations() {
                           <Label className="text-xs">বিবরণ</Label>
                           <Input
                             value={rule.description}
-                            onChange={(e) => updateRule(idx, { description: e.target.value })}
+                            onChange={(e) => updateRule(index, { description: e.target.value })}
                             placeholder="এই রুলটি কী করে..."
                           />
                         </div>
                       </div>
 
-                      {/* Visual flow */}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
-                        <Badge variant="outline" className="text-xs">{rule.field || "?"}</Badge>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs">
+                          {rule.field || "?"}
+                        </Badge>
                         <span>=</span>
-                        <Badge variant="outline" className="text-xs">{rule.value || "?"}</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {rule.value || "?"}
+                        </Badge>
                         <ArrowRight className="h-3 w-3" />
                         <Badge className="text-xs bg-primary/10 text-primary border-0">
-                          {ACTION_TYPES.find(a => a.value === rule.action)?.label}
+                          {ACTION_TYPES.find((action) => action.value === rule.action)?.label}
                         </Badge>
                         {rule.target_status && (
                           <>
                             <ArrowRight className="h-3 w-3" />
-                            <Badge variant="secondary" className="text-xs">{rule.target_status}</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {rule.target_status}
+                            </Badge>
+                          </>
+                        )}
+                        {rule.target_role && (
+                          <>
+                            <ArrowRight className="h-3 w-3" />
+                            <Badge variant="secondary" className="text-xs">
+                              {SALES_ROLES.find((role) => role.value === rule.target_role)?.label || rule.target_role}
+                            </Badge>
                           </>
                         )}
                       </div>
@@ -500,7 +745,7 @@ export default function HRDataOperations() {
                       variant="ghost"
                       size="icon"
                       className="shrink-0 text-destructive hover:text-destructive"
-                      onClick={() => removeRule(idx)}
+                      onClick={() => removeRule(index)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -508,6 +753,110 @@ export default function HRDataOperations() {
                 </CardContent>
               </Card>
             ))}
+          </TabsContent>
+
+          <TabsContent value="live" className="space-y-4">
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    এখানে সিলেক্ট করা ক্যাম্পেইনের ডাটা এবং চলমান অপারেশন লাইভ দেখা যাবে
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">ডাটা: {liveLeads.length}</Badge>
+                    <Badge variant="outline">লাইভ ইভেন্ট: {liveEvents.length}</Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-4">
+                      <h3 className="text-sm font-semibold text-foreground mb-3">
+                        {selectedMode === "lead" ? "লাইভ লিড ডাটা" : "লাইভ প্রসেসিং ডাটা"}
+                      </h3>
+                      {liveLoading ? (
+                        <p className="text-sm text-muted-foreground">ডাটা লোড হচ্ছে...</p>
+                      ) : liveLeads.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">এই ফিল্টারে কোনো ডাটা নেই।</p>
+                      ) : (
+                        <div className="max-h-[360px] overflow-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>নাম</TableHead>
+                                <TableHead>ফোন</TableHead>
+                                <TableHead>স্ট্যাটাস</TableHead>
+                                <TableHead>পদ</TableHead>
+                                <TableHead>আপডেট</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {liveLeads.map((lead) => (
+                                <TableRow key={lead.id}>
+                                  <TableCell className="font-mono text-xs">{lead.id.slice(0, 8)}</TableCell>
+                                  <TableCell>{lead.name || "—"}</TableCell>
+                                  <TableCell>{lead.phone || "—"}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {lead.status || "—"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{lead.agent_type || "—"}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {formatDateTime(lead.updated_at)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-4">
+                      <h3 className="text-sm font-semibold text-foreground mb-3">লাইভ অপারেশন লগ</h3>
+                      {liveEvents.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          এখনো কোনো লাইভ অপারেশন ধরা পড়েনি। ডাটা আপডেট হলে এখানে দেখা যাবে।
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-[360px] overflow-auto">
+                          {liveEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className="rounded-md border border-border bg-card px-3 py-2 flex items-center justify-between gap-3"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {event.eventType}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    {event.leadId.slice(0, 8)}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {event.status}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {event.position}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatDateTime(event.happenedAt)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       )}
