@@ -10,6 +10,9 @@ import DeliveryCoordinatorDashboard from "./DeliveryCoordinatorDashboard";
 import GroupLeaderDashboard from "./GroupLeaderDashboard";
 import MaintenanceOfficerDashboard from "./MaintenanceOfficerDashboard";
 
+// Roles that bypass AttendanceGate (warehouse roles work on dispatch floor, not desk)
+const GATE_EXEMPT_ROLES = ["warehouse_assistant", "warehouse_supervisor", "inventory_manager"];
+
 export default function EmployeeDashboardRouter() {
   const { user } = useAuth();
 
@@ -20,7 +23,6 @@ export default function EmployeeDashboardRouter() {
     return <EmployeeTSDashboard />;
   }
 
-  // All other roles use AttendanceGate wrapper
   const getDashboard = () => {
     switch (user.role) {
       case "warehouse_assistant":
@@ -43,6 +45,11 @@ export default function EmployeeDashboardRouter() {
         return <EmployeeTSDashboard />;
     }
   };
+
+  // Warehouse roles skip AttendanceGate
+  if (GATE_EXEMPT_ROLES.includes(user.role)) {
+    return getDashboard();
+  }
 
   return <AttendanceGate>{getDashboard()}</AttendanceGate>;
 }
