@@ -163,7 +163,7 @@ export default function ProfileSettings() {
                   <p className="font-medium">{profile.name}</p>
                   <WarningLights
                     targetUserId={profile.id}
-                    canView={!!user && (user.panel === "sa" || user.panel === "hr" || user.panel === "tl" || user.role === "Business Development And Marketing Manager")}
+                    canView={!!user && (user.id === profile.id || user.panel === "sa" || user.panel === "hr" || user.panel === "tl" || user.role === "Business Development And Marketing Manager")}
                   />
                 </div>
               </div>
