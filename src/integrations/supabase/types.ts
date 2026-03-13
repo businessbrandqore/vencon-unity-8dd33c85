@@ -1379,7 +1379,9 @@ export type Database = {
       orders: {
         Row: {
           address: string | null
+          advance_payment: number | null
           agent_id: string | null
+          card_name: string | null
           created_at: string | null
           cs_call_done_at: string | null
           cs_id: string | null
@@ -1389,8 +1391,12 @@ export type Database = {
           cso_id: string | null
           customer_name: string | null
           delivery_status: string | null
+          district: string | null
+          gift_name: string | null
           id: string
           lead_id: string | null
+          order_media: string | null
+          payment_method: string | null
           phone: string | null
           price: number | null
           product: string | null
@@ -1400,13 +1406,16 @@ export type Database = {
           status: string | null
           steadfast_consignment_id: string | null
           steadfast_send_failed: boolean | null
+          thana: string | null
           tl_id: string | null
           warehouse_sent_at: string | null
           warehouse_sent_by: string | null
         }
         Insert: {
           address?: string | null
+          advance_payment?: number | null
           agent_id?: string | null
+          card_name?: string | null
           created_at?: string | null
           cs_call_done_at?: string | null
           cs_id?: string | null
@@ -1416,8 +1425,12 @@ export type Database = {
           cso_id?: string | null
           customer_name?: string | null
           delivery_status?: string | null
+          district?: string | null
+          gift_name?: string | null
           id?: string
           lead_id?: string | null
+          order_media?: string | null
+          payment_method?: string | null
           phone?: string | null
           price?: number | null
           product?: string | null
@@ -1427,13 +1440,16 @@ export type Database = {
           status?: string | null
           steadfast_consignment_id?: string | null
           steadfast_send_failed?: boolean | null
+          thana?: string | null
           tl_id?: string | null
           warehouse_sent_at?: string | null
           warehouse_sent_by?: string | null
         }
         Update: {
           address?: string | null
+          advance_payment?: number | null
           agent_id?: string | null
+          card_name?: string | null
           created_at?: string | null
           cs_call_done_at?: string | null
           cs_id?: string | null
@@ -1443,8 +1459,12 @@ export type Database = {
           cso_id?: string | null
           customer_name?: string | null
           delivery_status?: string | null
+          district?: string | null
+          gift_name?: string | null
           id?: string
           lead_id?: string | null
+          order_media?: string | null
+          payment_method?: string | null
           phone?: string | null
           price?: number | null
           product?: string | null
@@ -1454,6 +1474,7 @@ export type Database = {
           status?: string | null
           steadfast_consignment_id?: string | null
           steadfast_send_failed?: boolean | null
+          thana?: string | null
           tl_id?: string | null
           warehouse_sent_at?: string | null
           warehouse_sent_by?: string | null
