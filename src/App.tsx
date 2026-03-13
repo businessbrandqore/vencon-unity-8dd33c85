@@ -37,6 +37,7 @@ import HRFeedback from "./pages/dashboard/HRFeedback";
 import HRChatAdmin from "./pages/dashboard/HRChatAdmin";
 import HRComplaints from "./pages/dashboard/HRComplaints";
 import WebhookDocumentation from "./pages/dashboard/WebhookDocumentation";
+import HRDataOperations from "./pages/dashboard/HRDataOperations";
 import TLDashboard from "./pages/dashboard/TLDashboard";
 import TLLeads from "./pages/dashboard/TLLeads";
 import BDOAgentAssignment from "./pages/dashboard/BDOAgentAssignment";
