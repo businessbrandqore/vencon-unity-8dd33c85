@@ -42,6 +42,8 @@ export default function EmployeeDashboardRouter() {
         return <GroupLeaderDashboard />;
       case "maintenance_officer":
         return <MaintenanceOfficerDashboard />;
+      case "office_assistant":
+        return <OfficeAssistantDashboard />;
       default:
         return <EmployeeTSDashboard />;
     }
