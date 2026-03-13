@@ -376,7 +376,8 @@ const DataTracker = () => {
       const [countRes, dataRes] = await Promise.all([countQ, dataQ]);
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "agent_changed",
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED ORDERS =====
