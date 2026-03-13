@@ -322,7 +322,7 @@ export default function CSOLeads() {
             <Clock className="h-8 w-8 text-amber-500" />
             <div>
               <p className="text-xs text-muted-foreground">Pending Review</p>
-              <p className="text-2xl font-heading">{pendingOrders.length}</p>
+              <p className="text-2xl font-heading">{filteredPending.length}</p>
             </div>
           </CardContent>
         </Card>
