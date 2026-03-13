@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,16 +13,20 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Settings2, Activity, X } from "lucide-react";
+import { Plus, Save, Settings2, Activity, X } from "lucide-react";
 
 /* ─── Types ─── */
+type AppPanel = "sa" | "hr" | "tl" | "employee";
+
 interface StatusOption {
   id: string;
   value: string;
   label: string;
   label_bn: string;
   color?: string;
-  next_status?: string; // auto-progress after this
+  next_status?: string;
+  next_panel?: AppPanel | "";
+  next_location?: string;
 }
 
 interface RoleStatusConfig {
@@ -41,6 +45,8 @@ interface LiveLeadRow {
 }
 
 /* ─── Constants ─── */
+const NO_OPTION = "__none__";
+
 const SALES_ROLES = [
   { value: "telesales_executive", label: "টেলিসেলস (Bronze)" },
   { value: "silver_agent", label: "সিলভার এজেন্ট" },
@@ -62,6 +68,39 @@ const STATUS_COLORS = [
   { value: "gray", label: "ধূসর" },
 ];
 
+const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
+  { value: "employee", label: "Employee Panel" },
+  { value: "tl", label: "TL Panel" },
+  { value: "hr", label: "HR Panel" },
+  { value: "sa", label: "SA Panel" },
+];
+
+const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string }>> = {
+  employee: [
+    { value: "leads", label: "Leads" },
+    { value: "cs-leads", label: "CS Leads" },
+    { value: "my-orders", label: "My Orders" },
+    { value: "dispatch", label: "Dispatch" },
+    { value: "steadfast", label: "Steadfast Monitoring" },
+  ],
+  tl: [
+    { value: "leads", label: "TL Leads" },
+    { value: "my-leads", label: "My Leads" },
+    { value: "data-requests", label: "Data Requests" },
+    { value: "my-team", label: "Team" },
+  ],
+  hr: [
+    { value: "data-monitor", label: "Data Monitor" },
+    { value: "data-tracker", label: "Data Tracker" },
+    { value: "approvals", label: "Approvals" },
+  ],
+  sa: [
+    { value: "all-data", label: "All Data" },
+    { value: "data-tracker", label: "Data Tracker" },
+    { value: "approvals", label: "Approvals" },
+  ],
+};
+
 const colorClasses: Record<string, string> = {
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
   green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
@@ -73,19 +112,32 @@ const colorClasses: Record<string, string> = {
 };
 
 /* ─── Helpers ─── */
+const panelSet = new Set<AppPanel>(["sa", "hr", "tl", "employee"]);
+
 const parseRoleConfigs = (raw: unknown): RoleStatusConfig[] => {
   if (!Array.isArray(raw)) return [];
-  return raw.map((item: any) => ({
+
+  return raw.map((item: any, roleIndex: number) => ({
     role: item.role || "",
     statuses: Array.isArray(item.statuses)
-      ? item.statuses.map((s: any, i: number) => ({
-          id: s.id || `s_${Date.now()}_${i}`,
-          value: s.value || "",
-          label: s.label || "",
-          label_bn: s.label_bn || "",
-          color: s.color || "gray",
-          next_status: s.next_status || "",
-        }))
+      ? item.statuses.map((s: any, statusIndex: number) => {
+          const nextPanel = panelSet.has(s.next_panel) ? s.next_panel : "";
+          const validLocations = nextPanel ? PANEL_DESTINATIONS[nextPanel] : [];
+          const nextLocation = validLocations.some((loc) => loc.value === s.next_location)
+            ? s.next_location
+            : "";
+
+          return {
+            id: s.id || `${item.role || "role"}_${roleIndex}_${statusIndex}_${s.value || "status"}`,
+            value: s.value || "",
+            label: s.label || "",
+            label_bn: s.label_bn || "",
+            color: s.color || "gray",
+            next_status: s.next_status || "",
+            next_panel: nextPanel,
+            next_location: nextLocation,
+          };
+        })
       : [],
   }));
 };
@@ -153,21 +205,40 @@ export default function HRDataOperations() {
     refetchOnWindowFocus: false,
   });
 
-  // ─── Sync config → state ───
+  const normalizedConfig = useMemo(
+    () => parseRoleConfigs(existingConfig?.fields_config),
+    [existingConfig?.fields_config],
+  );
+  const configFingerprint = useMemo(
+    () => JSON.stringify(normalizedConfig),
+    [normalizedConfig],
+  );
+  const lastAppliedConfigRef = useRef("");
+
+  // ─── Sync config → state (without clobbering active edits) ───
   useEffect(() => {
-    if (existingConfig) {
-      // fields_config stores our role-status configs
-      setRoleConfigs(parseRoleConfigs(existingConfig.fields_config));
-    } else {
-      setRoleConfigs([]);
-    }
     setHasChanges(false);
-  }, [existingConfig]);
+    lastAppliedConfigRef.current = "";
+  }, [selectedCampaign, selectedMode]);
+
+  useEffect(() => {
+    if (!selectedCampaign) {
+      setRoleConfigs([]);
+      return;
+    }
+
+    if (hasChanges) return;
+    if (lastAppliedConfigRef.current === configFingerprint) return;
+
+    setRoleConfigs(normalizedConfig);
+    lastAppliedConfigRef.current = configFingerprint;
+  }, [selectedCampaign, normalizedConfig, configFingerprint, hasChanges]);
 
   // ─── Current role config ───
-  const currentRoleConfig = useMemo(() => {
-    return roleConfigs.find((rc) => rc.role === selectedRole);
-  }, [roleConfigs, selectedRole]);
+  const currentRoleConfig = useMemo(
+    () => roleConfigs.find((rc) => rc.role === selectedRole),
+    [roleConfigs, selectedRole],
+  );
 
   const currentStatuses = currentRoleConfig?.statuses || [];
 
@@ -177,6 +248,11 @@ export default function HRDataOperations() {
     roleConfigs.forEach((rc) => rc.statuses.forEach((s) => { if (s.value) set.add(s.value); }));
     return Array.from(set);
   }, [roleConfigs]);
+
+  const getPanelLocations = (panel?: AppPanel | "") => {
+    if (!panel) return [];
+    return PANEL_DESTINATIONS[panel] || [];
+  };
 
   // ─── Mutations ───
   const updateRoleStatuses = (statuses: StatusOption[]) => {
@@ -191,20 +267,43 @@ export default function HRDataOperations() {
   };
 
   const addStatus = () => {
-    const id = `status_${Date.now()}`;
+    const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `status_${Date.now()}`;
+
     updateRoleStatuses([
       ...currentStatuses,
-      { id, value: "", label: "", label_bn: "", color: "gray", next_status: "" },
+      {
+        id,
+        value: "",
+        label: "",
+        label_bn: "",
+        color: "gray",
+        next_status: "",
+        next_panel: "",
+        next_location: "",
+      },
     ]);
   };
 
   const updateStatus = (idx: number, updates: Partial<StatusOption>) => {
     const updated = [...currentStatuses];
-    updated[idx] = { ...updated[idx], ...updates };
-    // auto-sync value from label if value is empty
-    if (updates.label && !updated[idx].value) {
-      updated[idx].value = updates.label.toLowerCase().replace(/\s+/g, "_");
+    const current = updated[idx];
+    const merged = { ...current, ...updates };
+
+    if (updates.label && !current.value) {
+      merged.value = updates.label.toLowerCase().replace(/\s+/g, "_");
     }
+
+    if (Object.prototype.hasOwnProperty.call(updates, "next_panel")) {
+      const panel = updates.next_panel || "";
+      const validLocations = panel ? getPanelLocations(panel) : [];
+      if (!validLocations.some((loc) => loc.value === merged.next_location)) {
+        merged.next_location = "";
+      }
+    }
+
+    updated[idx] = merged;
     updateRoleStatuses(updated);
   };
 
@@ -226,24 +325,34 @@ export default function HRDataOperations() {
       };
 
       if (existingConfig?.id) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("campaign_data_operations")
           .update(payload)
-          .eq("id", existingConfig.id);
+          .eq("id", existingConfig.id)
+          .select("*")
+          .single();
+
         if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("campaign_data_operations")
-          .insert(payload);
-        if (error) throw error;
+        return data;
       }
+
+      const { data, error } = await supabase
+        .from("campaign_data_operations")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (savedConfig) => {
       toast.success("কনফিগারেশন সেভ হয়েছে!");
       setHasChanges(false);
-      queryClient.invalidateQueries({
-        queryKey: ["data-operations-config", selectedCampaign, selectedMode],
-      });
+      queryClient.setQueryData(
+        ["data-operations-config", selectedCampaign, selectedMode],
+        savedConfig,
+      );
+      lastAppliedConfigRef.current = JSON.stringify(parseRoleConfigs(savedConfig?.fields_config));
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -378,90 +487,136 @@ export default function HRDataOperations() {
                           <TableHead>লেবেল (বাংলা)</TableHead>
                           <TableHead>রঙ</TableHead>
                           <TableHead>পরবর্তী স্ট্যাটাস</TableHead>
+                          <TableHead>পরবর্তী প্যানেল</TableHead>
+                          <TableHead>প্যানেলের ভেতরে কোথায় যাবে</TableHead>
                           <TableHead>প্রিভিউ</TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {currentStatuses.map((status, idx) => (
-                          <TableRow key={status.id}>
-                            <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                            <TableCell>
-                              <Input
-                                value={status.value}
-                                onChange={(e) => updateStatus(idx, { value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
-                                placeholder="order_confirm"
-                                className="h-8 text-sm font-mono"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={status.label}
-                                onChange={(e) => updateStatus(idx, { label: e.target.value })}
-                                placeholder="Order Confirm"
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={status.label_bn}
-                                onChange={(e) => updateStatus(idx, { label_bn: e.target.value })}
-                                placeholder="অর্ডার কনফার্ম"
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={status.color || "gray"}
-                                onValueChange={(v) => updateStatus(idx, { color: v })}
-                              >
-                                <SelectTrigger className="h-8 w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {STATUS_COLORS.map((c) => (
-                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={status.next_status || "__none__"}
-                                onValueChange={(v) => updateStatus(idx, { next_status: v === "__none__" ? "" : v })}
-                              >
-                                <SelectTrigger className="h-8 w-36">
-                                  <SelectValue placeholder="নেই" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">নেই</SelectItem>
-                                  {allStatusValues
-                                    .filter((sv) => sv !== status.value)
-                                    .map((sv) => (
-                                      <SelectItem key={sv} value={sv}>{sv}</SelectItem>
+                        {currentStatuses.map((status, idx) => {
+                          const panelLocations = getPanelLocations(status.next_panel);
+
+                          return (
+                            <TableRow key={status.id}>
+                              <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                              <TableCell>
+                                <Input
+                                  value={status.value}
+                                  onChange={(e) => updateStatus(idx, { value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                                  placeholder="order_confirm"
+                                  className="h-8 text-sm font-mono"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={status.label}
+                                  onChange={(e) => updateStatus(idx, { label: e.target.value })}
+                                  placeholder="Order Confirm"
+                                  className="h-8 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={status.label_bn}
+                                  onChange={(e) => updateStatus(idx, { label_bn: e.target.value })}
+                                  placeholder="অর্ডার কনফার্ম"
+                                  className="h-8 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.color || "gray"}
+                                  onValueChange={(v) => updateStatus(idx, { color: v })}
+                                >
+                                  <SelectTrigger className="h-8 w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {STATUS_COLORS.map((c) => (
+                                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                                     ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              {status.value && (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[status.color || "gray"] || colorClasses.gray}`}>
-                                  {status.label_bn || status.label || status.value}
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => removeStatus(idx)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.next_status || NO_OPTION}
+                                  onValueChange={(v) => updateStatus(idx, { next_status: v === NO_OPTION ? "" : v })}
+                                >
+                                  <SelectTrigger className="h-8 w-36">
+                                    <SelectValue placeholder="নেই" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_OPTION}>নেই</SelectItem>
+                                    {allStatusValues
+                                      .filter((sv) => sv !== status.value)
+                                      .map((sv) => (
+                                        <SelectItem key={sv} value={sv}>{sv}</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.next_panel || NO_OPTION}
+                                  onValueChange={(v) => updateStatus(idx, { next_panel: v === NO_OPTION ? "" : (v as AppPanel) })}
+                                >
+                                  <SelectTrigger className="h-8 w-36">
+                                    <SelectValue placeholder="প্যানেল" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_OPTION}>নির্বাচন করুন</SelectItem>
+                                    {PANEL_OPTIONS.map((panel) => (
+                                      <SelectItem key={panel.value} value={panel.value}>{panel.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.next_location || NO_OPTION}
+                                  onValueChange={(v) => updateStatus(idx, { next_location: v === NO_OPTION ? "" : v })}
+                                  disabled={!status.next_panel}
+                                >
+                                  <SelectTrigger className="h-8 w-44">
+                                    <SelectValue placeholder="সেকশন" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_OPTION}>নির্বাচন করুন</SelectItem>
+                                    {panelLocations.map((location) => (
+                                      <SelectItem key={location.value} value={location.value}>{location.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                {status.value && (
+                                  <div className="space-y-1">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[status.color || "gray"] || colorClasses.gray}`}>
+                                      {status.label_bn || status.label || status.value}
+                                    </span>
+                                    {(status.next_panel || status.next_location) && (
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {(status.next_panel || "—").toUpperCase()} / {status.next_location || "—"}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => removeStatus(idx)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -474,7 +629,7 @@ export default function HRDataOperations() {
               <Card>
                 <CardContent className="pt-4">
                   <p className="text-xs text-muted-foreground mb-2">
-                    এই পদের কর্মী যে স্ট্যাটাসগুলো দেখতে পাবে:
+                    এই পদের কর্মী যে স্ট্যাটাসগুলো দেখতে পাবে (এবং কোন প্যানেলে রাউট হবে):
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {currentStatuses.map((s) => (
@@ -485,6 +640,9 @@ export default function HRDataOperations() {
                         {s.label_bn || s.label || s.value}
                         {s.next_status && (
                           <span className="ml-1 opacity-60 text-xs">→ {s.next_status}</span>
+                        )}
+                        {(s.next_panel || s.next_location) && (
+                          <span className="ml-1 opacity-70 text-xs">({(s.next_panel || "—").toUpperCase()}/{s.next_location || "—"})</span>
                         )}
                       </span>
                     ))}
@@ -523,6 +681,9 @@ export default function HRDataOperations() {
                               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colorClasses[s.color || "gray"] || colorClasses.gray}`}
                             >
                               {s.label_bn || s.label || s.value}
+                              {(s.next_panel || s.next_location) && (
+                                <span className="ml-1 opacity-70">({(s.next_panel || "—").toUpperCase()}/{s.next_location || "—"})</span>
+                              )}
                             </span>
                           ))}
                         </div>
