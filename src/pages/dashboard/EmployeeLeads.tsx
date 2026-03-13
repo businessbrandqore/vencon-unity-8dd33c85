@@ -83,6 +83,10 @@ export default function EmployeeLeads() {
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
   const [preOrderDate, setPreOrderDate] = useState<Date>();
   const [preOrderNote, setPreOrderNote] = useState("");
+  const [preOrderDistrict, setPreOrderDistrict] = useState("");
+  const [preOrderThana, setPreOrderThana] = useState("");
+  const [preOrderAddress, setPreOrderAddress] = useState("");
+  const [preOrderProduct, setPreOrderProduct] = useState("");
 
   const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0 });
   const [tick, setTick] = useState(0);
