@@ -466,7 +466,7 @@ export default function CSOLeads() {
                     </tr>
                   </thead>
                   <tbody>
-                    {approvedOrders.map((o) => (
+                    {filteredApproved.map((o) => (
                       <tr key={o.id} className="border-b border-border">
                         <td className="py-2 px-2 font-mono text-xs">{o.id.slice(0, 8)}</td>
                         <td className="py-2 px-2">{o.customer_name || "—"}</td>
