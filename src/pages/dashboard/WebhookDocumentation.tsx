@@ -50,12 +50,15 @@ const WebhookDocumentation = () => {
   });
 
   const selectedCampaign = campaigns?.find((c) => c.id === selectedCampaignId);
+  const selectedWebsite = campaignWebsites?.find((w) => w.id === selectedWebsiteId);
   const webhookUrl = selectedCampaignId
     ? `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}`
     : "";
 
-  const maskedSecret = selectedCampaign?.webhook_secret
-    ? "•".repeat(Math.max(0, selectedCampaign.webhook_secret.length - 8)) + selectedCampaign.webhook_secret.slice(-8)
+  // Use website-specific secret if selected, otherwise campaign secret
+  const activeSecret = selectedWebsite?.webhook_secret || selectedCampaign?.webhook_secret || "";
+  const maskedSecret = activeSecret
+    ? "•".repeat(Math.max(0, activeSecret.length - 8)) + activeSecret.slice(-8)
     : "";
 
   const copyText = (text: string) => {
