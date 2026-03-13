@@ -25,6 +25,13 @@ interface OrderRow {
   rider_name: string | null;
   rider_phone: string | null;
   created_at: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
 }
 
 const DELIVERY_STATUSES = [
