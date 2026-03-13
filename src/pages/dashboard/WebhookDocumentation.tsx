@@ -293,79 +293,12 @@ function send_order_to_crm_${dataMode}(\$order_id) {
             </Select>
           </div>
 
-          {/* Website (Lead/Processing) selector */}
-          {selectedCampaign && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                {isBn ? "ওয়েবসাইট সিলেক্ট করুন (Lead / Processing)" : "Select Website (Lead / Processing)"}
-              </label>
-              {campaignWebsites && campaignWebsites.length > 0 ? (
-                <Select value={selectedWebsiteId} onValueChange={(v) => { setSelectedWebsiteId(v); setShowSecret(false); setTestResult(null); }}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={isBn ? "— ওয়েবসাইট বেছে নিন (Lead / Processing) —" : "— Choose a website (Lead / Processing) —"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {campaignWebsites.map((ws) => (
-                      <SelectItem key={ws.id} value={ws.id}>
-                        <span className="flex items-center gap-2">
-                          <Globe className="h-3.5 w-3.5 text-primary" />
-                          {ws.site_name}
-                          <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
-                            {ws.data_mode === "lead" ? "Lead" : "Processing"}
-                          </Badge>
-                          {ws.is_active ? (
-                            <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">Active</Badge>
-                          ) : (
-                            <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
-                          )}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
-                  <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-                    {isBn ? "⚠️ এই ক্যাম্পেইনে কোনো ওয়েবসাইট যোগ করা হয়নি।" : "⚠️ No websites added to this campaign yet."}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {isBn 
-                      ? "প্রতিটি ক্যাম্পেইনে দুটি ওয়েবসাইট (একটি Lead, একটি Processing) যোগ করতে হবে। Campaign সেটিংসে গিয়ে ওয়েবসাইট যোগ করুন — তাহলে এখানে আলাদা আলাদা সেটআপ কোড ও Secret Key পাবেন।" 
-                      : "Each campaign needs two websites (one Lead, one Processing). Go to Campaign settings to add websites — then you'll get separate setup code & Secret Keys here."}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {isBn ? "📍 যান: সাইডবার → ক্যাম্পেইন → এই ক্যাম্পেইন এডিট করুন → ওয়েবসাইট ট্যাব" : "📍 Go to: Sidebar → Campaigns → Edit this campaign → Websites tab"}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Show credentials when campaign (and optionally website) is selected */}
-          {selectedCampaign && (
+          {/* Show both websites' credentials when campaign is selected */}
+          {selectedCampaign && campaignWebsites && campaignWebsites.length > 0 ? (
             <div className="space-y-4 pt-2">
-              {/* Selected info summary */}
-              {selectedWebsite && (
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Globe className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">{selectedWebsite.site_name}</span>
-                    <Badge variant={selectedWebsite.data_mode === "lead" ? "default" : "secondary"}>
-                      {selectedWebsite.data_mode === "lead" ? "Lead Data" : "Processing Data"}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">→ {selectedWebsite.site_url}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {isBn 
-                      ? `এই ওয়েবসাইট থেকে আসা ডাটা "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}" হিসেবে সেভ হবে।`
-                      : `Data from this website will be saved as "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}".`}
-                  </p>
-                </div>
-              )}
-
-              {/* Webhook URL */}
+              {/* Webhook URL (same for both) */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Webhook URL</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Webhook URL ({isBn ? "দুটি সাইটের জন্য একই" : "Same for both sites"})</label>
                 <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted border border-border">
                   <code className="text-xs text-foreground flex-1 break-all font-mono">{webhookUrl}</code>
                   <button onClick={() => copyText(webhookUrl)} className="text-muted-foreground hover:text-primary shrink-0">
@@ -374,52 +307,103 @@ function send_order_to_crm_${dataMode}(\$order_id) {
                 </div>
               </div>
 
-              {/* Secret Key */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">
-                  {selectedWebsite 
-                    ? (isBn ? `Secret Key — ${selectedWebsite.site_name} (${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'})` : `Secret Key — ${selectedWebsite.site_name} (${selectedWebsite.data_mode})`)
-                    : (isBn ? "Campaign Secret Key" : "Campaign Secret Key")}
-                </label>
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted border border-border">
-                  <code className="text-xs text-foreground flex-1 break-all font-mono">
-                    {showSecret ? activeSecret : maskedSecret}
-                  </code>
-                  <button onClick={() => setShowSecret(!showSecret)} className="text-muted-foreground hover:text-primary shrink-0">
-                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                  <button onClick={() => copyText(activeSecret)} className="text-muted-foreground hover:text-primary shrink-0">
-                    <Copy className="h-4 w-4" />
-                  </button>
+              {/* Each website card with its own secret */}
+              <div className="grid gap-3 md:grid-cols-2">
+                {campaignWebsites.map((ws) => {
+                  const wsMasked = ws.webhook_secret
+                    ? "•".repeat(Math.max(0, ws.webhook_secret.length - 8)) + ws.webhook_secret.slice(-8)
+                    : "";
+                  const isLead = ws.data_mode === "lead";
+                  return (
+                    <div key={ws.id} className={`p-4 rounded-xl border-2 space-y-3 ${isLead ? "border-primary/40 bg-primary/5" : "border-purple-500/40 bg-purple-500/5"}`}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Globe className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-bold text-foreground">{ws.site_name}</span>
+                        <Badge variant={isLead ? "default" : "secondary"} className="text-[10px]">
+                          {isLead ? "Lead" : "Processing"}
+                        </Badge>
+                        {ws.is_active ? (
+                          <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">Active</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {isBn 
+                          ? `এই সাইট থেকে ডাটা "${isLead ? 'Lead' : 'Processing'}" হিসেবে CRM-এ আসবে।`
+                          : `Data from this site arrives as "${isLead ? 'Lead' : 'Processing'}" in CRM.`}
+                      </p>
+                      <div>
+                        <label className="text-[11px] font-medium text-muted-foreground block mb-1">
+                          Secret Key — {ws.site_name}
+                        </label>
+                        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted border border-border">
+                          <code className="text-[11px] text-foreground flex-1 break-all font-mono">
+                            {selectedWebsiteId === ws.id && showSecret ? ws.webhook_secret : wsMasked}
+                          </code>
+                          <button onClick={() => { setSelectedWebsiteId(ws.id); setShowSecret(selectedWebsiteId === ws.id ? !showSecret : true); }} className="text-muted-foreground hover:text-primary shrink-0">
+                            {selectedWebsiteId === ws.id && showSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                          <button onClick={() => copyText(ws.webhook_secret)} className="text-muted-foreground hover:text-primary shrink-0">
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      {/* Per-website test */}
+                      <Button size="sm" variant="outline" className="w-full text-xs" onClick={async () => {
+                        setSelectedWebsiteId(ws.id);
+                        setTesting(true);
+                        setTestResult(null);
+                        try {
+                          const res = await fetch(webhookUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "X-Webhook-Secret": ws.webhook_secret },
+                            body: JSON.stringify({ customer_name: "Test", phone: `test-${Date.now()}`, address: "Test Address" }),
+                          });
+                          const data = await res.json();
+                          if (res.ok && (data.imported > 0 || data.skipped_duplicates > 0)) {
+                            setTestResult({ success: true, message: `✓ ${ws.site_name} — OK!` });
+                          } else {
+                            setTestResult({ success: false, message: data.error || "Error" });
+                          }
+                        } catch (err) { setTestResult({ success: false, message: String(err) }); }
+                        finally { setTesting(false); }
+                      }} disabled={testing || selectedCampaign.status !== "active"}>
+                        {testing && selectedWebsiteId === ws.id ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1" />}
+                        {isBn ? `টেস্ট — ${ws.site_name}` : `Test — ${ws.site_name}`}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Test result */}
+              {testResult && (
+                <div className={`flex items-center gap-1.5 text-xs p-2 rounded-lg ${testResult.success ? "text-green-600 bg-green-500/10" : "text-destructive bg-destructive/10"}`}>
+                  {testResult.success ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                  {testResult.message}
                 </div>
-                {!selectedWebsite && campaignWebsites && campaignWebsites.length > 0 && (
-                  <p className="text-[11px] text-amber-600 mt-1">
-                    {isBn ? "⚠️ ওয়েবসাইট সিলেক্ট করুন — প্রতিটি সাইটের নিজস্ব Secret Key আছে যা ডাটা মোড (Lead/Processing) নির্ধারণ করে।" 
-                          : "⚠️ Select a website — each site has its own Secret Key that determines data mode (Lead/Processing)."}
-                  </p>
-                )}
-              </div>
+              )}
 
-              {/* Test Button */}
-              <div className="flex items-center gap-3 pt-2">
-                <Button size="sm" onClick={handleTestConnection} disabled={testing || selectedCampaign.status !== "active"}>
-                  {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  {isBn ? "টেস্ট করুন" : "Test Connection"}
-                </Button>
-                {selectedCampaign.status !== "active" && (
-                  <span className="text-xs text-destructive">{isBn ? "⚠️ ক্যাম্পেইন Active নয়" : "⚠️ Campaign not active"}</span>
-                )}
-                {testResult && (
-                  <div className={`flex items-center gap-1.5 text-xs ${testResult.success ? "text-green-600" : "text-destructive"}`}>
-                    {testResult.success ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-                    {testResult.message}
-                  </div>
-                )}
-              </div>
+              {selectedCampaign.status !== "active" && (
+                <span className="text-xs text-destructive">{isBn ? "⚠️ ক্যাম্পেইন Active নয় — টেস্ট করতে Active করুন" : "⚠️ Campaign not active"}</span>
+              )}
             </div>
-          )}
-
-          {!selectedCampaignId && (
+          ) : selectedCampaign ? (
+            <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
+              <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                {isBn ? "⚠️ এই ক্যাম্পেইনে কোনো ওয়েবসাইট যোগ করা হয়নি।" : "⚠️ No websites added to this campaign yet."}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isBn 
+                  ? "প্রতিটি ক্যাম্পেইনে দুটি ওয়েবসাইট (একটি Lead, একটি Processing) যোগ করতে হবে। Campaign সেটিংসে গিয়ে ওয়েবসাইট যোগ করুন।" 
+                  : "Add two websites (one Lead, one Processing) in Campaign settings."}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "📍 যান: সাইডবার → ক্যাম্পেইন → এই ক্যাম্পেইন এডিট করুন → ওয়েবসাইট ট্যাব" : "📍 Go to: Sidebar → Campaigns → Edit → Websites tab"}
+              </p>
+            </div>
+          ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
               {isBn ? "👆 উপরে থেকে একটি ক্যাম্পেইন সিলেক্ট করুন" : "👆 Select a campaign above"}
             </p>
@@ -501,47 +485,41 @@ function send_order_to_crm_${dataMode}(\$order_id) {
             </div>
           </div>
 
-          {/* Show code for selected website */}
-          {selectedWebsite ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 mb-3">
-                <Globe className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">{selectedWebsite.site_name}</span>
-                <Badge variant={selectedWebsite.data_mode === "lead" ? "default" : "secondary"}>
-                  {selectedWebsite.data_mode === "lead" ? "Lead Data" : "Processing Data"}
-                </Badge>
-              </div>
+          {/* Show code for ALL websites in the campaign */}
+          {selectedCampaign && campaignWebsites && campaignWebsites.length > 0 ? (
+            <div className="space-y-6">
               <p className="text-sm text-muted-foreground">
                 {isBn 
-                  ? `📋 নিচের PHP কোডটি "${selectedWebsite.site_name}" ওয়েবসাইটে যোগ করুন। এই কোড ব্যবহার করলে ডাটা "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}" হিসেবে CRM-এ আসবে।`
-                  : `📋 Add the PHP code below to "${selectedWebsite.site_name}". Data will arrive as "${selectedWebsite.data_mode}" in the CRM.`}
+                  ? "📋 প্রতিটি ওয়েবসাইটের জন্য আলাদা PHP কোড দেওয়া হয়েছে। প্রতিটি কোড সংশ্লিষ্ট WordPress সাইটে যোগ করুন।"
+                  : "📋 Separate PHP code is provided for each website. Add the respective code to each WordPress site."}
               </p>
-              <div className="relative p-3 rounded-lg bg-muted border border-border overflow-x-auto">
-                <button
-                  onClick={() => copyText(generatePerWebsitePhpSnippet(selectedWebsite.webhook_secret, selectedWebsite.site_url, selectedWebsite.site_name, selectedWebsite.data_mode))}
-                  className="absolute top-2 right-2 text-muted-foreground hover:text-primary"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
-                <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
-                  {generatePerWebsitePhpSnippet(selectedWebsite.webhook_secret, selectedWebsite.site_url, selectedWebsite.site_name, selectedWebsite.data_mode)}
-                </pre>
-              </div>
-            </div>
-          ) : selectedCampaign && campaignWebsites && campaignWebsites.length > 0 ? (
-            <div className="text-center py-6 space-y-2">
-              <p className="text-sm text-muted-foreground">
-                {isBn 
-                  ? "👆 উপরে থেকে একটি ওয়েবসাইট (Lead / Processing) সিলেক্ট করুন — তাহলে সেই সাইটের জন্য নির্দিষ্ট PHP কোড দেখাবে।" 
-                  : "👆 Select a website (Lead / Processing) above to see the specific PHP code for that site."}
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {campaignWebsites.map((ws) => (
-                  <Badge key={ws.id} variant="outline" className="cursor-pointer hover:bg-primary/10" onClick={() => setSelectedWebsiteId(ws.id)}>
-                    {ws.site_name} — {ws.data_mode === "lead" ? "Lead" : "Processing"}
-                  </Badge>
-                ))}
-              </div>
+              {campaignWebsites.map((ws) => {
+                const isLead = ws.data_mode === "lead";
+                const snippet = generatePerWebsitePhpSnippet(ws.webhook_secret, ws.site_url, ws.site_name, ws.data_mode);
+                return (
+                  <div key={ws.id} className={`rounded-xl border-2 overflow-hidden ${isLead ? "border-primary/30" : "border-purple-500/30"}`}>
+                    <div className={`px-4 py-2 flex items-center gap-2 ${isLead ? "bg-primary/10" : "bg-purple-500/10"}`}>
+                      <Globe className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-bold text-foreground">{ws.site_name}</span>
+                      <Badge variant={isLead ? "default" : "secondary"} className="text-[10px]">
+                        {isLead ? "Lead" : "Processing"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground ml-auto">{ws.site_url}</span>
+                    </div>
+                    <div className="relative p-3 overflow-x-auto">
+                      <button
+                        onClick={() => copyText(snippet)}
+                        className="absolute top-2 right-2 text-muted-foreground hover:text-primary z-10"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
+                        {snippet}
+                      </pre>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : selectedCampaign ? (
             <div className="space-y-2">
