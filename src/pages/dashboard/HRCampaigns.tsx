@@ -118,7 +118,7 @@ const HRCampaigns = () => {
 
     const { data: camp, error: campErr } = await supabase
       .from("campaigns")
-      .insert({ name: newName.trim(), status: "pending_sa", created_by: user.id, data_mode: dataMode })
+      .insert({ name: newName.trim(), status: "pending_sa", created_by: user.id, data_mode: "lead" })
       .select("id")
       .single();
 
