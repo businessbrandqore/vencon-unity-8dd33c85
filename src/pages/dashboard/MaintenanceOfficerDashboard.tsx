@@ -556,15 +556,29 @@ export default function MaintenanceOfficerDashboard() {
             <h2 className="font-heading text-sm flex items-center gap-2">
               <Monitor className="h-4 w-4" /> কর্মীদের ডেস্ক রিপোর্ট
             </h2>
-            <Select value={deskFilter} onValueChange={setDeskFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="সব স্ট্যাটাস" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">সব স্ট্যাটাস</SelectItem>
-                <SelectItem value="clean">✅ পরিষ্কার</SelectItem>
-                <SelectItem value="moderate">⚠️ মোটামুটি</SelectItem>
-                <SelectItem value="dirty">❌ অপরিষ্কার</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2 flex-wrap">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left text-xs", !deskDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {deskDate ? format(deskDate, "dd MMM yyyy") : "তারিখ ফিল্টার"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar mode="single" selected={deskDate} onSelect={setDeskDate} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              {deskDate && <Button variant="ghost" size="sm" className="text-xs" onClick={() => setDeskDate(undefined)}>✕ রিসেট</Button>}
+              <Select value={deskFilter} onValueChange={setDeskFilter}>
+                <SelectTrigger className="w-[150px]"><SelectValue placeholder="সব স্ট্যাটাস" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব স্ট্যাটাস</SelectItem>
+                  <SelectItem value="clean">✅ পরিষ্কার</SelectItem>
+                  <SelectItem value="moderate">⚠️ মোটামুটি</SelectItem>
+                  <SelectItem value="dirty">❌ অপরিষ্কার</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Summary cards */}
