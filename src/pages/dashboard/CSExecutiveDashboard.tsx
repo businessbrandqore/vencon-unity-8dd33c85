@@ -129,7 +129,7 @@ export default function CSExecutiveDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <Phone className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
-          Customer Support — Follow-Up Calls
+          লিড — ডেলিভারড ডাটা
         </h1>
         <Badge variant="outline" className="text-[hsl(var(--panel-employee))] border-[hsl(var(--panel-employee)/0.5)]">
           <CheckCircle className="h-3 w-3 mr-1" /> আজ Done: {doneCount}
@@ -138,7 +138,7 @@ export default function CSExecutiveDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-heading">Delivered Orders — Follow-Up Pending ({orders.length})</CardTitle>
+          <CardTitle className="text-sm font-heading">ডেলিভারড ডাটা — কল পেন্ডিং ({orders.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
