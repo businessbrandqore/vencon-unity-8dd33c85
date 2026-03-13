@@ -120,8 +120,8 @@ export default function HRDataOperations() {
       const payload = {
         campaign_id: selectedCampaign,
         data_mode: selectedMode,
-        fields_config: fields as unknown as Record<string, unknown>[],
-        routing_rules: rules as unknown as Record<string, unknown>[],
+        fields_config: JSON.parse(JSON.stringify(fields)),
+        routing_rules: JSON.parse(JSON.stringify(rules)),
         created_by: user.id,
         updated_at: new Date().toISOString(),
       };
