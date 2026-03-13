@@ -5,6 +5,7 @@ import WarehouseAssistantDashboard from "./WarehouseAssistantDashboard";
 import WarehouseSupervisorDashboard from "./WarehouseSupervisorDashboard";
 import InventoryManagerDashboard from "./InventoryManagerDashboard";
 import CSExecutiveDashboard from "./CSExecutiveDashboard";
+import CSODashboard from "./CSODashboard";
 import DeliveryCoordinatorDashboard from "./DeliveryCoordinatorDashboard";
 import GroupLeaderDashboard from "./GroupLeaderDashboard";
 import MaintenanceOfficerDashboard from "./MaintenanceOfficerDashboard";
