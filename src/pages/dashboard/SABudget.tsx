@@ -28,9 +28,10 @@ const SABudget = () => {
   const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
-    const [allocRes, expRes] = await Promise.all([
+    const [allocRes, expRes, fundRes] = await Promise.all([
       supabase.from("maintenance_budget").select("*").order("created_at", { ascending: false }),
       supabase.from("maintenance_expenses").select("*").order("created_at", { ascending: false }),
+      supabase.from("fund_requests").select("*, users!fund_requests_officer_id_fkey(name)").order("created_at", { ascending: false }),
     ]);
 
     const allocs = allocRes.data || [];
