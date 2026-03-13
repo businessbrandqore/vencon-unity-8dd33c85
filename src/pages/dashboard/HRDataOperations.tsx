@@ -629,7 +629,7 @@ export default function HRDataOperations() {
               <Card>
                 <CardContent className="pt-4">
                   <p className="text-xs text-muted-foreground mb-2">
-                    এই পদের কর্মী যে স্ট্যাটাসগুলো দেখতে পাবে:
+                    এই পদের কর্মী যে স্ট্যাটাসগুলো দেখতে পাবে (এবং কোন প্যানেলে রাউট হবে):
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {currentStatuses.map((s) => (
@@ -640,6 +640,9 @@ export default function HRDataOperations() {
                         {s.label_bn || s.label || s.value}
                         {s.next_status && (
                           <span className="ml-1 opacity-60 text-xs">→ {s.next_status}</span>
+                        )}
+                        {(s.next_panel || s.next_location) && (
+                          <span className="ml-1 opacity-70 text-xs">({(s.next_panel || "—").toUpperCase()}/{s.next_location || "—"})</span>
                         )}
                       </span>
                     ))}
