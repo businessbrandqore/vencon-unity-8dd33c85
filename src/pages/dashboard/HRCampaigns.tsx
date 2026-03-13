@@ -653,7 +653,7 @@ const HRCampaigns = () => {
                     {isBn ? "সংযুক্ত ওয়েবসাইট" : "Connected Websites"} ({editing ? editWebsites.length : detailWebsites.length})
                     {editing && (
                       <Button variant="ghost" size="sm" className="text-primary ml-auto"
-                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true, data_mode: editDataMode }])}>
+                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true, data_mode: "lead" }])}>
                         <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
                       </Button>
                     )}
