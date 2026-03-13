@@ -69,6 +69,13 @@ export default function EmployeeLeads() {
   const [orderQty, setOrderQty] = useState(1);
   const [orderPrice, setOrderPrice] = useState(0);
   const [orderNote, setOrderNote] = useState("");
+  const [orderDistrict, setOrderDistrict] = useState("");
+  const [orderThana, setOrderThana] = useState("");
+  const [orderGiftName, setOrderGiftName] = useState("");
+  const [orderAdvancePayment, setOrderAdvancePayment] = useState(0);
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState("");
+  const [orderCardName, setOrderCardName] = useState("");
+  const [orderMedia, setOrderMedia] = useState("");
 
   const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
