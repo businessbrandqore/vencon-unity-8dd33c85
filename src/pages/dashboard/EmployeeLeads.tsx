@@ -481,6 +481,27 @@ export default function EmployeeLeads() {
               </div>
             </div>
 
+            {/* Upsell & Success Ratio */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Upsell</Label>
+                <Select value={orderUpsell} onValueChange={setOrderUpsell}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select upsell" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="01_to_02">০১ থেকে ০২</SelectItem>
+                    <SelectItem value="02_to_03">০২ থেকে ০৩</SelectItem>
+                    <SelectItem value="03_to_04">০৩ থেকে ০৪</SelectItem>
+                    <SelectItem value="04_to_05">০৪ থেকে ০৫</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Success Ratio (1-100) *</Label>
+                <Input type="number" min={1} max={100} value={orderSuccessRatio} onChange={e => setOrderSuccessRatio(e.target.value ? Number(e.target.value) : "")} className="mt-1" placeholder="1-100" />
+              </div>
+            </div>
+
             {/* Note */}
             <div><Label>নোট</Label><Textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
