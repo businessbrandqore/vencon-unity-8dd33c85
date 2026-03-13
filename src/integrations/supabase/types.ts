@@ -1568,6 +1568,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      progress_lead_after_cs: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_panel: "sa" | "hr" | "tl" | "employee"

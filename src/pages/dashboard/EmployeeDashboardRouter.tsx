@@ -18,8 +18,8 @@ export default function EmployeeDashboardRouter() {
 
   if (!user) return null;
 
-  // TS dashboard handles its own attendance flow internally
-  if (user.role === "telesales_executive") {
+  // TS/Silver/Golden dashboard handles its own attendance flow internally
+  if (user.role === "telesales_executive" || user.role === "silver_agent" || user.role === "golden_agent") {
     return <EmployeeTSDashboard />;
   }
 
