@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthSafe } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDistanceToNow } from "date-fns";
 import { bn as bnLocale } from "date-fns/locale";
@@ -44,7 +44,8 @@ const playNotificationSound = (volume: number) => {
 };
 
 const NotificationBell = () => {
-  const { user } = useAuth();
+  const authContext = useAuthSafe();
+  const user = authContext?.user ?? null;
   const { t, n, lang } = useLanguage();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
