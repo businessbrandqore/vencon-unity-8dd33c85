@@ -44,6 +44,7 @@ import TLATLApprovals from "./pages/dashboard/TLATLApprovals";
 import EmployeeAttendance from "./pages/dashboard/EmployeeAttendance";
 import EmployeeSalary from "./pages/dashboard/EmployeeSalary";
 import EmployeeLeads from "./pages/dashboard/EmployeeLeads";
+import CSOLeads from "./pages/dashboard/CSOLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
 import DataTracker from "./pages/dashboard/DataTracker";

@@ -85,8 +85,8 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   ],
   employee: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
-    { titleKey: "leads", icon: Target, path: "/employee/leads", roles: ["telesales_executive"] },
-    { titleKey: "my_orders", icon: Package, path: "/employee/my-orders", roles: ["telesales_executive", "cso", "cs_executive", "warehouse_assistant", "delivery_coordinator"] },
+    { titleKey: "leads", icon: Target, path: "/employee/leads", roles: ["telesales_executive", "cso"] },
+    { titleKey: "my_orders", icon: Package, path: "/employee/my-orders", roles: ["telesales_executive", "cs_executive", "warehouse_assistant", "delivery_coordinator"] },
     { titleKey: "attendance", icon: Clock, path: "/employee/attendance" },
     { titleKey: "salary", icon: DollarSign, path: "/employee/salary" },
     { titleKey: "chat", icon: MessageSquare, path: "/employee/chat" },
