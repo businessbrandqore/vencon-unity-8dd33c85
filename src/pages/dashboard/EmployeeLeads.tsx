@@ -189,6 +189,7 @@ export default function EmployeeLeads() {
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
       setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
       setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+      setOrderUpsell(""); setOrderSuccessRatio("");
       setShowOrderModal(true); return;
     }
     if (newStatus === "Pre Order") {
