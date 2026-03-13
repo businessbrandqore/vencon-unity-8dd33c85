@@ -83,10 +83,15 @@ export default function EmployeeLeads() {
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
   const [preOrderDate, setPreOrderDate] = useState<Date>();
   const [preOrderNote, setPreOrderNote] = useState("");
-  const [preOrderDistrict, setPreOrderDistrict] = useState("");
-  const [preOrderThana, setPreOrderThana] = useState("");
-  const [preOrderAddress, setPreOrderAddress] = useState("");
-  const [preOrderProduct, setPreOrderProduct] = useState("");
+
+  // Pre Order Confirm states
+  const [currentPreOrderConfirmLead, setCurrentPreOrderConfirmLead] = useState<LeadRow | null>(null);
+  const [showPreOrderConfirmModal, setShowPreOrderConfirmModal] = useState(false);
+  const [pocDistrict, setPocDistrict] = useState("");
+  const [pocThana, setPocThana] = useState("");
+  const [pocAddress, setPocAddress] = useState("");
+  const [pocProduct, setPocProduct] = useState("");
+  const [pocDeliveryDate, setPocDeliveryDate] = useState<Date>();
 
   const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0 });
   const [tick, setTick] = useState(0);
