@@ -226,7 +226,8 @@ const DataTracker = () => {
       };
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
     placeholderData: keepPreviousData,
   });
 
