@@ -120,7 +120,7 @@ const normalizeRules = (raw: unknown): RoutingRule[] => {
 
     return {
       id: rule.id || `rule_${index + 1}`,
-      field: rule.field || "",
+      field: rule.field || "status",
       value: rule.value || "",
       action:
         rule.action === "create_order" ||
