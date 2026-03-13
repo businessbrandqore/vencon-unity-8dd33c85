@@ -294,34 +294,50 @@ function send_order_to_crm_${dataMode}(\$order_id) {
           </div>
 
           {/* Website (Lead/Processing) selector */}
-          {selectedCampaign && campaignWebsites && campaignWebsites.length > 0 && (
+          {selectedCampaign && (
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1.5">
                 {isBn ? "ওয়েবসাইট সিলেক্ট করুন (Lead / Processing)" : "Select Website (Lead / Processing)"}
               </label>
-              <Select value={selectedWebsiteId} onValueChange={(v) => { setSelectedWebsiteId(v); setShowSecret(false); setTestResult(null); }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={isBn ? "— ওয়েবসাইট বেছে নিন —" : "— Choose a website —"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaignWebsites.map((ws) => (
-                    <SelectItem key={ws.id} value={ws.id}>
-                      <span className="flex items-center gap-2">
-                        <Globe className="h-3.5 w-3.5 text-primary" />
-                        {ws.site_name}
-                        <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
-                          {ws.data_mode === "lead" ? "Lead" : "Processing"}
-                        </Badge>
-                        {ws.is_active ? (
-                          <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">Active</Badge>
-                        ) : (
-                          <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
-                        )}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {campaignWebsites && campaignWebsites.length > 0 ? (
+                <Select value={selectedWebsiteId} onValueChange={(v) => { setSelectedWebsiteId(v); setShowSecret(false); setTestResult(null); }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={isBn ? "— ওয়েবসাইট বেছে নিন (Lead / Processing) —" : "— Choose a website (Lead / Processing) —"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campaignWebsites.map((ws) => (
+                      <SelectItem key={ws.id} value={ws.id}>
+                        <span className="flex items-center gap-2">
+                          <Globe className="h-3.5 w-3.5 text-primary" />
+                          {ws.site_name}
+                          <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
+                            {ws.data_mode === "lead" ? "Lead" : "Processing"}
+                          </Badge>
+                          {ws.is_active ? (
+                            <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px]">Active</Badge>
+                          ) : (
+                            <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
+                  <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                    {isBn ? "⚠️ এই ক্যাম্পেইনে কোনো ওয়েবসাইট যোগ করা হয়নি।" : "⚠️ No websites added to this campaign yet."}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isBn 
+                      ? "প্রতিটি ক্যাম্পেইনে দুটি ওয়েবসাইট (একটি Lead, একটি Processing) যোগ করতে হবে। Campaign সেটিংসে গিয়ে ওয়েবসাইট যোগ করুন — তাহলে এখানে আলাদা আলাদা সেটআপ কোড ও Secret Key পাবেন।" 
+                      : "Each campaign needs two websites (one Lead, one Processing). Go to Campaign settings to add websites — then you'll get separate setup code & Secret Keys here."}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isBn ? "📍 যান: সাইডবার → ক্যাম্পেইন → এই ক্যাম্পেইন এডিট করুন → ওয়েবসাইট ট্যাব" : "📍 Go to: Sidebar → Campaigns → Edit this campaign → Websites tab"}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
