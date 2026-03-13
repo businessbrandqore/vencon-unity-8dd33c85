@@ -72,6 +72,7 @@ export const translations: TranslationMap = {
   atl_approvals: { bn: "ATL এপ্রোভাল", en: "ATL Approvals" },
   order_dispatch: { bn: "অর্ডার ডিসপ্যাচ", en: "Order Dispatch" },
   follow_up_calls: { bn: "ফলো-আপ কল", en: "Follow-Up Calls" },
+  steadfast_monitoring: { bn: "স্টিডফাস্ট মনিটরিং", en: "Steadfast Monitoring" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },
