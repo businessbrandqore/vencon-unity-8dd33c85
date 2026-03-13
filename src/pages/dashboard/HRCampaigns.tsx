@@ -192,8 +192,8 @@ const HRCampaigns = () => {
     if (!detailId || !editName.trim()) return;
     setSaving(true);
 
-    // Update campaign
-    await supabase.from("campaigns").update({ name: editName.trim(), data_mode: editDataMode }).eq("id", detailId);
+    // Update campaign name
+    await supabase.from("campaigns").update({ name: editName.trim() }).eq("id", detailId);
 
     // Update TL assignments: delete old, insert new
     await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
