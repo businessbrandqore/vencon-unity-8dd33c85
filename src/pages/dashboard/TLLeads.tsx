@@ -210,9 +210,12 @@ const TLLeads = () => {
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
 
+    // Fresh leads: only show leads that don't have agent_type set (or are bronze-tier fresh)
     let freshQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
-      .is("assigned_to", null).eq("status", "fresh").order("created_at", { ascending: false });
+      .is("assigned_to", null).eq("status", "fresh")
+      .or("agent_type.is.null,agent_type.eq.bronze")
+      .order("created_at", { ascending: false });
     if (!isBDO) freshQ = freshQ.eq("tl_id", getEffectiveTlId());
     const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
@@ -251,50 +254,35 @@ const TLLeads = () => {
       setProcessingLeads(proc || []);
     }
 
-    // Silver data: Bronze orders that got delivered via Steadfast → show original user data
+    // Silver data: leads that have been progressed to silver (agent_type='silver')
+    // These are fresh silver leads waiting for TL to assign to silver agents
     let silverQ = supabase
-      .from("orders")
-      .select("id, customer_name, phone, address, product, price, created_at, delivery_status, lead_id, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at)")
-      .eq("delivery_status", "delivered")
-      .order("created_at", { ascending: false });
-    if (!isBDO) silverQ = silverQ.eq("tl_id", getEffectiveTlId());
-    const { data: silverOrders } = await silverQ;
-    const silverItems: SilverGoldenLead[] = (silverOrders || []).map((o: any) => ({
-      id: o.id,
-      name: o.leads?.name || o.customer_name,
-      phone: o.leads?.phone || o.phone,
-      address: o.leads?.address || o.address,
-      source: o.leads?.source || null,
-      created_at: o.leads?.created_at || o.created_at,
-      product: o.product,
-      price: o.price,
-    }));
-    setSilverData(silverItems);
-
-    // Golden data: Silver agent leads that got delivered again
-    let goldenLeadsQ = supabase
       .from("leads")
       .select("id, name, phone, address, source, created_at, agent_type")
       .eq("agent_type", "silver")
+      .eq("status", "fresh")
+      .is("assigned_to", null)
       .order("created_at", { ascending: false });
-    if (selectedCampaign) goldenLeadsQ = goldenLeadsQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) goldenLeadsQ = goldenLeadsQ.eq("tl_id", getEffectiveTlId());
-    const { data: silverAssignedLeads } = await goldenLeadsQ;
+    if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
+    if (!isBDO) silverQ = silverQ.eq("tl_id", null); // Silver leads have tl_id cleared by progress_lead_after_cs, but campaign_id remains
+    const { data: silverLeadsData } = await silverQ;
+    setSilverData((silverLeadsData || []).map(l => ({
+      id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
+    })));
 
-    if (silverAssignedLeads && silverAssignedLeads.length > 0) {
-      const silverLeadIds = silverAssignedLeads.map(l => l.id);
-      const { data: deliveredFromSilver } = await supabase
-        .from("orders")
-        .select("lead_id")
-        .in("lead_id", silverLeadIds)
-        .eq("delivery_status", "delivered");
-      const deliveredIds = new Set((deliveredFromSilver || []).map(o => o.lead_id));
-      setGoldenData(silverAssignedLeads.filter(l => deliveredIds.has(l.id)).map(l => ({
-        id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
-      })));
-    } else {
-      setGoldenData([]);
-    }
+    // Golden data: leads that have been progressed to golden (agent_type='golden')
+    let goldenQ = supabase
+      .from("leads")
+      .select("id, name, phone, address, source, created_at, agent_type")
+      .eq("agent_type", "golden")
+      .eq("status", "fresh")
+      .is("assigned_to", null)
+      .order("created_at", { ascending: false });
+    if (selectedCampaign) goldenQ = goldenQ.eq("campaign_id", selectedCampaign);
+    const { data: goldenLeadsData } = await goldenQ;
+    setGoldenData((goldenLeadsData || []).map(l => ({
+      id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
+    })));
   }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
@@ -329,13 +317,13 @@ const TLLeads = () => {
     setSelectedLeads(new Set()); setBulkAgent(""); loadData();
   };
 
-  const assignSilver = async (orderId: string, agentId: string) => {
+  const assignSilver = async (leadId: string, agentId: string) => {
     await executeOrRequestApproval(
       "lead_assign",
-      { orderId, agentId, type: "silver" },
+      { leadId, agentId, type: "silver" },
       isBn ? "সিলভার এজেন্ট অ্যাসাইন" : "Silver agent assignment",
       async () => {
-        await supabase.from("orders").update({ status: "silver_assigned", agent_id: agentId }).eq("id", orderId);
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", tl_id: user?.id }).eq("id", leadId);
         toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned");
       }
     );
@@ -690,13 +678,11 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
                     <TableHead>CS Note</TableHead>
                     <TableHead>CS Rating</TableHead>
-                    {!isProcessing && <TableHead>Silver Agent</TableHead>}
-                    {!isProcessing && <TableHead></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {callDoneOrders.length === 0 ? (
-                    <TableRow><TableCell colSpan={isProcessing ? 6 : 8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো call done order নেই" : "No call done orders"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো call done order নেই" : "No call done orders"}</TableCell></TableRow>
                   ) : callDoneOrders.map((o) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-mono text-xs">{o.id.slice(0, 8)}</TableCell>
@@ -705,25 +691,13 @@ const TLLeads = () => {
                       <TableCell>{o.product || "—"}</TableCell>
                       <TableCell>{o.cs_note || "—"}</TableCell>
                       <TableCell>{o.cs_rating || "—"}</TableCell>
-                      {!isProcessing && (
-                        <>
-                          <TableCell>
-                            <Select value={silverAssignments[o.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [o.id]: v }))}>
-                              <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                              <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" disabled={!silverAssignments[o.id]} onClick={() => assignSilver(o.id, silverAssignments[o.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                              {isBn ? "সেন্ড" : "Send"}
-                            </Button>
-                          </TableCell>
-                        </>
-                      )}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              <p className="text-xs text-muted-foreground mt-3">
+                {isBn ? "💡 Call Done হওয়ার পর ডাটা স্বয়ংক্রিয়ভাবে Silver/Golden ট্যাবে চলে যায়" : "💡 After Call Done, data auto-progresses to Silver/Golden tabs"}
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -826,16 +800,16 @@ const TLLeads = () => {
           </TabsContent>
         )}
 
-        {/* ========== SILVER TAB — Raw data only, NO assign ========== */}
+        {/* ========== SILVER TAB — Assign to Silver Agents ========== */}
         {!isProcessing && (
           <TabsContent value="silver">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-heading">
-                  🥈 {isBn ? "সিলভার ডাটা — ব্রোঞ্জ থেকে প্রোডাক্ট রিসিভ হয়েছে" : "Silver Data — Product Received from Bronze"}
+                  🥈 {isBn ? "সিলভার ডাটা — সিলভার এজেন্টে অ্যাসাইন করুন" : "Silver Data — Assign to Silver Agents"}
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  {isBn ? "স্টিডফাস্ট ডেলিভারি সম্পন্ন হওয়া ইউজারদের মূল তথ্য — কোনো Assign নেই, শুধু র ডাটা" : "Original user data from delivered orders — raw data only, no assignment"}
+                  {isBn ? "ব্রোঞ্জ অর্ডার ডেলিভার ও CS Call Done হওয়ার পর স্বয়ংক্রিয়ভাবে এখানে আসে" : "Auto-arrives after Bronze order delivered & CS Call Done"}
                 </p>
               </CardHeader>
               <CardContent>
@@ -846,15 +820,15 @@ const TLLeads = () => {
                       <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
-                      <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
-                      <TableHead>{isBn ? "মূল্য" : "Price"}</TableHead>
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                      <TableHead>Assign To</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {silverData.length === 0 ? (
                       <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        {isBn ? "কোনো সিলভার ডাটা নেই — ব্রোঞ্জ অর্ডার ডেলিভার হলে এখানে আসবে" : "No silver data — appears when Bronze orders are delivered"}
+                        {isBn ? "কোনো সিলভার ডাটা নেই — ব্রোঞ্জ অর্ডার ডেলিভার ও CS Call Done হলে এখানে আসবে" : "No silver data — appears after Bronze orders delivered & CS Call Done"}
                       </TableCell></TableRow>
                     ) : silverData.map((item, i) => (
                       <TableRow key={item.id}>
@@ -862,9 +836,18 @@ const TLLeads = () => {
                         <TableCell className="font-medium">{item.name || "—"}</TableCell>
                         <TableCell>{item.phone || "—"}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
-                        <TableCell>{item.product || "—"}</TableCell>
-                        <TableCell className="font-medium">{item.price ? `৳${item.price.toLocaleString()}` : "—"}</TableCell>
                         <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
+                        <TableCell>
+                          <Select value={silverAssignments[item.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [item.id]: v }))}>
+                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" disabled={!silverAssignments[item.id]} onClick={() => assignSilver(item.id, silverAssignments[item.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                            {isBn ? "সেন্ড" : "Send"}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -874,16 +857,16 @@ const TLLeads = () => {
           </TabsContent>
         )}
 
-        {/* ========== GOLDEN TAB — Raw data only, NO assign ========== */}
+        {/* ========== GOLDEN TAB — Assign or view ========== */}
         {!isProcessing && (
           <TabsContent value="golden">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-heading">
-                  🥇 {isBn ? "গোল্ডেন ডাটা — সিলভার থেকে প্রোডাক্ট রিসিভ হয়েছে" : "Golden Data — Product Received from Silver"}
+                  🥇 {isBn ? "গোল্ডেন ডাটা" : "Golden Data"}
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  {isBn ? "সিলভার এজেন্টের মাধ্যমে পুনরায় ডেলিভারি সম্পন্ন — ইউজারের মূল তথ্য, কোনো Assign নেই" : "Re-delivered via Silver agents — original user data, no assignment"}
+                  {isBn ? "সিলভার অর্ডার ডেলিভার ও CS Call Done হওয়ার পর স্বয়ংক্রিয়ভাবে এখানে আসে" : "Auto-arrives after Silver orders delivered & CS Call Done"}
                 </p>
               </CardHeader>
               <CardContent>
@@ -901,7 +884,7 @@ const TLLeads = () => {
                   <TableBody>
                     {goldenData.length === 0 ? (
                       <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        {isBn ? "কোনো গোল্ডেন ডাটা নেই — সিলভার অর্ডার ডেলিভার হলে এখানে আসবে" : "No golden data — appears when Silver orders are delivered"}
+                        {isBn ? "কোনো গোল্ডেন ডাটা নেই — সিলভার অর্ডার ডেলিভার ও CS Call Done হলে আসবে" : "No golden data yet"}
                       </TableCell></TableRow>
                     ) : goldenData.map((item, i) => (
                       <TableRow key={item.id}>
