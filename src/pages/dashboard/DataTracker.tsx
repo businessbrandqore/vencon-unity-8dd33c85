@@ -319,7 +319,7 @@ const DataTracker = () => {
       return { data: dataRes.data || [], count: countRes.count || 0 };
     },
     enabled: !!user,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   // ===== PAGINATED ALL DATA =====
