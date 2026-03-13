@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboardRouter from "./pages/dashboard/EmployeeDashboardRouter";
+import CSExecutiveDashboard from "./pages/dashboard/CSExecutiveDashboard";
 import SADashboard from "./pages/dashboard/SADashboard";
 import SAApprovalsPage from "./pages/dashboard/SAApprovalsPage";
 import SAAuditLogs from "./pages/dashboard/SAAuditLogs";
