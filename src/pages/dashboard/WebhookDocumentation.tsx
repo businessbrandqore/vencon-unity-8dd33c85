@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { BookOpen, Globe, Shield, CheckCircle2, ArrowRight, Copy, Code, AlertTriangle, Eye, EyeOff, Send, Loader2, CheckCircle, XCircle, ShoppingCart, Webhook, FileCode, Server, Zap } from "lucide-react";
+import { BookOpen, Globe, Shield, CheckCircle2, ArrowRight, Copy, Code, AlertTriangle, Eye, EyeOff, Send, Loader2, CheckCircle, XCircle, ShoppingCart, Webhook, FileCode, Server, Zap, Sparkles, ScanSearch } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WebhookDocumentation = () => {
