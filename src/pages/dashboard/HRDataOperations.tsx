@@ -487,90 +487,136 @@ export default function HRDataOperations() {
                           <TableHead>লেবেল (বাংলা)</TableHead>
                           <TableHead>রঙ</TableHead>
                           <TableHead>পরবর্তী স্ট্যাটাস</TableHead>
+                          <TableHead>পরবর্তী প্যানেল</TableHead>
+                          <TableHead>প্যানেলের ভেতরে কোথায় যাবে</TableHead>
                           <TableHead>প্রিভিউ</TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {currentStatuses.map((status, idx) => (
-                          <TableRow key={status.id}>
-                            <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                            <TableCell>
-                              <Input
-                                value={status.value}
-                                onChange={(e) => updateStatus(idx, { value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
-                                placeholder="order_confirm"
-                                className="h-8 text-sm font-mono"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={status.label}
-                                onChange={(e) => updateStatus(idx, { label: e.target.value })}
-                                placeholder="Order Confirm"
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={status.label_bn}
-                                onChange={(e) => updateStatus(idx, { label_bn: e.target.value })}
-                                placeholder="অর্ডার কনফার্ম"
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={status.color || "gray"}
-                                onValueChange={(v) => updateStatus(idx, { color: v })}
-                              >
-                                <SelectTrigger className="h-8 w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {STATUS_COLORS.map((c) => (
-                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={status.next_status || "__none__"}
-                                onValueChange={(v) => updateStatus(idx, { next_status: v === "__none__" ? "" : v })}
-                              >
-                                <SelectTrigger className="h-8 w-36">
-                                  <SelectValue placeholder="নেই" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">নেই</SelectItem>
-                                  {allStatusValues
-                                    .filter((sv) => sv !== status.value)
-                                    .map((sv) => (
-                                      <SelectItem key={sv} value={sv}>{sv}</SelectItem>
+                        {currentStatuses.map((status, idx) => {
+                          const panelLocations = getPanelLocations(status.next_panel);
+
+                          return (
+                            <TableRow key={status.id}>
+                              <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                              <TableCell>
+                                <Input
+                                  value={status.value}
+                                  onChange={(e) => updateStatus(idx, { value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                                  placeholder="order_confirm"
+                                  className="h-8 text-sm font-mono"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={status.label}
+                                  onChange={(e) => updateStatus(idx, { label: e.target.value })}
+                                  placeholder="Order Confirm"
+                                  className="h-8 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={status.label_bn}
+                                  onChange={(e) => updateStatus(idx, { label_bn: e.target.value })}
+                                  placeholder="অর্ডার কনফার্ম"
+                                  className="h-8 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.color || "gray"}
+                                  onValueChange={(v) => updateStatus(idx, { color: v })}
+                                >
+                                  <SelectTrigger className="h-8 w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {STATUS_COLORS.map((c) => (
+                                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                                     ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              {status.value && (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[status.color || "gray"] || colorClasses.gray}`}>
-                                  {status.label_bn || status.label || status.value}
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => removeStatus(idx)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.next_status || NO_OPTION}
+                                  onValueChange={(v) => updateStatus(idx, { next_status: v === NO_OPTION ? "" : v })}
+                                >
+                                  <SelectTrigger className="h-8 w-36">
+                                    <SelectValue placeholder="নেই" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_OPTION}>নেই</SelectItem>
+                                    {allStatusValues
+                                      .filter((sv) => sv !== status.value)
+                                      .map((sv) => (
+                                        <SelectItem key={sv} value={sv}>{sv}</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.next_panel || NO_OPTION}
+                                  onValueChange={(v) => updateStatus(idx, { next_panel: v === NO_OPTION ? "" : (v as AppPanel) })}
+                                >
+                                  <SelectTrigger className="h-8 w-36">
+                                    <SelectValue placeholder="প্যানেল" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_OPTION}>নির্বাচন করুন</SelectItem>
+                                    {PANEL_OPTIONS.map((panel) => (
+                                      <SelectItem key={panel.value} value={panel.value}>{panel.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={status.next_location || NO_OPTION}
+                                  onValueChange={(v) => updateStatus(idx, { next_location: v === NO_OPTION ? "" : v })}
+                                  disabled={!status.next_panel}
+                                >
+                                  <SelectTrigger className="h-8 w-44">
+                                    <SelectValue placeholder="সেকশন" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_OPTION}>নির্বাচন করুন</SelectItem>
+                                    {panelLocations.map((location) => (
+                                      <SelectItem key={location.value} value={location.value}>{location.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                {status.value && (
+                                  <div className="space-y-1">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[status.color || "gray"] || colorClasses.gray}`}>
+                                      {status.label_bn || status.label || status.value}
+                                    </span>
+                                    {(status.next_panel || status.next_location) && (
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {(status.next_panel || "—").toUpperCase()} / {status.next_location || "—"}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => removeStatus(idx)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
