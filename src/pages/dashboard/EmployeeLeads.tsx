@@ -41,7 +41,7 @@ interface InventoryItem {
 }
 
 const LEAD_STATUSES = [
-  "Order Confirm", "Pre Order", "Phone Off", "Positive", "Customer Reschedule",
+  "Order Confirm", "Pre Order", "Pre Order Confirm", "Phone Off", "Positive", "Customer Reschedule",
   "Do Not Pick", "No Response", "Busy Now", "Number Busy", "Negative",
   "Not Interested", "Cancelled", "Wrong Number", "Duplicate", "Already Ordered",
 ];
