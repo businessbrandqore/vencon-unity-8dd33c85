@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboardRouter from "./pages/dashboard/EmployeeDashboardRouter";
+import CSExecutiveDashboard from "./pages/dashboard/CSExecutiveDashboard";
 import SADashboard from "./pages/dashboard/SADashboard";
 import SAApprovalsPage from "./pages/dashboard/SAApprovalsPage";
 import SAAuditLogs from "./pages/dashboard/SAAuditLogs";
@@ -137,6 +138,7 @@ const App = () => (
               <Route path="/employee/leads" element={<EmployeeLeadsRouter />} />
               <Route path="/employee/my-orders" element={<EmployeeMyOrders />} />
               <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
+              <Route path="/employee/follow-up" element={<CSExecutiveDashboard />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
               <Route path="/employee/chat" element={<ChatPage />} />

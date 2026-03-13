@@ -71,6 +71,7 @@ export const translations: TranslationMap = {
   tl_approvals_bdo: { bn: "TL অনুরোধ", en: "TL Requests" },
   atl_approvals: { bn: "ATL এপ্রোভাল", en: "ATL Approvals" },
   order_dispatch: { bn: "অর্ডার ডিসপ্যাচ", en: "Order Dispatch" },
+  follow_up_calls: { bn: "ফলো-আপ কল", en: "Follow-Up Calls" },
 
   // ─── Common Actions ───
   save: { bn: "সংরক্ষণ করুন", en: "Save" },
