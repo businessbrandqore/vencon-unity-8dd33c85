@@ -211,6 +211,47 @@ const SABudget = () => {
             </div>
           </div>
 
+          {/* Fund Requests */}
+          {fundRequests.length > 0 && (
+            <div>
+              <h4 className="font-heading text-xs tracking-wider text-muted-foreground uppercase mb-3">
+                {isBn ? "ফান্ড আবেদন" : "Fund Requests"}
+              </h4>
+              <div className="border border-border overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {[isBn ? "তারিখ" : "Date", isBn ? "অফিসার" : "Officer", isBn ? "পরিমাণ" : "Amount", isBn ? "কারণ" : "Reason", isBn ? "স্ট্যাটাস" : "Status", isBn ? "অ্যাকশন" : "Action"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left font-heading text-xs tracking-wider text-muted-foreground uppercase">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fundRequests.map((f: any) => (
+                      <tr key={f.id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-3 font-body text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString(isBn ? "bn-BD" : "en-US")}</td>
+                        <td className="px-4 py-3 font-body text-xs text-foreground">{f.users?.name || "—"}</td>
+                        <td className="px-4 py-3 font-heading text-xs font-bold" style={{ color: TEAL }}>৳{Number(f.amount).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-body text-xs text-foreground">{f.reason}</td>
+                        <td className="px-4 py-3 font-body text-xs">
+                          <span className={f.status === "approved" ? "text-green-500" : f.status === "rejected" ? "text-red-500" : "text-yellow-500"}>{f.status === "approved" ? "অনুমোদিত" : f.status === "rejected" ? "বাতিল" : "পেন্ডিং"}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {f.status === "pending" && (
+                            <div className="flex gap-2">
+                              <button onClick={() => handleFundDecision(f.id, "approved", f.officer_id, Number(f.amount))} className="px-2 py-1 text-[10px] font-heading bg-green-600 text-white hover:bg-green-700 transition-colors">✓</button>
+                              <button onClick={() => handleFundDecision(f.id, "rejected", f.officer_id, Number(f.amount))} className="px-2 py-1 text-[10px] font-heading bg-red-600 text-white hover:bg-red-700 transition-colors">✗</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Monthly Category Chart */}
           {categoryData.length > 0 && (
             <div className="border border-border p-4">
