@@ -84,6 +84,8 @@ const ACTION_TYPES = [
   { value: "notify", label: "নোটিফিকেশন পাঠাও" },
 ];
 
+const NO_TARGET_ROLE = "__none__";
+
 const normalizeFields = (raw: unknown): FieldConfig[] => {
   if (!Array.isArray(raw)) return [];
 
