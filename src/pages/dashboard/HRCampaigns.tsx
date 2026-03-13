@@ -280,7 +280,7 @@ const HRCampaigns = () => {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Globe className="h-3.5 w-3.5" />
-                    {c.data_mode === "lead" ? (isBn ? "লিড" : "Lead") : (isBn ? "প্রসেসিং" : "Processing")}
+                    {isBn ? "Lead + Processing" : "Lead + Processing"}
                   </span>
                   <span>{c.leadCount} {isBn ? "ডাটা" : "Data"}</span>
                 </div>
