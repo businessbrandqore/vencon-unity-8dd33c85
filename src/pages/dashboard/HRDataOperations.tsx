@@ -30,10 +30,13 @@ interface ColumnOption {
   note?: string;
 }
 
+type ColumnType = "dropdown" | "note";
+
 interface StatusColumn {
   id: string;
   name: string;
   name_bn: string;
+  type: ColumnType;
   options: ColumnOption[];
 }
 
