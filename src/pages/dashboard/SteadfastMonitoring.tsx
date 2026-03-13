@@ -68,16 +68,33 @@ export default function SteadfastMonitoring() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignFilter, setCampaignFilter] = useState("all");
+
+  // Load campaigns
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("campaigns").select("id, name").eq("status", "active");
+      if (data) setCampaigns(data);
+    })();
+  }, []);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
       .from("orders")
-      .select("id, customer_name, phone, address, product, quantity, price, steadfast_consignment_id, delivery_status, status, warehouse_sent_at, rider_name, rider_phone, created_at")
+      .select("id, customer_name, phone, address, product, quantity, price, steadfast_consignment_id, delivery_status, status, warehouse_sent_at, rider_name, rider_phone, created_at, lead_id, leads(campaign_id, campaigns(id, name))")
       .in("status", ["dispatched", "send_today"])
       .order("warehouse_sent_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
-    if (data) setOrders(data as OrderRow[]);
+    if (data) {
+      const mapped = data.map((o: any) => ({
+        ...o,
+        campaign_id: o.leads?.campaign_id || null,
+        campaign_name: o.leads?.campaigns?.name || null,
+      })) as OrderRow[];
+      setOrders(mapped);
+    }
     setLoading(false);
   }, []);
 
