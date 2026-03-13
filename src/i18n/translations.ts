@@ -44,6 +44,7 @@ export const translations: TranslationMap = {
   analytics: { bn: "অ্যানালিটিক্স", en: "Analytics" },
   data_monitor: { bn: "ডাটা মনিটর", en: "Data Monitor" },
   data_tracker: { bn: "ডাটা ট্র্যাকার", en: "Data Tracker" },
+  data_operations: { bn: "ডাটা অপারেশন", en: "Data Operations" },
   warehouse: { bn: "ওয়্যারহাউস", en: "Warehouse" },
   budget: { bn: "বাজেট", en: "Budget" },
   audit_logs: { bn: "অডিট লগ", en: "Audit Logs" },
