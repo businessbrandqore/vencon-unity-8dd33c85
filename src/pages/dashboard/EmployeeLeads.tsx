@@ -119,7 +119,7 @@ export default function EmployeeLeads() {
   const loadLeads = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from("leads").select("*").eq("assigned_to", user.id)
-      .not("status", "in", '("order_confirm","negative","not_interested","cancelled","wrong_number","duplicate","already_ordered")');
+      .not("status", "in", '("order_confirm","pre_order_confirm","negative","not_interested","cancelled","wrong_number","duplicate","already_ordered")');
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
