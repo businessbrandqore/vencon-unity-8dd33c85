@@ -222,6 +222,7 @@ export default function EmployeeLeads() {
       district: orderDistrict || null, thana: orderThana || null, gift_name: orderGiftName || null,
       advance_payment: orderAdvancePayment || 0, payment_method: orderPaymentMethod || null,
       card_name: orderCardName || null, order_media: orderMedia || null,
+      upsell: orderUpsell || null, success_ratio: orderSuccessRatio || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     await supabase.from("leads").update({ status: "order_confirm", called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
