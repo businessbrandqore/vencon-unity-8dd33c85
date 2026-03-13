@@ -715,13 +715,16 @@ export default function HRDataOperations() {
                           <div className="space-y-1">
                             <Label className="text-xs">টার্গেট পদ</Label>
                             <Select
-                              value={rule.target_role || ""}
-                              onValueChange={(value) => updateRule(index, { target_role: value })}
+                              value={rule.target_role || NO_TARGET_ROLE}
+                              onValueChange={(value) =>
+                                updateRule(index, { target_role: value === NO_TARGET_ROLE ? "" : value })
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="পদ সিলেক্ট করুন..." />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value={NO_TARGET_ROLE}>নির্বাচিত নয়</SelectItem>
                                 {SALES_ROLES.map((role) => (
                                   <SelectItem key={role.value} value={role.value}>
                                     {role.label}
