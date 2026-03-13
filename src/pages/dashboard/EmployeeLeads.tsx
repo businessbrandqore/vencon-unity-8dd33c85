@@ -247,22 +247,34 @@ export default function EmployeeLeads() {
 
   const handlePreOrderSubmit = async () => {
     if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
-    if (!preOrderProduct) { toast.error("Product নির্বাচন করুন"); return; }
     await supabase.from("pre_orders").insert({
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
-    // Update lead with district/thana/address info
-    await supabase.from("leads").update({
-      status: "pre_order", called_date: new Date().toISOString(),
-      address: [preOrderDistrict, preOrderThana, preOrderAddress].filter(Boolean).join(", ") || currentPreOrderLead.address,
-    }).eq("id", currentPreOrderLead.id);
+    await supabase.from("leads").update({ status: "pre_order", called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
     loadLeads();
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  const handlePreOrderConfirmSubmit = async () => {
+    if (!currentPreOrderConfirmLead || !user) return;
+    if (!pocProduct) { toast.error("Product নির্বাচন করুন"); return; }
+    if (!pocDeliveryDate) { toast.error("Delivery Date নির্বাচন করুন"); return; }
+    // Create order from pre-order confirm
+    const { error } = await supabase.from("orders").insert({
+      customer_name: currentPreOrderConfirmLead.name, phone: currentPreOrderConfirmLead.phone,
+      address: [pocDistrict, pocThana, pocAddress].filter(Boolean).join(", ") || currentPreOrderConfirmLead.address,
+      product: pocProduct, quantity: 1, price: products.find(p => p.product_name === pocProduct)?.unit_price || 0,
+      agent_id: user.id, tl_id: currentPreOrderConfirmLead.tl_id, lead_id: currentPreOrderConfirmLead.id,
+      status: "pending_cso", district: pocDistrict || null, thana: pocThana || null,
+    } as any);
+    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
+    await supabase.from("leads").update({ status: "pre_order_confirm", called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
+    setShowPreOrderConfirmModal(false);
+    toast.success("Pre-Order Confirm হয়েছে ✓");
+    loadLeads();
+  };
 
   if (!checkedIn) {
     return (
