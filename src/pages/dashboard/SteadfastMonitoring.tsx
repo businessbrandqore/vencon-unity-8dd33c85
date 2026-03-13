@@ -173,10 +173,21 @@ export default function SteadfastMonitoring() {
           <Truck className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
           স্টিডফাস্ট মনিটরিং
         </h1>
-        <Button variant="outline" size="sm" onClick={handleSyncSteadfast} disabled={syncing} className="gap-2">
-          <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
-          {syncing ? "সিংক হচ্ছে..." : "স্টিডফাস্ট সিংক"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+            <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="ক্যাম্পেইন" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaigns.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={handleSyncSteadfast} disabled={syncing} className="gap-2">
+            <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
+            {syncing ? "সিংক হচ্ছে..." : "স্টিডফাস্ট সিংক"}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
