@@ -9,6 +9,7 @@ import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboardRouter from "./pages/dashboard/EmployeeDashboardRouter";
 import CSExecutiveDashboard from "./pages/dashboard/CSExecutiveDashboard";
+import SteadfastMonitoring from "./pages/dashboard/SteadfastMonitoring";
 import SADashboard from "./pages/dashboard/SADashboard";
 import SAApprovalsPage from "./pages/dashboard/SAApprovalsPage";
 import SAAuditLogs from "./pages/dashboard/SAAuditLogs";
@@ -137,6 +138,7 @@ const App = () => (
               <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
               <Route path="/employee/leads" element={<EmployeeLeadsRouter />} />
               <Route path="/employee/my-orders" element={<EmployeeMyOrders />} />
+              <Route path="/employee/steadfast" element={<SteadfastMonitoring />} />
               <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
               <Route path="/employee/cs-leads" element={<CSExecutiveDashboard />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
