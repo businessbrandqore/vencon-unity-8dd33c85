@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,35 +10,24 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, GripVertical, ArrowRight, Settings2, Activity } from "lucide-react";
+import { Plus, Trash2, Save, Settings2, Activity, X } from "lucide-react";
 
-interface FieldConfig {
+/* ─── Types ─── */
+interface StatusOption {
   id: string;
-  key: string;
+  value: string;
   label: string;
   label_bn: string;
-  type: "text" | "number" | "select" | "textarea";
-  options?: string[];
-  required?: boolean;
-  visible_to?: string[];
+  color?: string;
+  next_status?: string; // auto-progress after this
 }
 
-interface RoutingRule {
-  id: string;
-  field: string;
-  value: string;
-  action: "set_status" | "create_order" | "archive" | "notify";
-  target_status?: string;
-  target_role?: string;
-  description: string;
+interface RoleStatusConfig {
+  role: string;
+  statuses: StatusOption[];
 }
 
 interface LiveLeadRow {
@@ -47,128 +36,78 @@ interface LiveLeadRow {
   phone: string | null;
   status: string | null;
   agent_type: string | null;
+  assigned_to: string | null;
   updated_at: string | null;
 }
 
-interface LiveOperationEvent {
-  id: string;
-  leadId: string;
-  eventType: string;
-  status: string;
-  position: string;
-  happenedAt: string;
-}
-
+/* ─── Constants ─── */
 const SALES_ROLES = [
-  { value: "telesales_executive", label: "Telesales Executive (Bronze)" },
-  { value: "silver_agent", label: "Silver Agent" },
-  { value: "golden_agent", label: "Golden Agent" },
+  { value: "telesales_executive", label: "টেলিসেলস (Bronze)" },
+  { value: "silver_agent", label: "সিলভার এজেন্ট" },
+  { value: "golden_agent", label: "গোল্ডেন এজেন্ট" },
+  { value: "assistant_team_leader", label: "ATL" },
   { value: "cso", label: "CSO" },
   { value: "cs_executive", label: "CS Executive" },
   { value: "warehouse_assistant", label: "Warehouse Assistant" },
-  { value: "warehouse_supervisor", label: "Warehouse Supervisor" },
   { value: "delivery_coordinator", label: "Delivery Coordinator" },
 ];
 
-const FIELD_TYPES = [
-  { value: "text", label: "টেক্সট" },
-  { value: "number", label: "নম্বর" },
-  { value: "select", label: "সিলেক্ট (ড্রপডাউন)" },
-  { value: "textarea", label: "বড় টেক্সট" },
+const STATUS_COLORS = [
+  { value: "blue", label: "নীল" },
+  { value: "green", label: "সবুজ" },
+  { value: "yellow", label: "হলুদ" },
+  { value: "red", label: "লাল" },
+  { value: "purple", label: "বেগুনি" },
+  { value: "orange", label: "কমলা" },
+  { value: "gray", label: "ধূসর" },
 ];
 
-const ACTION_TYPES = [
-  { value: "set_status", label: "স্ট্যাটাস পরিবর্তন" },
-  { value: "create_order", label: "অর্ডার তৈরি" },
-  { value: "archive", label: "আর্কাইভ" },
-  { value: "notify", label: "নোটিফিকেশন পাঠাও" },
-];
-
-const NO_TARGET_ROLE = "__none__";
-
-const normalizeFields = (raw: unknown): FieldConfig[] => {
-  if (!Array.isArray(raw)) return [];
-
-  return raw.map((item, index) => {
-    const field = (item ?? {}) as Partial<FieldConfig>;
-    const safeKey = field.key?.trim() || `field_${index + 1}`;
-
-    return {
-      id: field.id || `${safeKey}_${index}`,
-      key: safeKey,
-      label: field.label || "",
-      label_bn: field.label_bn || "",
-      type:
-        field.type === "number" ||
-        field.type === "select" ||
-        field.type === "textarea" ||
-        field.type === "text"
-          ? field.type
-          : "text",
-      options: Array.isArray(field.options) ? field.options.filter(Boolean) : [],
-      required: Boolean(field.required),
-      visible_to: Array.isArray(field.visible_to) ? field.visible_to.filter(Boolean) : [],
-    };
-  });
+const colorClasses: Record<string, string> = {
+  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  red: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+  orange: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  gray: "bg-muted text-muted-foreground",
 };
 
-const normalizeRules = (raw: unknown): RoutingRule[] => {
+/* ─── Helpers ─── */
+const parseRoleConfigs = (raw: unknown): RoleStatusConfig[] => {
   if (!Array.isArray(raw)) return [];
-
-  return raw.map((item, index) => {
-    const rule = (item ?? {}) as Partial<RoutingRule>;
-
-    return {
-      id: rule.id || `rule_${index + 1}`,
-      field: rule.field || "status",
-      value: rule.value || "",
-      action:
-        rule.action === "create_order" ||
-        rule.action === "archive" ||
-        rule.action === "notify" ||
-        rule.action === "set_status"
-          ? rule.action
-          : "set_status",
-      target_status: rule.target_status || "",
-      target_role: rule.target_role || "",
-      description: rule.description || "",
-    };
-  });
-};
-
-const formatDateTime = (value: string | null) => {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("bn-BD", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date(value));
+  return raw.map((item: any) => ({
+    role: item.role || "",
+    statuses: Array.isArray(item.statuses)
+      ? item.statuses.map((s: any, i: number) => ({
+          id: s.id || `s_${Date.now()}_${i}`,
+          value: s.value || "",
+          label: s.label || "",
+          label_bn: s.label_bn || "",
+          color: s.color || "gray",
+          next_status: s.next_status || "",
+        }))
+      : [],
+  }));
 };
 
 export default function HRDataOperations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
-  const [selectedMode, setSelectedMode] = useState<string>("lead");
-  const [selectedRole, setSelectedRole] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<string>("fields");
-  const [fields, setFields] = useState<FieldConfig[]>([]);
-  const [rules, setRules] = useState<RoutingRule[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [selectedMode, setSelectedMode] = useState("lead");
+  const [selectedRole, setSelectedRole] = useState(SALES_ROLES[0].value);
+  const [activeTab, setActiveTab] = useState("config");
+  const [roleConfigs, setRoleConfigs] = useState<RoleStatusConfig[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-  const [liveEvents, setLiveEvents] = useState<LiveOperationEvent[]>([]);
 
-  const liveTabActive = activeTab === "live";
-  const lastEventAtRef = useRef(0);
-
+  // ─── Queries ───
   const { data: campaigns } = useQuery({
     queryKey: ["campaigns-for-ops"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("campaigns")
-        .select("id, name, status, data_mode")
+        .select("id, name, status")
         .eq("status", "active")
         .order("name");
       if (error) throw error;
@@ -192,118 +131,86 @@ export default function HRDataOperations() {
       return data;
     },
     enabled: !!selectedCampaign,
+    staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const { data: liveLeads = [], isLoading: liveLoading } = useQuery({
-    queryKey: ["hr-live-operations-data", selectedCampaign, selectedMode],
+    queryKey: ["hr-live-ops", selectedCampaign, selectedMode],
     queryFn: async () => {
       if (!selectedCampaign) return [] as LiveLeadRow[];
-
-      let leadsQuery = supabase
+      const { data, error } = await supabase
         .from("leads")
-        .select("id, name, phone, status, agent_type, updated_at")
+        .select("id, name, phone, status, agent_type, assigned_to, updated_at")
         .eq("campaign_id", selectedCampaign)
         .order("updated_at", { ascending: false })
-        .limit(50);
-
-      if (selectedMode === "lead") {
-        leadsQuery = leadsQuery.eq("status", "fresh");
-      } else {
-        leadsQuery = leadsQuery.neq("status", "fresh");
-      }
-
-      const { data, error } = await leadsQuery;
+        .limit(100);
       if (error) throw error;
       return (data || []) as LiveLeadRow[];
     },
-    enabled: !!selectedCampaign && liveTabActive,
+    enabled: !!selectedCampaign && activeTab === "live",
+    staleTime: 30 * 1000,
     refetchOnWindowFocus: false,
-    staleTime: 60 * 1000,
   });
 
+  // ─── Sync config → state ───
   useEffect(() => {
     if (existingConfig) {
-      setFields(normalizeFields(existingConfig.fields_config));
-      setRules(normalizeRules(existingConfig.routing_rules));
+      // fields_config stores our role-status configs
+      setRoleConfigs(parseRoleConfigs(existingConfig.fields_config));
     } else {
-      setFields([]);
-      setRules([]);
+      setRoleConfigs([]);
     }
     setHasChanges(false);
   }, [existingConfig]);
 
-  useEffect(() => {
-    setLiveEvents([]);
-  }, [selectedCampaign, selectedMode]);
+  // ─── Current role config ───
+  const currentRoleConfig = useMemo(() => {
+    return roleConfigs.find((rc) => rc.role === selectedRole);
+  }, [roleConfigs, selectedRole]);
 
-  useEffect(() => {
-    if (!selectedCampaign || !liveTabActive) return;
+  const currentStatuses = currentRoleConfig?.statuses || [];
 
-    const channel = supabase
-      .channel(`hr-data-operations-live-${selectedCampaign}-${selectedMode}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "leads",
-          filter: `campaign_id=eq.${selectedCampaign}`,
-        },
-        (payload) => {
-          const row = ((payload.new as Partial<LiveLeadRow>) ||
-            (payload.old as Partial<LiveLeadRow>) || {}) as Partial<LiveLeadRow>;
+  // ─── All unique statuses across all roles (for "next_status" dropdown) ───
+  const allStatusValues = useMemo(() => {
+    const set = new Set<string>();
+    roleConfigs.forEach((rc) => rc.statuses.forEach((s) => { if (s.value) set.add(s.value); }));
+    return Array.from(set);
+  }, [roleConfigs]);
 
-          const rowStatus = row.status || "";
-          const isLeadModeRow = rowStatus === "fresh";
+  // ─── Mutations ───
+  const updateRoleStatuses = (statuses: StatusOption[]) => {
+    setRoleConfigs((prev) => {
+      const exists = prev.find((rc) => rc.role === selectedRole);
+      if (exists) {
+        return prev.map((rc) => rc.role === selectedRole ? { ...rc, statuses } : rc);
+      }
+      return [...prev, { role: selectedRole, statuses }];
+    });
+    setHasChanges(true);
+  };
 
-          if (selectedMode === "lead" && !isLeadModeRow) return;
-          if (selectedMode === "processing" && isLeadModeRow) return;
+  const addStatus = () => {
+    const id = `status_${Date.now()}`;
+    updateRoleStatuses([
+      ...currentStatuses,
+      { id, value: "", label: "", label_bn: "", color: "gray", next_status: "" },
+    ]);
+  };
 
-          const now = Date.now();
-          if (now - lastEventAtRef.current < 200) return;
-          lastEventAtRef.current = now;
+  const updateStatus = (idx: number, updates: Partial<StatusOption>) => {
+    const updated = [...currentStatuses];
+    updated[idx] = { ...updated[idx], ...updates };
+    // auto-sync value from label if value is empty
+    if (updates.label && !updated[idx].value) {
+      updated[idx].value = updates.label.toLowerCase().replace(/\s+/g, "_");
+    }
+    updateRoleStatuses(updated);
+  };
 
-          setLiveEvents((prev) => [
-            {
-              id: `${payload.eventType}-${row.id || "unknown"}-${now}`,
-              leadId: row.id || "unknown",
-              eventType: payload.eventType,
-              status: row.status || "—",
-              position: row.agent_type || "—",
-              happenedAt: new Date().toISOString(),
-            },
-            ...prev,
-          ].slice(0, 30));
-
-          queryClient.setQueryData<LiveLeadRow[]>(
-            ["hr-live-operations-data", selectedCampaign, selectedMode],
-            (previous = []) => {
-              const listWithoutCurrent = previous.filter((item) => item.id !== row.id);
-              const shouldKeep = row.id && payload.eventType !== "DELETE";
-
-              if (!shouldKeep) return listWithoutCurrent.slice(0, 50);
-
-              const nextRow: LiveLeadRow = {
-                id: row.id || "",
-                name: row.name || null,
-                phone: row.phone || null,
-                status: row.status || null,
-                agent_type: row.agent_type || null,
-                updated_at: row.updated_at || new Date().toISOString(),
-              };
-
-              return [nextRow, ...listWithoutCurrent].slice(0, 50);
-            }
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [liveTabActive, queryClient, selectedCampaign, selectedMode]);
+  const removeStatus = (idx: number) => {
+    updateRoleStatuses(currentStatuses.filter((_, i) => i !== idx));
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -312,8 +219,8 @@ export default function HRDataOperations() {
       const payload = {
         campaign_id: selectedCampaign,
         data_mode: selectedMode,
-        fields_config: JSON.parse(JSON.stringify(fields)),
-        routing_rules: JSON.parse(JSON.stringify(rules)),
+        fields_config: JSON.parse(JSON.stringify(roleConfigs)),
+        routing_rules: existingConfig?.routing_rules || [],
         created_by: user.id,
         updated_at: new Date().toISOString(),
       };
@@ -334,111 +241,43 @@ export default function HRDataOperations() {
     onSuccess: () => {
       toast.success("কনফিগারেশন সেভ হয়েছে!");
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ["data-operations-config", selectedCampaign, selectedMode] });
+      queryClient.invalidateQueries({
+        queryKey: ["data-operations-config", selectedCampaign, selectedMode],
+      });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const visibleFieldRows = useMemo(
-    () =>
-      fields
-        .map((field, index) => ({ field, index }))
-        .filter(({ field }) =>
-          selectedRole === "all"
-            ? true
-            : !field.visible_to?.length || field.visible_to.includes(selectedRole)
-        ),
-    [fields, selectedRole]
-  );
+  // ─── Live tab: count by status ───
+  const statusCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    liveLeads.forEach((l) => {
+      const s = l.status || "unknown";
+      map[s] = (map[s] || 0) + 1;
+    });
+    return map;
+  }, [liveLeads]);
 
-  const visibleRuleRows = useMemo(
-    () =>
-      rules
-        .map((rule, index) => ({ rule, index }))
-        .filter(({ rule }) =>
-          selectedRole === "all" ? true : !rule.target_role || rule.target_role === selectedRole
-        ),
-    [rules, selectedRole]
-  );
-
-  const selectableFields = useMemo(
-    () =>
-      fields.filter(
-        (field) =>
-          field.type === "select" &&
-          (selectedRole === "all" || !field.visible_to?.length || field.visible_to.includes(selectedRole))
-      ),
-    [fields, selectedRole]
-  );
-
-  const addField = () => {
-    const id = `field_${Date.now()}`;
-    setFields([
-      ...fields,
-      {
-        id,
-        key: id,
-        label: "",
-        label_bn: "",
-        type: "text",
-        options: [],
-        required: false,
-        visible_to: selectedRole === "all" ? [] : [selectedRole],
-      },
-    ]);
-    setHasChanges(true);
-  };
-
-  const updateField = (index: number, updates: Partial<FieldConfig>) => {
-    const updated = [...fields];
-    updated[index] = { ...updated[index], ...updates };
-    setFields(updated);
-    setHasChanges(true);
-  };
-
-  const removeField = (index: number) => {
-    setFields(fields.filter((_, i) => i !== index));
-    setHasChanges(true);
-  };
-
-  const addRule = () => {
-    setRules([
-      ...rules,
-      {
-        id: `rule_${Date.now()}`,
-        field: "status",
-        value: "",
-        action: "set_status",
-        target_status: "",
-        target_role: selectedRole === "all" ? "" : selectedRole,
-        description: "",
-      },
-    ]);
-    setHasChanges(true);
-  };
-
-  const updateRule = (index: number, updates: Partial<RoutingRule>) => {
-    const updated = [...rules];
-    updated[index] = { ...updated[index], ...updates };
-    setRules(updated);
-    setHasChanges(true);
-  };
-
-  const removeRule = (index: number) => {
-    setRules(rules.filter((_, i) => i !== index));
-    setHasChanges(true);
+  // Find color for a status value
+  const getStatusColor = (statusValue: string) => {
+    for (const rc of roleConfigs) {
+      const found = rc.statuses.find((s) => s.value === statusValue);
+      if (found?.color) return found.color;
+    }
+    return "gray";
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Settings2 className="h-6 w-6 text-primary" />
-            ডাটা অপারেশন কনফিগারেশন
+            ডাটা অপারেশন
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            ক্যাম্পেইন অনুযায়ী ফিল্ড, রাউটিং রুল এবং লাইভ অপারেশন মনিটর করুন
+            প্রতিটি পদের জন্য লিডের স্ট্যাটাস অপশন নির্ধারণ করুন
           </p>
         </div>
         {hasChanges && (
@@ -449,20 +288,17 @@ export default function HRDataOperations() {
         )}
       </div>
 
+      {/* Filters */}
       <Card>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>ক্যাম্পেইন নির্বাচন করুন</Label>
+              <Label>ক্যাম্পেইন</Label>
               <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                <SelectTrigger>
-                  <SelectValue placeholder="ক্যাম্পেইন সিলেক্ট করুন..." />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="সিলেক্ট করুন..." /></SelectTrigger>
                 <SelectContent>
-                  {campaigns?.map((campaign) => (
-                    <SelectItem key={campaign.id} value={campaign.id}>
-                      {campaign.name}
-                    </SelectItem>
+                  {campaigns?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -470,9 +306,7 @@ export default function HRDataOperations() {
             <div className="space-y-2">
               <Label>ডাটা মোড</Label>
               <Select value={selectedMode} onValueChange={setSelectedMode}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lead">লিড</SelectItem>
                   <SelectItem value="processing">প্রসেসিং</SelectItem>
@@ -480,414 +314,285 @@ export default function HRDataOperations() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>পদ/রোল</Label>
+              <Label>পদ সিলেক্ট করুন</Label>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">সব পদ</SelectItem>
-                  {SALES_ROLES.map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      {role.label}
-                    </SelectItem>
+                  {SALES_ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          {configLoading && (
-            <p className="text-xs text-muted-foreground mt-3">কনফিগারেশন লোড হচ্ছে...</p>
-          )}
+          {configLoading && <p className="text-xs text-muted-foreground mt-3">লোড হচ্ছে...</p>}
         </CardContent>
       </Card>
 
+      {/* Main content */}
       {selectedCampaign && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="fields">কাস্টম ফিল্ড ({visibleFieldRows.length})</TabsTrigger>
-            <TabsTrigger value="routing">রাউটিং রুল ({visibleRuleRows.length})</TabsTrigger>
-            <TabsTrigger value="live" className="flex items-center gap-1">
-              <Activity className="h-3 w-3" />
-              লাইভ ({liveEvents.length})
+            <TabsTrigger value="config">
+              <Settings2 className="h-3.5 w-3.5 mr-1" />
+              স্ট্যাটাস কনফিগ ({currentStatuses.length})
+            </TabsTrigger>
+            <TabsTrigger value="overview">
+              সব পদের সারাংশ
+            </TabsTrigger>
+            <TabsTrigger value="live">
+              <Activity className="h-3.5 w-3.5 mr-1" />
+              লাইভ ডাটা
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="fields" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                এজেন্টদের কাজের ইন্টারফেসে অতিরিক্ত ফিল্ড যোগ করুন (মূল ওয়েবসাইট ডাটা অক্ষত থাকবে)
-              </p>
-              <Button variant="outline" size="sm" onClick={addField}>
-                <Plus className="h-4 w-4 mr-1" /> ফিল্ড যোগ করুন
-              </Button>
-            </div>
-
-            {visibleFieldRows.length === 0 && (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  এই পদের জন্য কোনো কাস্টম ফিল্ড নেই। "ফিল্ড যোগ করুন" বাটনে ক্লিক করুন।
-                </CardContent>
-              </Card>
-            )}
-
-            {visibleFieldRows.map(({ field, index }) => (
-              <Card key={field.id} className="relative">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <GripVertical className="h-5 w-5 text-muted-foreground mt-2 shrink-0" />
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">ফিল্ড নাম (EN)</Label>
-                        <Input
-                          value={field.label}
-                          onChange={(e) => updateField(index, { label: e.target.value })}
-                          placeholder="e.g. Product"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">ফিল্ড নাম (বাংলা)</Label>
-                        <Input
-                          value={field.label_bn}
-                          onChange={(e) => updateField(index, { label_bn: e.target.value })}
-                          placeholder="e.g. প্রোডাক্ট"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">ফিল্ড টাইপ</Label>
-                        <Select
-                          value={field.type}
-                          onValueChange={(value) => updateField(index, { type: value as FieldConfig["type"] })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FIELD_TYPES.map((fieldType) => (
-                              <SelectItem key={fieldType.value} value={fieldType.value}>
-                                {fieldType.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">দৃশ্যমান (রোল)</Label>
-                        <Select
-                          value={field.visible_to?.[0] || "all"}
-                          onValueChange={(value) =>
-                            updateField(index, { visible_to: value === "all" ? [] : [value] })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="সবাই" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">সবাই</SelectItem>
-                            {SALES_ROLES.map((role) => (
-                              <SelectItem key={role.value} value={role.value}>
-                                {role.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {field.type === "select" && (
-                        <div className="col-span-full space-y-1">
-                          <Label className="text-xs">অপশনসমূহ (কমা দিয়ে আলাদা করুন)</Label>
-                          <Input
-                            value={field.options?.join(", ") || ""}
-                            onChange={(e) =>
-                              updateField(index, {
-                                options: e.target.value
-                                  .split(",")
-                                  .map((value) => value.trim())
-                                  .filter(Boolean),
-                              })
-                            }
-                            placeholder="e.g. Product A, Product B, Product C"
-                          />
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {field.options?.map((option, optionIndex) => (
-                              <Badge key={optionIndex} variant="secondary" className="text-xs">
-                                {option}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-destructive hover:text-destructive"
-                      onClick={() => removeField(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="routing" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                ভ্যালু-ভিত্তিক রাউটিং কনফিগার করুন (পদ সিলেক্ট করে দ্রুত পরিবর্তন করা যাবে)
-              </p>
-              <Button variant="outline" size="sm" onClick={addRule}>
-                <Plus className="h-4 w-4 mr-1" /> রুল যোগ করুন
-              </Button>
-            </div>
-
-            {visibleRuleRows.length === 0 && (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  এই পদের জন্য কোনো রাউটিং রুল নেই। "রুল যোগ করুন" বাটনে ক্লিক করুন।
-                </CardContent>
-              </Card>
-            )}
-
-            {visibleRuleRows.map(({ rule, index }) => (
-              <Card key={rule.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">কোন ফিল্ডে</Label>
-                          <Select value={rule.field} onValueChange={(value) => updateRule(index, { field: value })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="ফিল্ড সিলেক্ট..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="status">স্ট্যাটাস (Lead Status)</SelectItem>
-                              {selectableFields.map((field) => (
-                                <SelectItem key={field.key} value={field.key}>
-                                  {field.label || field.key}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">কোন ভ্যালু হলে</Label>
-                          <Input
-                            value={rule.value}
-                            onChange={(e) => updateRule(index, { value: e.target.value })}
-                            placeholder="e.g. confirmed"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">কী হবে</Label>
-                          <Select
-                            value={rule.action}
-                            onValueChange={(value) => updateRule(index, { action: value as RoutingRule["action"] })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ACTION_TYPES.map((action) => (
-                                <SelectItem key={action.value} value={action.value}>
-                                  {action.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {(rule.action === "set_status" || rule.action === "create_order") && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">টার্গেট স্ট্যাটাস</Label>
-                            <Input
-                              value={rule.target_status || ""}
-                              onChange={(e) => updateRule(index, { target_status: e.target.value })}
-                              placeholder="e.g. pending_cso"
-                            />
-                          </div>
-                        )}
-                        {(rule.action === "notify" || rule.action === "create_order") && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">টার্গেট পদ</Label>
-                            <Select
-                              value={rule.target_role || NO_TARGET_ROLE}
-                              onValueChange={(value) =>
-                                updateRule(index, { target_role: value === NO_TARGET_ROLE ? "" : value })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="পদ সিলেক্ট করুন..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={NO_TARGET_ROLE}>নির্বাচিত নয়</SelectItem>
-                                {SALES_ROLES.map((role) => (
-                                  <SelectItem key={role.value} value={role.value}>
-                                    {role.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <div className="space-y-1">
-                          <Label className="text-xs">বিবরণ</Label>
-                          <Input
-                            value={rule.description}
-                            onChange={(e) => updateRule(index, { description: e.target.value })}
-                            placeholder="এই রুলটি কী করে..."
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2 flex-wrap">
-                        <Badge variant="outline" className="text-xs">
-                          {rule.field || "?"}
-                        </Badge>
-                        <span>=</span>
-                        <Badge variant="outline" className="text-xs">
-                          {rule.value || "?"}
-                        </Badge>
-                        <ArrowRight className="h-3 w-3" />
-                        <Badge className="text-xs bg-primary/10 text-primary border-0">
-                          {ACTION_TYPES.find((action) => action.value === rule.action)?.label}
-                        </Badge>
-                        {rule.target_status && (
-                          <>
-                            <ArrowRight className="h-3 w-3" />
-                            <Badge variant="secondary" className="text-xs">
-                              {rule.target_status}
-                            </Badge>
-                          </>
-                        )}
-                        {rule.target_role && (
-                          <>
-                            <ArrowRight className="h-3 w-3" />
-                            <Badge variant="secondary" className="text-xs">
-                              {SALES_ROLES.find((role) => role.value === rule.target_role)?.label || rule.target_role}
-                            </Badge>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-destructive hover:text-destructive"
-                      onClick={() => removeRule(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="live" className="space-y-4">
+          {/* ─── Config Tab ─── */}
+          <TabsContent value="config" className="space-y-4">
             <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    এখানে সিলেক্ট করা ক্যাম্পেইনের ডাটা এবং চলমান অপারেশন লাইভ দেখা যাবে
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">ডাটা: {liveLeads.length}</Badge>
-                    <Badge variant="outline">লাইভ ইভেন্ট: {liveEvents.length}</Badge>
-                  </div>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    {SALES_ROLES.find((r) => r.value === selectedRole)?.label} — স্ট্যাটাস অপশন
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={addStatus}>
+                    <Plus className="h-4 w-4 mr-1" /> স্ট্যাটাস যোগ করুন
+                  </Button>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-0">
+                {currentStatuses.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground border border-dashed rounded-lg">
+                    এই পদের জন্য কোনো স্ট্যাটাস অপশন নেই।<br />
+                    <Button variant="outline" size="sm" className="mt-3" onClick={addStatus}>
+                      <Plus className="h-4 w-4 mr-1" /> প্রথম স্ট্যাটাস যোগ করুন
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]">#</TableHead>
+                          <TableHead>ভ্যালু (key)</TableHead>
+                          <TableHead>লেবেল (EN)</TableHead>
+                          <TableHead>লেবেল (বাংলা)</TableHead>
+                          <TableHead>রঙ</TableHead>
+                          <TableHead>পরবর্তী স্ট্যাটাস</TableHead>
+                          <TableHead>প্রিভিউ</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentStatuses.map((status, idx) => (
+                          <TableRow key={status.id}>
+                            <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                            <TableCell>
+                              <Input
+                                value={status.value}
+                                onChange={(e) => updateStatus(idx, { value: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                                placeholder="order_confirm"
+                                className="h-8 text-sm font-mono"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={status.label}
+                                onChange={(e) => updateStatus(idx, { label: e.target.value })}
+                                placeholder="Order Confirm"
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={status.label_bn}
+                                onChange={(e) => updateStatus(idx, { label_bn: e.target.value })}
+                                placeholder="অর্ডার কনফার্ম"
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={status.color || "gray"}
+                                onValueChange={(v) => updateStatus(idx, { color: v })}
+                              >
+                                <SelectTrigger className="h-8 w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_COLORS.map((c) => (
+                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={status.next_status || "__none__"}
+                                onValueChange={(v) => updateStatus(idx, { next_status: v === "__none__" ? "" : v })}
+                              >
+                                <SelectTrigger className="h-8 w-36">
+                                  <SelectValue placeholder="নেই" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">নেই</SelectItem>
+                                  {allStatusValues
+                                    .filter((sv) => sv !== status.value)
+                                    .map((sv) => (
+                                      <SelectItem key={sv} value={sv}>{sv}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              {status.value && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[status.color || "gray"] || colorClasses.gray}`}>
+                                  {status.label_bn || status.label || status.value}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => removeStatus(idx)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="pt-4">
-                      <h3 className="text-sm font-semibold text-foreground mb-3">
-                        {selectedMode === "lead" ? "লাইভ লিড ডাটা" : "লাইভ প্রসেসিং ডাটা"}
-                      </h3>
-                      {liveLoading ? (
-                        <p className="text-sm text-muted-foreground">ডাটা লোড হচ্ছে...</p>
-                      ) : liveLeads.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">এই ফিল্টারে কোনো ডাটা নেই।</p>
-                      ) : (
-                        <div className="max-h-[360px] overflow-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>নাম</TableHead>
-                                <TableHead>ফোন</TableHead>
-                                <TableHead>স্ট্যাটাস</TableHead>
-                                <TableHead>পদ</TableHead>
-                                <TableHead>আপডেট</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {liveLeads.map((lead) => (
-                                <TableRow key={lead.id}>
-                                  <TableCell className="font-mono text-xs">{lead.id.slice(0, 8)}</TableCell>
-                                  <TableCell>{lead.name || "—"}</TableCell>
-                                  <TableCell>{lead.phone || "—"}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="secondary" className="text-xs">
-                                      {lead.status || "—"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>{lead.agent_type || "—"}</TableCell>
-                                  <TableCell className="text-xs text-muted-foreground">
-                                    {formatDateTime(lead.updated_at)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+            {/* Quick preview of all statuses for this role */}
+            {currentStatuses.length > 0 && (
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    এই পদের কর্মী যে স্ট্যাটাসগুলো দেখতে পাবে:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {currentStatuses.map((s) => (
+                      <span
+                        key={s.id}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClasses[s.color || "gray"] || colorClasses.gray}`}
+                      >
+                        {s.label_bn || s.label || s.value}
+                        {s.next_status && (
+                          <span className="ml-1 opacity-60 text-xs">→ {s.next_status}</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-                  <Card>
-                    <CardContent className="pt-4">
-                      <h3 className="text-sm font-semibold text-foreground mb-3">লাইভ অপারেশন লগ</h3>
-                      {liveEvents.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          এখনো কোনো লাইভ অপারেশন ধরা পড়েনি। ডাটা আপডেট হলে এখানে দেখা যাবে।
-                        </p>
+          {/* ─── Overview Tab ─── */}
+          <TabsContent value="overview" className="space-y-4">
+            {roleConfigs.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  কোনো পদের জন্য স্ট্যাটাস কনফিগার করা হয়নি।
+                </CardContent>
+              </Card>
+            ) : (
+              roleConfigs.map((rc) => {
+                const roleInfo = SALES_ROLES.find((r) => r.value === rc.role);
+                return (
+                  <Card key={rc.role}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold">
+                        {roleInfo?.label || rc.role}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {rc.statuses.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">কোনো স্ট্যাটাস নেই</p>
                       ) : (
-                        <div className="space-y-2 max-h-[360px] overflow-auto">
-                          {liveEvents.map((event) => (
-                            <div
-                              key={event.id}
-                              className="rounded-md border border-border bg-card px-3 py-2 flex items-center justify-between gap-3"
+                        <div className="flex flex-wrap gap-2">
+                          {rc.statuses.map((s) => (
+                            <span
+                              key={s.id}
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colorClasses[s.color || "gray"] || colorClasses.gray}`}
                             >
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge variant="outline" className="text-xs">
-                                    {event.eventType}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground font-mono">
-                                    {event.leadId.slice(0, 8)}
-                                  </span>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {event.status}
-                                  </Badge>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {event.position}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {formatDateTime(event.happenedAt)}
-                              </span>
-                            </div>
+                              {s.label_bn || s.label || s.value}
+                            </span>
                           ))}
                         </div>
                       )}
                     </CardContent>
                   </Card>
-                </div>
+                );
+              })
+            )}
+          </TabsContent>
+
+          {/* ─── Live Tab ─── */}
+          <TabsContent value="live" className="space-y-4">
+            {/* Status counts */}
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(statusCounts).map(([status, count]) => (
+                <Badge
+                  key={status}
+                  className={`text-xs ${colorClasses[getStatusColor(status)] || colorClasses.gray}`}
+                >
+                  {status}: {count}
+                </Badge>
+              ))}
+              <Badge variant="outline" className="text-xs">মোট: {liveLeads.length}</Badge>
+            </div>
+
+            <Card>
+              <CardContent className="pt-4">
+                {liveLoading ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">ডাটা লোড হচ্ছে...</p>
+                ) : liveLeads.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">কোনো ডাটা নেই</p>
+                ) : (
+                  <div className="max-h-[500px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>নাম</TableHead>
+                          <TableHead>ফোন</TableHead>
+                          <TableHead>স্ট্যাটাস</TableHead>
+                          <TableHead>টায়ার</TableHead>
+                          <TableHead>আপডেট</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {liveLeads.map((lead) => (
+                          <TableRow key={lead.id}>
+                            <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                            <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                            <TableCell>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[getStatusColor(lead.status || "")] || colorClasses.gray}`}>
+                                {lead.status || "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-xs">
+                                {lead.agent_type || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {lead.updated_at
+                                ? new Date(lead.updated_at).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" })
+                                : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
