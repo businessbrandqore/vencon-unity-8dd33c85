@@ -167,55 +167,40 @@ const DataTracker = () => {
     enabled: !!user,
   });
 
-  // Fetch Silver data: orders delivered from Bronze agents → original lead info
+  // Fetch Silver data: leads with agent_type = 'silver'
   const { data: silverLeads, isLoading: silverLoading } = useQuery({
     queryKey: ["tracker-silver", selectedCampaign, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
       let q = supabase
-        .from("orders")
-        .select("id, lead_id, customer_name, phone, address, product, price, created_at, delivery_status, leads!orders_lead_id_fkey(id, name, phone, address, source, created_at, campaign_id)")
-        .eq("delivery_status", "delivered")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
-      const { data, error } = await q;
-      if (error) throw error;
-      const result = (data || []).filter((o: any) => o.leads);
-      if (selectedCampaign !== "all") {
-        return result.filter((o: any) => o.leads?.campaign_id === selectedCampaign);
-      }
-      return result;
-    },
-    enabled: !!user,
-  });
-
-  // Fetch Golden data: orders from Silver agents that got delivered again
-  // Golden = leads that have agent_type = 'silver' AND their order is delivered
-  const { data: goldenLeads, isLoading: goldenLoading } = useQuery({
-    queryKey: ["tracker-golden", selectedCampaign, user?.id, isTL, isATL, atlTlMap],
-    queryFn: async () => {
-      let q = supabase
         .from("leads")
-        .select("id, name, phone, address, source, created_at, campaign_id, agent_type")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status")
         .eq("agent_type", "silver")
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
       if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
-      const { data: silverAssigned, error: sErr } = await q;
-      if (sErr) throw sErr;
-      if (!silverAssigned || silverAssigned.length === 0) return [];
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
 
-      const silverIds = silverAssigned.map(l => l.id);
-      const { data: deliveredOrders, error: oErr } = await supabase
-        .from("orders")
-        .select("lead_id")
-        .in("lead_id", silverIds)
-        .eq("delivery_status", "delivered");
-      if (oErr) throw oErr;
-
-      const deliveredLeadIds = new Set((deliveredOrders || []).map(o => o.lead_id));
-      return silverAssigned.filter(l => deliveredLeadIds.has(l.id));
+  // Fetch Golden data: leads with agent_type = 'golden'
+  const { data: goldenLeads, isLoading: goldenLoading } = useQuery({
+    queryKey: ["tracker-golden", selectedCampaign, user?.id, isTL, isATL, atlTlMap],
+    queryFn: async () => {
+      let q = supabase
+        .from("leads")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status")
+        .eq("agent_type", "golden")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!user,
   });
