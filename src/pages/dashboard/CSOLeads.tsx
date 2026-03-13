@@ -31,6 +31,13 @@ interface OrderRow {
   tl_id: string | null;
   cso_approved_at: string | null;
   cs_note: string | null;
+  lead_id: string | null;
+  campaign_id?: string | null;
+}
+
+interface CampaignOption {
+  id: string;
+  name: string;
 }
 
 interface TLOption {
