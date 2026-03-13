@@ -764,19 +764,24 @@ export default function HRDataOperations() {
                         {rc.columns.map(col => (
                           <div key={col.id}>
                             <p className="text-xs font-medium text-muted-foreground mb-1">
-                              📋 {col.name_bn || col.name || "কলাম"}
+                              {col.type === "note" ? "📝" : "📋"} {col.name_bn || col.name || "কলাম"}
+                              {col.type === "note" && <span className="ml-1 text-[10px] opacity-60">(নোট)</span>}
                             </p>
-                            <div className="flex flex-wrap gap-1.5 ml-3">
-                              {col.options.map(o => (
-                                <span key={o.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${getColorClasses(o.color || "gray")}`}>
-                                  {o.label_bn || o.label || o.value}
-                                  {o.next_panel && (
-                                    <span className="ml-1 opacity-60">→ {o.next_panel.toUpperCase()}</span>
-                                  )}
-                                </span>
-                              ))}
-                              {col.options.length === 0 && <span className="text-[10px] text-muted-foreground">কোনো ভ্যালু নেই</span>}
-                            </div>
+                            {col.type === "note" ? (
+                              <p className="text-[10px] text-muted-foreground ml-3">ফ্রি-টেক্সট ইনপুট</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5 ml-3">
+                                {col.options.map(o => (
+                                  <span key={o.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${getColorClasses(o.color || "gray")}`}>
+                                    {o.label_bn || o.label || o.value}
+                                    {o.next_panel && (
+                                      <span className="ml-1 opacity-60">→ {o.next_panel.toUpperCase()}</span>
+                                    )}
+                                  </span>
+                                ))}
+                                {col.options.length === 0 && <span className="text-[10px] text-muted-foreground">কোনো ভ্যালু নেই</span>}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
