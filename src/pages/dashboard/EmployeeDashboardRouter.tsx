@@ -31,6 +31,8 @@ export default function EmployeeDashboardRouter() {
         return <InventoryManagerDashboard />;
       case "cs_executive":
         return <CSExecutiveDashboard />;
+      case "cso":
+        return <CSODashboard />;
       case "delivery_coordinator":
         return <DeliveryCoordinatorDashboard />;
       case "group_leader":
