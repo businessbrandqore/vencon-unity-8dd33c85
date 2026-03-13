@@ -583,9 +583,12 @@ export default function MaintenanceOfficerDashboard() {
 
           {/* Summary cards */}
           {(() => {
-            const clean = deskReports.filter(d => d.desk_condition === "clean").length;
-            const moderate = deskReports.filter(d => d.desk_condition === "moderate").length;
-            const dirty = deskReports.filter(d => d.desk_condition === "dirty").length;
+            const dateFiltered = deskDate
+              ? deskReports.filter(d => d.date === format(deskDate, "yyyy-MM-dd"))
+              : deskReports;
+            const clean = dateFiltered.filter(d => d.desk_condition === "clean").length;
+            const moderate = dateFiltered.filter(d => d.desk_condition === "moderate").length;
+            const dirty = dateFiltered.filter(d => d.desk_condition === "dirty").length;
             return (
               <div className="grid grid-cols-3 gap-3">
                 <Card className="border-green-500/30">
