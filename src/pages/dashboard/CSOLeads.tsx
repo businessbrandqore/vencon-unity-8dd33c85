@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Inbox } from "lucide-react";
+import { Inbox, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,13 @@ interface OrderRow {
   tl_id: string | null;
   cso_approved_at: string | null;
   cs_note: string | null;
+  lead_id: string | null;
+  campaign_id?: string | null;
+}
+
+interface CampaignOption {
+  id: string;
+  name: string;
 }
 
 interface TLOption {
@@ -49,10 +56,16 @@ export default function CSOLeads() {
   const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Campaign filter
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [leadCampaignMap, setLeadCampaignMap] = useState<Record<string, string>>({});
+
   // Data Request state
   const [showDataRequest, setShowDataRequest] = useState(false);
   const [dataRequestMsg, setDataRequestMsg] = useState("");
   const [dataRequestTlId, setDataRequestTlId] = useState("");
+  const [dataRequestCampaignId, setDataRequestCampaignId] = useState("");
   const [tlOptions, setTlOptions] = useState<TLOption[]>([]);
   const [sendingRequest, setSendingRequest] = useState(false);
 
@@ -65,34 +78,51 @@ export default function CSOLeads() {
   const loadOrders = useCallback(async () => {
     if (!user) return;
 
+    const selectFields = "id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note, lead_id";
+
     const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note")
+        .select(selectFields)
         .eq("status", "pending_cso")
         .order("created_at", { ascending: true }),
       supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note")
+        .select(selectFields)
         .eq("status", "send_today")
         .eq("cso_id", user.id)
         .order("cso_approved_at", { ascending: false })
         .limit(50),
       supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, created_at, agent_id, tl_id, cso_approved_at, cs_note")
+        .select(selectFields)
         .eq("status", "rejected")
         .eq("cso_id", user.id)
         .order("cso_approved_at", { ascending: false })
         .limit(50),
     ]);
 
+    const allOrders = [...(pendingRes.data || []), ...(approvedRes.data || []), ...(rejectedRes.data || [])] as OrderRow[];
+
+    // Get lead -> campaign mapping
+    const leadIds = [...new Set(allOrders.map(o => o.lead_id).filter(Boolean))] as string[];
+    if (leadIds.length > 0) {
+      const { data: leadsData } = await supabase
+        .from("leads")
+        .select("id, campaign_id")
+        .in("id", leadIds);
+      if (leadsData) {
+        const lcMap: Record<string, string> = {};
+        leadsData.forEach(l => { if (l.campaign_id) lcMap[l.id] = l.campaign_id; });
+        setLeadCampaignMap(lcMap);
+      }
+    }
+
     setPendingOrders((pendingRes.data || []) as OrderRow[]);
     setApprovedOrders((approvedRes.data || []) as OrderRow[]);
     setRejectedOrders((rejectedRes.data || []) as OrderRow[]);
 
     // Get agent names
-    const allOrders = [...(pendingRes.data || []), ...(approvedRes.data || []), ...(rejectedRes.data || [])] as OrderRow[];
     const agentIds = [...new Set(allOrders.map(o => o.agent_id).filter(Boolean))] as string[];
     if (agentIds.length > 0) {
       const { data: agents } = await supabase.from("users").select("id, name").in("id", agentIds);
@@ -105,6 +135,16 @@ export default function CSOLeads() {
 
     setLoading(false);
   }, [user]);
+
+  // Load campaigns
+  const loadCampaigns = useCallback(async () => {
+    const { data } = await supabase
+      .from("campaigns")
+      .select("id, name")
+      .eq("status", "active")
+      .order("name");
+    if (data) setCampaigns(data);
+  }, []);
 
   // Load TL options for data request
   const loadTLs = useCallback(async () => {
@@ -122,7 +162,7 @@ export default function CSOLeads() {
     if (!user) return;
     const { data } = await supabase
       .from("data_requests")
-      .select("id, message, status, created_at, responded_at, response_note, tl_id")
+      .select("id, message, status, created_at, responded_at, response_note, tl_id, campaign_id")
       .eq("requested_by", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -131,9 +171,10 @@ export default function CSOLeads() {
 
   useEffect(() => {
     loadOrders();
+    loadCampaigns();
     loadTLs();
     loadMyRequests();
-  }, [loadOrders, loadTLs, loadMyRequests]);
+  }, [loadOrders, loadCampaigns, loadTLs, loadMyRequests]);
 
   // Realtime
   useEffect(() => {
@@ -186,12 +227,16 @@ export default function CSOLeads() {
       return;
     }
     setSendingRequest(true);
-    const { error } = await supabase.from("data_requests").insert({
+    const insertData: any = {
       requested_by: user.id,
       tl_id: dataRequestTlId,
       message: dataRequestMsg.trim(),
       status: "pending",
-    });
+    };
+    if (dataRequestCampaignId && dataRequestCampaignId !== "all") {
+      insertData.campaign_id = dataRequestCampaignId;
+    }
+    const { error } = await supabase.from("data_requests").insert(insertData);
 
     if (error) {
       toast.error("রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে");
@@ -211,16 +256,28 @@ export default function CSOLeads() {
     setShowDataRequest(false);
     setDataRequestMsg("");
     setDataRequestTlId("");
+    setDataRequestCampaignId("");
     setSendingRequest(false);
     loadMyRequests();
   };
 
+  const campaignFilter = (o: OrderRow) => {
+    if (selectedCampaign === "all") return true;
+    const campId = o.lead_id ? leadCampaignMap[o.lead_id] : null;
+    return campId === selectedCampaign;
+  };
+
   const filteredPending = pendingOrders.filter(o =>
-    !search ||
-    o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    o.phone?.includes(search) ||
-    o.id.includes(search)
+    campaignFilter(o) && (
+      !search ||
+      o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      o.phone?.includes(search) ||
+      o.id.includes(search)
+    )
   );
+
+  const filteredApproved = approvedOrders.filter(campaignFilter);
+  const filteredRejected = rejectedOrders.filter(campaignFilter);
 
   const statusBadge = (s: string) => {
     switch (s) {
@@ -241,7 +298,19 @@ export default function CSOLeads() {
           <ShieldCheck className="h-5 w-5 text-primary" />
           CSO — লিড ও অর্ডার যাচাই
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+            <SelectTrigger className="w-[200px] h-9">
+              <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="ক্যাম্পেইন ফিল্টার" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={() => { setShowDataRequest(true); loadTLs(); }}>
             <Database className="h-4 w-4 mr-1" /> ডাটা রিকোয়েস্ট
           </Button>
@@ -258,7 +327,7 @@ export default function CSOLeads() {
             <Clock className="h-8 w-8 text-amber-500" />
             <div>
               <p className="text-xs text-muted-foreground">Pending Review</p>
-              <p className="text-2xl font-heading">{pendingOrders.length}</p>
+              <p className="text-2xl font-heading">{filteredPending.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -267,7 +336,7 @@ export default function CSOLeads() {
             <CheckCircle className="h-8 w-8 text-emerald-500" />
             <div>
               <p className="text-xs text-muted-foreground">Approved</p>
-              <p className="text-2xl font-heading">{approvedOrders.length}</p>
+              <p className="text-2xl font-heading">{filteredApproved.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -276,7 +345,7 @@ export default function CSOLeads() {
             <XCircle className="h-8 w-8 text-destructive" />
             <div>
               <p className="text-xs text-muted-foreground">Rejected</p>
-              <p className="text-2xl font-heading">{rejectedOrders.length}</p>
+              <p className="text-2xl font-heading">{filteredRejected.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -285,13 +354,13 @@ export default function CSOLeads() {
       <Tabs defaultValue="pending">
         <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="pending">
-            Pending ({pendingOrders.length})
+            Pending ({filteredPending.length})
           </TabsTrigger>
           <TabsTrigger value="approved">
-            Approved ({approvedOrders.length})
+            Approved ({filteredApproved.length})
           </TabsTrigger>
           <TabsTrigger value="rejected">
-            Rejected ({rejectedOrders.length})
+            Rejected ({filteredRejected.length})
           </TabsTrigger>
           <TabsTrigger value="requests">
             রিকোয়েস্ট ({myRequests.length})
@@ -402,7 +471,7 @@ export default function CSOLeads() {
                     </tr>
                   </thead>
                   <tbody>
-                    {approvedOrders.map((o) => (
+                    {filteredApproved.map((o) => (
                       <tr key={o.id} className="border-b border-border">
                         <td className="py-2 px-2 font-mono text-xs">{o.id.slice(0, 8)}</td>
                         <td className="py-2 px-2">{o.customer_name || "—"}</td>
@@ -415,7 +484,7 @@ export default function CSOLeads() {
                         </td>
                       </tr>
                     ))}
-                    {approvedOrders.length === 0 && (
+                    {filteredApproved.length === 0 && (
                       <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">কোনো approved অর্ডার নেই</td></tr>
                     )}
                   </tbody>
@@ -444,7 +513,7 @@ export default function CSOLeads() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rejectedOrders.map((o) => (
+                    {filteredRejected.map((o) => (
                       <tr key={o.id} className="border-b border-border">
                         <td className="py-2 px-2 font-mono text-xs">{o.id.slice(0, 8)}</td>
                         <td className="py-2 px-2">{o.customer_name || "—"}</td>
@@ -455,7 +524,7 @@ export default function CSOLeads() {
                         </td>
                       </tr>
                     ))}
-                    {rejectedOrders.length === 0 && (
+                    {filteredRejected.length === 0 && (
                       <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো rejected অর্ডার নেই</td></tr>
                     )}
                   </tbody>
@@ -547,6 +616,19 @@ export default function CSOLeads() {
                 <SelectContent>
                   {tlOptions.map((tl) => (
                     <SelectItem key={tl.id} value={tl.id}>{tl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">ক্যাম্পেইন (ঐচ্ছিক)</label>
+              <Select value={dataRequestCampaignId} onValueChange={setDataRequestCampaignId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="ক্যাম্পেইন বাছাই করুন..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
