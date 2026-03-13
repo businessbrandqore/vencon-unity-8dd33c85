@@ -47,10 +47,12 @@ const HRCampaigns = () => {
 
   // Create form
   const [newName, setNewName] = useState("");
-  const [dataMode, setDataMode] = useState<"lead" | "processing">("lead");
   const [tlUsers, setTLUsers] = useState<TLUser[]>([]);
   const [selectedTLs, setSelectedTLs] = useState<string[]>([]);
-  const [websites, setWebsites] = useState<{ name: string; url: string; dataMode: "lead" | "processing" }[]>([{ name: "", url: "", dataMode: "lead" }]);
+  const [websites, setWebsites] = useState<{ name: string; url: string; dataMode: "lead" | "processing" }[]>([
+    { name: "", url: "", dataMode: "lead" },
+    { name: "", url: "", dataMode: "processing" },
+  ]);
   const [submitting, setSubmitting] = useState(false);
 
   // Detail
@@ -62,7 +64,6 @@ const HRCampaigns = () => {
   // Edit mode
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editDataMode, setEditDataMode] = useState<"lead" | "processing">("lead");
   const [editTLs, setEditTLs] = useState<string[]>([]);
   const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
   const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean; data_mode: string }[]>([]);
@@ -117,7 +118,7 @@ const HRCampaigns = () => {
 
     const { data: camp, error: campErr } = await supabase
       .from("campaigns")
-      .insert({ name: newName.trim(), status: "pending_sa", created_by: user.id, data_mode: dataMode })
+      .insert({ name: newName.trim(), status: "pending_sa", created_by: user.id, data_mode: "lead" })
       .select("id")
       .single();
 
@@ -129,7 +130,7 @@ const HRCampaigns = () => {
 
     // Insert websites
     const siteInserts = validSites.map((s) => ({
-      campaign_id: camp.id, site_name: s.name.trim(), site_url: s.url.trim(),
+      campaign_id: camp.id, site_name: s.name.trim(), site_url: s.url.trim(), data_mode: s.dataMode,
     }));
     await supabase.from("campaign_websites").insert(siteInserts);
 
@@ -139,14 +140,14 @@ const HRCampaigns = () => {
       type: "new_campaign", requested_by: user.id, status: "pending",
       details: {
         campaign_id: camp.id, campaign_name: newName.trim(),
-        data_mode: dataMode, websites: validSites.map((s) => s.name),
+        websites: validSites.map((s) => ({ name: s.name, mode: s.dataMode })),
         assigned_tls: tlNames,
       },
     });
 
     toast({ title: isBn ? "Campaign SA approval-এর জন্য submit হয়েছে ✓" : "Campaign submitted for SA approval ✓" });
-    setNewName(""); setSelectedTLs([]); setDataMode("lead");
-    setWebsites([{ name: "", url: "", dataMode: "lead" }]);
+    setNewName(""); setSelectedTLs([]);
+    setWebsites([{ name: "", url: "", dataMode: "lead" }, { name: "", url: "", dataMode: "processing" }]);
     setShowCreate(false); setSearchParams({});
     setSubmitting(false); fetchCampaigns();
   };
@@ -180,9 +181,8 @@ const HRCampaigns = () => {
   const startEditing = () => {
     if (!detailCampaign) return;
     setEditName(detailCampaign.name);
-    setEditDataMode(detailCampaign.data_mode as "lead" | "processing");
     setEditTLs(detailTLs.map((t) => t.id));
-    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode || detailCampaign.data_mode || "lead" })));
+    setEditWebsites(detailWebsites.map((w) => ({ id: w.id, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode || "lead" })));
     setEditing(true);
     // Refresh TL users to get latest employees
     fetchTLUsers();
@@ -192,8 +192,8 @@ const HRCampaigns = () => {
     if (!detailId || !editName.trim()) return;
     setSaving(true);
 
-    // Update campaign
-    await supabase.from("campaigns").update({ name: editName.trim(), data_mode: editDataMode }).eq("id", detailId);
+    // Update campaign name
+    await supabase.from("campaigns").update({ name: editName.trim() }).eq("id", detailId);
 
     // Update TL assignments: delete old, insert new
     await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
@@ -280,7 +280,7 @@ const HRCampaigns = () => {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Globe className="h-3.5 w-3.5" />
-                    {c.data_mode === "lead" ? (isBn ? "লিড" : "Lead") : (isBn ? "প্রসেসিং" : "Processing")}
+                    {isBn ? "Lead + Processing" : "Lead + Processing"}
                   </span>
                   <span>{c.leadCount} {isBn ? "ডাটা" : "Data"}</span>
                 </div>
@@ -506,19 +506,18 @@ const HRCampaigns = () => {
                 <Badge className={statusColors[detailCampaign.status] || statusColors.draft}>
                   {detailCampaign.status}
                 </Badge>
-                {editing ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant={editDataMode === "lead" ? "default" : "outline"} onClick={() => setEditDataMode("lead")}>
-                      🎯 {isBn ? "লিড" : "Lead"}
-                    </Button>
-                    <Button size="sm" variant={editDataMode === "processing" ? "default" : "outline"} onClick={() => setEditDataMode("processing")}>
-                      ⚙️ {isBn ? "প্রসেসিং" : "Processing"}
-                    </Button>
+                {!editing && (
+                  <div className="flex gap-1.5">
+                    {detailWebsites.some(w => w.data_mode === "lead" || !w.data_mode) && (
+                      <Badge variant="outline" className="border-primary/30 text-primary">🎯 {isBn ? "লিড" : "Lead"}</Badge>
+                    )}
+                    {detailWebsites.some(w => w.data_mode === "processing") && (
+                      <Badge variant="outline" className="border-primary/30 text-primary">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</Badge>
+                    )}
+                    {detailWebsites.length === 0 && (
+                      <Badge variant="outline" className="text-muted-foreground">{isBn ? "ওয়েবসাইট নেই" : "No websites"}</Badge>
+                    )}
                   </div>
-                ) : (
-                  <Badge variant="outline" className="border-primary/30 text-primary">
-                    {detailCampaign.data_mode === "lead" ? (isBn ? "🎯 লিড পদ্ধতি" : "🎯 Lead Mode") : (isBn ? "⚙️ প্রসেসিং" : "⚙️ Processing")}
-                  </Badge>
                 )}
                 {(detailCampaign.status === "active" || detailCampaign.status === "paused") && !editing && (
                   <Button size="sm" variant="outline" onClick={() => { togglePause(detailCampaign); setDetailId(null); }}>
@@ -620,28 +619,30 @@ const HRCampaigns = () => {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">{isBn ? "ডাটা ফ্লো" : "Data Flow"}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {detailCampaign.data_mode === "lead" ? (
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-foreground mb-1.5">🎯 {isBn ? "লিড ডাটা ফ্লো" : "Lead Data Flow"}</p>
                       <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-                        {["WordPress", "SA/HR/BDO", "TL", "Bronze Agent", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS", "TL (Silver)", "Silver Agent"].map((step, i) => (
+                        {["WordPress", "SA/HR/BDO", "TL", "Bronze Agent", "CSO", "Warehouse", "Steadfast", "DC", "CS", "TL (Silver)", "Silver Agent"].map((step, i) => (
                           <span key={i} className="flex items-center gap-1.5">
                             <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary font-medium">{step}</span>
                             {i < 10 && <span className="text-muted-foreground">→</span>}
                           </span>
                         ))}
-                        <span className="text-muted-foreground ml-1">🔄</span>
+                        <span className="text-muted-foreground ml-1">🔄 → Golden</span>
                       </div>
-                    ) : (
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-foreground mb-1.5">⚙️ {isBn ? "প্রসেসিং ডাটা ফ্লো" : "Processing Data Flow"}</p>
                       <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-                        {["WordPress", "SA/HR/BDO", "TL", "CSO", "Warehouse", "Steadfast", "Delivery Coordinator", "CS"].map((step, i) => (
+                        {["WordPress", "SA/HR/BDO", "TL", "CSO", "Warehouse", "Steadfast", "DC", "CS"].map((step, i) => (
                           <span key={i} className="flex items-center gap-1.5">
                             <span className="px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">{step}</span>
                             {i < 7 && <span className="text-muted-foreground">→</span>}
                           </span>
                         ))}
-                        <span className="text-muted-foreground ml-1">🔄</span>
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -654,7 +655,7 @@ const HRCampaigns = () => {
                     {isBn ? "সংযুক্ত ওয়েবসাইট" : "Connected Websites"} ({editing ? editWebsites.length : detailWebsites.length})
                     {editing && (
                       <Button variant="ghost" size="sm" className="text-primary ml-auto"
-                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true, data_mode: editDataMode }])}>
+                        onClick={() => setEditWebsites([...editWebsites, { site_name: "", site_url: "", is_active: true, data_mode: "lead" }])}>
                         <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
                       </Button>
                     )}
@@ -724,6 +725,9 @@ const HRCampaigns = () => {
                           <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${site.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
                             <span className="font-heading font-bold text-sm text-foreground">{site.site_name}</span>
+                            <Badge variant={site.data_mode === "lead" || !site.data_mode ? "default" : "secondary"} className="text-[10px]">
+                              {site.data_mode === "processing" ? "Processing" : "Lead"}
+                            </Badge>
                           </div>
                           <a href={site.site_url} target="_blank" rel="noopener noreferrer" className="text-primary text-xs flex items-center gap-1 hover:underline">
                             <ExternalLink className="h-3 w-3" /> {isBn ? "দেখুন" : "Visit"}
