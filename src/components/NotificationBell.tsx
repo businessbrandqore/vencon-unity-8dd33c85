@@ -47,6 +47,7 @@ const NotificationBell = () => {
   let authContext: { user: any } | undefined;
   try { authContext = useAuth(); } catch { return null; }
   const { user } = authContext;
+  const { t, n, lang } = useLanguage();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
