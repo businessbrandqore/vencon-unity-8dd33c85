@@ -217,7 +217,9 @@ export default function HRDataOperations() {
       if (error) throw error;
       return (data || []) as LiveLeadRow[];
     },
-    enabled: !!selectedCampaign,
+    enabled: !!selectedCampaign && liveTabActive,
+    refetchOnWindowFocus: false,
+    staleTime: 60 * 1000,
   });
 
   useEffect(() => {
