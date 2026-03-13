@@ -204,8 +204,12 @@ export default function EmployeeLeads() {
     if (newStatus === "Pre Order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
-      setPreOrderDistrict(""); setPreOrderThana(""); setPreOrderAddress(lead.address || ""); setPreOrderProduct("");
       setShowPreOrderModal(true); return;
+    }
+    if (newStatus === "Pre Order Confirm") {
+      setCurrentPreOrderConfirmLead(lead);
+      setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+      setShowPreOrderConfirmModal(true); return;
     }
 
     const updatePayload: Record<string, unknown> = {
