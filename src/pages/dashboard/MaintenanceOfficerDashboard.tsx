@@ -644,7 +644,7 @@ export default function MaintenanceOfficerDashboard() {
                           <td className="py-2 px-2 text-xs">{d.clock_in ? new Date(d.clock_in).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                         </tr>
                       ))}
-                    {deskReports.filter(d => deskFilter === "all" || d.desk_condition === deskFilter).length === 0 && (
+                    {deskReports.filter(d => (deskFilter === "all" || d.desk_condition === deskFilter) && (!deskDate || d.date === format(deskDate, "yyyy-MM-dd"))).length === 0 && (
                       <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">কোনো ডেস্ক রিপোর্ট নেই</td></tr>
                     )}
                   </tbody>
