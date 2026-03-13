@@ -60,7 +60,19 @@ const SABudget = () => {
       }))
     );
 
+    setFundRequests(fundRes.data || []);
     setLoading(false);
+  };
+
+  const handleFundDecision = async (id: string, status: "approved" | "rejected", officerId: string, reqAmount: number) => {
+    await supabase.from("fund_requests").update({ status, decided_by: user?.id, decided_at: new Date().toISOString() }).eq("id", id);
+    if (status === "approved" && user) {
+      await supabase.from("maintenance_budget").insert({ allocated_by: user.id, amount: reqAmount, note: `Fund request approved` });
+      await supabase.from("notifications").insert({ user_id: officerId, title: "ফান্ড আবেদন অনুমোদিত", message: `৳${reqAmount.toLocaleString()} বরাদ্দ করা হয়েছে`, type: "info" });
+    } else {
+      await supabase.from("notifications").insert({ user_id: officerId, title: "ফান্ড আবেদন বাতিল", message: `৳${reqAmount.toLocaleString()} আবেদন বাতিল হয়েছে`, type: "warning" });
+    }
+    fetchData();
   };
 
   useEffect(() => { fetchData(); }, []);
