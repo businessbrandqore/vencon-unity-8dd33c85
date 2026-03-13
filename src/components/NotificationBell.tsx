@@ -44,8 +44,9 @@ const playNotificationSound = (volume: number) => {
 };
 
 const NotificationBell = () => {
-  const { user } = useAuth();
-  const { t, n, lang } = useLanguage();
+  let authContext: { user: any } | undefined;
+  try { authContext = useAuth(); } catch { return null; }
+  const { user } = authContext;
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
