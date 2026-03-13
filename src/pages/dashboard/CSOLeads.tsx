@@ -256,6 +256,7 @@ export default function CSOLeads() {
     setShowDataRequest(false);
     setDataRequestMsg("");
     setDataRequestTlId("");
+    setDataRequestCampaignId("");
     setSendingRequest(false);
     loadMyRequests();
   };
