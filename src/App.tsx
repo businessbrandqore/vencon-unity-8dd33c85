@@ -48,6 +48,7 @@ import EmployeeLeadsRouter from "./pages/dashboard/EmployeeLeadsRouter";
 import CSOLeads from "./pages/dashboard/CSOLeads";
 import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
+import WarehouseDispatchPage from "./pages/dashboard/WarehouseDispatchPage";
 import DataTracker from "./pages/dashboard/DataTracker";
 import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
