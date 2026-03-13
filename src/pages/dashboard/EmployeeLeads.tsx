@@ -83,6 +83,10 @@ export default function EmployeeLeads() {
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
   const [preOrderDate, setPreOrderDate] = useState<Date>();
   const [preOrderNote, setPreOrderNote] = useState("");
+  const [preOrderDistrict, setPreOrderDistrict] = useState("");
+  const [preOrderThana, setPreOrderThana] = useState("");
+  const [preOrderAddress, setPreOrderAddress] = useState("");
+  const [preOrderProduct, setPreOrderProduct] = useState("");
 
   const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0 });
   const [tick, setTick] = useState(0);
@@ -195,6 +199,7 @@ export default function EmployeeLeads() {
     if (newStatus === "Pre Order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
+      setPreOrderDistrict(""); setPreOrderThana(""); setPreOrderAddress(lead.address || ""); setPreOrderProduct("");
       setShowPreOrderModal(true); return;
     }
 
@@ -233,11 +238,16 @@ export default function EmployeeLeads() {
 
   const handlePreOrderSubmit = async () => {
     if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
+    if (!preOrderProduct) { toast.error("Product নির্বাচন করুন"); return; }
     await supabase.from("pre_orders").insert({
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
-    await supabase.from("leads").update({ status: "pre_order", called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
+    // Update lead with district/thana/address info
+    await supabase.from("leads").update({
+      status: "pre_order", called_date: new Date().toISOString(),
+      address: [preOrderDistrict, preOrderThana, preOrderAddress].filter(Boolean).join(", ") || currentPreOrderLead.address,
+    }).eq("id", currentPreOrderLead.id);
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
     loadLeads();
@@ -514,29 +524,61 @@ export default function EmployeeLeads() {
 
       {/* Pre-Order Modal */}
       <Dialog open={showPreOrderModal} onOpenChange={setShowPreOrderModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>প্রি-অর্ডার</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Pre-Order</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>কাস্টমার</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>ফোন</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div>
-              <Label>ডেলিভারি তারিখ</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preOrderDate ? format(preOrderDate, "PPP") : "তারিখ নির্বাচন"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={preOrderDate} onSelect={setPreOrderDate} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
+            {/* Name & Phone */}
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Name *</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>Phone *</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
-            <div><Label>নোট</Label><Textarea value={preOrderNote} onChange={e => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
+
+            {/* District & Thana */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>District</Label>
+                <Input value={preOrderDistrict} onChange={e => setPreOrderDistrict(e.target.value)} className="mt-1" placeholder="জেলা লিখুন" />
+              </div>
+              <div>
+                <Label>Thana</Label>
+                <Input value={preOrderThana} onChange={e => setPreOrderThana(e.target.value)} className="mt-1" placeholder="থানা লিখুন" />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <Label>Location</Label>
+              <Input value={preOrderAddress} onChange={e => setPreOrderAddress(e.target.value)} className="mt-1" placeholder="সম্পূর্ণ ঠিকানা" />
+            </div>
+
+            {/* Product & Delivery Date */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Product *</Label>
+                <Select value={preOrderProduct} onValueChange={setPreOrderProduct}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Preferred Delivery Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {preOrderDate ? format(preOrderDate, "PPP") : "তারিখ নির্বাচন"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={preOrderDate} onSelect={setPreOrderDate} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">সাবমিট</Button>
+            <Button variant="outline" onClick={() => setShowPreOrderModal(false)}>Cancel</Button>
+            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">Save Pre-Order</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
