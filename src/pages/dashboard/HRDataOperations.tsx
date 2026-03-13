@@ -205,21 +205,40 @@ export default function HRDataOperations() {
     refetchOnWindowFocus: false,
   });
 
-  // ─── Sync config → state ───
+  const normalizedConfig = useMemo(
+    () => parseRoleConfigs(existingConfig?.fields_config),
+    [existingConfig?.fields_config],
+  );
+  const configFingerprint = useMemo(
+    () => JSON.stringify(normalizedConfig),
+    [normalizedConfig],
+  );
+  const lastAppliedConfigRef = useRef("");
+
+  // ─── Sync config → state (without clobbering active edits) ───
   useEffect(() => {
-    if (existingConfig) {
-      // fields_config stores our role-status configs
-      setRoleConfigs(parseRoleConfigs(existingConfig.fields_config));
-    } else {
-      setRoleConfigs([]);
-    }
     setHasChanges(false);
-  }, [existingConfig]);
+    lastAppliedConfigRef.current = "";
+  }, [selectedCampaign, selectedMode]);
+
+  useEffect(() => {
+    if (!selectedCampaign) {
+      setRoleConfigs([]);
+      return;
+    }
+
+    if (hasChanges) return;
+    if (lastAppliedConfigRef.current === configFingerprint) return;
+
+    setRoleConfigs(normalizedConfig);
+    lastAppliedConfigRef.current = configFingerprint;
+  }, [selectedCampaign, normalizedConfig, configFingerprint, hasChanges]);
 
   // ─── Current role config ───
-  const currentRoleConfig = useMemo(() => {
-    return roleConfigs.find((rc) => rc.role === selectedRole);
-  }, [roleConfigs, selectedRole]);
+  const currentRoleConfig = useMemo(
+    () => roleConfigs.find((rc) => rc.role === selectedRole),
+    [roleConfigs, selectedRole],
+  );
 
   const currentStatuses = currentRoleConfig?.statuses || [];
 
@@ -229,6 +248,11 @@ export default function HRDataOperations() {
     roleConfigs.forEach((rc) => rc.statuses.forEach((s) => { if (s.value) set.add(s.value); }));
     return Array.from(set);
   }, [roleConfigs]);
+
+  const getPanelLocations = (panel?: AppPanel | "") => {
+    if (!panel) return [];
+    return PANEL_DESTINATIONS[panel] || [];
+  };
 
   // ─── Mutations ───
   const updateRoleStatuses = (statuses: StatusOption[]) => {
@@ -243,20 +267,43 @@ export default function HRDataOperations() {
   };
 
   const addStatus = () => {
-    const id = `status_${Date.now()}`;
+    const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `status_${Date.now()}`;
+
     updateRoleStatuses([
       ...currentStatuses,
-      { id, value: "", label: "", label_bn: "", color: "gray", next_status: "" },
+      {
+        id,
+        value: "",
+        label: "",
+        label_bn: "",
+        color: "gray",
+        next_status: "",
+        next_panel: "",
+        next_location: "",
+      },
     ]);
   };
 
   const updateStatus = (idx: number, updates: Partial<StatusOption>) => {
     const updated = [...currentStatuses];
-    updated[idx] = { ...updated[idx], ...updates };
-    // auto-sync value from label if value is empty
-    if (updates.label && !updated[idx].value) {
-      updated[idx].value = updates.label.toLowerCase().replace(/\s+/g, "_");
+    const current = updated[idx];
+    const merged = { ...current, ...updates };
+
+    if (updates.label && !current.value) {
+      merged.value = updates.label.toLowerCase().replace(/\s+/g, "_");
     }
+
+    if (Object.prototype.hasOwnProperty.call(updates, "next_panel")) {
+      const panel = updates.next_panel || "";
+      const validLocations = panel ? getPanelLocations(panel) : [];
+      if (!validLocations.some((loc) => loc.value === merged.next_location)) {
+        merged.next_location = "";
+      }
+    }
+
+    updated[idx] = merged;
     updateRoleStatuses(updated);
   };
 
@@ -278,24 +325,34 @@ export default function HRDataOperations() {
       };
 
       if (existingConfig?.id) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("campaign_data_operations")
           .update(payload)
-          .eq("id", existingConfig.id);
+          .eq("id", existingConfig.id)
+          .select("*")
+          .single();
+
         if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("campaign_data_operations")
-          .insert(payload);
-        if (error) throw error;
+        return data;
       }
+
+      const { data, error } = await supabase
+        .from("campaign_data_operations")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (savedConfig) => {
       toast.success("কনফিগারেশন সেভ হয়েছে!");
       setHasChanges(false);
-      queryClient.invalidateQueries({
-        queryKey: ["data-operations-config", selectedCampaign, selectedMode],
-      });
+      queryClient.setQueryData(
+        ["data-operations-config", selectedCampaign, selectedMode],
+        savedConfig,
+      );
+      lastAppliedConfigRef.current = JSON.stringify(parseRoleConfigs(savedConfig?.fields_config));
     },
     onError: (err: Error) => toast.error(err.message),
   });
