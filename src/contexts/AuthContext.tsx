@@ -120,7 +120,7 @@ export const AuthProvider = ({
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
-      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+      if (event === "SIGNED_OUT") {
         cachedUser = null;
         setUser(null);
         setLoading(false);
