@@ -226,7 +226,8 @@ const DataTracker = () => {
       };
     },
     enabled: !!user,
-    refetchInterval: 30000, // Refresh every 30s
+    refetchInterval: 30000,
+    placeholderData: keepPreviousData,
   });
 
   const pipelineSummary = pipelineCounts || {
