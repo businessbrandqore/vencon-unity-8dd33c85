@@ -65,6 +65,7 @@ export const translations: TranslationMap = {
   chat_admin: { bn: "চ্যাট অ্যাডমিন", en: "Chat Admin" },
   attendance_leaves: { bn: "উপস্থিতি ও ছুটি", en: "Attendance & Leaves" },
   customer_feedback: { bn: "গ্রাহক প্রতিক্রিয়া", en: "Customer Feedback" },
+  complaints: { bn: "অভিযোগ", en: "Complaints" },
   my_attendance: { bn: "আমার উপস্থিতি", en: "My Attendance" },
   data_requests: { bn: "ডাটা রিকোয়েস্ট", en: "Data Requests" },
   agent_assignment: { bn: "এজেন্ট অ্যাসাইনমেন্ট", en: "Agent Assignment" },
