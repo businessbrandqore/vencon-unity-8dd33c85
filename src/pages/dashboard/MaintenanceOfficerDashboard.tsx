@@ -626,7 +626,7 @@ export default function MaintenanceOfficerDashboard() {
                   </tr></thead>
                   <tbody>
                     {deskReports
-                      .filter(d => deskFilter === "all" || d.desk_condition === deskFilter)
+                      .filter(d => (deskFilter === "all" || d.desk_condition === deskFilter) && (!deskDate || d.date === format(deskDate, "yyyy-MM-dd")))
                       .map(d => (
                         <tr key={d.id} className="border-b border-border">
                           <td className="py-2 px-2 text-xs">{d.date}</td>
