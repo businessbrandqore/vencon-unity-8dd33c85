@@ -485,36 +485,47 @@ function send_order_to_crm_${dataMode}(\$order_id) {
             </div>
           </div>
 
-          {/* Per-website code blocks */}
-          {campaignWebsites && campaignWebsites.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-sm text-foreground font-medium">
+          {/* Show code for selected website */}
+          {selectedWebsite ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-3">
+                <Globe className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">{selectedWebsite.site_name}</span>
+                <Badge variant={selectedWebsite.data_mode === "lead" ? "default" : "secondary"}>
+                  {selectedWebsite.data_mode === "lead" ? "Lead Data" : "Processing Data"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
                 {isBn 
-                  ? `📌 এই ক্যাম্পেইনে ${campaignWebsites.length}টি ওয়েবসাইট আছে। প্রতিটি সাইটে নিজ নিজ কোড ব্যবহার করুন:` 
-                  : `📌 This campaign has ${campaignWebsites.length} website(s). Use the specific code for each:`}
+                  ? `📋 নিচের PHP কোডটি "${selectedWebsite.site_name}" ওয়েবসাইটে যোগ করুন। এই কোড ব্যবহার করলে ডাটা "${selectedWebsite.data_mode === 'lead' ? 'Lead' : 'Processing'}" হিসেবে CRM-এ আসবে।`
+                  : `📋 Add the PHP code below to "${selectedWebsite.site_name}". Data will arrive as "${selectedWebsite.data_mode}" in the CRM.`}
               </p>
-              {campaignWebsites.map((ws) => (
-                <div key={ws.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">{ws.site_name}</span>
-                    <Badge variant={ws.data_mode === "lead" ? "default" : "secondary"} className="text-[10px]">
-                      {ws.data_mode === "lead" ? "Lead Data" : "Processing Data"}
-                    </Badge>
-                  </div>
-                  <div className="relative p-3 rounded-lg bg-muted border border-border overflow-x-auto">
-                    <button
-                      onClick={() => copyText(generatePerWebsitePhpSnippet(ws.webhook_secret, ws.site_url, ws.site_name, ws.data_mode))}
-                      className="absolute top-2 right-2 text-muted-foreground hover:text-primary"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                    <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
-                      {generatePerWebsitePhpSnippet(ws.webhook_secret, ws.site_url, ws.site_name, ws.data_mode)}
-                    </pre>
-                  </div>
-                </div>
-              ))}
+              <div className="relative p-3 rounded-lg bg-muted border border-border overflow-x-auto">
+                <button
+                  onClick={() => copyText(generatePerWebsitePhpSnippet(selectedWebsite.webhook_secret, selectedWebsite.site_url, selectedWebsite.site_name, selectedWebsite.data_mode))}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-primary"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <pre className="text-[11px] text-foreground whitespace-pre font-mono leading-relaxed">
+                  {generatePerWebsitePhpSnippet(selectedWebsite.webhook_secret, selectedWebsite.site_url, selectedWebsite.site_name, selectedWebsite.data_mode)}
+                </pre>
+              </div>
+            </div>
+          ) : selectedCampaign && campaignWebsites && campaignWebsites.length > 0 ? (
+            <div className="text-center py-6 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {isBn 
+                  ? "👆 উপরে থেকে একটি ওয়েবসাইট (Lead / Processing) সিলেক্ট করুন — তাহলে সেই সাইটের জন্য নির্দিষ্ট PHP কোড দেখাবে।" 
+                  : "👆 Select a website (Lead / Processing) above to see the specific PHP code for that site."}
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {campaignWebsites.map((ws) => (
+                  <Badge key={ws.id} variant="outline" className="cursor-pointer hover:bg-primary/10" onClick={() => setSelectedWebsiteId(ws.id)}>
+                    {ws.site_name} — {ws.data_mode === "lead" ? "Lead" : "Processing"}
+                  </Badge>
+                ))}
+              </div>
             </div>
           ) : selectedCampaign ? (
             <div className="space-y-2">
