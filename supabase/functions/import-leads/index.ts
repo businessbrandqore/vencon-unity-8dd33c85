@@ -21,9 +21,23 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/");
-    const campaignId = pathParts[pathParts.length - 1];
+    // Support: /import-leads/{campaignId} or /import-leads/{campaignId}/{websiteId}
+    const lastPart = pathParts[pathParts.length - 1];
+    const secondLast = pathParts[pathParts.length - 2];
 
-    if (!campaignId) {
+    let campaignId: string;
+    let websiteId: string | null = null;
+
+    // Detect if path has websiteId (UUID format check)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(lastPart) && uuidRegex.test(secondLast)) {
+      // /import-leads/{campaignId}/{websiteId}
+      campaignId = secondLast;
+      websiteId = lastPart;
+    } else if (uuidRegex.test(lastPart)) {
+      // /import-leads/{campaignId}
+      campaignId = lastPart;
+    } else {
       return new Response(
         JSON.stringify({ error: "Campaign ID required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -45,7 +59,7 @@ Deno.serve(async (req) => {
     // Validate campaign
     const { data: campaign, error: campError } = await supabase
       .from("campaigns")
-      .select("id, status, webhook_secret")
+      .select("id, status, webhook_secret, data_mode")
       .eq("id", campaignId)
       .single();
 
@@ -63,7 +77,59 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (campaign.webhook_secret !== webhookSecret) {
+    // Determine data_mode and validate secret
+    let dataMode: string = campaign.data_mode || "lead";
+    let sourceName = "wordpress_webhook";
+    let validSecret = false;
+
+    if (websiteId) {
+      // Website-level validation
+      const { data: website } = await supabase
+        .from("campaign_websites")
+        .select("id, webhook_secret, is_active, data_mode, site_name")
+        .eq("id", websiteId)
+        .eq("campaign_id", campaignId)
+        .single();
+
+      if (!website) {
+        return new Response(
+          JSON.stringify({ error: "Website not found for this campaign" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!website.is_active) {
+        return new Response(
+          JSON.stringify({ error: "Website integration is inactive" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (website.webhook_secret === webhookSecret) {
+        validSecret = true;
+        dataMode = website.data_mode || campaign.data_mode || "lead";
+        sourceName = website.site_name || "wordpress_webhook";
+      }
+    } else {
+      // Try campaign-level secret first
+      if (campaign.webhook_secret === webhookSecret) {
+        validSecret = true;
+      } else {
+        // Try matching against any campaign_website secret
+        const { data: websites } = await supabase
+          .from("campaign_websites")
+          .select("id, webhook_secret, is_active, data_mode, site_name")
+          .eq("campaign_id", campaignId)
+          .eq("is_active", true);
+
+        const matchedSite = (websites || []).find(w => w.webhook_secret === webhookSecret);
+        if (matchedSite) {
+          validSecret = true;
+          dataMode = matchedSite.data_mode || campaign.data_mode || "lead";
+          sourceName = matchedSite.site_name || "wordpress_webhook";
+        }
+      }
+    }
+
+    if (!validSecret) {
       return new Response(
         JSON.stringify({ error: "Invalid webhook secret" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -98,14 +164,14 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Insert lead
+      // Insert lead with proper source/import_source based on data_mode
       const { error: insertError } = await supabase.from("leads").insert({
         name: lead.customer_name,
         phone: phone,
         address: [lead.address, lead.city].filter(Boolean).join(", ") || null,
         campaign_id: campaignId,
-        source: "wordpress_webhook",
-        import_source: "webhook",
+        source: dataMode === "processing" ? "processing" : "wordpress_webhook",
+        import_source: dataMode === "processing" ? "processing" : "webhook",
         special_note: lead.extra_fields
           ? JSON.stringify(lead.extra_fields)
           : null,
@@ -120,7 +186,7 @@ Deno.serve(async (req) => {
     // Log the import
     await supabase.from("lead_import_logs").insert({
       campaign_id: campaignId,
-      source: "webhook",
+      source: `webhook_${dataMode}`,
       leads_imported: imported,
       duplicates_skipped: skippedDuplicates,
       total_received: leads.length,
@@ -132,6 +198,7 @@ Deno.serve(async (req) => {
         imported,
         skipped_duplicates: skippedDuplicates,
         total: leads.length,
+        data_mode: dataMode,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
