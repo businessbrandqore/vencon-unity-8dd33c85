@@ -23,6 +23,40 @@ const WebhookDocumentation = () => {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
+  const handleAnalyzeCheckout = async (ws: { id: string; site_url: string; site_name: string; data_mode: string; webhook_secret: string }) => {
+    setAnalyzingWebsiteId(ws.id);
+    try {
+      const res = await supabase.functions.invoke("analyze-checkout", {
+        body: {
+          site_url: ws.site_url,
+          site_name: ws.site_name,
+          data_mode: ws.data_mode,
+          webhook_secret: ws.webhook_secret,
+          webhook_url: `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}`,
+        },
+      });
+      if (res.error) throw res.error;
+      const data = res.data;
+      if (data?.success && data?.generated_code) {
+        setAnalyzedResults((prev) => ({
+          ...prev,
+          [ws.id]: {
+            code: data.generated_code,
+            fields: data.detected_fields || [],
+            formFound: data.form_found,
+          },
+        }));
+        toast({ title: isBn ? "✅ ফর্ম এনালাইসিস সম্পন্ন!" : "✅ Form analysis complete!" });
+      } else {
+        toast({ title: isBn ? "এনালাইসিস ব্যর্থ" : "Analysis failed", description: data?.error, variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: isBn ? "ত্রুটি হয়েছে" : "Error occurred", description: String(err), variant: "destructive" });
+    } finally {
+      setAnalyzingWebsiteId(null);
+    }
+  };
+
   const { data: campaigns } = useQuery({
     queryKey: ["doc-campaigns"],
     queryFn: async () => {
