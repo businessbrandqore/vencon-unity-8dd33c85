@@ -140,7 +140,7 @@ const HRCampaigns = () => {
       type: "new_campaign", requested_by: user.id, status: "pending",
       details: {
         campaign_id: camp.id, campaign_name: newName.trim(),
-        data_mode: dataMode, websites: validSites.map((s) => s.name),
+        websites: validSites.map((s) => ({ name: s.name, mode: s.dataMode })),
         assigned_tls: tlNames,
       },
     });
