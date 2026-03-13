@@ -293,7 +293,19 @@ export default function CSOLeads() {
           <ShieldCheck className="h-5 w-5 text-primary" />
           CSO — লিড ও অর্ডার যাচাই
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+            <SelectTrigger className="w-[200px] h-9">
+              <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="ক্যাম্পেইন ফিল্টার" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={() => { setShowDataRequest(true); loadTLs(); }}>
             <Database className="h-4 w-4 mr-1" /> ডাটা রিকোয়েস্ট
           </Button>
