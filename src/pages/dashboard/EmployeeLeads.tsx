@@ -841,7 +841,12 @@ export default function EmployeeLeads() {
       </Dialog>
 
       {/* Pre-Order Confirm Modal */}
-      <Dialog open={showPreOrderConfirmModal} onOpenChange={setShowPreOrderConfirmModal}>
+      <Dialog open={showPreOrderConfirmModal} onOpenChange={(open) => {
+        if (!open && currentPreOrderConfirmLead) {
+          setLeadStatuses(p => { const n = { ...p }; delete n[currentPreOrderConfirmLead.id]; return n; });
+        }
+        setShowPreOrderConfirmModal(open);
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Pre-Order Confirm</DialogTitle></DialogHeader>
           <div className="space-y-3">
