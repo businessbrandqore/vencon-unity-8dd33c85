@@ -108,7 +108,8 @@ export default function EmployeeLeads() {
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
 
   const [products, setProducts] = useState<InventoryItem[]>([]);
-  const [giftNames, setGiftNames] = useState<string[]>([]);
+   const [giftNames, setGiftNames] = useState<string[]>([]);
+   const [cardNames, setCardNames] = useState<string[]>([]);
   const [currentOrderLead, setCurrentOrderLead] = useState<LeadRow | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderAddress, setOrderAddress] = useState("");
