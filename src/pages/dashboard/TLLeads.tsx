@@ -486,9 +486,9 @@ const TLLeads = () => {
     loadData();
   };
 
-  if (!user) return null;
-
   const isProcessing = campaignMode === "processing";
+
+  if (!user) return null;
 
   const sections = useMemo(() => {
     const s: { key: string; label: string; icon: string; count: number }[] = [];
