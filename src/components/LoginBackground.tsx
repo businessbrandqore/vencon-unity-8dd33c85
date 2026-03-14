@@ -82,7 +82,7 @@ const LoginBackground = () => {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.opacity;
+        ctx.globalAlpha = p.opacity * 2.5;
 
         const color = `rgba(${baseColor}, ${p.opacity})`;
         ctx.fillStyle = color;
