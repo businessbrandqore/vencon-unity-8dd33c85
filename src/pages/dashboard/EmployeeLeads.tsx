@@ -403,7 +403,7 @@ export default function EmployeeLeads() {
                     <Select value={leadStatuses[lead.id] || ""} onValueChange={v => setLeadStatuses(p => ({ ...p, [lead.id]: v }))}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
                       <SelectContent>
-                        {availableStatuses.map(s => <SelectItem key={s.value} value={s.label}>{s.label_bn || s.label}</SelectItem>)}
+                        {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label_bn || s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
