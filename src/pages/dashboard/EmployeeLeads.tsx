@@ -67,9 +67,22 @@ interface RoleColumnConfig {
 
 // Fallback hardcoded statuses (used when no dynamic config exists)
 const FALLBACK_STATUSES = [
-  "Order Confirm", "Pre Order", "Pre Order Confirm", "Phone Off", "Positive", "Customer Reschedule",
-  "Do Not Pick", "No Response", "Busy Now", "Number Busy", "Negative",
-  "Not Interested", "Cancelled", "Wrong Number", "Duplicate", "Already Ordered",
+  { value: "order_confirm", label: "Order Confirm", label_bn: "অর্ডার কনফার্ম" },
+  { value: "pre_order", label: "Pre Order", label_bn: "প্রি অর্ডার" },
+  { value: "pre_order_confirm", label: "Pre Order Confirm", label_bn: "প্রি অর্ডার কনফার্ম" },
+  { value: "phone_off", label: "Phone Off", label_bn: "ফোন অফ" },
+  { value: "positive", label: "Positive", label_bn: "পজিটিভ" },
+  { value: "customer_reschedule", label: "Customer Reschedule", label_bn: "রিশিডিউল" },
+  { value: "do_not_pick", label: "Do Not Pick", label_bn: "ফোন ধরে না" },
+  { value: "no_response", label: "No Response", label_bn: "নো রেসপন্স" },
+  { value: "busy_now", label: "Busy Now", label_bn: "ব্যস্ত" },
+  { value: "number_busy", label: "Number Busy", label_bn: "নম্বর ব্যস্ত" },
+  { value: "negative", label: "Negative", label_bn: "নেগেটিভ" },
+  { value: "not_interested", label: "Not Interested", label_bn: "আগ্রহী না" },
+  { value: "cancelled", label: "Cancelled", label_bn: "বাতিল" },
+  { value: "wrong_number", label: "Wrong Number", label_bn: "ভুল নম্বর" },
+  { value: "duplicate", label: "Duplicate", label_bn: "ডুপ্লিকেট" },
+  { value: "already_ordered", label: "Already Ordered", label_bn: "আগেই অর্ডার করেছে" },
 ];
 
 // Statuses that trigger requeue
