@@ -488,8 +488,6 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
-  if (!user) return null;
-
   const sections = useMemo(() => {
     const s: { key: string; label: string; icon: string; count: number }[] = [];
     if (isProcessing) {
@@ -508,6 +506,8 @@ const TLLeads = () => {
     }
     return s;
   }, [isProcessing, isBn, freshLeads, agentLeads, csoOrders, callDoneOrders, preOrders, silverData, goldenData, deleteSheetLeads, processingLeads]);
+
+  if (!user) return null;
 
   // Render content based on active section
   const renderContent = () => {
