@@ -1138,9 +1138,9 @@ const TLLeads = () => {
               </Table>
             </CardContent>
           </Card>
-          </Card>
           </div>
         );
+
       case "golden":
         return (
           <Card>
