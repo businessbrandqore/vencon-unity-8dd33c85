@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Send, RefreshCw } from "lucide-react";
 
 interface Agent { id: string; name: string; }
 interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; }
@@ -80,6 +81,14 @@ const TLLeads = () => {
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
   const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
+
+  // Data send state
+  const [distDataMode, setDistDataMode] = useState<"lead" | "processing">("lead");
+  const [distAgent, setDistAgent] = useState("");
+  const [distAgents, setDistAgents] = useState<Agent[]>([]);
+  const [sendCount, setSendCount] = useState("");
+  const [availableCount, setAvailableCount] = useState(0);
+  const [sending, setSending] = useState(false);
 
   // Load dynamic columns for the selected campaign
   const statusLabelMap = useMemo(() => {
@@ -381,6 +390,84 @@ const TLLeads = () => {
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
+  // Load dist agents for data send
+  useEffect(() => {
+    if (!user || !selectedCampaign) { setDistAgents([]); return; }
+    const load = async () => {
+      const { data } = await supabase
+        .from("campaign_agent_roles")
+        .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
+        .eq("campaign_id", selectedCampaign)
+        .eq("tl_id", getEffectiveTlId());
+      if (!data) { setDistAgents([]); return; }
+      const filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
+      const unique = new Map<string, string>();
+      filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
+      setDistAgents(Array.from(unique, ([id, name]) => ({ id, name })));
+      setDistAgent("");
+    };
+    load();
+  }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId]);
+
+  // Count available leads for data send
+  useEffect(() => {
+    if (!user || !selectedCampaign) { setAvailableCount(0); return; }
+    const load = async () => {
+      let q = supabase.from("leads").select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null);
+      if (!isBDO) q = q.or(`tl_id.eq.${getEffectiveTlId()},tl_id.is.null`);
+      if (distDataMode === "lead") {
+        q = q.or("agent_type.is.null,agent_type.eq.bronze");
+      } else {
+        q = q.eq("agent_type", "silver");
+      }
+      const { count } = await q;
+      setAvailableCount(count || 0);
+    };
+    load();
+  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
+
+  // Handle data send
+  const handleSendData = async () => {
+    if (!user || !selectedCampaign || !distAgent || !sendCount) return;
+    const count = parseInt(sendCount);
+    if (isNaN(count) || count <= 0) { toast.error(isBn ? "সঠিক সংখ্যা দিন" : "Enter valid count"); return; }
+    if (count > availableCount) { toast.error(isBn ? `মাত্র ${availableCount} টি ডাটা পাওয়া যাচ্ছে` : `Only ${availableCount} available`); return; }
+
+    setSending(true);
+    try {
+      let q = supabase.from("leads").select("id")
+        .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null)
+        .order("created_at", { ascending: true }).limit(count);
+      if (!isBDO) q = q.or(`tl_id.eq.${getEffectiveTlId()},tl_id.is.null`);
+      if (distDataMode === "lead") {
+        q = q.or("agent_type.is.null,agent_type.eq.bronze");
+      } else {
+        q = q.eq("agent_type", "silver");
+      }
+      const { data: leadsToAssign, error } = await q;
+      if (error) throw error;
+      if (!leadsToAssign || leadsToAssign.length === 0) { toast.error(isBn ? "কোনো ডাটা পাওয়া যায়নি" : "No data found"); setSending(false); return; }
+
+      const ids = leadsToAssign.map(l => l.id);
+      const agentType = distDataMode === "processing" ? "silver" : "bronze";
+      const { error: updateError } = await supabase.from("leads").update({
+        assigned_to: distAgent, tl_id: getEffectiveTlId(), agent_type: agentType,
+        status: distDataMode === "processing" ? "processing_assigned" : "assigned",
+      }).in("id", ids);
+      if (updateError) throw updateError;
+
+      const agentName = distAgents.find(a => a.id === distAgent)?.name || "";
+      toast.success(isBn ? `${ids.length} টি ${distDataMode === "lead" ? "লিড" : "প্রসেসিং"} ডাটা ${agentName}-কে পাঠানো হয়েছে ✅` : `${ids.length} ${distDataMode} data sent to ${agentName} ✅`);
+      setSendCount("");
+      setAvailableCount(prev => Math.max(0, prev - ids.length));
+      loadData();
+    } catch (err: any) {
+      toast.error(isBn ? "ডাটা পাঠাতে সমস্যা: " + (err.message || "") : "Failed: " + (err.message || ""));
+    }
+    setSending(false);
+  };
+
   const assignLead = async (leadId: string, agentId: string) => {
     await executeOrRequestApproval(
       "lead_assign",
@@ -551,6 +638,56 @@ const TLLeads = () => {
     switch (activeSection) {
       case "assign": {
         return (
+          <div className="space-y-4">
+            {/* ====== DATA SEND SECTION ====== */}
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-heading flex items-center gap-2">
+                  <Send className="h-5 w-5 text-primary" />
+                  {isBn ? "ডাটা পাঠান" : "Send Data"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{isBn ? "ক্যাম্পেইন" : "Campaign"}</label>
+                    <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setDistAgent(""); setSendCount(""); }}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} /></SelectTrigger>
+                      <SelectContent>{campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{isBn ? "ডাটা মোড" : "Data Mode"}</label>
+                    <Select value={distDataMode} onValueChange={(v) => { setDistDataMode(v as "lead" | "processing"); setDistAgent(""); }}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"}</SelectItem>
+                        <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{isBn ? "এজেন্ট" : "Agent"}</label>
+                    <Select value={distAgent} onValueChange={setDistAgent} disabled={!selectedCampaign}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "এজেন্ট নির্বাচন" : "Select Agent"} /></SelectTrigger>
+                      <SelectContent>{distAgents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {isBn ? "সংখ্যা" : "Count"}
+                      {selectedCampaign && <span className="ml-1 text-primary">({isBn ? `${availableCount} টি পাওয়া যাচ্ছে` : `${availableCount} available`})</span>}
+                    </label>
+                    <Input type="number" min={1} max={availableCount} value={sendCount} onChange={(e) => setSendCount(e.target.value)} placeholder={isBn ? "কয়টি পাঠাবেন" : "How many"} className="h-9 text-sm" disabled={!distAgent} />
+                  </div>
+                  <Button onClick={handleSendData} disabled={!selectedCampaign || !distAgent || !sendCount || sending} className="h-9 gap-2">
+                    {sending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {isBn ? "পাঠান" : "Send"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
@@ -652,7 +789,8 @@ const TLLeads = () => {
                 </Table>
               </div>
             </CardContent>
-          </Card>
+           </Card>
+          </div>
         );
       }
 
