@@ -367,10 +367,13 @@ export default function EmployeeAttendance() {
                   <th className="py-2 px-2 text-right">মিনিট</th>
                   <th className="py-2 px-2 text-right">কর্তন</th>
                   <th className="py-2 px-2 text-center">স্ট্যাটাস</th>
+                  <th className="py-2 px-2 text-center">আপিল</th>
                 </tr>
               </thead>
               <tbody>
-                {attendance.map((a) => (
+                {attendance.map((a) => {
+                  const appealStatus = existingAppeals[a.id];
+                  return (
                   <tr key={a.id} className={cn("border-b border-border", (a.is_late || a.is_early_out) && "bg-orange-500/5")}>
                     <td className="py-2 px-2">{new Date(a.date).toLocaleDateString("bn-BD")}</td>
                     <td className="py-2 px-2 text-xs">{a.clock_in ? new Date(a.clock_in).toLocaleTimeString("bn-BD") : "—"}</td>
@@ -384,9 +387,21 @@ export default function EmployeeAttendance() {
                       {a.is_early_out && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-xs">Early</Badge>}
                       {!a.is_late && !a.is_early_out && a.clock_in && <Badge variant="outline" className="text-green-400 border-green-600/50 text-xs">OK</Badge>}
                     </td>
+                    <td className="py-2 px-2 text-center">
+                      {(a.is_late || a.is_early_out) && Number(a.deduction_amount) > 0 ? (
+                        appealStatus === "pending" ? <Badge variant="outline" className="text-amber-500 border-amber-500/50 text-[10px]">পেন্ডিং</Badge> :
+                        appealStatus === "approved" ? <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 text-[10px]">গৃহীত ✓</Badge> :
+                        appealStatus === "rejected" ? <Badge variant="outline" className="text-destructive border-destructive/50 text-[10px]">প্রত্যাখ্যাত</Badge> :
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px] text-[hsl(var(--panel-employee))]"
+                          onClick={() => { setAppealAttendanceId(a.id); setAppealExplanation(""); setShowAppealModal(true); }}>
+                          <ShieldAlert className="h-3 w-3 mr-1" /> আপিল
+                        </Button>
+                      ) : "—"}
+                    </td>
                   </tr>
-                ))}
-                {attendance.length === 0 && <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">এই মাসে কোনো রেকর্ড নেই</td></tr>}
+                  );
+                })}
+                {attendance.length === 0 && <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">এই মাসে কোনো রেকর্ড নেই</td></tr>}
               </tbody>
             </table>
           </div>
