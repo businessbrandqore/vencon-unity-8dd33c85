@@ -119,6 +119,19 @@ export default function EmployeeAttendance() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Load existing appeals
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("attendance_appeals").select("attendance_id, status").eq("user_id", user.id);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.attendance_id) map[a.attendance_id] = a.status; });
+        setExistingAppeals(map);
+      }
+    })();
+  }, [user]);
+
   const totalDeductions = attendance.reduce((s, a) => s + (Number(a.deduction_amount) || 0), 0);
   const lateDays = attendance.filter((a) => a.is_late).length;
   const earlyOuts = attendance.filter((a) => a.is_early_out).length;
