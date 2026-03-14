@@ -438,14 +438,18 @@ export default function EmployeeLeads() {
                   ) : (
                     <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
                       setLeadStatuses(p => ({ ...p, [lead.id]: v }));
-                      // Auto-open form for order/pre-order statuses
                       const ns = v.toLowerCase().replace(/\s+/g, "_");
+                      // Modal statuses - open form
                       if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
                         setCurrentOrderLead(lead);
                         setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-                        setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
+                        setOrderGiftName(""); setOrderAdvancePayment(0);
                         setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
                         setOrderUpsell(""); setOrderSuccessRatio("");
+                        const detected = detectLocation(lead.address || "");
+                        setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                        setLocationAutoDetected(!!(detected.district));
+                        setDistrictSearch(""); setThanaSearch("");
                         setTimeout(() => setShowOrderModal(true), 100);
                       } else if (ns === "pre_order") {
                         setCurrentPreOrderLead(lead);
@@ -453,8 +457,15 @@ export default function EmployeeLeads() {
                         setTimeout(() => setShowPreOrderModal(true), 100);
                       } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
                         setCurrentPreOrderConfirmLead(lead);
-                        setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                        const detected = detectLocation(lead.address || "");
+                        setPocDistrict(detected.district); setPocThana(detected.thana);
+                        setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
                         setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                      } else {
+                        // Non-modal status: auto-save immediately
+                        setTimeout(() => {
+                          handleLeadSave({ ...lead, __overrideStatus: v } as any);
+                        }, 50);
                       }
                     }}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
@@ -473,11 +484,6 @@ export default function EmployeeLeads() {
                       <SelectItem value="3">3</SelectItem>
                     </SelectContent>
                   </Select>
-                </td>
-                <td className="py-2 px-2">
-                  <Button size="sm" variant="outline" onClick={() => handleLeadSave(lead)} disabled={!leadStatuses[lead.id]} className="h-7 text-xs border-[hsl(var(--panel-employee))] text-[hsl(var(--panel-employee))]">
-                    সেভ
-                  </Button>
                 </td>
               </tr>
             );
