@@ -108,7 +108,7 @@ function extractFromBilling(rawLead: Record<string, unknown>): { name: string; p
   const firstName = String(billing.first_name || "").trim();
   const lastName = String(billing.last_name || "").trim();
   const name = [firstName, lastName].filter(Boolean).join(" ");
-  const phone = String(billing.phone || "").trim();
+  const phone = normalizePhone(String(billing.phone || ""));
   const address = [
     billing.address_1, billing.address_2, billing.city, billing.state, billing.postcode, billing.country
   ].filter(Boolean).map(v => String(v).trim()).join(", ");
