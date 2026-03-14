@@ -185,10 +185,10 @@ export default function EmployeeLeads() {
     if (dynamicColumns.length > 0) {
       const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
       if (dropdownCol?.options?.length) {
-        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location }));
+        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location, is_spam: o.is_spam }));
       }
     }
-    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined }));
+    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined, is_spam: undefined }));
   }, [dynamicColumns]);
 
   // Note columns from dynamic config
