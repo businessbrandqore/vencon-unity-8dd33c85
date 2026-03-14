@@ -26,6 +26,11 @@ import {
   Send,
   Truck,
   AlertTriangle,
+  Medal,
+  PhoneCall,
+  CalendarCheck,
+  Trash2,
+  Award,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
@@ -74,10 +79,17 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   tl: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/tl/dashboard" },
     { titleKey: "leads", icon: Target, path: "/tl/leads" },
-    { titleKey: "my_leads", icon: Phone, path: "/tl/my-leads", roles: ["Assistant Team Leader"] },
-    { titleKey: "my_orders", icon: Package, path: "/tl/my-orders", roles: ["Assistant Team Leader"] },
+    { titleKey: "agent_activity", icon: Users, path: "/tl/leads/agent_activity" },
+    { titleKey: "cso_pending", icon: ShieldCheck, path: "/tl/leads/cso" },
+    { titleKey: "call_done", icon: PhoneCall, path: "/tl/leads/calldone" },
+    { titleKey: "pre_orders", icon: CalendarCheck, path: "/tl/leads/preorders" },
+    { titleKey: "silver_data", icon: Medal, path: "/tl/leads/silver" },
+    { titleKey: "golden_data", icon: Award, path: "/tl/leads/golden" },
+    { titleKey: "delete_sheet", icon: Trash2, path: "/tl/leads/deletesheet" },
     { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
+    { titleKey: "my_leads", icon: Phone, path: "/tl/my-leads", roles: ["Assistant Team Leader"] },
+    { titleKey: "my_orders", icon: Package, path: "/tl/my-orders", roles: ["Assistant Team Leader"] },
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "tl_approvals_bdo", icon: ShieldCheck, path: "/tl/agent-assignment", roles: ["Business Development And Marketing Manager"] },

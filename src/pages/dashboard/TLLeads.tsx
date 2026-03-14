@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,8 @@ interface RoleColumnConfig { role: string; columns: StatusColumn[]; }
 const TLLeads = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { section: urlSection } = useParams<{ section?: string }>();
+  const navigate = useNavigate();
   const isBn = t("vencon") === "VENCON";
   const { isATL, executeOrRequestApproval } = useATLApproval();
 
@@ -52,7 +55,8 @@ const TLLeads = () => {
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [activeSection, setActiveSection] = useState<string>("assign");
+  // Derive active section from URL param, default to "assign"
+  const activeSection = urlSection || "assign";
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
@@ -487,25 +491,6 @@ const TLLeads = () => {
   };
 
   const isProcessing = campaignMode === "processing";
-
-  const sections = useMemo(() => {
-    const s: { key: string; label: string; icon: string; count: number }[] = [];
-    if (isProcessing) {
-      s.push({ key: "processing", label: isBn ? "প্রসেসিং ডাটা" : "Processing", icon: "⚙️", count: processingLeads.length });
-    } else {
-      s.push({ key: "assign", label: isBn ? "ফ্রেশ লিড" : "Fresh Leads", icon: "🎯", count: freshLeads.length });
-    }
-    s.push({ key: "agent_activity", label: isBn ? "এজেন্ট কার্যক্রম" : "Agent Activity", icon: "👥", count: agentLeads.length });
-    s.push({ key: "cso", label: "CSO Pending", icon: "📋", count: csoOrders.length });
-    s.push({ key: "calldone", label: "Call Done", icon: "✅", count: callDoneOrders.length });
-    if (!isProcessing) {
-      s.push({ key: "preorders", label: isBn ? "প্রি-অর্ডার" : "Pre-Orders", icon: "📅", count: preOrders.length });
-      s.push({ key: "silver", label: isBn ? "সিলভার" : "Silver", icon: "🥈", count: silverData.length });
-      s.push({ key: "golden", label: isBn ? "গোল্ডেন" : "Golden", icon: "🥇", count: goldenData.length });
-      s.push({ key: "deletesheet", label: isBn ? "ডিলিট শীট" : "Delete Sheet", icon: "🗑️", count: deleteSheetLeads.length });
-    }
-    return s;
-  }, [isProcessing, isBn, freshLeads, agentLeads, csoOrders, callDoneOrders, preOrders, silverData, goldenData, deleteSheetLeads, processingLeads]);
 
   if (!user) return null;
 
@@ -1012,54 +997,7 @@ const TLLeads = () => {
         </Select>
       </div>
 
-      {/* Main Layout: Left Panel + Right Content */}
-      <div className="flex gap-4">
-        {/* Left Panel */}
-        <div className="w-56 shrink-0">
-          <Card className="sticky top-4">
-            <CardContent className="p-2 space-y-1">
-              <p className="text-xs font-medium text-muted-foreground px-2 pt-1 pb-1.5">{isBn ? "ক্যাটাগরি" : "Categories"}</p>
-              {sections.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setActiveSection(s.key)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                    activeSection === s.key
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span>{s.icon}</span>
-                    <span className="truncate">{s.label}</span>
-                  </span>
-                  <Badge variant={activeSection === s.key ? "secondary" : "outline"} className="ml-1 text-xs px-1.5 min-w-[24px] justify-center">
-                    {s.count}
-                  </Badge>
-                </button>
-              ))}
-
-              {/* HR Config indicator */}
-              {dynamicColumns.length > 0 && (
-                <div className="mt-3 px-2 pt-2 border-t border-border">
-                  <p className="text-[10px] text-muted-foreground mb-1">{isBn ? "HR কনফিগ" : "HR Config"}</p>
-                  {dynamicColumns.map(col => (
-                    <div key={col.id} className="text-[10px] text-muted-foreground truncate">
-                      {col.type === "dropdown" ? "📋" : "📝"} {isBn ? col.name_bn || col.name : col.name}
-                      {col.type === "dropdown" && ` (${col.options.length})`}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Content */}
-        <div className="flex-1 min-w-0">
-          {renderContent()}
-        </div>
-      </div>
+      {renderContent()}
 
       {/* Delete Confirm Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

@@ -57,6 +57,13 @@ export const translations: TranslationMap = {
   my_team: { bn: "আমার টিম", en: "My Team" },
   pre_orders: { bn: "প্রি-অর্ডার", en: "Pre-Orders" },
   delete_sheet: { bn: "ডিলিট শিট", en: "Delete Sheet" },
+  fresh_leads: { bn: "ফ্রেশ লিড", en: "Fresh Leads" },
+  bronze_data: { bn: "ব্রোঞ্জ", en: "Bronze" },
+  cso_pending: { bn: "CSO", en: "CSO" },
+  silver_data: { bn: "সিলভার", en: "Silver" },
+  golden_data: { bn: "গোল্ডেন", en: "Golden" },
+  call_done: { bn: "কল ডান", en: "Call Done" },
+  agent_activity: { bn: "এজেন্ট কার্যক্রম", en: "Agent Activity" },
   my_leads: { bn: "আমার লিডস", en: "My Leads" },
   salary: { bn: "বেতন", en: "Salary" },
   my_orders: { bn: "আমার অর্ডার", en: "My Orders" },
@@ -354,7 +361,7 @@ export const translations: TranslationMap = {
 
   // ─── CS Executive ───
   call_queue: { bn: "কল কিউ", en: "Call Queue" },
-  call_done: { bn: "কল সম্পন্ন", en: "Call Done" },
+  cs_call_done: { bn: "কল সম্পন্ন", en: "Call Done" },
   rating: { bn: "রেটিং", en: "Rating" },
   cs_note: { bn: "CS নোট", en: "CS Note" },
 
