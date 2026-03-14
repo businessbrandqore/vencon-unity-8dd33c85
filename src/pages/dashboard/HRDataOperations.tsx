@@ -88,31 +88,29 @@ const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
   { value: "sa", label: "SA Panel" },
 ];
 
-const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string }>> = {
-  employee: [
-    { value: "leads", label: "Leads" },
-    { value: "cs-leads", label: "CS Leads" },
-    { value: "my-orders", label: "My Orders" },
-    { value: "dispatch", label: "Dispatch" },
-    { value: "steadfast", label: "Steadfast Monitoring" },
-  ],
-  tl: [
-    { value: "leads", label: "TL Leads" },
-    { value: "my-leads", label: "My Leads" },
-    { value: "data-requests", label: "Data Requests" },
-    { value: "my-team", label: "Team" },
-  ],
-  hr: [
-    { value: "data-monitor", label: "Data Monitor" },
-    { value: "data-tracker", label: "Data Tracker" },
-    { value: "approvals", label: "Approvals" },
-  ],
-  sa: [
-    { value: "all-data", label: "All Data" },
-    { value: "data-tracker", label: "Data Tracker" },
-    { value: "approvals", label: "Approvals" },
-  ],
-};
+// Dynamically build panel destinations from sidebarConfig
+const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string }>> = (() => {
+  const result: Record<AppPanel, Array<{ value: string; label: string }>> = {
+    sa: [], hr: [], tl: [], employee: [],
+  };
+  for (const panel of Object.keys(sidebarMenus) as AppPanel[]) {
+    const seen = new Set<string>();
+    result[panel] = sidebarMenus[panel]
+      .map((item) => {
+        // Extract the last segment of the path as the value
+        const segments = item.path.split("/").filter(Boolean);
+        const value = segments.slice(1).join("/") || segments[segments.length - 1];
+        if (seen.has(value)) return null;
+        seen.add(value);
+        // Use translation label if available, else titleKey
+        const t = translations[item.titleKey];
+        const label = t ? t.bn : item.titleKey;
+        return { value, label };
+      })
+      .filter(Boolean) as Array<{ value: string; label: string }>;
+  }
+  return result;
+})();
 
 const getColorInfo = (color: string) => STATUS_COLORS.find((c) => c.value === color) || STATUS_COLORS[6];
 
