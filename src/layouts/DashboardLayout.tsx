@@ -30,11 +30,11 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-50">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 z-50">
         <TopNav onToggleSidebar={toggleSidebar} />
       </div>
-      <div className="flex flex-1 pt-14">
+      <div className="flex flex-1 min-h-0">
         <PanelSidebar open={sidebarOpen} onClose={closeSidebar} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-7xl mx-auto space-y-4">
