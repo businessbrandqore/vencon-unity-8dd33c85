@@ -390,25 +390,6 @@ export default function EmployeeLeads() {
     loadLeads();
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
-
-  if (!checkedIn) {
-    return (
-      <div className="space-y-6">
-        <Card className="border-orange-500/30 bg-orange-500/5">
-          <CardContent className="py-8 text-center">
-            <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-400" />
-            <h2 className="font-heading text-lg mb-2">প্রথমে Check In করুন</h2>
-            <p className="text-sm text-muted-foreground">লিড দেখতে হলে আগে ড্যাশবোর্ড থেকে Check In করতে হবে</p>
-            <Button variant="outline" className="mt-4" onClick={() => window.location.href = "/employee/dashboard"}>
-              ড্যাশবোর্ডে যান
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // Extract dynamic raw-data column keys from special_note JSON across all leads
   const rawDataKeys = useMemo(() => {
     const keySet = new Set<string>();
@@ -436,6 +417,25 @@ export default function EmployeeLeads() {
     } catch { /* not JSON */ }
     return {};
   };
+
+  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+
+  if (!checkedIn) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-orange-500/30 bg-orange-500/5">
+          <CardContent className="py-8 text-center">
+            <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-400" />
+            <h2 className="font-heading text-lg mb-2">প্রথমে Check In করুন</h2>
+            <p className="text-sm text-muted-foreground">লিড দেখতে হলে আগে ড্যাশবোর্ড থেকে Check In করতে হবে</p>
+            <Button variant="outline" className="mt-4" onClick={() => window.location.href = "/employee/dashboard"}>
+              ড্যাশবোর্ডে যান
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const renderLeadTable = (leadList: LeadRow[]) => {
     // Fixed columns: #, name, phone, address
