@@ -380,7 +380,8 @@ const TLLeads = () => {
       { leadId, agentId },
       isBn ? "লিড অ্যাসাইন" : "Lead assignment",
       async () => {
-        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+        const tlId = getEffectiveTlId();
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze", tl_id: tlId }).eq("id", leadId);
         toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
       }
     );
