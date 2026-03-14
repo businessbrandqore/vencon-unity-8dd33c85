@@ -202,8 +202,10 @@ export default function EmployeeLeads() {
 
   const loadLeads = useCallback(async () => {
     if (!user) return;
+    // Load all leads assigned to this agent, excluding terminal statuses
+    const terminalStatuses = ["negative","not_interested","cancelled","wrong_number","duplicate","already_ordered"];
     const { data } = await supabase.from("leads").select("*").eq("assigned_to", user.id)
-      .not("status", "in", '("order_confirm","pre_order_confirm","negative","not_interested","cancelled","wrong_number","duplicate","already_ordered")');
+      .not("status", "in", `(${terminalStatuses.join(",")})`);
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
