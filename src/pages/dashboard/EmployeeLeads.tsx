@@ -575,11 +575,33 @@ export default function EmployeeLeads() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>District</Label>
-                <Input value={orderDistrict} onChange={e => setOrderDistrict(e.target.value)} className="mt-1" placeholder="জেলা লিখুন" />
+                <Select value={orderDistrict} onValueChange={v => { setOrderDistrict(v); setOrderThana(""); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    <div className="px-2 pb-2">
+                      <Input placeholder="খুঁজুন..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    {BD_DISTRICTS
+                      .filter(d => !districtSearch || d.name.toLowerCase().includes(districtSearch.toLowerCase()) || d.name_bn.includes(districtSearch))
+                      .map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {locationAutoDetected && orderDistrict && <p className="text-xs text-emerald-500 mt-0.5">✓ অটো-ডিটেক্ট হয়েছে</p>}
+                {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
               </div>
               <div>
                 <Label>Thana</Label>
-                <Input value={orderThana} onChange={e => setOrderThana(e.target.value)} className="mt-1" placeholder="থানা লিখুন" />
+                <Select value={orderThana} onValueChange={setOrderThana} disabled={!orderDistrict}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    <div className="px-2 pb-2">
+                      <Input placeholder="খুঁজুন..." value={thanaSearch} onChange={e => setThanaSearch(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    {(BD_DISTRICTS.find(d => d.name === orderDistrict)?.thanas || [])
+                      .filter(t => !thanaSearch || t.name.toLowerCase().includes(thanaSearch.toLowerCase()) || t.name_bn.includes(thanaSearch))
+                      .map(t => <SelectItem key={t.name} value={t.name}>{t.name_bn} ({t.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -594,13 +616,19 @@ export default function EmployeeLeads() {
               <div>
                 <Label>Product Name *</Label>
                 <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="প্রোডাক্ট নির্বাচন" /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Gift Name</Label>
-                <Input value={orderGiftName} onChange={e => setOrderGiftName(e.target.value)} className="mt-1" placeholder="Select gift" />
+                <Select value={orderGiftName} onValueChange={setOrderGiftName}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="গিফট নির্বাচন" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">কোনো গিফট নেই</SelectItem>
+                    {giftNames.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
