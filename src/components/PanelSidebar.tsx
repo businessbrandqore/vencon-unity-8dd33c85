@@ -56,7 +56,7 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
 
   const renderItem = (item: SidebarItem) => {
     const isActive = location.pathname === item.path ||
-      (item.path !== `/${user.panel}/dashboard` && location.pathname.startsWith(item.path));
+      (item.path !== `/${user.panel}/dashboard` && item.path !== `/${user.panel}/leads` && location.pathname.startsWith(item.path));
     const Icon = item.icon;
 
     return (
