@@ -106,6 +106,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "leads", icon: Target, path: "/employee/leads", roles: ["telesales_executive", "silver_agent", "golden_agent", "cso"] },
     { titleKey: "leads", icon: Target, path: "/employee/cs-leads", roles: ["cs_executive"] },
     { titleKey: "my_orders", icon: Package, path: "/employee/my-orders", roles: ["telesales_executive", "silver_agent", "golden_agent"] },
+    { titleKey: "spam", icon: ShieldBan, path: "/employee/spam", roles: ["telesales_executive", "silver_agent", "golden_agent", "cso"] },
     { titleKey: "steadfast_monitoring", icon: Truck, path: "/employee/steadfast", roles: ["delivery_coordinator"] },
     { titleKey: "order_dispatch", icon: Send, path: "/employee/dispatch", roles: ["warehouse_assistant", "warehouse_supervisor", "inventory_manager"] },
     { titleKey: "attendance", icon: Clock, path: "/employee/attendance" },
