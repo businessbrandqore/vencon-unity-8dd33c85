@@ -343,6 +343,11 @@ export default function EmployeeLeads() {
     const updatePayload: Record<string, unknown> = {
       status: newStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
+    // Check if this status routes to another panel — if so, clear assignment
+    const selectedOpt = availableStatuses.find(s => s.value === newStatus);
+    if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
+      updatePayload.assigned_to = null;
+    }
     if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
@@ -360,7 +365,7 @@ export default function EmployeeLeads() {
     const { error } = await supabase.from("orders").insert({
       customer_name: currentOrderLead.name, phone: currentOrderLead.phone, address: orderAddress,
       product: orderProduct, quantity: orderQty, price: orderPrice, agent_id: user.id,
-      tl_id: currentOrderLead.tl_id, lead_id: currentOrderLead.id, status: "pending_cso",
+      tl_id: currentOrderLead.tl_id, lead_id: currentOrderLead.id, status: "pending_tl",
       district: orderDistrict || null, thana: orderThana || null, gift_name: orderGiftName || null,
       advance_payment: orderAdvancePayment || 0, payment_method: orderPaymentMethod || null,
       card_name: orderCardName || null, order_media: orderMedia || null,
@@ -369,7 +374,7 @@ export default function EmployeeLeads() {
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     // Use the actual selected status value from dynamic config
     const selectedStatus = leadStatuses[currentOrderLead.id] || "order_confirm";
-    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
+    await supabase.from("leads").update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
     loadLeads();
@@ -398,11 +403,11 @@ export default function EmployeeLeads() {
       address: [pocDistrict, pocThana, pocAddress].filter(Boolean).join(", ") || currentPreOrderConfirmLead.address,
       product: pocProduct, quantity: 1, price: products.find(p => p.product_name === pocProduct)?.unit_price || 0,
       agent_id: user.id, tl_id: currentPreOrderConfirmLead.tl_id, lead_id: currentPreOrderConfirmLead.id,
-      status: "pending_cso", district: pocDistrict || null, thana: pocThana || null,
+      status: "pending_tl", district: pocDistrict || null, thana: pocThana || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     const selectedStatus = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
-    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
+    await supabase.from("leads").update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
     setShowPreOrderConfirmModal(false);
     toast.success("Pre-Order Confirm হয়েছে ✓");
     loadLeads();
