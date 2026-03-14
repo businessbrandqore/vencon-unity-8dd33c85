@@ -533,11 +533,14 @@ const TLLeads = () => {
     return freshLeads;
   }, [freshLeads, tierFilter]);
 
-  const getSpecialNoteValue = useCallback((lead: Lead, key: string) => {
+  const getSpecialNoteValue = useCallback((lead: Lead, key: string): string => {
     if (!lead.special_note) return "—";
     try {
       const parsed = JSON.parse(lead.special_note);
-      return parsed?.[key] ?? "—";
+      const val = parsed?.[key];
+      if (val === null || val === undefined) return "—";
+      if (typeof val === "object") return JSON.stringify(val);
+      return String(val);
     } catch { return "—"; }
   }, []);
 
