@@ -463,7 +463,6 @@ export default function EmployeeLeads() {
               {noteCols.map(col => (
                 <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
               ))}
-              <th className="py-2 px-2 text-left">কল</th>
             </tr>
           </thead>
           <tbody>
