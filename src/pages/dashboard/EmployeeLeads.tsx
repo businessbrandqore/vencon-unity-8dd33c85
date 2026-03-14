@@ -298,9 +298,14 @@ export default function EmployeeLeads() {
     if (normalizedStatus.endsWith("order_confirm") && !normalizedStatus.includes("pre_order")) {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-      setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
+      setOrderGiftName(""); setOrderAdvancePayment(0);
       setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
       setOrderUpsell(""); setOrderSuccessRatio("");
+      // Auto-detect district/thana from lead address
+      const detected = detectLocation(lead.address || "");
+      setOrderDistrict(detected.district); setOrderThana(detected.thana);
+      setLocationAutoDetected(!!(detected.district));
+      setDistrictSearch(""); setThanaSearch("");
       setShowOrderModal(true); return;
     }
     if (normalizedStatus === "pre_order") {
