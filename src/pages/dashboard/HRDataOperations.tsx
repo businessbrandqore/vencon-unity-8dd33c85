@@ -159,7 +159,8 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
           type: (col.type === "note" ? "note" : "dropdown") as ColumnType,
           options: Array.isArray(col.options)
             ? col.options.map((s: any) => {
-                const np = panelSet.has(s.next_panel) ? s.next_panel : "";
+                const nr = s.next_role || "";
+                const np = nr ? (ROLE_PANEL_MAP[nr] || "") : (panelSet.has(s.next_panel) ? s.next_panel : "");
                 const vl = np ? (PANEL_DESTINATIONS[np] || []) : [];
                 return {
                   id: s.id || crypto.randomUUID?.() || `opt_${Date.now()}`,
@@ -167,9 +168,9 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                   label: s.label || "",
                   label_bn: s.label_bn || "",
                   color: s.color || "gray",
+                  next_role: nr,
                   next_panel: np,
                   next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
-                  next_user: s.next_user || "",
                   note: s.note || "",
                 };
               })
