@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       if (rawLead.customer_name || rawLead.phone) {
         // Our PHP snippet sends data in this format
         name = String(rawLead.customer_name || "").trim();
-        phone = String(rawLead.phone || "").trim();
+        phone = normalizePhone(String(rawLead.phone || ""));
         address = String(rawLead.address || "").trim();
         console.log("[import-leads] Using direct fields: name=", name, "phone=", phone);
       }
