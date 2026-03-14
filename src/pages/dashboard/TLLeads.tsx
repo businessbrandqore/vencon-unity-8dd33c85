@@ -232,12 +232,15 @@ const TLLeads = () => {
     if (c) setCampaignMode(c.data_mode);
   }, [selectedCampaign, campaigns]);
 
-  // Load dynamic columns from campaign_data_operations
+  // Load dynamic columns from campaign_data_operations (filtered by data_mode)
   useEffect(() => {
     if (!selectedCampaign) return;
     (async () => {
       const { data: configData } = await supabase.from("campaign_data_operations")
-        .select("fields_config").eq("campaign_id", selectedCampaign).maybeSingle();
+        .select("fields_config")
+        .eq("campaign_id", selectedCampaign)
+        .eq("data_mode", campaignMode)
+        .maybeSingle();
       if (!configData?.fields_config) { setDynamicColumns([]); return; }
       const configs = configData.fields_config as unknown as RoleColumnConfig[];
       // Collect all columns from all roles for TL overview
@@ -250,7 +253,7 @@ const TLLeads = () => {
       });
       setDynamicColumns(allCols);
     })();
-  }, [selectedCampaign]);
+  }, [selectedCampaign, campaignMode]);
 
   const loadAgents = useCallback(async () => {
     if (!user || !selectedCampaign) return;
