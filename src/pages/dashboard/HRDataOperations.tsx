@@ -198,6 +198,23 @@ function OptionRow({
   const colorInfo = getColorInfo(option.color || "gray");
   const panelLocations = option.next_panel ? (PANEL_DESTINATIONS[option.next_panel] || []) : [];
 
+  // Fetch users for the selected panel
+  const { data: panelUsers = [] } = useQuery({
+    queryKey: ["panel-users", option.next_panel],
+    queryFn: async () => {
+      if (!option.next_panel) return [];
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, role")
+        .eq("panel", option.next_panel)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!option.next_panel,
+  });
+
   return (
     <div className={`border rounded-md overflow-hidden ${colorInfo.bg}`}>
       <div className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer select-none" onClick={onToggle}>
