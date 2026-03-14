@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Save, Settings2, Activity, X, ChevronDown, ChevronUp, ArrowRight, Columns3, FileText } from "lucide-react";
+import { sidebarMenus } from "@/lib/sidebarConfig";
+import { translations } from "@/i18n/translations";
 
 /* ─── Types ─── */
 type AppPanel = "sa" | "hr" | "tl" | "employee";
