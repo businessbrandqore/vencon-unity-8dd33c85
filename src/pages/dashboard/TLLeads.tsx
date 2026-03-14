@@ -390,24 +390,44 @@ const TLLeads = () => {
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
-  // Load dist agents for data send
+  // Load dist agents for data send (context-aware by section)
   useEffect(() => {
     if (!user || !selectedCampaign) { setDistAgents([]); return; }
     const load = async () => {
-      const { data } = await supabase
-        .from("campaign_agent_roles")
-        .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
-        .eq("campaign_id", selectedCampaign)
-        .eq("tl_id", getEffectiveTlId());
-      if (!data) { setDistAgents([]); return; }
-      const filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
-      const unique = new Map<string, string>();
-      filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
-      setDistAgents(Array.from(unique, ([id, name]) => ({ id, name })));
+      if (activeSection === "cso") {
+        // CSO section: show CSO role users
+        const { data } = await supabase
+          .from("users")
+          .select("id, name")
+          .eq("role", "cso")
+          .eq("is_active", true);
+        if (!data) { setDistAgents([]); return; }
+        setDistAgents(data.map((u: any) => ({ id: u.id, name: u.name })));
+      } else {
+        // Agent sections: filter by role type
+        const { data } = await supabase
+          .from("campaign_agent_roles")
+          .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
+          .eq("campaign_id", selectedCampaign)
+          .eq("tl_id", getEffectiveTlId());
+        if (!data) { setDistAgents([]); return; }
+        let filtered;
+        if (activeSection === "silver") {
+          filtered = data.filter((r: any) => r.is_silver);
+        } else if (activeSection === "golden") {
+          // Golden agents: show silver agents (they handle golden tier)
+          filtered = data.filter((r: any) => r.is_silver);
+        } else {
+          filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
+        }
+        const unique = new Map<string, string>();
+        filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
+        setDistAgents(Array.from(unique, ([id, name]) => ({ id, name })));
+      }
       setDistAgent("");
     };
     load();
-  }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId]);
+  }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId, activeSection]);
 
   // Count available leads for data send
   useEffect(() => {
