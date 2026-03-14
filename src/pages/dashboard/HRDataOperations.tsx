@@ -300,18 +300,22 @@ function OptionRow({
               </Select>
             </div>
             <div>
-              <Label className="text-[10px] text-muted-foreground">ডাটা কোন প্যানেলে</Label>
+              <Label className="text-[10px] text-muted-foreground">কোন পদে যাবে</Label>
               <Select
-                value={option.next_panel || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_panel: v === NO_OPTION ? "" : (v as AppPanel), next_location: "", next_user: "" })}
+                value={option.next_role || NO_OPTION}
+                onValueChange={(v) => {
+                  const role = v === NO_OPTION ? "" : v;
+                  const panel = role ? (ROLE_PANEL_MAP[role] || "") : "";
+                  onUpdate({ next_role: role, next_panel: panel as AppPanel | "", next_location: "" });
+                }}
               >
                 <SelectTrigger className="h-7 mt-0.5 text-xs">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
-                  {PANEL_OPTIONS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  {ALL_ROLES_WITH_PANEL.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -321,10 +325,10 @@ function OptionRow({
               <Select
                 value={option.next_location || NO_OPTION}
                 onValueChange={(v) => onUpdate({ next_location: v === NO_OPTION ? "" : v })}
-                disabled={!option.next_panel}
+                disabled={!derivedPanel}
               >
                 <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder={option.next_panel ? "—" : "আগে প্যানেল দিন"} />
+                  <SelectValue placeholder={derivedPanel ? "—" : "আগে পদ দিন"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
@@ -334,30 +338,6 @@ function OptionRow({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* কর্মী সিলেক্ট ড্রপডাউন */}
-          {option.next_panel && (
-            <div>
-              <Label className="text-[10px] text-muted-foreground">কার কাছে যাবে (কর্মী)</Label>
-              <Select
-                value={option.next_user || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_user: v === NO_OPTION ? "" : v })}
-              >
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder="কর্মী সিলেক্ট করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_OPTION}>— সবাই —</SelectItem>
-                  {panelUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div>
             <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
