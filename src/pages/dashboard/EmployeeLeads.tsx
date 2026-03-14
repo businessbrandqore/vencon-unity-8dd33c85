@@ -265,12 +265,13 @@ export default function EmployeeLeads() {
         });
       }
     })();
-    // Load gift names from app_settings
+    // Load gift names and card names from app_settings
     (async () => {
-      const { data } = await supabase.from("app_settings").select("value").eq("key", "gift_names").maybeSingle();
-      if (data?.value && Array.isArray(data.value)) {
-        setGiftNames(data.value as string[]);
-      }
+      const { data } = await supabase.from("app_settings").select("key, value").in("key", ["gift_names", "card_names"]);
+      (data || []).forEach(row => {
+        if (row.key === "gift_names" && Array.isArray(row.value)) setGiftNames(row.value as string[]);
+        if (row.key === "card_names" && Array.isArray(row.value)) setCardNames(row.value as string[]);
+      });
     })();
   }, []);
 
