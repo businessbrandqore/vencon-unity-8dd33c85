@@ -420,7 +420,6 @@ export default function EmployeeLeads() {
             <th className="py-2 px-2 text-left">ঠিকানা</th>
             <th className="py-2 px-2 text-left">স্ট্যাটাস</th>
             <th className="py-2 px-2 text-left">কল</th>
-            <th className="py-2 px-2"></th>
           </tr>
         </thead>
         <tbody>
