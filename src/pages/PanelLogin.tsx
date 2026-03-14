@@ -5,6 +5,7 @@ import { getPanelByType, PanelType } from "@/lib/panelConfig";
 import { supabase } from "@/integrations/supabase/client";
 import LanguageToggle from "@/components/LanguageToggle";
 import { Shield, Eye, EyeOff } from "lucide-react";
+import LoginBackground from "@/components/LoginBackground";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000;
