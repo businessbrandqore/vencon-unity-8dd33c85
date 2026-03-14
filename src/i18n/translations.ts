@@ -361,7 +361,7 @@ export const translations: TranslationMap = {
 
   // ─── CS Executive ───
   call_queue: { bn: "কল কিউ", en: "Call Queue" },
-  call_done: { bn: "কল সম্পন্ন", en: "Call Done" },
+  cs_call_done: { bn: "কল সম্পন্ন", en: "Call Done" },
   rating: { bn: "রেটিং", en: "Rating" },
   cs_note: { bn: "CS নোট", en: "CS Note" },
 
