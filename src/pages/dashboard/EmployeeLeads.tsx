@@ -94,6 +94,9 @@ const DELETE_SHEET_THRESHOLD = 5;
 // Statuses that trigger special modals
 const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
 
+const normalizeWorkflowStatus = (value: string) =>
+  value.toLowerCase().trim().replace(/\s+/g, "_").replace(/^_+/, "");
+
 export default function EmployeeLeads() {
   const { user } = useAuth();
 
