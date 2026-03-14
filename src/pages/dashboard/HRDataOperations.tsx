@@ -267,7 +267,7 @@ function OptionRow({
         <span className={`text-xs font-medium flex-1 truncate ${colorInfo.text}`}>
           {option.label_bn || option.label || option.value || "নতুন অপশন"}
         </span>
-        {option.next_panel && (
+        {hasRoutes && (
           <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
         )}
         <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
