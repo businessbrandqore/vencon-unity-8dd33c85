@@ -807,7 +807,12 @@ export default function EmployeeLeads() {
       </Dialog>
 
       {/* Pre-Order Modal (simple) */}
-      <Dialog open={showPreOrderModal} onOpenChange={setShowPreOrderModal}>
+      <Dialog open={showPreOrderModal} onOpenChange={(open) => {
+        if (!open && currentPreOrderLead) {
+          setLeadStatuses(p => { const n = { ...p }; delete n[currentPreOrderLead.id]; return n; });
+        }
+        setShowPreOrderModal(open);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>প্রি-অর্ডার</DialogTitle></DialogHeader>
           <div className="space-y-3">
