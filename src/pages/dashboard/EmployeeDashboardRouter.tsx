@@ -45,7 +45,8 @@ export default function EmployeeDashboardRouter() {
       case "office_assistant":
         return <OfficeAssistantDashboard />;
       default:
-        return <EmployeeTSDashboard />;
+        // Default uses EmployeeTSDashboard which handles attendance internally
+        return null;
     }
   };
 
