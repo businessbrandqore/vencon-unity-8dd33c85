@@ -26,6 +26,11 @@ import {
   Send,
   Truck,
   AlertTriangle,
+  Medal,
+  PhoneCall,
+  CalendarCheck,
+  Trash2,
+  Award,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
