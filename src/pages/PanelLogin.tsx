@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import LanguageToggle from "@/components/LanguageToggle";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import LoginBackground from "@/components/LoginBackground";
+import venconLogo from "@/assets/vencon-logo.jpg";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000;
@@ -119,6 +120,7 @@ const PanelLogin = () => {
 
         {/* Left branding */}
         <div className="hidden lg:flex flex-1 flex-col justify-end p-12">
+          <img src={venconLogo} alt="Vencon" className="w-24 h-24 rounded-2xl shadow-lg mb-6" />
           <h1 className="font-heading text-6xl font-bold tracking-[0.25em] text-foreground">
             VENCON
           </h1>
