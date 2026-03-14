@@ -42,18 +42,26 @@ function extractName(obj: Record<string, unknown>): string {
   return "";
 }
 
+function normalizePhone(raw: string): string {
+  // Remove all non-digit chars
+  let digits = raw.replace(/[^\d]/g, "");
+  // Normalize Bangladesh numbers: +880/880 prefix → 0
+  if (digits.startsWith("880") && digits.length >= 13) {
+    digits = "0" + digits.slice(3);
+  }
+  return digits;
+}
+
 function extractPhone(obj: Record<string, unknown>): string {
   const raw = findField(obj, [
     "phone", "billing_phone", "billing.phone", "tel", "mobile",
     "phone_number", "contact", "billing_phone_number",
     "wcf_phone", "wcf_billing_phone"
   ]);
-  // Clean phone: remove non-digit chars except leading +
   if (raw) {
-    const cleaned = raw.replace(/[^\d+]/g, "");
-    // Validate: must be at least 7 digits
-    if (cleaned.replace(/\D/g, "").length >= 7) {
-      return cleaned;
+    const normalized = normalizePhone(raw);
+    if (normalized.length >= 7) {
+      return normalized;
     }
   }
   return raw; // Return raw even if short, let downstream handle
