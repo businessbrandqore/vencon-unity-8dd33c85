@@ -171,6 +171,21 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                 const nr = s.next_role || "";
                 const np = nr ? (ROLE_PANEL_MAP[nr] || "") : (panelSet.has(s.next_panel) ? s.next_panel : "");
                 const vl = np ? (PANEL_DESTINATIONS[np] || []) : [];
+                // Parse routes array
+                const parsedRoutes: RouteDestination[] = Array.isArray(s.routes)
+                  ? s.routes.map((rt: any) => {
+                      const rtRole = rt.next_role || "";
+                      const rtPanel = rtRole ? (ROLE_PANEL_MAP[rtRole] || "") : "";
+                      return {
+                        id: rt.id || crypto.randomUUID?.() || `rt_${Date.now()}`,
+                        next_role: rtRole,
+                        next_panel: rtPanel,
+                        next_location: rt.next_location || "",
+                      };
+                    })
+                  : nr
+                    ? [{ id: crypto.randomUUID?.() || `rt_${Date.now()}`, next_role: nr, next_panel: np, next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "" }]
+                    : [];
                 return {
                   id: s.id || crypto.randomUUID?.() || `opt_${Date.now()}`,
                   value: s.value || "",
@@ -180,7 +195,9 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                   next_role: nr,
                   next_panel: np,
                   next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
+                  routes: parsedRoutes,
                   note: s.note || "",
+                  is_spam: !!s.is_spam,
                 };
               })
             : [],
