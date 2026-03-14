@@ -103,6 +103,8 @@ const HRSettings = () => {
         if (row.value && Array.isArray(row.value)) setGiftNames(row.value as string[]);
       } else if (row.key === "product_names") {
         if (row.value && Array.isArray(row.value)) setProductNames(row.value as string[]);
+      } else if (row.key === "card_names") {
+        if (row.value && Array.isArray(row.value)) setCardNames(row.value as string[]);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
