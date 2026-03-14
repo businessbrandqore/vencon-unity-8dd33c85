@@ -934,7 +934,7 @@ const TLLeads = () => {
           const { error } = await supabase.from("orders").update({ status: "pending_cso" }).eq("id", orderId);
           if (error) { toast.error("CSO তে পাঠাতে সমস্যা"); return; }
           toast.success("CSO তে পাঠানো হয়েছে ✓");
-          fetchData();
+          loadData();
         };
         const handleSendAllToCso = async () => {
           if (csoOrders.length === 0) return;
