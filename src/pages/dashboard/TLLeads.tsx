@@ -490,224 +490,144 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="font-heading text-2xl font-bold text-foreground">
-            {isBn ? "Lead Management" : "Lead Management"}
-          </h2>
-          {isProcessing && (
-            <Badge variant="outline" className="mt-1 border-primary/30 text-primary">
-              {isBn ? "⚙️ প্রসেসিং মোড — Agent ছাড়া সরাসরি অপারেশন" : "⚙️ Processing Mode — Direct operation without Agent"}
-            </Badge>
-          )}
-        </div>
-        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-64 border-primary/30">
-            <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
-          </SelectTrigger>
-          <SelectContent>
-            {campaigns.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name} {c.data_mode === "processing" ? "⚙️" : "🎯"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  const sections = useMemo(() => {
+    const s: { key: string; label: string; icon: string; count: number }[] = [];
+    if (isProcessing) {
+      s.push({ key: "processing", label: isBn ? "প্রসেসিং ডাটা" : "Processing", icon: "⚙️", count: processingLeads.length });
+    } else {
+      s.push({ key: "assign", label: isBn ? "ফ্রেশ লিড" : "Fresh Leads", icon: "🎯", count: freshLeads.length });
+    }
+    s.push({ key: "agent_activity", label: isBn ? "এজেন্ট কার্যক্রম" : "Agent Activity", icon: "👥", count: agentLeads.length });
+    s.push({ key: "cso", label: "CSO Pending", icon: "📋", count: csoOrders.length });
+    s.push({ key: "calldone", label: "Call Done", icon: "✅", count: callDoneOrders.length });
+    if (!isProcessing) {
+      s.push({ key: "preorders", label: isBn ? "প্রি-অর্ডার" : "Pre-Orders", icon: "📅", count: preOrders.length });
+      s.push({ key: "silver", label: isBn ? "সিলভার" : "Silver", icon: "🥈", count: silverData.length });
+      s.push({ key: "golden", label: isBn ? "গোল্ডেন" : "Golden", icon: "🥇", count: goldenData.length });
+      s.push({ key: "deletesheet", label: isBn ? "ডিলিট শীট" : "Delete Sheet", icon: "🗑️", count: deleteSheetLeads.length });
+    }
+    return s;
+  }, [isProcessing, isBn, freshLeads, agentLeads, csoOrders, callDoneOrders, preOrders, silverData, goldenData, deleteSheetLeads, processingLeads]);
 
-      {/* Data Flow Visualization */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="py-3 px-4">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs font-body">
-            {isProcessing ? (
-              <>
-                {["WordPress", "TL", "CSO", "Warehouse", "Steadfast", "Delivery", "CS"].map((step, i) => (
-                  <span key={i} className="flex items-center gap-1.5">
-                    <span className="px-2 py-1 rounded-md bg-card border border-border text-foreground font-medium">{step}</span>
-                    {i < 6 && <span className="text-primary font-bold">→</span>}
-                  </span>
-                ))}
-                <span className="text-primary ml-1">🔄</span>
-              </>
-            ) : (
-              <>
-                {["WordPress", "TL", "Bronze", "CSO", "Warehouse", "Steadfast", "Delivery", "CS", "Silver", "Golden"].map((step, i) => (
-                  <span key={i} className="flex items-center gap-1.5">
-                    <span className={`px-2 py-1 rounded-md border font-medium ${
-                      step === "Silver" ? "bg-gray-200 dark:bg-gray-700 border-gray-400 text-gray-800 dark:text-gray-200" :
-                      step === "Golden" ? "bg-amber-100 dark:bg-amber-900/30 border-amber-400 text-amber-800 dark:text-amber-300" :
-                      "bg-card border-border text-foreground"
-                    }`}>{step}</span>
-                    {i < 9 && <span className="text-primary font-bold">→</span>}
-                  </span>
-                ))}
-                <span className="text-primary ml-1">🔄</span>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue={isProcessing ? "processing" : "assign"} className="space-y-4">
-        <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
-          {isProcessing ? (
-            <TabsTrigger value="processing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              {isBn ? "প্রসেসিং ডাটা" : "Processing Data"} ({processingLeads.length})
-            </TabsTrigger>
-          ) : (
-            <TabsTrigger value="assign" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              {isBn ? "Lead Assign" : "Assign Leads"} ({freshLeads.length})
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="agent_activity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            {isBn ? "এজেন্ট কার্যক্রম" : "Agent Activity"} ({agentLeads.length})
-          </TabsTrigger>
-          <TabsTrigger value="cso" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            CSO Pending ({csoOrders.length})
-          </TabsTrigger>
-          <TabsTrigger value="calldone" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            Call Done ({callDoneOrders.length})
-          </TabsTrigger>
-          {!isProcessing && (
-            <>
-              <TabsTrigger value="preorders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Pre-Orders ({preOrders.length})
-              </TabsTrigger>
-              <TabsTrigger value="deletesheet" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Delete Sheet ({deleteSheetLeads.length})
-              </TabsTrigger>
-              <TabsTrigger value="silver" className="data-[state=active]:bg-muted data-[state=active]:text-foreground">
-                🥈 Silver ({silverData.length})
-              </TabsTrigger>
-              <TabsTrigger value="golden" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-                🥇 Golden ({goldenData.length})
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
-
-        {/* Processing Tab */}
-        {isProcessing && (
-          <TabsContent value="processing">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-heading">
-                  {isBn ? "প্রসেসিং ডাটা — যেকোনো Agent-কে assign করুন" : "Processing Data — Assign to any Agent"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
-                      <TableHead>{isBn ? "Assign To" : "Assign To"}</TableHead>
-                      <TableHead></TableHead>
+  // Render content based on active section
+  const renderContent = () => {
+    switch (activeSection) {
+      case "assign":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">{isBn ? "Bronze Agent-এ Lead Assign করুন" : "Assign Leads to Bronze Agents"}</CardTitle>
+              {selectedLeads.size > 0 && (
+                <div className="flex items-center gap-3 pt-2">
+                  <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
+                  <Select value={bulkAgent} onValueChange={setBulkAgent}>
+                    <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
+                    <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Button onClick={bulkAssign} disabled={!bulkAgent} className="bg-primary text-primary-foreground">Apply</Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox checked={selectedLeads.size === freshLeads.length && freshLeads.length > 0}
+                        onCheckedChange={(v) => setSelectedLeads(v ? new Set(freshLeads.map(l => l.id)) : new Set())} />
+                    </TableHead>
+                    <TableHead>#</TableHead>
+                    <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "শহর" : "City"}</TableHead>
+                    <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                    <TableHead>Assign To</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {freshLeads.length === 0 ? (
+                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন lead নেই" : "No new leads"}</TableCell></TableRow>
+                  ) : freshLeads.map((lead, i) => (
+                    <TableRow key={lead.id}>
+                      <TableCell>
+                        <Checkbox checked={selectedLeads.has(lead.id)}
+                          onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
+                      </TableCell>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                      <TableCell>{lead.phone || "—"}</TableCell>
+                      <TableCell>{lead.address || "—"}</TableCell>
+                      <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell>
+                        <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(p => ({ ...p, [lead.id]: v }))}>
+                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                          {isBn ? "সেন্ড" : "Send"}
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {processingLeads.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো প্রসেসিং ডাটা নেই" : "No processing data"}</TableCell></TableRow>
-                    ) : processingLeads.map((lead, i) => (
-                      <TableRow key={lead.id}>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                        <TableCell>{lead.phone || "—"}</TableCell>
-                        <TableCell>{lead.address || "—"}</TableCell>
-                        <TableCell>
-                          <Select value={processingAssignments[lead.id] || ""} onValueChange={(v) => setProcessingAssignments(p => ({ ...p, [lead.id]: v }))}>
-                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" disabled={!processingAssignments[lead.id]} onClick={() => assignProcessing(lead.id, processingAssignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেন্ড" : "Send"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
 
-        {/* Lead Assign Tab */}
-        {!isProcessing && (
-          <TabsContent value="assign">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-heading">{isBn ? "Bronze Agent-এ Lead Assign করুন" : "Assign Leads to Bronze Agents"}</CardTitle>
-                {selectedLeads.size > 0 && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
-                    <Select value={bulkAgent} onValueChange={setBulkAgent}>
-                      <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
-                      <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Button onClick={bulkAssign} disabled={!bulkAgent} className="bg-primary text-primary-foreground">Apply</Button>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox checked={selectedLeads.size === freshLeads.length && freshLeads.length > 0}
-                          onCheckedChange={(v) => setSelectedLeads(v ? new Set(freshLeads.map(l => l.id)) : new Set())} />
-                      </TableHead>
-                      <TableHead>#</TableHead>
-                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead>{isBn ? "শহর" : "City"}</TableHead>
-                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                      <TableHead>Assign To</TableHead>
-                      <TableHead></TableHead>
+      case "processing":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">
+                {isBn ? "প্রসেসিং ডাটা — যেকোনো Agent-কে assign করুন" : "Processing Data — Assign to any Agent"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                    <TableHead>Assign To</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {processingLeads.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো প্রসেসিং ডাটা নেই" : "No processing data"}</TableCell></TableRow>
+                  ) : processingLeads.map((lead, i) => (
+                    <TableRow key={lead.id}>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                      <TableCell>{lead.phone || "—"}</TableCell>
+                      <TableCell>{lead.address || "—"}</TableCell>
+                      <TableCell>
+                        <Select value={processingAssignments[lead.id] || ""} onValueChange={(v) => setProcessingAssignments(p => ({ ...p, [lead.id]: v }))}>
+                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" disabled={!processingAssignments[lead.id]} onClick={() => assignProcessing(lead.id, processingAssignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                          {isBn ? "সেন্ড" : "Send"}
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {freshLeads.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন lead নেই" : "No new leads"}</TableCell></TableRow>
-                    ) : freshLeads.map((lead, i) => (
-                      <TableRow key={lead.id}>
-                        <TableCell>
-                          <Checkbox checked={selectedLeads.has(lead.id)}
-                            onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
-                        </TableCell>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                        <TableCell>{lead.phone || "—"}</TableCell>
-                        <TableCell>{lead.address || "—"}</TableCell>
-                        <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
-                        <TableCell>
-                          <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(p => ({ ...p, [lead.id]: v }))}>
-                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেন্ড" : "Send"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
 
-        {/* Agent Activity Tab */}
-        <TabsContent value="agent_activity">
+      case "agent_activity":
+        return (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">
@@ -735,7 +655,7 @@ const TLLeads = () => {
             <CardContent>
               {dynamicColumns.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1.5">
-                  <span className="text-xs text-muted-foreground">{isBn ? "HR কনফিগ কলাম:" : "HR Config Columns:"}</span>
+                  <span className="text-xs text-muted-foreground">{isBn ? "HR কনফিগ কলাম:" : "HR Config:"}</span>
                   {dynamicColumns.map(col => (
                     <Badge key={col.id} variant="outline" className="text-xs">
                       {isBn ? col.name_bn || col.name : col.name}
@@ -751,7 +671,6 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "এজেন্ট" : "Agent"}</TableHead>
                     <TableHead>{isBn ? "কাস্টমার" : "Customer"}</TableHead>
                     <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
                     <TableHead>{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                     <TableHead>{isBn ? "কল" : "Calls"}</TableHead>
                     <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
@@ -764,7 +683,7 @@ const TLLeads = () => {
                     if (agentFilter !== "all") filtered = filtered.filter((l: any) => l.assigned_to === agentFilter);
                     if (statusFilter !== "all") filtered = filtered.filter(l => l.status === statusFilter);
                     if (filtered.length === 0) return (
-                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         {isBn ? "কোনো এজেন্ট লিড নেই" : "No agent leads found"}
                       </TableCell></TableRow>
                     );
@@ -776,7 +695,6 @@ const TLLeads = () => {
                           <TableCell className="font-medium">{lead.agent_name || "—"}</TableCell>
                           <TableCell>{lead.name || "—"}</TableCell>
                           <TableCell>{lead.phone || "—"}</TableCell>
-                          <TableCell className="max-w-[120px] truncate">{lead.address || "—"}</TableCell>
                           <TableCell>
                             <Badge variant="outline" style={color ? { borderColor: color, color: color } : {}}>
                               {getStatusLabel(lead.status)}
@@ -793,10 +711,10 @@ const TLLeads = () => {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
+        );
 
-        {/* CSO Pending */}
-        <TabsContent value="cso">
+      case "cso":
+        return (
           <Card>
             <CardHeader><CardTitle className="text-lg font-heading">CSO Pending</CardTitle></CardHeader>
             <CardContent>
@@ -821,17 +739,17 @@ const TLLeads = () => {
                       <TableCell>{o.product || "—"}</TableCell>
                       <TableCell>{(o as any).agent?.name || "—"}</TableCell>
                       <TableCell>{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</TableCell>
-                      <TableCell><Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Pending CSO</Badge></TableCell>
+                      <TableCell><Badge className="bg-accent text-accent-foreground">Pending CSO</Badge></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
+        );
 
-        {/* Call Done */}
-        <TabsContent value="calldone">
+      case "calldone":
+        return (
           <Card>
             <CardHeader><CardTitle className="text-lg font-heading">Call Done Queue</CardTitle></CardHeader>
             <CardContent>
@@ -866,210 +784,284 @@ const TLLeads = () => {
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
+        );
 
-        {/* Pre-Orders */}
-        {!isProcessing && (
-          <TabsContent value="preorders">
-            <Card>
-              <CardHeader><CardTitle className="text-lg font-heading">Pre-Orders</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{isBn ? "গ্রাহক" : "Customer"}</TableHead>
-                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                      <TableHead>Agent</TableHead>
-                      <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
-                      <TableHead>{isBn ? "অ্যাকশন" : "Actions"}</TableHead>
+      case "preorders":
+        return (
+          <Card>
+            <CardHeader><CardTitle className="text-lg font-heading">Pre-Orders</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{isBn ? "গ্রাহক" : "Customer"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                    <TableHead>Agent</TableHead>
+                    <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
+                    <TableHead>{isBn ? "অ্যাকশন" : "Actions"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {preOrders.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো pre-order নেই" : "No pre-orders"}</TableCell></TableRow>
+                  ) : preOrders.map((po) => (
+                    <TableRow key={po.id}>
+                      <TableCell>{(po as any).lead?.name || "—"}</TableCell>
+                      <TableCell>{(po as any).lead?.phone || "—"}</TableCell>
+                      <TableCell>{po.scheduled_date || "—"}</TableCell>
+                      <TableCell>{(po as any).agent?.name || "—"}</TableCell>
+                      <TableCell className="max-w-48 truncate">{po.note || "—"}</TableCell>
+                      <TableCell className="space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => convertPreOrder(po)} className="border-primary text-primary hover:bg-primary/10">Convert</Button>
+                        <Button size="sm" variant="outline" onClick={() => deletePreOrder(po.id)} className="border-destructive text-destructive hover:bg-destructive/10">Delete</Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {preOrders.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো pre-order নেই" : "No pre-orders"}</TableCell></TableRow>
-                    ) : preOrders.map((po) => (
-                      <TableRow key={po.id}>
-                        <TableCell>{(po as any).lead?.name || "—"}</TableCell>
-                        <TableCell>{(po as any).lead?.phone || "—"}</TableCell>
-                        <TableCell>{po.scheduled_date || "—"}</TableCell>
-                        <TableCell>{(po as any).agent?.name || "—"}</TableCell>
-                        <TableCell className="max-w-48 truncate">{po.note || "—"}</TableCell>
-                        <TableCell className="space-x-2">
-                          <Button size="sm" variant="outline" onClick={() => convertPreOrder(po)} className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/10">Convert</Button>
-                          <Button size="sm" variant="outline" onClick={() => deletePreOrder(po.id)} className="border-destructive text-destructive hover:bg-destructive/10">Delete</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
 
-        {/* Delete Sheet */}
-        {!isProcessing && (
-          <TabsContent value="deletesheet">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-heading">TL Delete Sheet</CardTitle>
-                {selectedDeleteLeads.size > 0 && (
-                  <Button size="sm" variant="destructive" onClick={bulkDeleteLeads} className="mt-2 w-fit">
-                    {isBn ? `Delete (${selectedDeleteLeads.size})` : `Delete all (${selectedDeleteLeads.size})`}
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox checked={selectedDeleteLeads.size === deleteSheetLeads.length && deleteSheetLeads.length > 0}
-                          onCheckedChange={(v) => setSelectedDeleteLeads(v ? new Set(deleteSheetLeads.map(l => l.id)) : new Set())} />
-                      </TableHead>
-                      <TableHead>{isBn ? "গ্রাহক" : "Customer"}</TableHead>
-                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Requeue</TableHead>
-                      <TableHead>{isBn ? "শেষ Activity" : "Last Activity"}</TableHead>
-                      <TableHead>{isBn ? "অ্যাকশন" : "Actions"}</TableHead>
+      case "silver":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">
+                🥈 {isBn ? "সিলভার ডাটা — সিলভার এজেন্টে অ্যাসাইন করুন" : "Silver Data — Assign to Silver Agents"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "ব্রোঞ্জ অর্ডার ডেলিভার ও CS Call Done হওয়ার পর স্বয়ংক্রিয়ভাবে এখানে আসে" : "Auto-arrives after Bronze order delivered & CS Call Done"}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                    <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                    <TableHead>Assign To</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {silverData.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      {isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"}
+                    </TableCell></TableRow>
+                  ) : silverData.map((item, i) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell className="font-medium">{item.name || "—"}</TableCell>
+                      <TableCell>{item.phone || "—"}</TableCell>
+                      <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
+                      <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell>
+                        <Select value={silverAssignments[item.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [item.id]: v }))}>
+                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" disabled={!silverAssignments[item.id]} onClick={() => assignSilver(item.id, silverAssignments[item.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                          {isBn ? "সেন্ড" : "Send"}
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deleteSheetLeads.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</TableCell></TableRow>
-                    ) : deleteSheetLeads.map((lead) => (
-                      <TableRow key={lead.id}>
-                        <TableCell>
-                          <Checkbox checked={selectedDeleteLeads.has(lead.id)}
-                            onCheckedChange={(v) => { const next = new Set(selectedDeleteLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedDeleteLeads(next); }} />
-                        </TableCell>
-                        <TableCell>{lead.name || "—"}</TableCell>
-                        <TableCell>{lead.phone || "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{lead.status}</Badge></TableCell>
-                        <TableCell className="text-center">{lead.requeue_count}</TableCell>
-                        <TableCell>{lead.updated_at ? new Date(lead.updated_at).toLocaleDateString() : "—"}</TableCell>
-                        <TableCell className="space-x-2">
-                          <Select onValueChange={(agentId) => reassignLead(lead.id, agentId)}>
-                            <SelectTrigger className="w-36 inline-flex"><SelectValue placeholder="Reassign" /></SelectTrigger>
-                            <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                          <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>Delete</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
 
-        {/* ========== SILVER TAB — Assign to Silver Agents ========== */}
-        {!isProcessing && (
-          <TabsContent value="silver">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-heading">
-                  🥈 {isBn ? "সিলভার ডাটা — সিলভার এজেন্টে অ্যাসাইন করুন" : "Silver Data — Assign to Silver Agents"}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {isBn ? "ব্রোঞ্জ অর্ডার ডেলিভার ও CS Call Done হওয়ার পর স্বয়ংক্রিয়ভাবে এখানে আসে" : "Auto-arrives after Bronze order delivered & CS Call Done"}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
-                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                      <TableHead>Assign To</TableHead>
-                      <TableHead></TableHead>
+      case "golden":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">
+                🥇 {isBn ? "গোল্ডেন ডাটা" : "Golden Data"}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "সিলভার অর্ডার ডেলিভার ও CS Call Done হওয়ার পর স্বয়ংক্রিয়ভাবে এখানে আসে" : "Auto-arrives after Silver orders delivered & CS Call Done"}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                    <TableHead>{isBn ? "সোর্স" : "Source"}</TableHead>
+                    <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {goldenData.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      {isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data yet"}
+                    </TableCell></TableRow>
+                  ) : goldenData.map((item, i) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell className="font-medium">{item.name || "—"}</TableCell>
+                      <TableCell>{item.phone || "—"}</TableCell>
+                      <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
+                      <TableCell>{item.source || "—"}</TableCell>
+                      <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {silverData.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        {isBn ? "কোনো সিলভার ডাটা নেই — ব্রোঞ্জ অর্ডার ডেলিভার ও CS Call Done হলে এখানে আসবে" : "No silver data — appears after Bronze orders delivered & CS Call Done"}
-                      </TableCell></TableRow>
-                    ) : silverData.map((item, i) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell className="font-medium">{item.name || "—"}</TableCell>
-                        <TableCell>{item.phone || "—"}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
-                        <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
-                        <TableCell>
-                          <Select value={silverAssignments[item.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [item.id]: v }))}>
-                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" disabled={!silverAssignments[item.id]} onClick={() => assignSilver(item.id, silverAssignments[item.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেন্ড" : "Send"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
 
-        {/* ========== GOLDEN TAB — Assign or view ========== */}
-        {!isProcessing && (
-          <TabsContent value="golden">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-heading">
-                  🥇 {isBn ? "গোল্ডেন ডাটা" : "Golden Data"}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {isBn ? "সিলভার অর্ডার ডেলিভার ও CS Call Done হওয়ার পর স্বয়ংক্রিয়ভাবে এখানে আসে" : "Auto-arrives after Silver orders delivered & CS Call Done"}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                      <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
-                      <TableHead>{isBn ? "সোর্স" : "Source"}</TableHead>
-                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+      case "deletesheet":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">TL Delete Sheet</CardTitle>
+              {selectedDeleteLeads.size > 0 && (
+                <Button size="sm" variant="destructive" onClick={bulkDeleteLeads} className="mt-2 w-fit">
+                  {isBn ? `Delete (${selectedDeleteLeads.size})` : `Delete all (${selectedDeleteLeads.size})`}
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox checked={selectedDeleteLeads.size === deleteSheetLeads.length && deleteSheetLeads.length > 0}
+                        onCheckedChange={(v) => setSelectedDeleteLeads(v ? new Set(deleteSheetLeads.map(l => l.id)) : new Set())} />
+                    </TableHead>
+                    <TableHead>{isBn ? "গ্রাহক" : "Customer"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requeue</TableHead>
+                    <TableHead>{isBn ? "শেষ Activity" : "Last Activity"}</TableHead>
+                    <TableHead>{isBn ? "অ্যাকশন" : "Actions"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deleteSheetLeads.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</TableCell></TableRow>
+                  ) : deleteSheetLeads.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell>
+                        <Checkbox checked={selectedDeleteLeads.has(lead.id)}
+                          onCheckedChange={(v) => { const next = new Set(selectedDeleteLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedDeleteLeads(next); }} />
+                      </TableCell>
+                      <TableCell>{lead.name || "—"}</TableCell>
+                      <TableCell>{lead.phone || "—"}</TableCell>
+                      <TableCell><Badge variant="outline">{getStatusLabel(lead.status)}</Badge></TableCell>
+                      <TableCell className="text-center">{lead.requeue_count}</TableCell>
+                      <TableCell>{lead.updated_at ? new Date(lead.updated_at).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell className="space-x-2">
+                        <Select onValueChange={(agentId) => reassignLead(lead.id, agentId)}>
+                          <SelectTrigger className="w-36 inline-flex"><SelectValue placeholder="Reassign" /></SelectTrigger>
+                          <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>Delete</Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {goldenData.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        {isBn ? "কোনো গোল্ডেন ডাটা নেই — সিলভার অর্ডার ডেলিভার ও CS Call Done হলে আসবে" : "No golden data yet"}
-                      </TableCell></TableRow>
-                    ) : goldenData.map((item, i) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell className="font-medium">{item.name || "—"}</TableCell>
-                        <TableCell>{item.phone || "—"}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
-                        <TableCell>{item.source || "—"}</TableCell>
-                        <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
 
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="font-heading text-2xl font-bold text-foreground">
+            {isBn ? "Lead Management" : "Lead Management"}
+          </h2>
+          {isProcessing && (
+            <Badge variant="outline" className="mt-1 border-primary/30 text-primary">
+              ⚙️ {isBn ? "প্রসেসিং মোড" : "Processing Mode"}
+            </Badge>
+          )}
+        </div>
+        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+          <SelectTrigger className="w-64 border-primary/30">
+            <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
+          </SelectTrigger>
+          <SelectContent>
+            {campaigns.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name} {c.data_mode === "processing" ? "⚙️" : "🎯"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Main Layout: Left Panel + Right Content */}
+      <div className="flex gap-4">
+        {/* Left Panel */}
+        <div className="w-56 shrink-0">
+          <Card className="sticky top-4">
+            <CardContent className="p-2 space-y-1">
+              <p className="text-xs font-medium text-muted-foreground px-2 pt-1 pb-1.5">{isBn ? "ক্যাটাগরি" : "Categories"}</p>
+              {sections.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setActiveSection(s.key)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                    activeSection === s.key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span>{s.icon}</span>
+                    <span className="truncate">{s.label}</span>
+                  </span>
+                  <Badge variant={activeSection === s.key ? "secondary" : "outline"} className="ml-1 text-xs px-1.5 min-w-[24px] justify-center">
+                    {s.count}
+                  </Badge>
+                </button>
+              ))}
+
+              {/* HR Config indicator */}
+              {dynamicColumns.length > 0 && (
+                <div className="mt-3 px-2 pt-2 border-t border-border">
+                  <p className="text-[10px] text-muted-foreground mb-1">{isBn ? "HR কনফিগ" : "HR Config"}</p>
+                  {dynamicColumns.map(col => (
+                    <div key={col.id} className="text-[10px] text-muted-foreground truncate">
+                      {col.type === "dropdown" ? "📋" : "📝"} {isBn ? col.name_bn || col.name : col.name}
+                      {col.type === "dropdown" && ` (${col.options.length})`}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Content */}
+        <div className="flex-1 min-w-0">
+          {renderContent()}
+        </div>
+      </div>
+
+      {/* Delete Confirm Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
