@@ -266,7 +266,10 @@ export default function EmployeeLeads() {
     const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
     const note = leadNotes[lead.id] ?? lead.special_note;
 
-    if (newStatus === "Order Confirm") {
+    // Normalize to snake_case for comparison
+    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
+
+    if (statusKey === "order_confirm") {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
       setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
@@ -274,18 +277,17 @@ export default function EmployeeLeads() {
       setOrderUpsell(""); setOrderSuccessRatio("");
       setShowOrderModal(true); return;
     }
-    if (newStatus === "Pre Order") {
+    if (statusKey === "pre_order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
       setShowPreOrderModal(true); return;
     }
-    if (newStatus === "Pre Order Confirm") {
+    if (statusKey === "pre_order_confirm") {
       setCurrentPreOrderConfirmLead(lead);
       setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
       setShowPreOrderConfirmModal(true); return;
     }
 
-    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
     const updatePayload: Record<string, unknown> = {
       status: statusKey, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
