@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut, ShieldAlert } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 
 interface AttendanceRow {
@@ -78,6 +78,13 @@ export default function EmployeeAttendance() {
   const [leaveEnd, setLeaveEnd] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
 
+  // Appeal
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealAttendanceId, setAppealAttendanceId] = useState("");
+  const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSubmitting, setAppealSubmitting] = useState(false);
+  const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
+
   // Load profile
   useEffect(() => {
     if (!user) return;
@@ -111,6 +118,19 @@ export default function EmployeeAttendance() {
   }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Load existing appeals
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("attendance_appeals").select("attendance_id, status").eq("user_id", user.id);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.attendance_id) map[a.attendance_id] = a.status; });
+        setExistingAppeals(map);
+      }
+    })();
+  }, [user]);
 
   const totalDeductions = attendance.reduce((s, a) => s + (Number(a.deduction_amount) || 0), 0);
   const lateDays = attendance.filter((a) => a.is_late).length;
@@ -197,6 +217,22 @@ export default function EmployeeAttendance() {
     setLeaveStart(""); setLeaveEnd(""); setLeaveReason("");
     const { data } = await supabase.from("leave_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     if (data) setLeaves(data as LeaveRequest[]);
+  };
+
+  const handleAppealSubmit = async () => {
+    if (!user || !appealAttendanceId || !appealExplanation.trim()) { toast.error("কারণ লিখুন"); return; }
+    setAppealSubmitting(true);
+    const { error } = await supabase.from("attendance_appeals").insert({
+      user_id: user.id, attendance_id: appealAttendanceId, explanation: appealExplanation.trim(),
+    });
+    if (error) { toast.error("আপিল পাঠাতে সমস্যা"); console.error(error); }
+    else {
+      toast.success("আপিল পাঠানো হয়েছে — HR রিভিউ করবে");
+      setExistingAppeals(p => ({ ...p, [appealAttendanceId]: "pending" }));
+    }
+    setAppealSubmitting(false);
+    setShowAppealModal(false);
+    setAppealExplanation("");
   };
 
   const statusColor = (s: string | null) => {
@@ -331,10 +367,13 @@ export default function EmployeeAttendance() {
                   <th className="py-2 px-2 text-right">মিনিট</th>
                   <th className="py-2 px-2 text-right">কর্তন</th>
                   <th className="py-2 px-2 text-center">স্ট্যাটাস</th>
+                  <th className="py-2 px-2 text-center">আপিল</th>
                 </tr>
               </thead>
               <tbody>
-                {attendance.map((a) => (
+                {attendance.map((a) => {
+                  const appealStatus = existingAppeals[a.id];
+                  return (
                   <tr key={a.id} className={cn("border-b border-border", (a.is_late || a.is_early_out) && "bg-orange-500/5")}>
                     <td className="py-2 px-2">{new Date(a.date).toLocaleDateString("bn-BD")}</td>
                     <td className="py-2 px-2 text-xs">{a.clock_in ? new Date(a.clock_in).toLocaleTimeString("bn-BD") : "—"}</td>
@@ -348,9 +387,21 @@ export default function EmployeeAttendance() {
                       {a.is_early_out && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-xs">Early</Badge>}
                       {!a.is_late && !a.is_early_out && a.clock_in && <Badge variant="outline" className="text-green-400 border-green-600/50 text-xs">OK</Badge>}
                     </td>
+                    <td className="py-2 px-2 text-center">
+                      {(a.is_late || a.is_early_out) && Number(a.deduction_amount) > 0 ? (
+                        appealStatus === "pending" ? <Badge variant="outline" className="text-amber-500 border-amber-500/50 text-[10px]">পেন্ডিং</Badge> :
+                        appealStatus === "approved" ? <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 text-[10px]">গৃহীত ✓</Badge> :
+                        appealStatus === "rejected" ? <Badge variant="outline" className="text-destructive border-destructive/50 text-[10px]">প্রত্যাখ্যাত</Badge> :
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px] text-[hsl(var(--panel-employee))]"
+                          onClick={() => { setAppealAttendanceId(a.id); setAppealExplanation(""); setShowAppealModal(true); }}>
+                          <ShieldAlert className="h-3 w-3 mr-1" /> আপিল
+                        </Button>
+                      ) : "—"}
+                    </td>
                   </tr>
-                ))}
-                {attendance.length === 0 && <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">এই মাসে কোনো রেকর্ড নেই</td></tr>}
+                  );
+                })}
+                {attendance.length === 0 && <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">এই মাসে কোনো রেকর্ড নেই</td></tr>}
               </tbody>
             </table>
           </div>
@@ -459,6 +510,27 @@ export default function EmployeeAttendance() {
           </div>
           <DialogFooter>
             <Button onClick={handleLeaveSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">আবেদন জমা দিন</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Appeal Modal */}
+      <Dialog open={showAppealModal} onOpenChange={setShowAppealModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>কর্তন আপিল</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">দেরি বা আগে যাওয়ার কারণ ব্যাখ্যা করুন। HR রিভিউ করে সিদ্ধান্ত নিবে।</p>
+            <div>
+              <Label>কারণ *</Label>
+              <Textarea value={appealExplanation} onChange={e => setAppealExplanation(e.target.value)} className="mt-1" rows={3} placeholder="কেন দেরি হয়েছিল..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAppealModal(false)}>বাতিল</Button>
+            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || !appealExplanation.trim()}
+              className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
+              {appealSubmitting ? "পাঠানো হচ্ছে..." : "আপিল পাঠান"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
