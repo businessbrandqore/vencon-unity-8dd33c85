@@ -78,6 +78,13 @@ export default function EmployeeAttendance() {
   const [leaveEnd, setLeaveEnd] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
 
+  // Appeal
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealAttendanceId, setAppealAttendanceId] = useState("");
+  const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSubmitting, setAppealSubmitting] = useState(false);
+  const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
+
   // Load profile
   useEffect(() => {
     if (!user) return;
