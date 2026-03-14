@@ -1185,7 +1185,9 @@ const TLLeads = () => {
               </Table>
             </CardContent>
           </Card>
+          </div>
         );
+
 
       case "deletesheet":
         return (
