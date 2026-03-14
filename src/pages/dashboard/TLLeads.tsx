@@ -419,7 +419,8 @@ const TLLeads = () => {
       { leadId, agentId, type: "silver" },
       isBn ? "সিলভার এজেন্ট অ্যাসাইন" : "Silver agent assignment",
       async () => {
-        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", tl_id: user?.id }).eq("id", leadId);
+        const tlId = getEffectiveTlId();
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", tl_id: tlId }).eq("id", leadId);
         toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned");
       }
     );
