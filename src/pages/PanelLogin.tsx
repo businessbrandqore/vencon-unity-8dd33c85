@@ -113,7 +113,8 @@ const PanelLogin = () => {
         <div className="fixed inset-0 z-50 transition-opacity duration-200" style={{ backgroundColor: panelConfig.color }} />
       )}
 
-      <div className="min-h-screen bg-background flex">
+      <div className="min-h-screen bg-background flex relative overflow-hidden">
+        <LoginBackground />
         <LanguageToggle />
 
         {/* Left branding */}
