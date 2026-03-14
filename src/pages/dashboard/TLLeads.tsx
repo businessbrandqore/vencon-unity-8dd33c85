@@ -34,6 +34,8 @@ interface RoleColumnConfig { role: string; columns: StatusColumn[]; }
 const TLLeads = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { section: urlSection } = useParams<{ section?: string }>();
+  const navigate = useNavigate();
   const isBn = t("vencon") === "VENCON";
   const { isATL, executeOrRequestApproval } = useATLApproval();
 
@@ -53,7 +55,8 @@ const TLLeads = () => {
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [activeSection, setActiveSection] = useState<string>("assign");
+  // Derive active section from URL param, default to "assign"
+  const activeSection = urlSection || "assign";
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
