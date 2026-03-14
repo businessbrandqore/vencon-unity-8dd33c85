@@ -233,8 +233,32 @@ function OptionRow({
   onToggle: () => void;
 }) {
   const colorInfo = getColorInfo(option.color || "gray");
-  const derivedPanel = option.next_role ? (ROLE_PANEL_MAP[option.next_role] || null) : null;
-  const panelLocations = derivedPanel ? (PANEL_DESTINATIONS[derivedPanel] || []) : [];
+  
+  // Use routes array, fallback to single next_role for backward compat
+  const routes: RouteDestination[] = option.routes?.length
+    ? option.routes
+    : option.next_role
+      ? [{ id: crypto.randomUUID?.() || `rt_${Date.now()}`, next_role: option.next_role, next_panel: (option.next_panel || "") as AppPanel | "", next_location: option.next_location || "" }]
+      : [];
+
+  const hasRoutes = routes.some(r => r.next_role);
+
+  const addRoute = () => {
+    const newRoute: RouteDestination = { id: crypto.randomUUID?.() || `rt_${Date.now()}`, next_role: "", next_panel: "", next_location: "" };
+    const updatedRoutes = [...routes, newRoute];
+    onUpdate({ routes: updatedRoutes, next_role: updatedRoutes[0]?.next_role || "", next_panel: (updatedRoutes[0]?.next_panel || "") as AppPanel | "", next_location: updatedRoutes[0]?.next_location || "" });
+  };
+
+  const updateRoute = (idx: number, updates: Partial<RouteDestination>) => {
+    const updatedRoutes = routes.map((r, i) => i === idx ? { ...r, ...updates } : r);
+    // Keep first route synced with legacy fields
+    onUpdate({ routes: updatedRoutes, next_role: updatedRoutes[0]?.next_role || "", next_panel: (updatedRoutes[0]?.next_panel || "") as AppPanel | "", next_location: updatedRoutes[0]?.next_location || "" });
+  };
+
+  const removeRoute = (idx: number) => {
+    const updatedRoutes = routes.filter((_, i) => i !== idx);
+    onUpdate({ routes: updatedRoutes, next_role: updatedRoutes[0]?.next_role || "", next_panel: (updatedRoutes[0]?.next_panel || "") as AppPanel | "", next_location: updatedRoutes[0]?.next_location || "" });
+  };
 
   return (
     <div className={`border rounded-md overflow-hidden ${colorInfo.bg}`}>
