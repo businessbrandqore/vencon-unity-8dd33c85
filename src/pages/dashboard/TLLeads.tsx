@@ -52,6 +52,7 @@ const TLLeads = () => {
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeSection, setActiveSection] = useState<string>("assign");
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
