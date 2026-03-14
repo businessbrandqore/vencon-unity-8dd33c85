@@ -770,7 +770,13 @@ export default function EmployeeLeads() {
               </div>
               <div>
                 <Label>Card Name</Label>
-                <Input value={orderCardName} onChange={e => setOrderCardName(e.target.value)} className="mt-1" placeholder="Select card" />
+                <Select value={orderCardName} onValueChange={setOrderCardName}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select card" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Card</SelectItem>
+                    {cardNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
