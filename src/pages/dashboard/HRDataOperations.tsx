@@ -29,7 +29,7 @@ interface ColumnOption {
   color?: string;
   next_panel?: AppPanel | "";
   next_location?: string;
-  next_user?: string;
+  next_role?: string;
   note?: string;
 }
 
@@ -89,6 +89,33 @@ const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
   { value: "sa", label: "SA Panel" },
 ];
 
+// All roles with their panel mapping
+const ALL_ROLES_WITH_PANEL: { value: string; label: string; panel: AppPanel }[] = [
+  { value: "telesales_executive", label: "টেলিসেলস এক্সিকিউটিভ", panel: "employee" },
+  { value: "cso", label: "CSO (Customer Security Officer)", panel: "employee" },
+  { value: "cs_executive", label: "CS Executive", panel: "employee" },
+  { value: "warehouse_assistant", label: "Warehouse Assistant", panel: "employee" },
+  { value: "warehouse_supervisor", label: "Warehouse Supervisor", panel: "employee" },
+  { value: "inventory_manager", label: "Inventory Manager", panel: "employee" },
+  { value: "delivery_coordinator", label: "Delivery Coordinator", panel: "employee" },
+  { value: "maintenance_officer", label: "Maintenance Officer", panel: "employee" },
+  { value: "office_assistant", label: "Office Assistant", panel: "employee" },
+  { value: "group_leader", label: "Group Leader", panel: "employee" },
+  { value: "team_leader", label: "Team Leader", panel: "tl" },
+  { value: "assistant_team_leader", label: "Assistant Team Leader (ATL)", panel: "tl" },
+  { value: "Business Development And Marketing Manager", label: "BDO (বিডিও)", panel: "tl" },
+  { value: "hr_manager", label: "HR Manager", panel: "hr" },
+  { value: "hr_executive", label: "HR Executive", panel: "hr" },
+  { value: "super_admin", label: "Super Admin", panel: "sa" },
+];
+
+const getRolePanelMap = (): Record<string, AppPanel> => {
+  const map: Record<string, AppPanel> = {};
+  ALL_ROLES_WITH_PANEL.forEach((r) => { map[r.value] = r.panel; });
+  return map;
+};
+const ROLE_PANEL_MAP = getRolePanelMap();
+
 // Dynamically build panel destinations from sidebarConfig
 const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string }>> = (() => {
   const result: Record<AppPanel, Array<{ value: string; label: string }>> = {
@@ -132,7 +159,8 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
           type: (col.type === "note" ? "note" : "dropdown") as ColumnType,
           options: Array.isArray(col.options)
             ? col.options.map((s: any) => {
-                const np = panelSet.has(s.next_panel) ? s.next_panel : "";
+                const nr = s.next_role || "";
+                const np = nr ? (ROLE_PANEL_MAP[nr] || "") : (panelSet.has(s.next_panel) ? s.next_panel : "");
                 const vl = np ? (PANEL_DESTINATIONS[np] || []) : [];
                 return {
                   id: s.id || crypto.randomUUID?.() || `opt_${Date.now()}`,
@@ -140,9 +168,9 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                   label: s.label || "",
                   label_bn: s.label_bn || "",
                   color: s.color || "gray",
+                  next_role: nr,
                   next_panel: np,
                   next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
-                  next_user: s.next_user || "",
                   note: s.note || "",
                 };
               })
@@ -196,24 +224,8 @@ function OptionRow({
   onToggle: () => void;
 }) {
   const colorInfo = getColorInfo(option.color || "gray");
-  const panelLocations = option.next_panel ? (PANEL_DESTINATIONS[option.next_panel] || []) : [];
-
-  // Fetch users for the selected panel
-  const { data: panelUsers = [] } = useQuery({
-    queryKey: ["panel-users", option.next_panel],
-    queryFn: async () => {
-      if (!option.next_panel) return [];
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, name, role")
-        .eq("panel", option.next_panel)
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!option.next_panel,
-  });
+  const derivedPanel = option.next_role ? (ROLE_PANEL_MAP[option.next_role] || null) : null;
+  const panelLocations = derivedPanel ? (PANEL_DESTINATIONS[derivedPanel] || []) : [];
 
   return (
     <div className={`border rounded-md overflow-hidden ${colorInfo.bg}`}>
@@ -289,18 +301,22 @@ function OptionRow({
               </Select>
             </div>
             <div>
-              <Label className="text-[10px] text-muted-foreground">ডাটা কোন প্যানেলে</Label>
+              <Label className="text-[10px] text-muted-foreground">কোন পদে যাবে</Label>
               <Select
-                value={option.next_panel || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_panel: v === NO_OPTION ? "" : (v as AppPanel), next_location: "", next_user: "" })}
+                value={option.next_role || NO_OPTION}
+                onValueChange={(v) => {
+                  const role = v === NO_OPTION ? "" : v;
+                  const panel = role ? (ROLE_PANEL_MAP[role] || "") : "";
+                  onUpdate({ next_role: role, next_panel: panel as AppPanel | "", next_location: "" });
+                }}
               >
                 <SelectTrigger className="h-7 mt-0.5 text-xs">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
-                  {PANEL_OPTIONS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  {ALL_ROLES_WITH_PANEL.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -310,10 +326,10 @@ function OptionRow({
               <Select
                 value={option.next_location || NO_OPTION}
                 onValueChange={(v) => onUpdate({ next_location: v === NO_OPTION ? "" : v })}
-                disabled={!option.next_panel}
+                disabled={!derivedPanel}
               >
                 <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder={option.next_panel ? "—" : "আগে প্যানেল দিন"} />
+                  <SelectValue placeholder={derivedPanel ? "—" : "আগে পদ দিন"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
@@ -324,29 +340,6 @@ function OptionRow({
               </Select>
             </div>
           </div>
-
-          {/* কর্মী সিলেক্ট ড্রপডাউন */}
-          {option.next_panel && (
-            <div>
-              <Label className="text-[10px] text-muted-foreground">কার কাছে যাবে (কর্মী)</Label>
-              <Select
-                value={option.next_user || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_user: v === NO_OPTION ? "" : v })}
-              >
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder="কর্মী সিলেক্ট করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_OPTION}>— সবাই —</SelectItem>
-                  {panelUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div>
             <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
