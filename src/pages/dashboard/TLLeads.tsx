@@ -823,17 +823,6 @@ const TLLeads = () => {
                           <TableCell key={key} className="text-xs max-w-[120px] truncate">{getSpecialNoteValue(lead, key)}</TableCell>
                         ))}
                         <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
-                        <TableCell>
-                          <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(p => ({ ...p, [lead.id]: v }))}>
-                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেন্ড" : "Send"}
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
