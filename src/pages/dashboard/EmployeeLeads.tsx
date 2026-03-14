@@ -344,7 +344,8 @@ export default function EmployeeLeads() {
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
-    await supabase.from("leads").update({ status: "pre_order", called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
+    const selectedStatus = leadStatuses[currentPreOrderLead.id] || "pre_order";
+    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
     loadLeads();
