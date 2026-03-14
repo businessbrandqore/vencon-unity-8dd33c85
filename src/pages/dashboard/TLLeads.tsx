@@ -799,8 +799,6 @@ const TLLeads = () => {
                         <TableHead key={key} className="text-xs">{key}</TableHead>
                       ))}
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                      <TableHead>Assign To</TableHead>
-                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -825,17 +823,6 @@ const TLLeads = () => {
                           <TableCell key={key} className="text-xs max-w-[120px] truncate">{getSpecialNoteValue(lead, key)}</TableCell>
                         ))}
                         <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
-                        <TableCell>
-                          <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(p => ({ ...p, [lead.id]: v }))}>
-                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            {isBn ? "সেন্ড" : "Send"}
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -863,8 +850,6 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
                     <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                     <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
-                    <TableHead>Assign To</TableHead>
-                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -876,17 +861,6 @@ const TLLeads = () => {
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell>{lead.phone || "—"}</TableCell>
                       <TableCell>{lead.address || "—"}</TableCell>
-                      <TableCell>
-                        <Select value={processingAssignments[lead.id] || ""} onValueChange={(v) => setProcessingAssignments(p => ({ ...p, [lead.id]: v }))}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                          <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" disabled={!processingAssignments[lead.id]} onClick={() => assignProcessing(lead.id, processingAssignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                          {isBn ? "সেন্ড" : "Send"}
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1143,8 +1117,6 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                     <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
                     <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                    <TableHead>Assign To</TableHead>
-                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1159,17 +1131,6 @@ const TLLeads = () => {
                       <TableCell>{item.phone || "—"}</TableCell>
                       <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
                       <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>
-                        <Select value={silverAssignments[item.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [item.id]: v }))}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                          <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" disabled={!silverAssignments[item.id]} onClick={() => assignSilver(item.id, silverAssignments[item.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                          {isBn ? "সেন্ড" : "Send"}
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
