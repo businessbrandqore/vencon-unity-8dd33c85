@@ -437,9 +437,6 @@ export default function EmployeeLeads() {
                   </Select>
                 </td>
                 <td className="py-2 px-2">
-                  <Input className="h-8 text-xs" value={leadNotes[lead.id] ?? (lead.special_note || "")} onChange={e => setLeadNotes(p => ({ ...p, [lead.id]: e.target.value }))} placeholder="নোট" />
-                </td>
-                <td className="py-2 px-2">
                   <Button size="sm" variant="outline" onClick={() => handleLeadSave(lead)} disabled={!leadStatuses[lead.id]} className="h-7 text-xs border-[hsl(var(--panel-employee))] text-[hsl(var(--panel-employee))]">
                     সেভ
                   </Button>
