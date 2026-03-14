@@ -36,10 +36,10 @@ const LoginBackground = () => {
     particlesRef.current = Array.from({ length: Math.min(count, 40) }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      size: Math.random() * 20 + 8,
-      speedX: (Math.random() - 0.5) * 0.4,
-      speedY: (Math.random() - 0.5) * 0.4,
-      opacity: Math.random() * 0.12 + 0.03,
+      size: Math.random() * 30 + 12,
+      speedX: (Math.random() - 0.5) * 0.6,
+      speedY: (Math.random() - 0.5) * 0.6,
+      opacity: Math.random() * 0.25 + 0.08,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.008,
       shape: (["circle", "square", "triangle", "line"] as const)[Math.floor(Math.random() * 4)],
@@ -82,7 +82,7 @@ const LoginBackground = () => {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.opacity;
+        ctx.globalAlpha = p.opacity * 2.5;
 
         const color = `rgba(${baseColor}, ${p.opacity})`;
         ctx.fillStyle = color;
@@ -125,7 +125,7 @@ const LoginBackground = () => {
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 200) {
-            const opacity = ((200 - dist) / 200) * 0.06;
+            const opacity = ((200 - dist) / 200) * 0.15;
             ctx.strokeStyle = `rgba(${baseColor}, ${opacity})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
