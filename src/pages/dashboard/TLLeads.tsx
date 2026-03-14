@@ -930,32 +930,67 @@ const TLLeads = () => {
         );
 
       case "cso":
+        const handleSendToCso = async (orderId: string) => {
+          const { error } = await supabase.from("orders").update({ status: "pending_cso" }).eq("id", orderId);
+          if (error) { toast.error("CSO তে পাঠাতে সমস্যা"); return; }
+          toast.success("CSO তে পাঠানো হয়েছে ✓");
+          fetchData();
+        };
+        const handleSendAllToCso = async () => {
+          if (csoOrders.length === 0) return;
+          const ids = csoOrders.map(o => o.id);
+          const { error } = await supabase.from("orders").update({ status: "pending_cso" }).in("id", ids);
+          if (error) { toast.error("সমস্যা হয়েছে"); return; }
+          toast.success(`${ids.length}টি অর্ডার CSO তে পাঠানো হয়েছে ✓`);
+          fetchData();
+        };
         return (
           <Card>
-            <CardHeader><CardTitle className="text-lg font-heading">CSO Pending</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-heading">{isBn ? "পেন্ডিং অর্ডার (TL রিভিউ)" : "Pending Orders (TL Review)"}</CardTitle>
+              {csoOrders.length > 0 && (
+                <Button size="sm" onClick={handleSendAllToCso}>
+                  <Send className="h-4 w-4 mr-1" />{isBn ? "সব CSO তে পাঠাও" : "Send All to CSO"}
+                </Button>
+              )}
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Order ID</TableHead>
                     <TableHead>{isBn ? "গ্রাহক" : "Customer"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                     <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
+                    <TableHead>{isBn ? "পরিমাণ" : "Qty"}</TableHead>
+                    <TableHead>{isBn ? "মূল্য" : "Price"}</TableHead>
+                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                    <TableHead>{isBn ? "জেলা" : "District"}</TableHead>
                     <TableHead>Agent</TableHead>
                     <TableHead>{isBn ? "সময়" : "Time"}</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{isBn ? "অ্যাকশন" : "Action"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {csoOrders.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{isBn ? "কোনো pending order নেই" : "No pending orders"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">{isBn ? "কোনো pending order নেই" : "No pending orders"}</TableCell></TableRow>
                   ) : csoOrders.map((o) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-mono text-xs">{o.id.slice(0, 8)}</TableCell>
                       <TableCell>{o.customer_name || "—"}</TableCell>
+                      <TableCell>{o.phone || "—"}</TableCell>
                       <TableCell>{o.product || "—"}</TableCell>
+                      <TableCell>{(o as any).quantity || 1}</TableCell>
+                      <TableCell>৳{(o as any).price || 0}</TableCell>
+                      <TableCell className="max-w-[150px] truncate text-xs">{(o as any).address || "—"}</TableCell>
+                      <TableCell>{(o as any).district || "—"}</TableCell>
                       <TableCell>{(o as any).agent?.name || "—"}</TableCell>
-                      <TableCell>{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</TableCell>
-                      <TableCell><Badge className="bg-accent text-accent-foreground">Pending CSO</Badge></TableCell>
+                      <TableCell className="text-xs">{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="outline" onClick={() => handleSendToCso(o.id)}>
+                          <Send className="h-3 w-3 mr-1" />CSO
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
