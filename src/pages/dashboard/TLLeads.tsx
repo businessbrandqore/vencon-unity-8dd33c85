@@ -705,6 +705,95 @@ const TLLeads = () => {
           </TabsContent>
         )}
 
+        {/* Agent Activity Tab */}
+        <TabsContent value="agent_activity">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">
+                {isBn ? "এজেন্ট কার্যক্রম — HR কনফিগ সহ" : "Agent Activity — With HR Config"}
+              </CardTitle>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Select value={agentFilter} onValueChange={setAgentFilter}>
+                  <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "এজেন্ট ফিল্টার" : "Filter Agent"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isBn ? "সব এজেন্ট" : "All Agents"}</SelectItem>
+                    {allAgents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "স্ট্যাটাস ফিল্টার" : "Filter Status"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isBn ? "সব স্ট্যাটাস" : "All Statuses"}</SelectItem>
+                    {Object.entries(statusLabelMap).map(([val, info]) => (
+                      <SelectItem key={val} value={val}>{isBn ? (info.label_bn || info.label) : info.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {dynamicColumns.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  <span className="text-xs text-muted-foreground">{isBn ? "HR কনফিগ কলাম:" : "HR Config Columns:"}</span>
+                  {dynamicColumns.map(col => (
+                    <Badge key={col.id} variant="outline" className="text-xs">
+                      {isBn ? col.name_bn || col.name : col.name}
+                      {col.type === "dropdown" ? ` (${col.options.length})` : " 📝"}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>{isBn ? "এজেন্ট" : "Agent"}</TableHead>
+                    <TableHead>{isBn ? "কাস্টমার" : "Customer"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                    <TableHead>{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
+                    <TableHead>{isBn ? "কল" : "Calls"}</TableHead>
+                    <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
+                    <TableHead>{isBn ? "আপডেট" : "Updated"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    let filtered = agentLeads;
+                    if (agentFilter !== "all") filtered = filtered.filter((l: any) => l.assigned_to === agentFilter);
+                    if (statusFilter !== "all") filtered = filtered.filter(l => l.status === statusFilter);
+                    if (filtered.length === 0) return (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                        {isBn ? "কোনো এজেন্ট লিড নেই" : "No agent leads found"}
+                      </TableCell></TableRow>
+                    );
+                    return filtered.map((lead: any, i: number) => {
+                      const color = getStatusColor(lead.status);
+                      return (
+                        <TableRow key={lead.id}>
+                          <TableCell>{i + 1}</TableCell>
+                          <TableCell className="font-medium">{lead.agent_name || "—"}</TableCell>
+                          <TableCell>{lead.name || "—"}</TableCell>
+                          <TableCell>{lead.phone || "—"}</TableCell>
+                          <TableCell className="max-w-[120px] truncate">{lead.address || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" style={color ? { borderColor: color, color: color } : {}}>
+                              {getStatusLabel(lead.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">{lead.called_time || 0}</TableCell>
+                          <TableCell className="max-w-[150px] truncate text-xs">{lead.special_note || "—"}</TableCell>
+                          <TableCell className="text-xs">{lead.updated_at ? new Date(lead.updated_at).toLocaleString() : "—"}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* CSO Pending */}
         <TabsContent value="cso">
           <Card>
