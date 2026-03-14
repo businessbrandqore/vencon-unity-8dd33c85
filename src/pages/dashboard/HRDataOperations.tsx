@@ -338,6 +338,7 @@ function OptionRow({
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
           <div>
             <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
