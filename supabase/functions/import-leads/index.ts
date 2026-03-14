@@ -320,17 +320,35 @@ Deno.serve(async (req) => {
       }
 
       const phoneClean = phone ? String(phone).trim() : "";
+      const orderId = extractOrderId(rawLead as Record<string, unknown>);
 
-      // Duplicate check if phone exists
-      if (phoneClean) {
-        const { count } = await supabase
+      // Duplicate check priority:
+      // 1) If order_id exists -> dedupe by order_id in recent payloads
+      // 2) Else fallback to short-window phone dedupe (15 minutes)
+      if (orderId) {
+        const numericPattern = `%\"order_id\":${orderId}%`;
+        const stringPattern = `%\"order_id\":\"${orderId}\"%`;
+
+        const { count: orderDupCount } = await supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .eq("campaign_id", campaignId)
+          .or(`special_note.ilike.${numericPattern},special_note.ilike.${stringPattern}`)
+          .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+        if ((orderDupCount ?? 0) > 0) {
+          skippedDuplicates++;
+          continue;
+        }
+      } else if (phoneClean) {
+        const { count: phoneDupCount } = await supabase
           .from("leads")
           .select("id", { count: "exact", head: true })
           .eq("phone", phoneClean)
           .eq("campaign_id", campaignId)
-          .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+          .gte("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
-        if ((count ?? 0) > 0) {
+        if ((phoneDupCount ?? 0) > 0) {
           skippedDuplicates++;
           continue;
         }
