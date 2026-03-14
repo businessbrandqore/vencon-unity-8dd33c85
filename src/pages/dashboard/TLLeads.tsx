@@ -396,8 +396,9 @@ const TLLeads = () => {
       { leadIds: ids, agentId: bulkAgent },
       isBn ? `${ids.length}টি লিড বাল্ক অ্যাসাইন` : `Bulk assign ${ids.length} leads`,
       async () => {
+        const tlId = getEffectiveTlId();
         for (const id of ids) {
-          await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze" }).eq("id", id);
+          await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze", tl_id: tlId }).eq("id", id);
         }
         toast.success(isBn ? `${ids.length}টি lead assign হয়েছে` : `${ids.length} leads assigned`);
       }
