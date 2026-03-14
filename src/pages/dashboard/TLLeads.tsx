@@ -420,9 +420,17 @@ const TLLeads = () => {
     load();
   }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId, activeSection]);
 
-  // Count available leads for data send
+  // Count available items for data send
   useEffect(() => {
-    if (!user || !selectedCampaign) { setAvailableCount(0); return; }
+    if (!user) { setAvailableCount(0); return; }
+
+    if (activeSection === "cso") {
+      setAvailableCount(csoOrders.length);
+      return;
+    }
+
+    if (!selectedCampaign) { setAvailableCount(0); return; }
+
     const load = async () => {
       let q = supabase.from("leads").select("id", { count: "exact", head: true })
         .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null);
@@ -436,17 +444,44 @@ const TLLeads = () => {
       setAvailableCount(count || 0);
     };
     load();
-  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
+  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId, activeSection, csoOrders]);
 
   // Handle data send
   const handleSendData = async () => {
-    if (!user || !selectedCampaign || !distAgent || !sendCount) return;
+    if (!user || !distAgent || !sendCount || (activeSection !== "cso" && !selectedCampaign)) return;
     const count = parseInt(sendCount);
     if (isNaN(count) || count <= 0) { toast.error(isBn ? "সঠিক সংখ্যা দিন" : "Enter valid count"); return; }
     if (count > availableCount) { toast.error(isBn ? `মাত্র ${availableCount} টি ডাটা পাওয়া যাচ্ছে` : `Only ${availableCount} available`); return; }
 
     setSending(true);
     try {
+      if (activeSection === "cso") {
+        const orderIds = csoOrders.slice(0, count).map((o) => o.id);
+        if (orderIds.length === 0) {
+          toast.error(isBn ? "কোনো অর্ডার পাওয়া যায়নি" : "No orders found");
+          setSending(false);
+          return;
+        }
+
+        const { error: orderUpdateError } = await supabase
+          .from("orders")
+          .update({ status: "pending_cso", cso_id: distAgent })
+          .in("id", orderIds);
+
+        if (orderUpdateError) throw orderUpdateError;
+
+        const csoName = distAgents.find((a) => a.id === distAgent)?.name || "";
+        toast.success(
+          isBn
+            ? `${orderIds.length} টি অর্ডার ${csoName}-এর CSO কিউতে পাঠানো হয়েছে ✅`
+            : `${orderIds.length} orders sent to ${csoName}'s CSO queue ✅`,
+        );
+        setSendCount("");
+        await loadData();
+        setSending(false);
+        return;
+      }
+
       let q = supabase.from("leads").select("id")
         .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null)
         .order("created_at", { ascending: true }).limit(count);
