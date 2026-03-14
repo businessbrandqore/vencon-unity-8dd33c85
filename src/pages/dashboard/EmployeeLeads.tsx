@@ -285,8 +285,8 @@ export default function EmployeeLeads() {
   const salesRatio = metrics.orders > 0 ? ((metrics.orders / Math.max(leads.length + metrics.orders, 1)) * 100).toFixed(1) : "0";
   const receiveRatio = metrics.orders > 0 ? ((metrics.delivered / metrics.orders) * 100).toFixed(1) : "0";
 
-  const handleLeadSave = async (lead: LeadRow) => {
-    const newStatus = leadStatuses[lead.id];
+  const handleLeadSave = async (lead: LeadRow & { __overrideStatus?: string }) => {
+    const newStatus = (lead as any).__overrideStatus || leadStatuses[lead.id];
     if (!newStatus || !user) return;
     const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
     const note = leadNotes[lead.id] ?? lead.special_note;
