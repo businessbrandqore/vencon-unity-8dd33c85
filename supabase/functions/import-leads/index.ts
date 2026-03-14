@@ -365,6 +365,18 @@ Deno.serve(async (req) => {
       // Store ALL raw data as JSON in special_note — nothing is lost
       const specialNote = JSON.stringify(rawLead);
 
+      // Auto-assign TL from campaign_tls so lead goes to TL automatically
+      let autoTlId: string | null = null;
+      const { data: campaignTls } = await supabase
+        .from("campaign_tls")
+        .select("tl_id")
+        .eq("campaign_id", campaignId)
+        .limit(1)
+        .single();
+      if (campaignTls) {
+        autoTlId = campaignTls.tl_id;
+      }
+
       const { error: insertError } = await supabase.from("leads").insert({
         name: name || null,
         phone: phoneClean || null,
@@ -374,6 +386,7 @@ Deno.serve(async (req) => {
         import_source: dataMode === "processing" ? "processing" : "webhook",
         special_note: specialNote,
         status: "fresh",
+        tl_id: autoTlId,
       });
 
       if (!insertError) {
