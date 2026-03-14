@@ -390,6 +390,84 @@ const TLLeads = () => {
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
+  // Load dist agents for data send
+  useEffect(() => {
+    if (!user || !selectedCampaign) { setDistAgents([]); return; }
+    const load = async () => {
+      const { data } = await supabase
+        .from("campaign_agent_roles")
+        .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
+        .eq("campaign_id", selectedCampaign)
+        .eq("tl_id", getEffectiveTlId());
+      if (!data) { setDistAgents([]); return; }
+      const filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
+      const unique = new Map<string, string>();
+      filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
+      setDistAgents(Array.from(unique, ([id, name]) => ({ id, name })));
+      setDistAgent("");
+    };
+    load();
+  }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId]);
+
+  // Count available leads for data send
+  useEffect(() => {
+    if (!user || !selectedCampaign) { setAvailableCount(0); return; }
+    const load = async () => {
+      let q = supabase.from("leads").select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null);
+      if (!isBDO) q = q.or(`tl_id.eq.${getEffectiveTlId()},tl_id.is.null`);
+      if (distDataMode === "lead") {
+        q = q.or("agent_type.is.null,agent_type.eq.bronze");
+      } else {
+        q = q.eq("agent_type", "silver");
+      }
+      const { count } = await q;
+      setAvailableCount(count || 0);
+    };
+    load();
+  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
+
+  // Handle data send
+  const handleSendData = async () => {
+    if (!user || !selectedCampaign || !distAgent || !sendCount) return;
+    const count = parseInt(sendCount);
+    if (isNaN(count) || count <= 0) { toast.error(isBn ? "সঠিক সংখ্যা দিন" : "Enter valid count"); return; }
+    if (count > availableCount) { toast.error(isBn ? `মাত্র ${availableCount} টি ডাটা পাওয়া যাচ্ছে` : `Only ${availableCount} available`); return; }
+
+    setSending(true);
+    try {
+      let q = supabase.from("leads").select("id")
+        .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null)
+        .order("created_at", { ascending: true }).limit(count);
+      if (!isBDO) q = q.or(`tl_id.eq.${getEffectiveTlId()},tl_id.is.null`);
+      if (distDataMode === "lead") {
+        q = q.or("agent_type.is.null,agent_type.eq.bronze");
+      } else {
+        q = q.eq("agent_type", "silver");
+      }
+      const { data: leadsToAssign, error } = await q;
+      if (error) throw error;
+      if (!leadsToAssign || leadsToAssign.length === 0) { toast.error(isBn ? "কোনো ডাটা পাওয়া যায়নি" : "No data found"); setSending(false); return; }
+
+      const ids = leadsToAssign.map(l => l.id);
+      const agentType = distDataMode === "processing" ? "silver" : "bronze";
+      const { error: updateError } = await supabase.from("leads").update({
+        assigned_to: distAgent, tl_id: getEffectiveTlId(), agent_type: agentType,
+        status: distDataMode === "processing" ? "processing_assigned" : "assigned",
+      }).in("id", ids);
+      if (updateError) throw updateError;
+
+      const agentName = distAgents.find(a => a.id === distAgent)?.name || "";
+      toast.success(isBn ? `${ids.length} টি ${distDataMode === "lead" ? "লিড" : "প্রসেসিং"} ডাটা ${agentName}-কে পাঠানো হয়েছে ✅` : `${ids.length} ${distDataMode} data sent to ${agentName} ✅`);
+      setSendCount("");
+      setAvailableCount(prev => Math.max(0, prev - ids.length));
+      loadData();
+    } catch (err: any) {
+      toast.error(isBn ? "ডাটা পাঠাতে সমস্যা: " + (err.message || "") : "Failed: " + (err.message || ""));
+    }
+    setSending(false);
+  };
+
   const assignLead = async (leadId: string, agentId: string) => {
     await executeOrRequestApproval(
       "lead_assign",
