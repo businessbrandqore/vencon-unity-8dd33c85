@@ -861,17 +861,6 @@ const TLLeads = () => {
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell>{lead.phone || "—"}</TableCell>
                       <TableCell>{lead.address || "—"}</TableCell>
-                      <TableCell>
-                        <Select value={processingAssignments[lead.id] || ""} onValueChange={(v) => setProcessingAssignments(p => ({ ...p, [lead.id]: v }))}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                          <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" disabled={!processingAssignments[lead.id]} onClick={() => assignProcessing(lead.id, processingAssignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                          {isBn ? "সেন্ড" : "Send"}
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
