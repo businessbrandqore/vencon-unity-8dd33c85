@@ -29,7 +29,7 @@ interface ColumnOption {
   color?: string;
   next_panel?: AppPanel | "";
   next_location?: string;
-  next_user?: string;
+  next_role?: string;
   note?: string;
 }
 
