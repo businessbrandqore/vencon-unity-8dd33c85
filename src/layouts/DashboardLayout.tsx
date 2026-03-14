@@ -36,7 +36,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       </div>
       <div className="flex flex-1 min-h-0">
         <PanelSidebar open={sidebarOpen} onClose={closeSidebar} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-background">
           <div className="max-w-7xl mx-auto space-y-4">
             {panel === "tl" && <ATLApprovalBanner />}
             <Outlet />
