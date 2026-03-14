@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboardRouter from "./pages/dashboard/EmployeeDashboardRouter";
+import AttendanceGatedRoute from "./components/AttendanceGatedRoute";
 import CSExecutiveDashboard from "./pages/dashboard/CSExecutiveDashboard";
 import SteadfastMonitoring from "./pages/dashboard/SteadfastMonitoring";
 import SADashboard from "./pages/dashboard/SADashboard";
@@ -143,12 +144,12 @@ const App = () => (
             {/* Employee Panel Routes */}
             <Route element={<DashboardLayout panel="employee" />}>
               <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
-              <Route path="/employee/leads" element={<EmployeeLeadsRouter />} />
-              <Route path="/employee/my-orders" element={<EmployeeMyOrders />} />
-              <Route path="/employee/steadfast" element={<SteadfastMonitoring />} />
+              <Route path="/employee/leads" element={<AttendanceGatedRoute><EmployeeLeadsRouter /></AttendanceGatedRoute>} />
+              <Route path="/employee/my-orders" element={<AttendanceGatedRoute><EmployeeMyOrders /></AttendanceGatedRoute>} />
+              <Route path="/employee/steadfast" element={<AttendanceGatedRoute><SteadfastMonitoring /></AttendanceGatedRoute>} />
               <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
-              <Route path="/employee/cs-leads" element={<CSExecutiveDashboard />} />
-              <Route path="/employee/spam" element={<SpamLeads />} />
+              <Route path="/employee/cs-leads" element={<AttendanceGatedRoute><CSExecutiveDashboard /></AttendanceGatedRoute>} />
+              <Route path="/employee/spam" element={<AttendanceGatedRoute><SpamLeads /></AttendanceGatedRoute>} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
               <Route path="/employee/chat" element={<ChatPage />} />
