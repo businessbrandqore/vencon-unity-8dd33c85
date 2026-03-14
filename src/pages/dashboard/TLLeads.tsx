@@ -1131,17 +1131,6 @@ const TLLeads = () => {
                       <TableCell>{item.phone || "—"}</TableCell>
                       <TableCell className="max-w-[150px] truncate">{item.address || "—"}</TableCell>
                       <TableCell>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>
-                        <Select value={silverAssignments[item.id] || ""} onValueChange={(v) => setSilverAssignments(p => ({ ...p, [item.id]: v }))}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                          <SelectContent>{silverAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" disabled={!silverAssignments[item.id]} onClick={() => assignSilver(item.id, silverAssignments[item.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                          {isBn ? "সেন্ড" : "Send"}
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
