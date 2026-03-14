@@ -351,7 +351,9 @@ export default function EmployeeLeads() {
     if (selectedOpt?.is_spam) {
       updatePayload.is_spam = true;
     }
-    if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
+    const hasNonEmployeeRoute = (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") ||
+      (selectedOpt?.routes?.some(r => r.next_panel && r.next_panel !== "employee"));
+    if (hasNonEmployeeRoute) {
       updatePayload.assigned_to = null;
     }
     if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
