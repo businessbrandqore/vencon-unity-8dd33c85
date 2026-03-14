@@ -530,38 +530,6 @@ const TLLeads = () => {
   const renderContent = () => {
     switch (activeSection) {
       case "assign": {
-        // Parse dynamic columns from special_note JSON
-        const specialNoteKeys = useMemo(() => {
-          const keys = new Set<string>();
-          freshLeads.forEach(l => {
-            if (l.special_note) {
-              try {
-                const parsed = JSON.parse(l.special_note);
-                if (parsed && typeof parsed === "object") {
-                  Object.keys(parsed).forEach(k => keys.add(k));
-                }
-              } catch {}
-            }
-          });
-          return Array.from(keys);
-        }, [freshLeads]);
-
-        // Filter by tier
-        const filteredFresh = tierFilter === "all"
-          ? freshLeads
-          : tierFilter === "lead"
-            ? freshLeads.filter(l => !l.agent_type || l.agent_type === "")
-            : freshLeads.filter(l => l.agent_type === "bronze");
-
-        const getSpecialNoteValue = (lead: Lead, key: string) => {
-          if (!lead.special_note) return "—";
-          try {
-            const parsed = JSON.parse(lead.special_note);
-            return parsed?.[key] ?? "—";
-          } catch { return "—"; }
-        };
-
-        return (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
