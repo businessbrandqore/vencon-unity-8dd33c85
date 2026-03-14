@@ -275,12 +275,13 @@ const TLLeads = () => {
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
 
-    // Fresh leads: only show leads that don't have agent_type set (or are bronze-tier fresh)
+    // Fresh leads: show leads that are fresh and unassigned (both lead/null and bronze types)
     let freshQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .is("assigned_to", null).eq("status", "fresh")
       .or("agent_type.is.null,agent_type.eq.bronze")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
     if (!isBDO) freshQ = freshQ.eq("tl_id", getEffectiveTlId());
     const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
