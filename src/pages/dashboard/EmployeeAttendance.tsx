@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut, ShieldAlert } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 
 interface AttendanceRow {
