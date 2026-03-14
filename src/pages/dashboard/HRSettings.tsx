@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Settings, FileText, Plug, Bell, Clock } from "lucide-react";
+import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag } from "lucide-react";
 
 const BLUE = "#1D4ED8";
 
@@ -73,6 +73,10 @@ const HRSettings = () => {
 
   const [settings, setSettings] = useState<Settings>({});
   const [deduction, setDeduction] = useState<DeductionSettings>(DEFAULT_DEDUCTION);
+  const [giftNames, setGiftNames] = useState<string[]>([]);
+  const [newGiftName, setNewGiftName] = useState("");
+  const [productNames, setProductNames] = useState<string[]>([]);
+  const [newProductName, setNewProductName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -89,11 +93,15 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
-      if (row.key === "attendance_deduction_config") {
+      if (row.key === "gift_names") {
+        if (row.value && Array.isArray(row.value)) setGiftNames(row.value as string[]);
+      } else if (row.key === "product_names") {
+        if (row.value && Array.isArray(row.value)) setProductNames(row.value as string[]);
+      } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
           setDeduction(val);
@@ -289,10 +297,14 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-5 bg-secondary">
+        <TabsList className="w-full grid grid-cols-6 bg-secondary">
           <TabsTrigger value="general" className="text-xs gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="products" className="text-xs gap-1.5">
+            <ShoppingBag className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{isBn ? "পণ্য/গিফট" : "Products"}</span>
           </TabsTrigger>
           <TabsTrigger value="invoice" className="text-xs gap-1.5">
             <FileText className="h-3.5 w-3.5" />
@@ -362,6 +374,131 @@ const HRSettings = () => {
             <button onClick={() => saveGroup("ui_config", { company_logo: settings.company_logo, favicon: settings.favicon, primary_color: settings.primary_color, font: settings.font })} disabled={saving} className="px-4 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: BLUE }}>
               {isBn ? "সংরক্ষণ" : "Save"}
             </button>
+          </div>
+        </TabsContent>
+
+        {/* Products & Gifts Tab */}
+        <TabsContent value="products" className="mt-4">
+          <div className="border border-border p-4 space-y-6">
+            {/* Product Names */}
+            <div className="space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {isBn ? "প্রোডাক্ট তালিকা" : "Product List"}
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">
+                {isBn ? "অর্ডার ফর্মে যে প্রোডাক্টের নাম ড্রপডাউনে দেখাবে।" : "Product names shown in order form dropdown."}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  placeholder={isBn ? "প্রোডাক্টের নাম লিখুন" : "Enter product name"}
+                  className="bg-background border-border text-foreground flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newProductName.trim()) {
+                      const updated = [...productNames, newProductName.trim()];
+                      setProductNames(updated);
+                      setNewProductName("");
+                      saveGroup("product_names", updated);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!newProductName.trim()) return;
+                    const updated = [...productNames, newProductName.trim()];
+                    setProductNames(updated);
+                    setNewProductName("");
+                    saveGroup("product_names", updated);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {productNames.map((name, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body bg-secondary text-foreground border border-border rounded">
+                    {name}
+                    <button
+                      onClick={() => {
+                        const updated = productNames.filter((_, idx) => idx !== i);
+                        setProductNames(updated);
+                        saveGroup("product_names", updated);
+                      }}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {productNames.length === 0 && (
+                  <span className="text-xs text-muted-foreground font-body">{isBn ? "কোনো প্রোডাক্ট যোগ করা হয়নি" : "No products added"}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-border" />
+
+            {/* Gift Names */}
+            <div className="space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {isBn ? "গিফট তালিকা" : "Gift List"}
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">
+                {isBn ? "অর্ডার ফর্মে যে গিফটের নাম ড্রপডাউনে দেখাবে।" : "Gift names shown in order form dropdown."}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newGiftName}
+                  onChange={(e) => setNewGiftName(e.target.value)}
+                  placeholder={isBn ? "গিফটের নাম লিখুন" : "Enter gift name"}
+                  className="bg-background border-border text-foreground flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newGiftName.trim()) {
+                      const updated = [...giftNames, newGiftName.trim()];
+                      setGiftNames(updated);
+                      setNewGiftName("");
+                      saveGroup("gift_names", updated);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!newGiftName.trim()) return;
+                    const updated = [...giftNames, newGiftName.trim()];
+                    setGiftNames(updated);
+                    setNewGiftName("");
+                    saveGroup("gift_names", updated);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {giftNames.map((name, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body bg-secondary text-foreground border border-border rounded">
+                    {name}
+                    <button
+                      onClick={() => {
+                        const updated = giftNames.filter((_, idx) => idx !== i);
+                        setGiftNames(updated);
+                        saveGroup("gift_names", updated);
+                      }}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {giftNames.length === 0 && (
+                  <span className="text-xs text-muted-foreground font-body">{isBn ? "কোনো গিফট যোগ করা হয়নি" : "No gifts added"}</span>
+                )}
+              </div>
+            </div>
           </div>
         </TabsContent>
 
