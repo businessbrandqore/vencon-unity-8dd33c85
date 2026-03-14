@@ -125,7 +125,7 @@ const LoginBackground = () => {
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 200) {
-            const opacity = ((200 - dist) / 200) * 0.06;
+            const opacity = ((200 - dist) / 200) * 0.15;
             ctx.strokeStyle = `rgba(${baseColor}, ${opacity})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
