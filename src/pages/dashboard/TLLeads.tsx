@@ -232,12 +232,15 @@ const TLLeads = () => {
     if (c) setCampaignMode(c.data_mode);
   }, [selectedCampaign, campaigns]);
 
-  // Load dynamic columns from campaign_data_operations
+  // Load dynamic columns from campaign_data_operations (filtered by data_mode)
   useEffect(() => {
     if (!selectedCampaign) return;
     (async () => {
       const { data: configData } = await supabase.from("campaign_data_operations")
-        .select("fields_config").eq("campaign_id", selectedCampaign).maybeSingle();
+        .select("fields_config")
+        .eq("campaign_id", selectedCampaign)
+        .eq("data_mode", campaignMode)
+        .maybeSingle();
       if (!configData?.fields_config) { setDynamicColumns([]); return; }
       const configs = configData.fields_config as unknown as RoleColumnConfig[];
       // Collect all columns from all roles for TL overview
@@ -250,7 +253,7 @@ const TLLeads = () => {
       });
       setDynamicColumns(allCols);
     })();
-  }, [selectedCampaign]);
+  }, [selectedCampaign, campaignMode]);
 
   const loadAgents = useCallback(async () => {
     if (!user || !selectedCampaign) return;
@@ -275,14 +278,18 @@ const TLLeads = () => {
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
 
-    // Fresh leads: show leads that are fresh and unassigned (both lead/null and bronze types)
+    // Fresh leads: show leads for this campaign that are unassigned
+    // Include leads with tl_id matching OR tl_id null (newly imported, not yet assigned to a TL)
     let freshQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .is("assigned_to", null).eq("status", "fresh")
       .or("agent_type.is.null,agent_type.eq.bronze")
       .order("created_at", { ascending: false })
       .limit(500);
-    if (!isBDO) freshQ = freshQ.eq("tl_id", getEffectiveTlId());
+    if (!isBDO) {
+      const tlId = getEffectiveTlId();
+      freshQ = freshQ.or(`tl_id.eq.${tlId},tl_id.is.null`);
+    }
     const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
 
@@ -373,7 +380,8 @@ const TLLeads = () => {
       { leadId, agentId },
       isBn ? "লিড অ্যাসাইন" : "Lead assignment",
       async () => {
-        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+        const tlId = getEffectiveTlId();
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze", tl_id: tlId }).eq("id", leadId);
         toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
       }
     );
@@ -388,8 +396,9 @@ const TLLeads = () => {
       { leadIds: ids, agentId: bulkAgent },
       isBn ? `${ids.length}টি লিড বাল্ক অ্যাসাইন` : `Bulk assign ${ids.length} leads`,
       async () => {
+        const tlId = getEffectiveTlId();
         for (const id of ids) {
-          await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze" }).eq("id", id);
+          await supabase.from("leads").update({ assigned_to: bulkAgent, status: "assigned", agent_type: "bronze", tl_id: tlId }).eq("id", id);
         }
         toast.success(isBn ? `${ids.length}টি lead assign হয়েছে` : `${ids.length} leads assigned`);
       }
@@ -558,6 +567,18 @@ const TLLeads = () => {
                   </>
                 )}
               </div>
+              {/* Show HR configured dynamic columns */}
+              {dynamicColumns.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-xs text-muted-foreground">{isBn ? "HR কনফিগ:" : "HR Config:"}</span>
+                  {dynamicColumns.map(col => (
+                    <Badge key={col.id} variant="outline" className="text-xs">
+                      {isBn ? col.name_bn || col.name : col.name}
+                      {col.type === "dropdown" ? ` (${col.options.length})` : " 📝"}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
