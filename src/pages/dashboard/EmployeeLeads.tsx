@@ -361,6 +361,7 @@ export default function EmployeeLeads() {
       return;
     }
     toast.success("Lead আপডেট হয়েছে");
+    setLeads((prev) => prev.filter((item) => item.id !== lead.id));
     loadLeads();
   };
 
@@ -391,6 +392,7 @@ export default function EmployeeLeads() {
     }
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
+    setLeads((prev) => prev.filter((item) => item.id !== currentOrderLead.id));
     loadLeads();
   };
 
@@ -419,6 +421,7 @@ export default function EmployeeLeads() {
     }
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
+    setLeads((prev) => prev.filter((item) => item.id !== currentPreOrderLead.id));
     loadLeads();
   };
 
@@ -449,6 +452,7 @@ export default function EmployeeLeads() {
     }
     setShowPreOrderConfirmModal(false);
     toast.success("Pre-Order Confirm হয়েছে ✓");
+    setLeads((prev) => prev.filter((item) => item.id !== currentPreOrderConfirmLead.id));
     loadLeads();
   };
 
