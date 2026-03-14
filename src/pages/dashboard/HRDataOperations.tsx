@@ -29,6 +29,7 @@ interface ColumnOption {
   color?: string;
   next_panel?: AppPanel | "";
   next_location?: string;
+  next_user?: string;
   note?: string;
 }
 
@@ -141,6 +142,7 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                   color: s.color || "gray",
                   next_panel: np,
                   next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
+                  next_user: s.next_user || "",
                   note: s.note || "",
                 };
               })
@@ -195,6 +197,23 @@ function OptionRow({
 }) {
   const colorInfo = getColorInfo(option.color || "gray");
   const panelLocations = option.next_panel ? (PANEL_DESTINATIONS[option.next_panel] || []) : [];
+
+  // Fetch users for the selected panel
+  const { data: panelUsers = [] } = useQuery({
+    queryKey: ["panel-users", option.next_panel],
+    queryFn: async () => {
+      if (!option.next_panel) return [];
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, role")
+        .eq("panel", option.next_panel)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!option.next_panel,
+  });
 
   return (
     <div className={`border rounded-md overflow-hidden ${colorInfo.bg}`}>
@@ -273,7 +292,7 @@ function OptionRow({
               <Label className="text-[10px] text-muted-foreground">ডাটা কোন প্যানেলে</Label>
               <Select
                 value={option.next_panel || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_panel: v === NO_OPTION ? "" : (v as AppPanel), next_location: "" })}
+                onValueChange={(v) => onUpdate({ next_panel: v === NO_OPTION ? "" : (v as AppPanel), next_location: "", next_user: "" })}
               >
                 <SelectTrigger className="h-7 mt-0.5 text-xs">
                   <SelectValue placeholder="—" />
@@ -305,6 +324,29 @@ function OptionRow({
               </Select>
             </div>
           </div>
+
+          {/* কর্মী সিলেক্ট ড্রপডাউন */}
+          {option.next_panel && (
+            <div>
+              <Label className="text-[10px] text-muted-foreground">কার কাছে যাবে (কর্মী)</Label>
+              <Select
+                value={option.next_user || NO_OPTION}
+                onValueChange={(v) => onUpdate({ next_user: v === NO_OPTION ? "" : v })}
+              >
+                <SelectTrigger className="h-7 mt-0.5 text-xs">
+                  <SelectValue placeholder="কর্মী সিলেক্ট করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_OPTION}>— সবাই —</SelectItem>
+                  {panelUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
