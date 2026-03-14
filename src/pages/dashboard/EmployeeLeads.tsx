@@ -52,6 +52,7 @@ interface ColumnOption {
   next_panel?: AppPanel | "";
   next_location?: string;
   note?: string;
+  is_spam?: boolean;
 }
 type ColumnType = "dropdown" | "note";
 interface StatusColumn {
