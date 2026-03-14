@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboardRouter from "./pages/dashboard/EmployeeDashboardRouter";
+import AttendanceGatedRoute from "./components/AttendanceGatedRoute";
 import CSExecutiveDashboard from "./pages/dashboard/CSExecutiveDashboard";
 import SteadfastMonitoring from "./pages/dashboard/SteadfastMonitoring";
 import SADashboard from "./pages/dashboard/SADashboard";
