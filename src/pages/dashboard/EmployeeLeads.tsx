@@ -343,6 +343,11 @@ export default function EmployeeLeads() {
     const updatePayload: Record<string, unknown> = {
       status: newStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
+    // Check if this status routes to another panel — if so, clear assignment
+    const selectedOpt = availableStatuses.find(s => s.value === newStatus);
+    if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
+      updatePayload.assigned_to = null;
+    }
     if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
