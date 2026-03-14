@@ -292,7 +292,7 @@ function OptionRow({
               <Label className="text-[10px] text-muted-foreground">ডাটা কোন প্যানেলে</Label>
               <Select
                 value={option.next_panel || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_panel: v === NO_OPTION ? "" : (v as AppPanel), next_location: "" })}
+                onValueChange={(v) => onUpdate({ next_panel: v === NO_OPTION ? "" : (v as AppPanel), next_location: "", next_user: "" })}
               >
                 <SelectTrigger className="h-7 mt-0.5 text-xs">
                   <SelectValue placeholder="—" />
@@ -324,6 +324,29 @@ function OptionRow({
               </Select>
             </div>
           </div>
+
+          {/* কর্মী সিলেক্ট ড্রপডাউন */}
+          {option.next_panel && (
+            <div>
+              <Label className="text-[10px] text-muted-foreground">কার কাছে যাবে (কর্মী)</Label>
+              <Select
+                value={option.next_user || NO_OPTION}
+                onValueChange={(v) => onUpdate({ next_user: v === NO_OPTION ? "" : v })}
+              >
+                <SelectTrigger className="h-7 mt-0.5 text-xs">
+                  <SelectValue placeholder="কর্মী সিলেক্ট করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_OPTION}>— সবাই —</SelectItem>
+                  {panelUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
