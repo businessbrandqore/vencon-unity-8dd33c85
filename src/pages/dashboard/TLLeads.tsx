@@ -682,9 +682,11 @@ const TLLeads = () => {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">{isBn ? "এজেন্ট" : "Agent"}</label>
-            <Select value={distAgent} onValueChange={setDistAgent} disabled={!selectedCampaign}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "এজেন্ট নির্বাচন" : "Select Agent"} /></SelectTrigger>
+            <label className="text-xs font-medium text-muted-foreground">
+              {activeSection === "cso" ? (isBn ? "CSO" : "CSO") : activeSection === "silver" ? (isBn ? "সিলভার এজেন্ট" : "Silver Agent") : activeSection === "golden" ? (isBn ? "গোল্ডেন এজেন্ট" : "Golden Agent") : (isBn ? "এজেন্ট" : "Agent")}
+            </label>
+            <Select value={distAgent} onValueChange={setDistAgent} disabled={activeSection !== "cso" && !selectedCampaign}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={activeSection === "cso" ? (isBn ? "CSO নির্বাচন" : "Select CSO") : (isBn ? "এজেন্ট নির্বাচন" : "Select Agent")} /></SelectTrigger>
               <SelectContent>{distAgents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
