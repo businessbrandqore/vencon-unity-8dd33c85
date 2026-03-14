@@ -89,6 +89,33 @@ const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
   { value: "sa", label: "SA Panel" },
 ];
 
+// All roles with their panel mapping
+const ALL_ROLES_WITH_PANEL: { value: string; label: string; panel: AppPanel }[] = [
+  { value: "telesales_executive", label: "টেলিসেলস এক্সিকিউটিভ", panel: "employee" },
+  { value: "cso", label: "CSO (Customer Security Officer)", panel: "employee" },
+  { value: "cs_executive", label: "CS Executive", panel: "employee" },
+  { value: "warehouse_assistant", label: "Warehouse Assistant", panel: "employee" },
+  { value: "warehouse_supervisor", label: "Warehouse Supervisor", panel: "employee" },
+  { value: "inventory_manager", label: "Inventory Manager", panel: "employee" },
+  { value: "delivery_coordinator", label: "Delivery Coordinator", panel: "employee" },
+  { value: "maintenance_officer", label: "Maintenance Officer", panel: "employee" },
+  { value: "office_assistant", label: "Office Assistant", panel: "employee" },
+  { value: "group_leader", label: "Group Leader", panel: "employee" },
+  { value: "team_leader", label: "Team Leader", panel: "tl" },
+  { value: "assistant_team_leader", label: "Assistant Team Leader (ATL)", panel: "tl" },
+  { value: "Business Development And Marketing Manager", label: "BDO (বিডিও)", panel: "tl" },
+  { value: "hr_manager", label: "HR Manager", panel: "hr" },
+  { value: "hr_executive", label: "HR Executive", panel: "hr" },
+  { value: "super_admin", label: "Super Admin", panel: "sa" },
+];
+
+const getRolePanelMap = (): Record<string, AppPanel> => {
+  const map: Record<string, AppPanel> = {};
+  ALL_ROLES_WITH_PANEL.forEach((r) => { map[r.value] = r.panel; });
+  return map;
+};
+const ROLE_PANEL_MAP = getRolePanelMap();
+
 // Dynamically build panel destinations from sidebarConfig
 const PANEL_DESTINATIONS: Record<AppPanel, Array<{ value: string; label: string }>> = (() => {
   const result: Record<AppPanel, Array<{ value: string; label: string }>> = {
