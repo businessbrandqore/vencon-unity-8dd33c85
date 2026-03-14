@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import SalaryCard from "@/components/SalaryCard";
+import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,18 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
-import { CalendarIcon, Clock, AlertTriangle, LogOut } from "lucide-react";
+import { Clock, AlertTriangle, LogOut, TrendingUp, Package, Truck, RotateCcw, XCircle, ShieldAlert, CheckCircle, BarChart3 } from "lucide-react";
+import SalaryCard from "@/components/SalaryCard";
 
 /* ───── types ───── */
 interface UserProfile {
@@ -45,28 +40,6 @@ interface AttendanceRow {
   is_early_out: boolean | null;
 }
 
-interface LeadRow {
-  id: string;
-  name: string | null;
-  phone: string | null;
-  address: string | null;
-  status: string | null;
-  called_time: number | null;
-  special_note: string | null;
-  agent_type: string | null;
-  requeue_count: number | null;
-  requeue_at: string | null;
-  campaign_id: string | null;
-  tl_id: string | null;
-  created_at: string | null;
-}
-
-interface InventoryItem {
-  id: string;
-  product_name: string;
-  unit_price: number | null;
-}
-
 /* ───── constants ───── */
 const MOODS = [
   { value: "happy", emoji: "😊", labelKey: "mood_happy" },
@@ -77,44 +50,12 @@ const MOODS = [
   { value: "angry", emoji: "😠", labelKey: "mood_angry" },
 ];
 
-const LEAD_STATUSES = [
-  "Order Confirm",
-  "Pre Order",
-  "Phone Off",
-  "Positive",
-  "Customer Reschedule",
-  "Do Not Pick",
-  "No Response",
-  "Busy Now",
-  "Number Busy",
-  "Negative",
-  "Not Interested",
-  "Cancelled",
-  "Wrong Number",
-  "Duplicate",
-  "Already Ordered",
-];
-
-const REQUEUE_STATUSES = [
-  "Phone Off",
-  "Positive",
-  "Customer Reschedule",
-  "Do Not Pick",
-  "No Response",
-  "Busy Now",
-  "Number Busy",
-];
-
-const REQUEUE_MINUTES = 40;
-const DELETE_SHEET_THRESHOLD = 5;
-
-
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 /* ═══════════════════════════════════════════ */
 export default function EmployeeTSDashboard() {
   const { user } = useAuth();
-  const { t, n, lang, statusName } = useLanguage();
+  const { t, n } = useLanguage();
   const deductionConfig = useDeductionConfig();
 
   /* user profile with shift info */
@@ -123,6 +64,7 @@ export default function EmployeeTSDashboard() {
 
   /* attendance */
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRow | null>(null);
+  const [monthAttendance, setMonthAttendance] = useState<AttendanceRow[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(true);
 
   /* flow state */
@@ -133,8 +75,11 @@ export default function EmployeeTSDashboard() {
   const [showDeskModal, setShowDeskModal] = useState(false);
   const [showMoodInModal, setShowMoodInModal] = useState(false);
   const [showClockOutModal, setShowClockOutModal] = useState(false);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [showPreOrderModal, setShowPreOrderModal] = useState(false);
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealAttendanceId, setAppealAttendanceId] = useState("");
+  const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSubmitting, setAppealSubmitting] = useState(false);
+  const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
 
   /* desk report */
   const [deskCondition, setDeskCondition] = useState("");
@@ -150,31 +95,10 @@ export default function EmployeeTSDashboard() {
   const [clockOutMood, setClockOutMood] = useState("");
   const [clockOutNote, setClockOutNote] = useState("");
 
-  /* leads */
-  const [leads, setLeads] = useState<LeadRow[]>([]);
-  const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
-  const [leadCalledTimes, setLeadCalledTimes] = useState<Record<string, number>>({});
-  const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
-  const [currentOrderLead, setCurrentOrderLead] = useState<LeadRow | null>(null);
-  const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
-
-  /* inventory */
-  const [products, setProducts] = useState<InventoryItem[]>([]);
-
-  /* order form */
-  const [orderAddress, setOrderAddress] = useState("");
-  const [orderProduct, setOrderProduct] = useState("");
-  const [orderQty, setOrderQty] = useState(1);
-  const [orderPrice, setOrderPrice] = useState<number>(0);
-  const [orderNote, setOrderNote] = useState("");
-
-  /* pre-order form */
-  const [preOrderDate, setPreOrderDate] = useState<Date>();
-  const [preOrderNote, setPreOrderNote] = useState("");
-
   /* metrics */
-  const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0 });
+  const [metrics, setMetrics] = useState({ orders: 0, delivered: 0, cancelled: 0, returned: 0, totalLeads: 0 });
   const [monthDeductions, setMonthDeductions] = useState(0);
+  const [dailyOrders, setDailyOrders] = useState(0);
 
   /* requeue countdown tick */
   const [tick, setTick] = useState(0);
@@ -204,7 +128,7 @@ export default function EmployeeTSDashboard() {
     if (profile.shift_start && profile.shift_end) {
       setIsWithinShift(hhmm >= profile.shift_start && hhmm <= profile.shift_end);
     } else {
-      setIsWithinShift(true); // no shift configured → allow
+      setIsWithinShift(true);
     }
   }, [profile]);
 
@@ -212,14 +136,17 @@ export default function EmployeeTSDashboard() {
   const loadAttendance = useCallback(async () => {
     if (!user) return;
     setAttendanceLoading(true);
-    const { data } = await supabase
-      .from("attendance")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("date", todayStr())
-      .maybeSingle();
-    if (data) {
-      const row = data as AttendanceRow;
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [todayRes, monthRes] = await Promise.all([
+      supabase.from("attendance").select("*").eq("user_id", user.id).eq("date", todayStr()).maybeSingle(),
+      supabase.from("attendance").select("*").eq("user_id", user.id).gte("date", monthStart.toISOString().slice(0, 10)).order("date", { ascending: false }),
+    ]);
+
+    if (todayRes.data) {
+      const row = todayRes.data as AttendanceRow;
       setTodayAttendance(row);
       setDeskReportDone(!!(row.desk_condition));
       setClockedIn(!!row.clock_in);
@@ -228,44 +155,32 @@ export default function EmployeeTSDashboard() {
       setDeskReportDone(false);
       setClockedIn(false);
     }
+    if (monthRes.data) {
+      setMonthAttendance(monthRes.data as AttendanceRow[]);
+    }
     setAttendanceLoading(false);
   }, [user]);
 
   useEffect(() => { loadAttendance(); }, [loadAttendance]);
 
+  /* ───── load existing appeals ───── */
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("attendance_appeals").select("attendance_id, status").eq("user_id", user.id);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.attendance_id) map[a.attendance_id] = a.status; });
+        setExistingAppeals(map);
+      }
+    })();
+  }, [user]);
+
   /* ───── load phone instruction ───── */
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "phone_minutes_instruction")
-        .maybeSingle();
-      if (data?.value) {
-        const val = String(data.value).replace(/^"|"$/g, '');
-        setPhoneInstruction(val);
-      }
-    })();
-  }, []);
-
-  /* ───── load leads ───── */
-  const loadLeads = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("assigned_to", user.id)
-      .not("status", "in", '("order_confirm","negative","not_interested","cancelled","wrong_number","duplicate","already_ordered")');
-    if (data) setLeads(data as LeadRow[]);
-  }, [user]);
-
-  useEffect(() => { if (clockedIn) loadLeads(); }, [clockedIn, loadLeads]);
-
-  /* ───── load products ───── */
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("inventory").select("id, product_name, unit_price");
-      if (data) setProducts(data as InventoryItem[]);
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "phone_minutes_instruction").maybeSingle();
+      if (data?.value) setPhoneInstruction(String(data.value).replace(/^"|"$/g, ''));
     })();
   }, []);
 
@@ -276,70 +191,57 @@ export default function EmployeeTSDashboard() {
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
-      const { data: ordersData } = await supabase
-        .from("orders")
-        .select("status, delivery_status")
-        .eq("agent_id", user.id)
-        .gte("created_at", monthStart.toISOString());
+      const [ordersRes, attRes, leadsRes, dailyRes] = await Promise.all([
+        supabase.from("orders").select("status, delivery_status").eq("agent_id", user.id).gte("created_at", monthStart.toISOString()),
+        supabase.from("attendance").select("deduction_amount").eq("user_id", user.id).gte("date", monthStart.toISOString().slice(0, 10)),
+        supabase.from("leads").select("id", { count: "exact", head: true }).eq("assigned_to", user.id),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("agent_id", user.id).gte("created_at", todayStart.toISOString()),
+      ]);
 
-      if (ordersData) {
+      if (ordersRes.data) {
         setMetrics({
-          orders: ordersData.length,
-          delivered: ordersData.filter((o) => o.delivery_status === "delivered").length,
-          cancelled: ordersData.filter((o) => o.status === "cancelled").length,
-          returned: ordersData.filter((o) => o.delivery_status === "returned").length,
+          orders: ordersRes.data.length,
+          delivered: ordersRes.data.filter((o) => o.delivery_status === "delivered").length,
+          cancelled: ordersRes.data.filter((o) => o.status === "cancelled").length,
+          returned: ordersRes.data.filter((o) => o.delivery_status === "returned").length,
+          totalLeads: leadsRes.count || 0,
         });
       }
-
-      const { data: attData } = await supabase
-        .from("attendance")
-        .select("deduction_amount")
-        .eq("user_id", user.id)
-        .gte("date", monthStart.toISOString().slice(0, 10));
-
-      if (attData) {
-        setMonthDeductions(attData.reduce((s, a) => s + (Number(a.deduction_amount) || 0), 0));
+      if (attRes.data) {
+        setMonthDeductions(attRes.data.reduce((s, a) => s + (Number(a.deduction_amount) || 0), 0));
       }
+      setDailyOrders(dailyRes.count || 0);
     })();
   }, [user, tick]);
 
   /* ───── computed ───── */
-  const salesRatio = metrics.orders > 0 ? ((metrics.orders / Math.max(leads.length + metrics.orders, 1)) * 100).toFixed(1) : "0";
+  const salesRatio = metrics.orders > 0 ? ((metrics.orders / Math.max(metrics.totalLeads + metrics.orders, 1)) * 100).toFixed(1) : "0";
   const receiveRatio = metrics.orders > 0 ? ((metrics.delivered / metrics.orders) * 100).toFixed(1) : "0";
   const cancelRatio = metrics.orders > 0 ? ((metrics.cancelled / metrics.orders) * 100).toFixed(1) : "0";
   const returnRatio = metrics.orders > 0 ? ((metrics.returned / metrics.orders) * 100).toFixed(1) : "0";
   const basicSalary = profile?.basic_salary || 0;
   const netSalary = basicSalary - monthDeductions;
 
-  const bronzeLeads = useMemo(() => leads.filter((l) => l.agent_type === "bronze" || !l.agent_type), [leads]);
-  const silverLeads = useMemo(() => leads.filter((l) => l.agent_type === "silver"), [leads]);
+  const lateDays = monthAttendance.filter(a => a.is_late).length;
+  const earlyOuts = monthAttendance.filter(a => a.is_early_out).length;
+  const presentDays = monthAttendance.filter(a => a.clock_in).length;
 
   /* ───── handlers ───── */
-
   const handleDeskReportSubmit = async () => {
     if (!user || (!deskCondition && !deskNote)) { toast.error("ডেস্কের অবস্থা নির্বাচন করুন বা লিখুন"); return; }
-    // upsert attendance row for today
+    const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
     if (todayAttendance) {
-      const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").update({
-        desk_condition: deskValue,
-        phone_minutes_remaining: phoneMins,
-        phone_number: phoneNumber || null,
-        desk_number: deskNumber || null,
+        desk_condition: deskValue, phone_minutes_remaining: phoneMins, phone_number: phoneNumber || null, desk_number: deskNumber || null,
       } as any).eq("id", todayAttendance.id);
     } else {
-      const deskValue = deskNote ? `${deskCondition}||${deskNote}` : deskCondition;
       await supabase.from("attendance").insert({
-        user_id: user.id,
-        date: todayStr(),
-        desk_condition: deskValue,
-        phone_minutes_remaining: phoneMins,
-        phone_number: phoneNumber || null,
-        desk_number: deskNumber || null,
+        user_id: user.id, date: todayStr(), desk_condition: deskValue, phone_minutes_remaining: phoneMins, phone_number: phoneNumber || null, desk_number: deskNumber || null,
       } as any);
     }
-    
     setShowDeskModal(false);
     await loadAttendance();
     toast.success("ডেস্ক রিপোর্ট সংরক্ষণ করা হয়েছে");
@@ -355,22 +257,13 @@ export default function EmployeeTSDashboard() {
       const shiftParts = profile.shift_start.split(":");
       const shiftDate = new Date();
       shiftDate.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
-      if (now > shiftDate) {
-        isLate = true;
-        lateMinutes = Math.ceil((now.getTime() - shiftDate.getTime()) / 60000);
-      }
+      if (now > shiftDate) { isLate = true; lateMinutes = Math.ceil((now.getTime() - shiftDate.getTime()) / 60000); }
     }
     const lateAmt = isLate ? getDeductionAmount(deductionConfig.late_tiers, lateMinutes) : 0;
     if (todayAttendance) {
-      await supabase.from("attendance").update({
-        clock_in: nowISO, mood_in: selectedMood, mood_note: moodNote || null,
-        is_late: isLate, deduction_amount: lateAmt,
-      }).eq("id", todayAttendance.id);
+      await supabase.from("attendance").update({ clock_in: nowISO, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: lateAmt }).eq("id", todayAttendance.id);
     } else {
-      await supabase.from("attendance").insert({
-        user_id: user.id, date: todayStr(), clock_in: nowISO, mood_in: selectedMood,
-        mood_note: moodNote || null, is_late: isLate, deduction_amount: lateAmt,
-      });
+      await supabase.from("attendance").insert({ user_id: user.id, date: todayStr(), clock_in: nowISO, mood_in: selectedMood, mood_note: moodNote || null, is_late: isLate, deduction_amount: lateAmt });
     }
     setShowMoodInModal(false);
     setClockedIn(true);
@@ -388,124 +281,33 @@ export default function EmployeeTSDashboard() {
       const shiftParts = profile.shift_end.split(":");
       const shiftEnd = new Date();
       shiftEnd.setHours(parseInt(shiftParts[0]), parseInt(shiftParts[1]), 0, 0);
-      if (now < shiftEnd) {
-        earlyOut = true;
-        earlyMinutes = Math.ceil((shiftEnd.getTime() - now.getTime()) / 60000);
-        extraDeduction = getDeductionAmount(deductionConfig.early_tiers, earlyMinutes);
-      }
+      if (now < shiftEnd) { earlyOut = true; earlyMinutes = Math.ceil((shiftEnd.getTime() - now.getTime()) / 60000); extraDeduction = getDeductionAmount(deductionConfig.early_tiers, earlyMinutes); }
     }
     if (todayAttendance) {
       await supabase.from("attendance").update({
-        clock_out: now.toISOString(), mood_out: clockOutMood,
-        is_early_out: earlyOut,
+        clock_out: now.toISOString(), mood_out: clockOutMood, is_early_out: earlyOut,
         deduction_amount: (Number(todayAttendance.deduction_amount) || 0) + extraDeduction,
       }).eq("id", todayAttendance.id);
     }
     setShowClockOutModal(false);
     await loadAttendance();
-    toast.success(earlyOut ? "Check Out হয়েছে (Early out — ৳33 কর্তন)" : "Check Out সফল ✓");
+    toast.success(earlyOut ? `Check Out হয়েছে (${earlyMinutes} মিনিট আগে — ৳${extraDeduction} কর্তন)` : "Check Out সফল ✓");
   };
 
-  const handleLeadSave = async (lead: LeadRow) => {
-    const newStatus = leadStatuses[lead.id];
-    if (!newStatus || !user) return;
-
-    const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
-    const note = leadNotes[lead.id] ?? lead.special_note;
-
-    if (newStatus === "Order Confirm") {
-      setCurrentOrderLead(lead);
-      setOrderAddress(lead.address || "");
-      setOrderProduct("");
-      setOrderQty(1);
-      setOrderPrice(0);
-      setOrderNote("");
-      setShowOrderModal(true);
-      return;
-    }
-
-    if (newStatus === "Pre Order") {
-      setCurrentPreOrderLead(lead);
-      setPreOrderDate(undefined);
-      setPreOrderNote("");
-      setShowPreOrderModal(true);
-      return;
-    }
-
-    // Update lead
-    const updatePayload: Record<string, unknown> = {
-      status: newStatus.toLowerCase().replace(/\s+/g, "_"),
-      called_time: calledTime,
-      special_note: note,
-      called_date: new Date().toISOString(),
-    };
-
-    if (REQUEUE_STATUSES.includes(newStatus)) {
-      const newRequeueCount = (lead.requeue_count || 0) + 1;
-      updatePayload.requeue_count = newRequeueCount;
-      updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
-      if (newRequeueCount >= DELETE_SHEET_THRESHOLD) {
-        updatePayload.status = "tl_delete_sheet";
-      }
-    }
-
-    await supabase.from("leads").update(updatePayload).eq("id", lead.id);
-    toast.success("Lead আপডেট হয়েছে");
-    loadLeads();
-  };
-
-  const handleOrderConfirm = async () => {
-    if (!currentOrderLead || !user || !orderProduct) { toast.error("Product নির্বাচন করুন"); return; }
-    // Insert order
-    const { error } = await supabase.from("orders").insert({
-      customer_name: currentOrderLead.name,
-      phone: currentOrderLead.phone,
-      address: orderAddress,
-      product: orderProduct,
-      quantity: orderQty,
-      price: orderPrice,
-      agent_id: user.id,
-      tl_id: currentOrderLead.tl_id,
-      lead_id: currentOrderLead.id,
-      status: "pending_cso",
+  const handleAppealSubmit = async () => {
+    if (!user || !appealAttendanceId || !appealExplanation.trim()) { toast.error("কারণ লিখুন"); return; }
+    setAppealSubmitting(true);
+    const { error } = await supabase.from("attendance_appeals").insert({
+      user_id: user.id, attendance_id: appealAttendanceId, explanation: appealExplanation.trim(),
     });
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); return; }
-
-    // Update lead
-    await supabase.from("leads").update({
-      status: "order_confirm",
-      called_date: new Date().toISOString(),
-    }).eq("id", currentOrderLead.id);
-
-    setShowOrderModal(false);
-    toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
-    loadLeads();
-  };
-
-  const handlePreOrderSubmit = async () => {
-    if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
-    await supabase.from("pre_orders").insert({
-      lead_id: currentPreOrderLead.id,
-      agent_id: user.id,
-      tl_id: currentPreOrderLead.tl_id,
-      scheduled_date: format(preOrderDate, "yyyy-MM-dd"),
-      note: preOrderNote || null,
-    });
-    await supabase.from("leads").update({
-      status: "pre_order",
-      called_date: new Date().toISOString(),
-    }).eq("id", currentPreOrderLead.id);
-
-    setShowPreOrderModal(false);
-    toast.success("Pre-order তৈরি হয়েছে ✓");
-    loadLeads();
-  };
-
-  /* ───── requeue helper ───── */
-  const getRequeueRemaining = (lead: LeadRow) => {
-    if (!lead.requeue_at) return null;
-    const remaining = differenceInMinutes(new Date(lead.requeue_at), new Date());
-    return remaining > 0 ? remaining : null;
+    if (error) { toast.error("আপিল পাঠাতে সমস্যা হয়েছে"); console.error(error); }
+    else {
+      toast.success("আপিল পাঠানো হয়েছে — HR রিভিউ করবে");
+      setExistingAppeals(p => ({ ...p, [appealAttendanceId]: "pending" }));
+    }
+    setAppealSubmitting(false);
+    setShowAppealModal(false);
+    setAppealExplanation("");
   };
 
   /* ───── loading ───── */
@@ -556,17 +358,11 @@ export default function EmployeeTSDashboard() {
               </div>
               <div>
                 <Label>বিস্তারিত লিখুন (ঐচ্ছিক)</Label>
-                <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} placeholder="ডেস্কের অবস্থা সম্পর্কে বিস্তারিত লিখুন..." />
+                <Textarea value={deskNote} onChange={(e) => setDeskNote(e.target.value)} className="mt-1" rows={2} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>মোবাইল নাম্বার</Label>
-                  <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" />
-                </div>
-                <div>
-                  <Label>ডেস্ক নাম্বার</Label>
-                  <Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" />
-                </div>
+                <div><Label>মোবাইল নাম্বার</Label><Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="mt-1" placeholder="01XXXXXXXXX" /></div>
+                <div><Label>ডেস্ক নাম্বার</Label><Input value={deskNumber} onChange={(e) => setDeskNumber(e.target.value)} className="mt-1" placeholder="ডেস্ক নং" /></div>
               </div>
               <div>
                 <Label>{t("phone_minutes")}</Label>
@@ -597,16 +393,10 @@ export default function EmployeeTSDashboard() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setSelectedMood(m.value)}
-                  className={cn(
-                    "flex flex-col items-center rounded-md border p-4 transition-all hover:border-[hsl(var(--panel-employee))]",
-                    selectedMood === m.value
-                      ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]"
-                      : "border-border"
-                  )}
-                >
+                <button key={m.value} onClick={() => setSelectedMood(m.value)}
+                  className={cn("flex flex-col items-center rounded-md border p-4 transition-all hover:border-[hsl(var(--panel-employee))]",
+                    selectedMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border"
+                  )}>
                   <span className="text-3xl mb-1">{m.emoji}</span>
                   <span className="text-xs text-muted-foreground">{t(m.labelKey)}</span>
                 </button>
@@ -616,11 +406,8 @@ export default function EmployeeTSDashboard() {
               <Label>{t("mood_write")}</Label>
               <Textarea value={moodNote} onChange={(e) => setMoodNote(e.target.value)} className="mt-1" rows={2} />
             </div>
-            <Button
-              onClick={handleClockIn}
-              disabled={!selectedMood}
-              className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white"
-            >
+            <Button onClick={handleClockIn} disabled={!selectedMood}
+              className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
               {t("clock_in")}
             </Button>
           </CardContent>
@@ -630,206 +417,204 @@ export default function EmployeeTSDashboard() {
   }
 
   /* ═══════════════════════════════════════════ */
-  /* ───── MAIN LEAD SHEET ───── */
+  /* ───── MAIN DASHBOARD (Analytics) ───── */
   /* ═══════════════════════════════════════════ */
 
-  const renderLeadTable = (leadList: LeadRow[]) => (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-muted-foreground">
-            <th className="py-2 px-2 text-left">#</th>
-            <th className="py-2 px-2 text-left">Customer</th>
-            <th className="py-2 px-2 text-left">Phone</th>
-            <th className="py-2 px-2 text-left">City</th>
-            <th className="py-2 px-2 text-left">Status</th>
-            <th className="py-2 px-2 text-left">Called</th>
-            <th className="py-2 px-2 text-left">Note</th>
-            <th className="py-2 px-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {leadList.map((lead, idx) => {
-            const requeueRemaining = getRequeueRemaining(lead);
-            const isRequeued = requeueRemaining !== null && requeueRemaining > 0;
-            return (
-              <tr key={lead.id} className={cn("border-b border-border", isRequeued && "opacity-50 pointer-events-none bg-muted/30")}>
-                <td className="py-2 px-2">{idx + 1}</td>
-                <td className="py-2 px-2">{lead.name || "—"}</td>
-                <td className="py-2 px-2">{lead.phone || "—"}</td>
-                <td className="py-2 px-2">{lead.address || "—"}</td>
-                <td className="py-2 px-2 min-w-[180px]">
-                  {isRequeued ? (
-                    <Badge variant="outline" className="text-orange-400 border-orange-400/50">আসছে: {requeueRemaining} মিনিটে</Badge>
-                  ) : (
-                    <Select value={leadStatuses[lead.id] || ""} onValueChange={(v) => setLeadStatuses((p) => ({ ...p, [lead.id]: v }))}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status নির্বাচন" /></SelectTrigger>
-                      <SelectContent>
-                        {LEAD_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </td>
-                <td className="py-2 px-2 min-w-[80px]">
-                  <Select value={String(leadCalledTimes[lead.id] || lead.called_time || 1)} onValueChange={(v) => setLeadCalledTimes((p) => ({ ...p, [lead.id]: Number(v) }))}>
-                    <SelectTrigger className="h-8 text-xs w-16"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </td>
-                <td className="py-2 px-2">
-                  <Input
-                    className="h-8 text-xs"
-                    value={leadNotes[lead.id] ?? (lead.special_note || "")}
-                    onChange={(e) => setLeadNotes((p) => ({ ...p, [lead.id]: e.target.value }))}
-                    placeholder="Note"
-                  />
-                </td>
-                <td className="py-2 px-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleLeadSave(lead)}
-                    disabled={!leadStatuses[lead.id]}
-                    className="h-7 text-xs border-[hsl(var(--panel-employee))] text-[hsl(var(--panel-employee))]"
-                  >
-                    Save
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-          {leadList.length === 0 && (
-            <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">কোনো lead নেই</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-
   return (
-    <div className="space-y-4 pb-24">
-      {/* Clock Out button */}
+    <div className="space-y-5 pb-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="font-heading text-xl">{t("lead_sheet")}</h1>
-        <Button
-          variant="outline"
-          onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }}
-          className="border-destructive text-destructive hover:bg-destructive/10"
-        >
+        <h1 className="font-heading text-xl flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> ড্যাশবোর্ড
+        </h1>
+        <Button variant="outline" onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }}
+          className="border-destructive text-destructive hover:bg-destructive/10">
           <LogOut className="h-4 w-4 mr-2" />{t("clock_out")}
         </Button>
       </div>
 
-      {/* Lead Tabs */}
-      <Tabs defaultValue="bronze">
-        <TabsList>
-          <TabsTrigger value="bronze">{t("bronze_leads")} ({n(bronzeLeads.length)})</TabsTrigger>
-          <TabsTrigger value="silver">{t("silver_leads")} ({n(silverLeads.length)})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="bronze">{renderLeadTable(bronzeLeads)}</TabsContent>
-        <TabsContent value="silver">{renderLeadTable(silverLeads)}</TabsContent>
-      </Tabs>
-
-      {/* ── Bottom Metrics Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 max-w-screen-xl mx-auto text-xs">
-          <div className="flex gap-4">
-            <span>{t("sales_ratio")}: <strong>{n(Number(salesRatio))}%</strong></span>
-            <span>{t("receive_ratio")}: <strong>{n(Number(receiveRatio))}%</strong></span>
-            <span>{t("cancel_ratio")}: <strong className="text-destructive">{n(Number(cancelRatio))}%</strong></span>
-            <span>{t("return_ratio")}: <strong className="text-orange-400">{n(Number(returnRatio))}%</strong></span>
-          </div>
-          <div>
-            {t("net_salary")}: <strong>৳{n(basicSalary)} - ৳{n(monthDeductions)} = <span className="text-[hsl(var(--panel-employee))]">৳{n(netSalary)}</span></strong>
-          </div>
-        </div>
+      {/* Today's quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="border-[hsl(var(--panel-employee)/0.3)]">
+          <CardContent className="pt-5 text-center">
+            <Package className="h-6 w-6 mx-auto text-[hsl(var(--panel-employee))] mb-1" />
+            <p className="text-2xl font-heading">{n(dailyOrders)}</p>
+            <p className="text-xs text-muted-foreground">আজকের অর্ডার</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 text-center">
+            <TrendingUp className="h-6 w-6 mx-auto text-emerald-500 mb-1" />
+            <p className="text-2xl font-heading">{n(metrics.orders)}</p>
+            <p className="text-xs text-muted-foreground">মাসিক অর্ডার</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 text-center">
+            <Truck className="h-6 w-6 mx-auto text-blue-500 mb-1" />
+            <p className="text-2xl font-heading">{n(metrics.delivered)}</p>
+            <p className="text-xs text-muted-foreground">ডেলিভারি হয়েছে</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 text-center">
+            <RotateCcw className="h-6 w-6 mx-auto text-orange-500 mb-1" />
+            <p className="text-2xl font-heading">{n(metrics.returned)}</p>
+            <p className="text-xs text-muted-foreground">রিটার্ন</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* ── Order Confirm Modal ── */}
-      <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{t("order_confirm_title")}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>{t("customer_name")}</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>{t("phone")}</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>{t("address")}</Label><Input value={orderAddress} onChange={(e) => setOrderAddress(e.target.value)} className="mt-1" /></div>
+      {/* Performance Ratios */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><TrendingUp className="h-4 w-4" /> পারফরমেন্স এনালাইসিস</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="text-center p-3 rounded-md border border-border">
+              <p className="text-xs text-muted-foreground mb-1">সেলস রেশিও</p>
+              <p className={cn("text-2xl font-heading", Number(salesRatio) >= 20 ? "text-emerald-500" : "text-orange-500")}>{salesRatio}%</p>
+            </div>
+            <div className="text-center p-3 rounded-md border border-border">
+              <p className="text-xs text-muted-foreground mb-1">রিসিভ রেশিও</p>
+              <p className={cn("text-2xl font-heading", Number(receiveRatio) >= 60 ? "text-emerald-500" : "text-destructive")}>{receiveRatio}%</p>
+              {Number(receiveRatio) < 60 && Number(receiveRatio) > 0 && (
+                <p className="text-[10px] text-destructive mt-1">⚠ ৬০% এর নিচে — ইনসেনটিভ ০</p>
+              )}
+            </div>
+            <div className="text-center p-3 rounded-md border border-border">
+              <p className="text-xs text-muted-foreground mb-1">ক্যান্সেল রেশিও</p>
+              <p className={cn("text-2xl font-heading", Number(cancelRatio) > 20 ? "text-destructive" : "text-foreground")}>{cancelRatio}%</p>
+            </div>
+            <div className="text-center p-3 rounded-md border border-border">
+              <p className="text-xs text-muted-foreground mb-1">রিটার্ন রেশিও</p>
+              <p className={cn("text-2xl font-heading", Number(returnRatio) > 15 ? "text-orange-500" : "text-foreground")}>{returnRatio}%</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Salary Summary */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm font-heading">বেতন সারাংশ (চলমান মাস)</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <Label>{t("product")}</Label>
-              <Select value={orderProduct} onValueChange={(v) => {
-                setOrderProduct(v);
-                const p = products.find((pr) => pr.product_name === v);
-                if (p) setOrderPrice(p.unit_price || 0);
-              }}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product")} /></SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <p className="text-xs text-muted-foreground">বেসিক</p>
+              <p className="text-lg font-heading">৳{n(basicSalary)}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={(e) => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
-              <div><Label>{t("price")}</Label><Input type="number" value={orderPrice} onChange={(e) => setOrderPrice(Number(e.target.value))} className="mt-1" /></div>
+            <div>
+              <p className="text-xs text-muted-foreground">কর্তন</p>
+              <p className="text-lg font-heading text-destructive">-৳{n(monthDeductions)}</p>
             </div>
-            <div><Label>Agent's Note</Label><Textarea value={orderNote} onChange={(e) => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
+            <div>
+              <p className="text-xs text-muted-foreground">নেট</p>
+              <p className="text-lg font-heading text-[hsl(var(--panel-employee))]">৳{n(netSalary)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Attendance Summary */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm font-heading flex items-center gap-2"><Clock className="h-4 w-4" /> উপস্থিতি সারাংশ</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="text-center p-2 rounded border border-border">
+              <CheckCircle className="h-5 w-5 mx-auto text-emerald-500 mb-1" />
+              <p className="text-xl font-heading">{n(presentDays)}</p>
+              <p className="text-[10px] text-muted-foreground">উপস্থিত</p>
+            </div>
+            <div className="text-center p-2 rounded border border-border">
+              <AlertTriangle className="h-5 w-5 mx-auto text-orange-400 mb-1" />
+              <p className="text-xl font-heading">{n(lateDays)}</p>
+              <p className="text-[10px] text-muted-foreground">দেরি</p>
+            </div>
+            <div className="text-center p-2 rounded border border-border">
+              <XCircle className="h-5 w-5 mx-auto text-orange-400 mb-1" />
+              <p className="text-xl font-heading">{n(earlyOuts)}</p>
+              <p className="text-[10px] text-muted-foreground">আগে প্রস্থান</p>
+            </div>
+            <div className="text-center p-2 rounded border border-border">
+              <p className="text-xl font-heading text-destructive">৳{n(monthDeductions)}</p>
+              <p className="text-[10px] text-muted-foreground">মোট কর্তন</p>
+            </div>
+          </div>
+
+          {/* Late/early rows with appeal */}
+          {monthAttendance.filter(a => a.is_late || a.is_early_out).length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">কর্তন হয়েছে এমন দিনগুলো:</p>
+              {monthAttendance.filter(a => a.is_late || a.is_early_out).map(a => {
+                const appealStatus = existingAppeals[a.id];
+                return (
+                  <div key={a.id} className="flex items-center justify-between rounded-md border border-border p-2 text-xs">
+                    <div className="flex items-center gap-3">
+                      <span>{new Date(a.date).toLocaleDateString("bn-BD")}</span>
+                      {a.is_late && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px]">Late</Badge>}
+                      {a.is_early_out && <Badge variant="outline" className="text-orange-400 border-orange-500/50 text-[10px]">Early</Badge>}
+                      <span className="text-destructive">৳{a.deduction_amount || 0}</span>
+                    </div>
+                    <div>
+                      {appealStatus === "pending" && <Badge variant="outline" className="text-amber-500 border-amber-500/50 text-[10px]">আপিল পেন্ডিং</Badge>}
+                      {appealStatus === "approved" && <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 text-[10px]">আপিল গৃহীত ✓</Badge>}
+                      {appealStatus === "rejected" && <Badge variant="outline" className="text-destructive border-destructive/50 text-[10px]">আপিল প্রত্যাখ্যাত</Badge>}
+                      {!appealStatus && Number(a.deduction_amount) > 0 && (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] border-[hsl(var(--panel-employee))] text-[hsl(var(--panel-employee))]"
+                          onClick={() => { setAppealAttendanceId(a.id); setAppealExplanation(""); setShowAppealModal(true); }}>
+                          <ShieldAlert className="h-3 w-3 mr-1" /> আপিল করুন
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Navigate to Leads */}
+      <Card className="border-[hsl(var(--panel-employee)/0.3)] bg-[hsl(var(--panel-employee)/0.05)]">
+        <CardContent className="py-4 text-center">
+          <p className="text-sm text-muted-foreground mb-2">লিড শীট দেখতে ও কাজ করতে</p>
+          <Button onClick={() => window.location.href = "/employee/leads"} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
+            লিড শীটে যান →
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Appeal Modal */}
+      <Dialog open={showAppealModal} onOpenChange={setShowAppealModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>কর্তন আপিল</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">দেরি বা আগে যাওয়ার কারণ ব্যাখ্যা করুন। HR রিভিউ করে সিদ্ধান্ত নিবে।</p>
+            <div>
+              <Label>কারণ *</Label>
+              <Textarea value={appealExplanation} onChange={e => setAppealExplanation(e.target.value)} className="mt-1" rows={3} placeholder="কেন দেরি হয়েছিল বা আগে যেতে হয়েছিল..." />
+            </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("confirm")}</Button>
+            <Button variant="outline" onClick={() => setShowAppealModal(false)}>বাতিল</Button>
+            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || !appealExplanation.trim()}
+              className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
+              {appealSubmitting ? "পাঠানো হচ্ছে..." : "আপিল পাঠান"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Pre-Order Modal ── */}
-      <Dialog open={showPreOrderModal} onOpenChange={setShowPreOrderModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{t("pre_order_title")}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Customer</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>Phone</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div>
-              <Label>Expected Delivery Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preOrderDate ? format(preOrderDate, "PPP") : t("select_date")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={preOrderDate} onSelect={setPreOrderDate} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div><Label>Note</Label><Textarea value={preOrderNote} onChange={(e) => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("submit")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Clock Out Modal ── */}
+      {/* Clock Out Modal */}
       <Dialog open={showClockOutModal} onOpenChange={setShowClockOutModal}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t("clock_out")} — {t("mood_select")}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {MOODS.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setClockOutMood(m.value)}
-                  className={cn(
-                    "flex flex-col items-center rounded-md border p-3 transition-all",
-                    clockOutMood === m.value
-                      ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]"
-                      : "border-border"
-                  )}
-                >
+                <button key={m.value} onClick={() => setClockOutMood(m.value)}
+                  className={cn("flex flex-col items-center rounded-md border p-3 transition-all",
+                    clockOutMood === m.value ? "border-[hsl(var(--panel-employee))] bg-[hsl(var(--panel-employee)/0.15)]" : "border-border"
+                  )}>
                   <span className="text-2xl mb-1">{m.emoji}</span>
                   <span className="text-xs">{t(m.labelKey)}</span>
                 </button>
