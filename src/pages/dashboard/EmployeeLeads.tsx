@@ -173,14 +173,12 @@ export default function EmployeeLeads() {
   // Compute available statuses from dynamic config or fallback
   const availableStatuses = useMemo(() => {
     if (dynamicColumns.length > 0) {
-      // Find the first dropdown column and use its options as statuses
       const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
       if (dropdownCol?.options?.length) {
         return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location }));
       }
     }
-    // Fallback
-    return FALLBACK_STATUSES.map(s => ({ value: s, label: s, label_bn: s, next_panel: undefined, next_location: undefined }));
+    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined }));
   }, [dynamicColumns]);
 
   // Note columns from dynamic config
