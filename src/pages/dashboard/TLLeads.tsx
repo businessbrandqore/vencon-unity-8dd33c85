@@ -420,9 +420,17 @@ const TLLeads = () => {
     load();
   }, [user?.id, selectedCampaign, distDataMode, getEffectiveTlId, activeSection]);
 
-  // Count available leads for data send
+  // Count available items for data send
   useEffect(() => {
-    if (!user || !selectedCampaign) { setAvailableCount(0); return; }
+    if (!user) { setAvailableCount(0); return; }
+
+    if (activeSection === "cso") {
+      setAvailableCount(csoOrders.length);
+      return;
+    }
+
+    if (!selectedCampaign) { setAvailableCount(0); return; }
+
     const load = async () => {
       let q = supabase.from("leads").select("id", { count: "exact", head: true })
         .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null);
@@ -436,7 +444,7 @@ const TLLeads = () => {
       setAvailableCount(count || 0);
     };
     load();
-  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId]);
+  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId, activeSection, csoOrders]);
 
   // Handle data send
   const handleSendData = async () => {
