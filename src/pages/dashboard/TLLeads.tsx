@@ -49,7 +49,9 @@ const TLLeads = () => {
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
   const [deleteSheetLeads, setDeleteSheetLeads] = useState<Lead[]>([]);
   const [processingLeads, setProcessingLeads] = useState<Lead[]>([]);
-
+  const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
+  const [agentFilter, setAgentFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
