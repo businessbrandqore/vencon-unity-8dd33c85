@@ -576,16 +576,6 @@ export default function EmployeeLeads() {
                       />
                     </td>
                   ))}
-                  <td className="py-2 px-2 min-w-[70px]">
-                    <Select value={String(leadCalledTimes[lead.id] || lead.called_time || 1)} onValueChange={v => setLeadCalledTimes(p => ({ ...p, [lead.id]: Number(v) }))}>
-                      <SelectTrigger className="h-8 text-xs w-14"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
                 </tr>
               );
             })}
