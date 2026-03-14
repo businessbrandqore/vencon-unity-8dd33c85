@@ -567,6 +567,18 @@ const TLLeads = () => {
                   </>
                 )}
               </div>
+              {/* Show HR configured dynamic columns */}
+              {dynamicColumns.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-xs text-muted-foreground">{isBn ? "HR কনফিগ:" : "HR Config:"}</span>
+                  {dynamicColumns.map(col => (
+                    <Badge key={col.id} variant="outline" className="text-xs">
+                      {isBn ? col.name_bn || col.name : col.name}
+                      {col.type === "dropdown" ? ` (${col.options.length})` : " 📝"}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
