@@ -5,6 +5,7 @@ import { getPanelByType, PanelType } from "@/lib/panelConfig";
 import { supabase } from "@/integrations/supabase/client";
 import LanguageToggle from "@/components/LanguageToggle";
 import { Shield, Eye, EyeOff } from "lucide-react";
+import LoginBackground from "@/components/LoginBackground";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000;
@@ -112,7 +113,8 @@ const PanelLogin = () => {
         <div className="fixed inset-0 z-50 transition-opacity duration-200" style={{ backgroundColor: panelConfig.color }} />
       )}
 
-      <div className="min-h-screen bg-background flex">
+      <div className="min-h-screen bg-background flex relative overflow-hidden">
+        <LoginBackground />
         <LanguageToggle />
 
         {/* Left branding */}
