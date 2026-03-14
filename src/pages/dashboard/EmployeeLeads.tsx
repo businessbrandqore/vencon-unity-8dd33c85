@@ -251,33 +251,68 @@ export default function EmployeeLeads() {
   };
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("inventory").select("id, product_name, unit_price");
-      if (data) setProducts(data as InventoryItem[]);
-    })();
-    // Load product names from app_settings and merge with inventory
-    (async () => {
-      const { data } = await supabase.from("app_settings").select("value").eq("key", "product_names").maybeSingle();
-      if (data?.value && Array.isArray(data.value)) {
-        const settingsProducts = (data.value as string[]).map((name, i) => ({
-          id: `setting-${i}`,
-          product_name: name,
-          unit_price: 0,
-        }));
-        setProducts(prev => {
-          const existingNames = new Set(prev.map(p => p.product_name));
-          const newOnes = settingsProducts.filter(p => !existingNames.has(p.product_name));
-          return [...prev, ...newOnes];
-        });
+    const toStringList = (value: unknown): string[] => {
+      if (Array.isArray(value)) {
+        return value.map((v) => String(v).trim()).filter(Boolean);
       }
-    })();
-    // Load gift names and card names from app_settings
+      if (typeof value === "string") {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed)
+            ? parsed.map((v) => String(v).trim()).filter(Boolean)
+            : [];
+        } catch {
+          return value
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        }
+      }
+      return [];
+    };
+
     (async () => {
-      const { data } = await supabase.from("app_settings").select("key, value").in("key", ["gift_names", "card_names"]);
-      (data || []).forEach(row => {
-        if (row.key === "gift_names" && Array.isArray(row.value)) setGiftNames(row.value as string[]);
-        if (row.key === "card_names" && Array.isArray(row.value)) setCardNames(row.value as string[]);
+      const [{ data: inventoryData, error: inventoryError }, { data: settingsData, error: settingsError }] = await Promise.all([
+        supabase.from("inventory").select("id, product_name, unit_price"),
+        supabase.from("app_settings").select("key, value").in("key", ["product_names", "gift_names", "card_names"]),
+      ]);
+
+      if (inventoryError) console.error("Inventory load error:", inventoryError);
+      if (settingsError) console.error("Settings load error:", settingsError);
+
+      const inventoryProducts = (inventoryData || []) as InventoryItem[];
+
+      let productNames: string[] = [];
+      let gifts: string[] = [];
+      let cards: string[] = [];
+
+      (settingsData || []).forEach((row: any) => {
+        if (row.key === "product_names") productNames = toStringList(row.value);
+        if (row.key === "gift_names") gifts = toStringList(row.value);
+        if (row.key === "card_names") cards = toStringList(row.value);
       });
+
+      const mergedByName = new Map<string, InventoryItem>();
+
+      inventoryProducts.forEach((p) => {
+        const name = p.product_name?.trim();
+        if (!name) return;
+        mergedByName.set(name, { ...p, product_name: name });
+      });
+
+      productNames.forEach((name, i) => {
+        if (!mergedByName.has(name)) {
+          mergedByName.set(name, {
+            id: `setting-${i}-${name}`,
+            product_name: name,
+            unit_price: 0,
+          });
+        }
+      });
+
+      setProducts(Array.from(mergedByName.values()));
+      setGiftNames(gifts);
+      setCardNames(cards);
     })();
   }, []);
 
