@@ -1085,7 +1085,9 @@ const TLLeads = () => {
 
       case "silver":
         return (
-          <Card>
+          <div className="space-y-4">
+            {renderDataSendSection()}
+            <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">
                 🥈 {isBn ? "সিলভার ডাটা — সিলভার এজেন্টে অ্যাসাইন করুন" : "Silver Data — Assign to Silver Agents"}
