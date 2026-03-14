@@ -73,6 +73,10 @@ const HRSettings = () => {
 
   const [settings, setSettings] = useState<Settings>({});
   const [deduction, setDeduction] = useState<DeductionSettings>(DEFAULT_DEDUCTION);
+  const [giftNames, setGiftNames] = useState<string[]>([]);
+  const [newGiftName, setNewGiftName] = useState("");
+  const [productNames, setProductNames] = useState<string[]>([]);
+  const [newProductName, setNewProductName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
