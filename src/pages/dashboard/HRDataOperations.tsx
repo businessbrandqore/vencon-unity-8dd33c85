@@ -21,6 +21,13 @@ import { translations } from "@/i18n/translations";
 /* ─── Types ─── */
 type AppPanel = "sa" | "hr" | "tl" | "employee";
 
+interface RouteDestination {
+  id: string;
+  next_role: string;
+  next_panel: AppPanel | "";
+  next_location: string;
+}
+
 interface ColumnOption {
   id: string;
   value: string;
@@ -30,6 +37,7 @@ interface ColumnOption {
   next_panel?: AppPanel | "";
   next_location?: string;
   next_role?: string;
+  routes?: RouteDestination[];
   note?: string;
   is_spam?: boolean;
 }
