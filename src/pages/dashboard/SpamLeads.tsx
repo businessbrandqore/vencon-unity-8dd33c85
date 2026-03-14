@@ -85,7 +85,7 @@ export default function SpamLeads() {
       <Card>
         <CardContent className="p-0">
           {leads.length === 0 ? (
-            <EmptyState icon={<ShieldBan className="h-10 w-10" />} title="কোনো স্প্যাম লিড নেই" description="স্প্যাম হিসেবে চিহ্নিত লিডগুলো এখানে দেখাবে" />
+            <EmptyState icon={<ShieldBan className="h-10 w-10" />} message="স্প্যাম হিসেবে চিহ্নিত লিডগুলো এখানে দেখাবে" />
           ) : (
             <div className="overflow-x-auto">
               <Table>
