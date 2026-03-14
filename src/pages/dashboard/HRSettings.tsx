@@ -134,7 +134,7 @@ const HRSettings = () => {
   const saveGroup = async (key: string, values: any) => {
     if (!user) return;
     setSaving(true);
-    const { data: existing } = await supabase.from("app_settings").select("id").eq("key", key).single();
+    const { data: existing } = await supabase.from("app_settings").select("id").eq("key", key).maybeSingle();
     if (existing) {
       await supabase.from("app_settings").update({ value: values, updated_by: user.id, updated_at: new Date().toISOString() }).eq("key", key);
     } else {
