@@ -96,6 +96,8 @@ STRICT RULES:
 11. Add short Bengali comments
 12. Use wp_remote_post with x-webhook-secret header
 13. address should be a single string, NOT an array
+14. CRITICAL: Use WooCommerce getter methods like $order->get_billing_phone(), $order->get_billing_first_name(), etc. Do NOT use $order->get_data()['billing'] as it may return empty for CartFlows/funnel orders
+15. CartFlows compatibility: always use direct getter methods
 
 EXAMPLE of CLEAN code structure:
 add_action('woocommerce_thankyou', 'send_order_to_crm_lead', 10, 1);
@@ -104,25 +106,35 @@ function send_order_to_crm_lead($order_id) {
     if (!$order) return;
     if ($order->get_meta('_crm_webhook_sent')) return;
     
-    // Get billing data
-    $billing = $order->get_data()['billing'];
-    $customer_name = trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? ''));
-    $phone = $billing['phone'] ?? '';
-    $address = implode(', ', array_filter([$billing['address_1'] ?? '', $billing['city'] ?? '']));
+    // বিলিং ডাটা — সরাসরি getter মেথড ব্যবহার (CartFlows সামঞ্জস্যপূর্ণ)
+    $customer_name = trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name());
+    $phone = $order->get_billing_phone();
+    $address = implode(', ', array_filter([
+        $order->get_billing_address_1(),
+        $order->get_billing_address_2(),
+        $order->get_billing_city(),
+        $order->get_billing_state(),
+        $order->get_billing_postcode()
+    ]));
     
-    // Products
+    // প্রোডাক্ট তথ্য
     $products = []; $qty = 0;
     foreach ($order->get_items() as $item) { $products[] = $item->get_name(); $qty += $item->get_quantity(); }
     
+    $url = 'WEBHOOK_URL_HERE';
+    $secret = 'SECRET_HERE';
+    
     $body = ['customer_name'=>$customer_name, 'phone'=>$phone, 'address'=>$address, 'extra_fields'=>[
-        'order_id'=>$order_id, 'product'=>implode(', ',$products), 'quantity'=>$qty, 'total'=>$order->get_total()
+        'order_id'=>$order_id, 'product'=>implode(', ',$products), 'quantity'=>$qty, 
+        'total'=>$order->get_total(), 'email'=>$order->get_billing_email(),
+        'payment_method'=>$order->get_payment_method_title()
     ]];
     
     wp_remote_post($url, ['headers'=>['Content-Type'=>'application/json','x-webhook-secret'=>$secret], 'body'=>wp_json_encode($body)]);
     $order->update_meta_data('_crm_webhook_sent','yes'); $order->save();
 }
 
-Keep it THIS simple. Match field names to what the form actually has.`;
+Keep it THIS simple. ALWAYS use $order->get_billing_phone() not $billing['phone']. This is CRITICAL for CartFlows compatibility.`;
 
     const userPrompt = formContext
       ? `Analyze this checkout form HTML. Generate CLEAN PHP code that captures ONLY the fields in this form.
