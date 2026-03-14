@@ -638,6 +638,56 @@ const TLLeads = () => {
     switch (activeSection) {
       case "assign": {
         return (
+          <div className="space-y-4">
+            {/* ====== DATA SEND SECTION ====== */}
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-heading flex items-center gap-2">
+                  <Send className="h-5 w-5 text-primary" />
+                  {isBn ? "ডাটা পাঠান" : "Send Data"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{isBn ? "ক্যাম্পেইন" : "Campaign"}</label>
+                    <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setDistAgent(""); setSendCount(""); }}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} /></SelectTrigger>
+                      <SelectContent>{campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{isBn ? "ডাটা মোড" : "Data Mode"}</label>
+                    <Select value={distDataMode} onValueChange={(v) => { setDistDataMode(v as "lead" | "processing"); setDistAgent(""); }}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"}</SelectItem>
+                        <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{isBn ? "এজেন্ট" : "Agent"}</label>
+                    <Select value={distAgent} onValueChange={setDistAgent} disabled={!selectedCampaign}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "এজেন্ট নির্বাচন" : "Select Agent"} /></SelectTrigger>
+                      <SelectContent>{distAgents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {isBn ? "সংখ্যা" : "Count"}
+                      {selectedCampaign && <span className="ml-1 text-primary">({isBn ? `${availableCount} টি পাওয়া যাচ্ছে` : `${availableCount} available`})</span>}
+                    </label>
+                    <Input type="number" min={1} max={availableCount} value={sendCount} onChange={(e) => setSendCount(e.target.value)} placeholder={isBn ? "কয়টি পাঠাবেন" : "How many"} className="h-9 text-sm" disabled={!distAgent} />
+                  </div>
+                  <Button onClick={handleSendData} disabled={!selectedCampaign || !distAgent || !sendCount || sending} className="h-9 gap-2">
+                    {sending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {isBn ? "পাঠান" : "Send"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
