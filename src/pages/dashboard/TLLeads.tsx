@@ -992,7 +992,7 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "জেলা" : "District"}</TableHead>
                     <TableHead>Agent</TableHead>
                     <TableHead>{isBn ? "সময়" : "Time"}</TableHead>
-                    <TableHead>{isBn ? "অ্যাকশন" : "Action"}</TableHead>
+                    
                   </TableRow>
                 </TableHeader>
                 <TableBody>
