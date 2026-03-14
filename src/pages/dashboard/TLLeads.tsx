@@ -499,71 +499,131 @@ const TLLeads = () => {
   // Render content based on active section
   const renderContent = () => {
     switch (activeSection) {
-      case "assign":
+      case "assign": {
+        // Parse dynamic columns from special_note JSON
+        const specialNoteKeys = useMemo(() => {
+          const keys = new Set<string>();
+          freshLeads.forEach(l => {
+            if (l.special_note) {
+              try {
+                const parsed = JSON.parse(l.special_note);
+                if (parsed && typeof parsed === "object") {
+                  Object.keys(parsed).forEach(k => keys.add(k));
+                }
+              } catch {}
+            }
+          });
+          return Array.from(keys);
+        }, [freshLeads]);
+
+        // Filter by tier
+        const filteredFresh = tierFilter === "all"
+          ? freshLeads
+          : tierFilter === "lead"
+            ? freshLeads.filter(l => !l.agent_type || l.agent_type === "")
+            : freshLeads.filter(l => l.agent_type === "bronze");
+
+        const getSpecialNoteValue = (lead: Lead, key: string) => {
+          if (!lead.special_note) return "—";
+          try {
+            const parsed = JSON.parse(lead.special_note);
+            return parsed?.[key] ?? "—";
+          } catch { return "—"; }
+        };
+
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">{isBn ? "Bronze Agent-এ Lead Assign করুন" : "Assign Leads to Bronze Agents"}</CardTitle>
-              {selectedLeads.size > 0 && (
-                <div className="flex items-center gap-3 pt-2">
-                  <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
-                  <Select value={bulkAgent} onValueChange={setBulkAgent}>
-                    <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
-                    <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button onClick={bulkAssign} disabled={!bulkAgent} className="bg-primary text-primary-foreground">Apply</Button>
-                </div>
-              )}
+              <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                {/* Tier filter */}
+                <Select value={tierFilter} onValueChange={setTierFilter}>
+                  <SelectTrigger className="w-44 border-primary/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"} ({freshLeads.length})</SelectItem>
+                    <SelectItem value="lead">{isBn ? "লিড (নতুন)" : "Lead (New)"} ({freshLeads.filter(l => !l.agent_type || l.agent_type === "").length})</SelectItem>
+                    <SelectItem value="bronze">{isBn ? "ব্রোঞ্জ" : "Bronze"} ({freshLeads.filter(l => l.agent_type === "bronze").length})</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {selectedLeads.size > 0 && (
+                  <>
+                    <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
+                    <Select value={bulkAgent} onValueChange={setBulkAgent}>
+                      <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
+                      <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Button onClick={bulkAssign} disabled={!bulkAgent} className="bg-primary text-primary-foreground">Apply</Button>
+                  </>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox checked={selectedLeads.size === freshLeads.length && freshLeads.length > 0}
-                        onCheckedChange={(v) => setSelectedLeads(v ? new Set(freshLeads.map(l => l.id)) : new Set())} />
-                    </TableHead>
-                    <TableHead>#</TableHead>
-                    <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
-                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                    <TableHead>{isBn ? "শহর" : "City"}</TableHead>
-                    <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                    <TableHead>Assign To</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {freshLeads.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন lead নেই" : "No new leads"}</TableCell></TableRow>
-                  ) : freshLeads.map((lead, i) => (
-                    <TableRow key={lead.id}>
-                      <TableCell>
-                        <Checkbox checked={selectedLeads.has(lead.id)}
-                          onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
-                      </TableCell>
-                      <TableCell>{i + 1}</TableCell>
-                      <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                      <TableCell>{lead.phone || "—"}</TableCell>
-                      <TableCell>{lead.address || "—"}</TableCell>
-                      <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
-                      <TableCell>
-                        <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(p => ({ ...p, [lead.id]: v }))}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
-                          <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                          {isBn ? "সেন্ড" : "Send"}
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox checked={selectedLeads.size === filteredFresh.length && filteredFresh.length > 0}
+                          onCheckedChange={(v) => setSelectedLeads(v ? new Set(filteredFresh.map(l => l.id)) : new Set())} />
+                      </TableHead>
+                      <TableHead>#</TableHead>
+                      <TableHead>{isBn ? "টাইপ" : "Type"}</TableHead>
+                      <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
+                      <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead>{isBn ? "শহর" : "City"}</TableHead>
+                      {specialNoteKeys.map(key => (
+                        <TableHead key={key} className="text-xs">{key}</TableHead>
+                      ))}
+                      <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
+                      <TableHead>Assign To</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFresh.length === 0 ? (
+                      <TableRow><TableCell colSpan={9 + specialNoteKeys.length} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
+                    ) : filteredFresh.map((lead, i) => (
+                      <TableRow key={lead.id}>
+                        <TableCell>
+                          <Checkbox checked={selectedLeads.has(lead.id)}
+                            onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
+                        </TableCell>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
+                            {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                        <TableCell>{lead.phone || "—"}</TableCell>
+                        <TableCell>{lead.address || "—"}</TableCell>
+                        {specialNoteKeys.map(key => (
+                          <TableCell key={key} className="text-xs max-w-[120px] truncate">{getSpecialNoteValue(lead, key)}</TableCell>
+                        ))}
+                        <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
+                        <TableCell>
+                          <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(p => ({ ...p, [lead.id]: v }))}>
+                            <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" disabled={!assignments[lead.id]} onClick={() => assignLead(lead.id, assignments[lead.id])} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                            {isBn ? "সেন্ড" : "Send"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         );
+      }
 
       case "processing":
         return (
