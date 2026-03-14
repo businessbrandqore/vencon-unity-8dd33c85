@@ -1001,7 +1001,8 @@ const TLLeads = () => {
                 </TableBody>
               </Table>
             </CardContent>
-          </Card>
+           </Card>
+          </div>
         );
 
       case "calldone":
