@@ -77,6 +77,8 @@ const HRSettings = () => {
   const [newGiftName, setNewGiftName] = useState("");
   const [productNames, setProductNames] = useState<string[]>([]);
   const [newProductName, setNewProductName] = useState("");
+  const [cardNames, setCardNames] = useState<string[]>([]);
+  const [newCardName, setNewCardName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
