@@ -750,11 +750,22 @@ export default function EmployeeLeads() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>District</Label>
-                <Input value={pocDistrict} onChange={e => setPocDistrict(e.target.value)} className="mt-1" placeholder="জেলা লিখুন" />
+                <Select value={pocDistrict} onValueChange={v => { setPocDistrict(v); setPocThana(""); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {BD_DISTRICTS.map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {!pocDistrict && currentPreOrderConfirmLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
               </div>
               <div>
                 <Label>Thana</Label>
-                <Input value={pocThana} onChange={e => setPocThana(e.target.value)} className="mt-1" placeholder="থানা লিখুন" />
+                <Select value={pocThana} onValueChange={setPocThana} disabled={!pocDistrict}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {(BD_DISTRICTS.find(d => d.name === pocDistrict)?.thanas || []).map(t => <SelectItem key={t.name} value={t.name}>{t.name_bn} ({t.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
