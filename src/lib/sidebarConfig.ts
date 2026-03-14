@@ -79,6 +79,13 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   tl: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/tl/dashboard" },
     { titleKey: "leads", icon: Target, path: "/tl/leads" },
+    { titleKey: "agent_activity", icon: Users, path: "/tl/leads/agent_activity" },
+    { titleKey: "cso_pending", icon: ShieldCheck, path: "/tl/leads/cso" },
+    { titleKey: "call_done", icon: PhoneCall, path: "/tl/leads/calldone" },
+    { titleKey: "pre_orders", icon: CalendarCheck, path: "/tl/leads/preorders" },
+    { titleKey: "silver_data", icon: Medal, path: "/tl/leads/silver" },
+    { titleKey: "golden_data", icon: Award, path: "/tl/leads/golden" },
+    { titleKey: "delete_sheet", icon: Trash2, path: "/tl/leads/deletesheet" },
     { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "my_leads", icon: Phone, path: "/tl/my-leads", roles: ["Assistant Team Leader"] },
