@@ -560,6 +560,9 @@ const TLLeads = () => {
               {isBn ? "Lead Assign" : "Assign Leads"} ({freshLeads.length})
             </TabsTrigger>
           )}
+          <TabsTrigger value="agent_activity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            {isBn ? "এজেন্ট কার্যক্রম" : "Agent Activity"} ({agentLeads.length})
+          </TabsTrigger>
           <TabsTrigger value="cso" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             CSO Pending ({csoOrders.length})
           </TabsTrigger>
@@ -574,10 +577,10 @@ const TLLeads = () => {
               <TabsTrigger value="deletesheet" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 Delete Sheet ({deleteSheetLeads.length})
               </TabsTrigger>
-              <TabsTrigger value="silver" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
+              <TabsTrigger value="silver" className="data-[state=active]:bg-muted data-[state=active]:text-foreground">
                 🥈 Silver ({silverData.length})
               </TabsTrigger>
-              <TabsTrigger value="golden" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+              <TabsTrigger value="golden" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                 🥇 Golden ({goldenData.length})
               </TabsTrigger>
             </>
