@@ -1117,8 +1117,6 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                     <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
                     <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                    <TableHead>Assign To</TableHead>
-                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
