@@ -73,6 +73,32 @@ const TLLeads = () => {
   const isGL = normalizedRole === "group_leader";
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
+  const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
+
+  // Load dynamic columns for the selected campaign
+  const statusLabelMap = useMemo(() => {
+    const map: Record<string, { label: string; label_bn: string; color?: string }> = {};
+    dynamicColumns.forEach(col => {
+      if (col.type === "dropdown") {
+        col.options.forEach(opt => {
+          map[opt.value] = { label: opt.label, label_bn: opt.label_bn, color: opt.color };
+        });
+      }
+    });
+    return map;
+  }, [dynamicColumns]);
+
+  const getStatusLabel = useCallback((status: string | null) => {
+    if (!status) return "—";
+    const mapped = statusLabelMap[status];
+    if (mapped) return isBn ? (mapped.label_bn || mapped.label) : mapped.label;
+    return status.replace(/_/g, " ");
+  }, [statusLabelMap, isBn]);
+
+  const getStatusColor = useCallback((status: string | null) => {
+    if (!status) return "";
+    return statusLabelMap[status]?.color || "";
+  }, [statusLabelMap]);
 
   // Get the effective TL id for data queries (ATL/GL uses their assigned TL's id)
   const getEffectiveTlId = useCallback((campaignId?: string) => {
