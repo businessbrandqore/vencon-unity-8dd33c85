@@ -82,6 +82,14 @@ const TLLeads = () => {
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
   const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
 
+  // Data send state
+  const [distDataMode, setDistDataMode] = useState<"lead" | "processing">("lead");
+  const [distAgent, setDistAgent] = useState("");
+  const [distAgents, setDistAgents] = useState<Agent[]>([]);
+  const [sendCount, setSendCount] = useState("");
+  const [availableCount, setAvailableCount] = useState(0);
+  const [sending, setSending] = useState(false);
+
   // Load dynamic columns for the selected campaign
   const statusLabelMap = useMemo(() => {
     const map: Record<string, { label: string; label_bn: string; color?: string }> = {};
