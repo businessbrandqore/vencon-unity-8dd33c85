@@ -77,6 +77,8 @@ const HRSettings = () => {
   const [newGiftName, setNewGiftName] = useState("");
   const [productNames, setProductNames] = useState<string[]>([]);
   const [newProductName, setNewProductName] = useState("");
+  const [cardNames, setCardNames] = useState<string[]>([]);
+  const [newCardName, setNewCardName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -93,7 +95,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
@@ -101,6 +103,8 @@ const HRSettings = () => {
         if (row.value && Array.isArray(row.value)) setGiftNames(row.value as string[]);
       } else if (row.key === "product_names") {
         if (row.value && Array.isArray(row.value)) setProductNames(row.value as string[]);
+      } else if (row.key === "card_names") {
+        if (row.value && Array.isArray(row.value)) setCardNames(row.value as string[]);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
@@ -439,7 +443,68 @@ const HRSettings = () => {
               </div>
             </div>
 
-            <div className="border-t border-border" />
+              <div className="border-t border-border" />
+
+            {/* Card Names */}
+            <div className="space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {isBn ? "কার্ড তালিকা" : "Card List"}
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">
+                {isBn ? "অর্ডার ফর্মে যে কার্ডের নাম ড্রপডাউনে দেখাবে।" : "Card names shown in order form dropdown."}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newCardName}
+                  onChange={(e) => setNewCardName(e.target.value)}
+                  placeholder={isBn ? "কার্ডের নাম লিখুন" : "Enter card name"}
+                  className="bg-background border-border text-foreground flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newCardName.trim()) {
+                      const updated = [...cardNames, newCardName.trim()];
+                      setCardNames(updated);
+                      setNewCardName("");
+                      saveGroup("card_names", updated);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!newCardName.trim()) return;
+                    const updated = [...cardNames, newCardName.trim()];
+                    setCardNames(updated);
+                    setNewCardName("");
+                    saveGroup("card_names", updated);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cardNames.map((name, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body bg-secondary text-foreground border border-border rounded">
+                    {name}
+                    <button
+                      onClick={() => {
+                        const updated = cardNames.filter((_, idx) => idx !== i);
+                        setCardNames(updated);
+                        saveGroup("card_names", updated);
+                      }}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {cardNames.length === 0 && (
+                  <span className="text-xs text-muted-foreground font-body">{isBn ? "কোনো কার্ড যোগ করা হয়নি" : "No cards added"}</span>
+                )}
+              </div>
+            </div>
+
+              <div className="border-t border-border" />
 
             {/* Gift Names */}
             <div className="space-y-3">

@@ -108,7 +108,8 @@ export default function EmployeeLeads() {
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
 
   const [products, setProducts] = useState<InventoryItem[]>([]);
-  const [giftNames, setGiftNames] = useState<string[]>([]);
+   const [giftNames, setGiftNames] = useState<string[]>([]);
+   const [cardNames, setCardNames] = useState<string[]>([]);
   const [currentOrderLead, setCurrentOrderLead] = useState<LeadRow | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderAddress, setOrderAddress] = useState("");
@@ -264,12 +265,13 @@ export default function EmployeeLeads() {
         });
       }
     })();
-    // Load gift names from app_settings
+    // Load gift names and card names from app_settings
     (async () => {
-      const { data } = await supabase.from("app_settings").select("value").eq("key", "gift_names").maybeSingle();
-      if (data?.value && Array.isArray(data.value)) {
-        setGiftNames(data.value as string[]);
-      }
+      const { data } = await supabase.from("app_settings").select("key, value").in("key", ["gift_names", "card_names"]);
+      (data || []).forEach(row => {
+        if (row.key === "gift_names" && Array.isArray(row.value)) setGiftNames(row.value as string[]);
+        if (row.key === "card_names" && Array.isArray(row.value)) setCardNames(row.value as string[]);
+      });
     })();
   }, []);
 
@@ -768,7 +770,13 @@ export default function EmployeeLeads() {
               </div>
               <div>
                 <Label>Card Name</Label>
-                <Input value={orderCardName} onChange={e => setOrderCardName(e.target.value)} className="mt-1" placeholder="Select card" />
+                <Select value={orderCardName} onValueChange={setOrderCardName}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select card" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Card</SelectItem>
+                    {cardNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
