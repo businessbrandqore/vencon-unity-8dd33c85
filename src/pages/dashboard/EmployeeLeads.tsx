@@ -51,6 +51,7 @@ interface ColumnOption {
   color?: string;
   next_panel?: AppPanel | "";
   next_location?: string;
+  routes?: Array<{ next_role: string; next_panel: AppPanel | ""; next_location: string }>;
   note?: string;
   is_spam?: boolean;
 }
@@ -185,10 +186,10 @@ export default function EmployeeLeads() {
     if (dynamicColumns.length > 0) {
       const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
       if (dropdownCol?.options?.length) {
-        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location, is_spam: o.is_spam }));
+        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location, routes: o.routes, is_spam: o.is_spam }));
       }
     }
-    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined, is_spam: undefined }));
+    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined, routes: undefined, is_spam: undefined }));
   }, [dynamicColumns]);
 
   // Note columns from dynamic config
@@ -350,7 +351,9 @@ export default function EmployeeLeads() {
     if (selectedOpt?.is_spam) {
       updatePayload.is_spam = true;
     }
-    if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
+    const hasNonEmployeeRoute = (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") ||
+      (selectedOpt?.routes?.some(r => r.next_panel && r.next_panel !== "employee"));
+    if (hasNonEmployeeRoute) {
       updatePayload.assigned_to = null;
     }
     if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {

@@ -21,6 +21,13 @@ import { translations } from "@/i18n/translations";
 /* ─── Types ─── */
 type AppPanel = "sa" | "hr" | "tl" | "employee";
 
+interface RouteDestination {
+  id: string;
+  next_role: string;
+  next_panel: AppPanel | "";
+  next_location: string;
+}
+
 interface ColumnOption {
   id: string;
   value: string;
@@ -30,6 +37,7 @@ interface ColumnOption {
   next_panel?: AppPanel | "";
   next_location?: string;
   next_role?: string;
+  routes?: RouteDestination[];
   note?: string;
   is_spam?: boolean;
 }
@@ -163,6 +171,21 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                 const nr = s.next_role || "";
                 const np = nr ? (ROLE_PANEL_MAP[nr] || "") : (panelSet.has(s.next_panel) ? s.next_panel : "");
                 const vl = np ? (PANEL_DESTINATIONS[np] || []) : [];
+                // Parse routes array
+                const parsedRoutes: RouteDestination[] = Array.isArray(s.routes)
+                  ? s.routes.map((rt: any) => {
+                      const rtRole = rt.next_role || "";
+                      const rtPanel = rtRole ? (ROLE_PANEL_MAP[rtRole] || "") : "";
+                      return {
+                        id: rt.id || crypto.randomUUID?.() || `rt_${Date.now()}`,
+                        next_role: rtRole,
+                        next_panel: rtPanel,
+                        next_location: rt.next_location || "",
+                      };
+                    })
+                  : nr
+                    ? [{ id: crypto.randomUUID?.() || `rt_${Date.now()}`, next_role: nr, next_panel: np, next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "" }]
+                    : [];
                 return {
                   id: s.id || crypto.randomUUID?.() || `opt_${Date.now()}`,
                   value: s.value || "",
@@ -172,7 +195,9 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                   next_role: nr,
                   next_panel: np,
                   next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
+                  routes: parsedRoutes,
                   note: s.note || "",
+                  is_spam: !!s.is_spam,
                 };
               })
             : [],
@@ -225,8 +250,32 @@ function OptionRow({
   onToggle: () => void;
 }) {
   const colorInfo = getColorInfo(option.color || "gray");
-  const derivedPanel = option.next_role ? (ROLE_PANEL_MAP[option.next_role] || null) : null;
-  const panelLocations = derivedPanel ? (PANEL_DESTINATIONS[derivedPanel] || []) : [];
+  
+  // Use routes array, fallback to single next_role for backward compat
+  const routes: RouteDestination[] = option.routes?.length
+    ? option.routes
+    : option.next_role
+      ? [{ id: crypto.randomUUID?.() || `rt_${Date.now()}`, next_role: option.next_role, next_panel: (option.next_panel || "") as AppPanel | "", next_location: option.next_location || "" }]
+      : [];
+
+  const hasRoutes = routes.some(r => r.next_role);
+
+  const addRoute = () => {
+    const newRoute: RouteDestination = { id: crypto.randomUUID?.() || `rt_${Date.now()}`, next_role: "", next_panel: "", next_location: "" };
+    const updatedRoutes = [...routes, newRoute];
+    onUpdate({ routes: updatedRoutes, next_role: updatedRoutes[0]?.next_role || "", next_panel: (updatedRoutes[0]?.next_panel || "") as AppPanel | "", next_location: updatedRoutes[0]?.next_location || "" });
+  };
+
+  const updateRoute = (idx: number, updates: Partial<RouteDestination>) => {
+    const updatedRoutes = routes.map((r, i) => i === idx ? { ...r, ...updates } : r);
+    // Keep first route synced with legacy fields
+    onUpdate({ routes: updatedRoutes, next_role: updatedRoutes[0]?.next_role || "", next_panel: (updatedRoutes[0]?.next_panel || "") as AppPanel | "", next_location: updatedRoutes[0]?.next_location || "" });
+  };
+
+  const removeRoute = (idx: number) => {
+    const updatedRoutes = routes.filter((_, i) => i !== idx);
+    onUpdate({ routes: updatedRoutes, next_role: updatedRoutes[0]?.next_role || "", next_panel: (updatedRoutes[0]?.next_panel || "") as AppPanel | "", next_location: updatedRoutes[0]?.next_location || "" });
+  };
 
   return (
     <div className={`border rounded-md overflow-hidden ${colorInfo.bg}`}>
@@ -235,7 +284,7 @@ function OptionRow({
         <span className={`text-xs font-medium flex-1 truncate ${colorInfo.text}`}>
           {option.label_bn || option.label || option.value || "নতুন অপশন"}
         </span>
-        {option.next_panel && (
+        {hasRoutes && (
           <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
         )}
         <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
@@ -282,64 +331,81 @@ function OptionRow({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5">
-            <div>
-              <Label className="text-[10px] text-muted-foreground">রঙ</Label>
-              <Select value={option.color || "gray"} onValueChange={(v) => onUpdate({ color: v })}>
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_COLORS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border`} />
-                        {c.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">রঙ</Label>
+            <Select value={option.color || "gray"} onValueChange={(v) => onUpdate({ color: v })}>
+              <SelectTrigger className="h-7 mt-0.5 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_COLORS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border`} />
+                      {c.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Routes (multiple destinations) */}
+          <div className="border rounded-md p-2 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] text-muted-foreground font-medium">কোথায় কোথায় যাবে</Label>
+              <Button variant="outline" size="sm" className="h-5 text-[10px] px-2" onClick={addRoute}>
+                <Plus className="h-2.5 w-2.5 mr-0.5" /> রুট যোগ
+              </Button>
             </div>
-            <div>
-              <Label className="text-[10px] text-muted-foreground">কোন পদে যাবে</Label>
-              <Select
-                value={option.next_role || NO_OPTION}
-                onValueChange={(v) => {
-                  const role = v === NO_OPTION ? "" : v;
-                  const panel = role ? (ROLE_PANEL_MAP[role] || "") : "";
-                  onUpdate({ next_role: role, next_panel: panel as AppPanel | "", next_location: "" });
-                }}
-              >
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
-                  {ALL_ROLES_WITH_PANEL.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-[10px] text-muted-foreground">কোথায় যাবে</Label>
-              <Select
-                value={option.next_location || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_location: v === NO_OPTION ? "" : v })}
-                disabled={!derivedPanel}
-              >
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder={derivedPanel ? "—" : "আগে পদ দিন"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
-                  {panelLocations.map((loc) => (
-                    <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {routes.length === 0 && (
+              <p className="text-[10px] text-muted-foreground text-center py-1">কোনো রুট নেই — এখানেই থাকবে</p>
+            )}
+            {routes.map((route, rIdx) => {
+              const routePanel = route.next_role ? (ROLE_PANEL_MAP[route.next_role] || null) : null;
+              const routeLocations = routePanel ? (PANEL_DESTINATIONS[routePanel] || []) : [];
+              return (
+                <div key={route.id} className="flex items-center gap-1.5 bg-muted/30 rounded px-1.5 py-1">
+                  <span className="text-[10px] text-muted-foreground w-4 flex-shrink-0">{rIdx + 1}.</span>
+                  <Select
+                    value={route.next_role || NO_OPTION}
+                    onValueChange={(v) => {
+                      const role = v === NO_OPTION ? "" : v;
+                      const panel = role ? (ROLE_PANEL_MAP[role] || "") : "";
+                      updateRoute(rIdx, { next_role: role, next_panel: panel as AppPanel | "", next_location: "" });
+                    }}
+                  >
+                    <SelectTrigger className="h-6 text-[10px] flex-1">
+                      <SelectValue placeholder="পদ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
+                      {ALL_ROLES_WITH_PANEL.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={route.next_location || NO_OPTION}
+                    onValueChange={(v) => updateRoute(rIdx, { next_location: v === NO_OPTION ? "" : v })}
+                    disabled={!routePanel}
+                  >
+                    <SelectTrigger className="h-6 text-[10px] flex-1">
+                      <SelectValue placeholder={routePanel ? "লোকেশন" : "—"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
+                      {routeLocations.map((loc) => (
+                        <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 text-destructive" onClick={() => removeRoute(rIdx)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-4">
