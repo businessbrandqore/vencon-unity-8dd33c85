@@ -87,6 +87,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "silver_data", icon: Medal, path: "/tl/leads/silver" },
     { titleKey: "golden_data", icon: Award, path: "/tl/leads/golden" },
     { titleKey: "delete_sheet", icon: Trash2, path: "/tl/leads/deletesheet" },
+    { titleKey: "spam", icon: ShieldBan, path: "/tl/spam", roles: ["team_leader", "Assistant Team Leader"] },
     { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "my_leads", icon: Phone, path: "/tl/my-leads", roles: ["Assistant Team Leader"] },

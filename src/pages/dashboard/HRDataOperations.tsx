@@ -31,6 +31,7 @@ interface ColumnOption {
   next_location?: string;
   next_role?: string;
   note?: string;
+  is_spam?: boolean;
 }
 
 type ColumnType = "dropdown" | "note";
