@@ -955,11 +955,6 @@ const TLLeads = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-heading">{isBn ? "পেন্ডিং অর্ডার (TL রিভিউ)" : "Pending Orders (TL Review)"}</CardTitle>
-                {csoOrders.length > 0 && (
-                  <Button size="sm" onClick={handleSendAllToCso}>
-                    <Send className="h-4 w-4 mr-1" />{isBn ? "সব CSO তে পাঠাও" : "Send All to CSO"}
-                  </Button>
-                )}
               </CardHeader>
             <CardContent>
               <Table>
