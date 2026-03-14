@@ -115,6 +115,26 @@ function extractFromExtraFields(rawLead: Record<string, unknown>): Record<string
   return extra;
 }
 
+function extractOrderId(rawLead: Record<string, unknown>): string | null {
+  const merged: Record<string, unknown> = {
+    ...flattenObject(rawLead),
+    ...rawLead,
+    ...extractFromExtraFields(rawLead),
+  };
+
+  const orderId = findField(merged, [
+    "order_id",
+    "extra_fields.order_id",
+    "wc_order_id",
+    "woocommerce_order_id",
+    "wcf_order_id",
+  ]);
+
+  if (!orderId) return null;
+  const normalized = orderId.trim().replace(/[^a-zA-Z0-9_-]/g, "");
+  return normalized || null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
