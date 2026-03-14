@@ -142,6 +142,7 @@ const parseRoleConfigs = (raw: unknown): RoleColumnConfig[] => {
                   color: s.color || "gray",
                   next_panel: np,
                   next_location: vl.some((l: any) => l.value === s.next_location) ? s.next_location : "",
+                  next_user: s.next_user || "",
                   note: s.note || "",
                 };
               })
