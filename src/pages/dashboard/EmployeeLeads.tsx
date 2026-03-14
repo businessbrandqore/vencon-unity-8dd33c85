@@ -667,6 +667,7 @@ export default function EmployeeLeads() {
                 <Select value={orderMedia} onValueChange={setOrderMedia}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select media" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="lead">Lead</SelectItem>
                     <SelectItem value="phone_call">Phone Call</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="facebook">Facebook</SelectItem>
