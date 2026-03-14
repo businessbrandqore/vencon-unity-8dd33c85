@@ -148,6 +148,7 @@ const App = () => (
               <Route path="/employee/steadfast" element={<SteadfastMonitoring />} />
               <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
               <Route path="/employee/cs-leads" element={<CSExecutiveDashboard />} />
+              <Route path="/employee/spam" element={<SpamLeads />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
               <Route path="/employee/chat" element={<ChatPage />} />
