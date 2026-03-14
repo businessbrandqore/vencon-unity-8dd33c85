@@ -67,9 +67,22 @@ interface RoleColumnConfig {
 
 // Fallback hardcoded statuses (used when no dynamic config exists)
 const FALLBACK_STATUSES = [
-  "Order Confirm", "Pre Order", "Pre Order Confirm", "Phone Off", "Positive", "Customer Reschedule",
-  "Do Not Pick", "No Response", "Busy Now", "Number Busy", "Negative",
-  "Not Interested", "Cancelled", "Wrong Number", "Duplicate", "Already Ordered",
+  { value: "order_confirm", label: "Order Confirm", label_bn: "অর্ডার কনফার্ম" },
+  { value: "pre_order", label: "Pre Order", label_bn: "প্রি অর্ডার" },
+  { value: "pre_order_confirm", label: "Pre Order Confirm", label_bn: "প্রি অর্ডার কনফার্ম" },
+  { value: "phone_off", label: "Phone Off", label_bn: "ফোন অফ" },
+  { value: "positive", label: "Positive", label_bn: "পজিটিভ" },
+  { value: "customer_reschedule", label: "Customer Reschedule", label_bn: "রিশিডিউল" },
+  { value: "do_not_pick", label: "Do Not Pick", label_bn: "ফোন ধরে না" },
+  { value: "no_response", label: "No Response", label_bn: "নো রেসপন্স" },
+  { value: "busy_now", label: "Busy Now", label_bn: "ব্যস্ত" },
+  { value: "number_busy", label: "Number Busy", label_bn: "নম্বর ব্যস্ত" },
+  { value: "negative", label: "Negative", label_bn: "নেগেটিভ" },
+  { value: "not_interested", label: "Not Interested", label_bn: "আগ্রহী না" },
+  { value: "cancelled", label: "Cancelled", label_bn: "বাতিল" },
+  { value: "wrong_number", label: "Wrong Number", label_bn: "ভুল নম্বর" },
+  { value: "duplicate", label: "Duplicate", label_bn: "ডুপ্লিকেট" },
+  { value: "already_ordered", label: "Already Ordered", label_bn: "আগেই অর্ডার করেছে" },
 ];
 
 // Statuses that trigger requeue
@@ -160,14 +173,12 @@ export default function EmployeeLeads() {
   // Compute available statuses from dynamic config or fallback
   const availableStatuses = useMemo(() => {
     if (dynamicColumns.length > 0) {
-      // Find the first dropdown column and use its options as statuses
       const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
       if (dropdownCol?.options?.length) {
         return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location }));
       }
     }
-    // Fallback
-    return FALLBACK_STATUSES.map(s => ({ value: s, label: s, label_bn: s, next_panel: undefined, next_location: undefined }));
+    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined }));
   }, [dynamicColumns]);
 
   // Note columns from dynamic config
@@ -266,7 +277,10 @@ export default function EmployeeLeads() {
     const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
     const note = leadNotes[lead.id] ?? lead.special_note;
 
-    if (newStatus === "Order Confirm") {
+    // Normalize to snake_case for comparison
+    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
+
+    if (statusKey === "order_confirm") {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
       setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
@@ -274,18 +288,17 @@ export default function EmployeeLeads() {
       setOrderUpsell(""); setOrderSuccessRatio("");
       setShowOrderModal(true); return;
     }
-    if (newStatus === "Pre Order") {
+    if (statusKey === "pre_order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
       setShowPreOrderModal(true); return;
     }
-    if (newStatus === "Pre Order Confirm") {
+    if (statusKey === "pre_order_confirm") {
       setCurrentPreOrderConfirmLead(lead);
       setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
       setShowPreOrderConfirmModal(true); return;
     }
 
-    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
     const updatePayload: Record<string, unknown> = {
       status: statusKey, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
@@ -401,7 +414,7 @@ export default function EmployeeLeads() {
                     <Select value={leadStatuses[lead.id] || ""} onValueChange={v => setLeadStatuses(p => ({ ...p, [lead.id]: v }))}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
                       <SelectContent>
-                        {availableStatuses.map(s => <SelectItem key={s.value} value={s.label}>{s.label_bn || s.label}</SelectItem>)}
+                        {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label_bn || s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
