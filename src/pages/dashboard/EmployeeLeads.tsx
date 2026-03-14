@@ -347,6 +347,9 @@ export default function EmployeeLeads() {
       status: normalizedStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
     const selectedOpt = availableStatuses.find(s => s.value === newStatus);
+    if (selectedOpt?.is_spam) {
+      updatePayload.is_spam = true;
+    }
     if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
       updatePayload.assigned_to = null;
     }
