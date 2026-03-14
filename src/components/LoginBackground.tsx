@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import venconLogo from "@/assets/vencon-logo.jpg";
+import venconLogo from "@/assets/vencon-logo.png";
 
 interface Particle {
   x: number;
