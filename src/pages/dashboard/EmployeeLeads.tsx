@@ -313,8 +313,7 @@ export default function EmployeeLeads() {
     const note = leadNotes[lead.id] ?? lead.special_note;
 
     // The value comes directly from dynamic config (e.g. "_order_confirm", "pre_order_confirm")
-    // Use includes/endsWith to match modal triggers regardless of prefix
-    const normalizedStatus = newStatus.toLowerCase().replace(/\s+/g, "_");
+    const normalizedStatus = normalizeWorkflowStatus(newStatus);
 
     if (normalizedStatus.endsWith("order_confirm") && !normalizedStatus.includes("pre_order")) {
       setCurrentOrderLead(lead);
@@ -342,11 +341,9 @@ export default function EmployeeLeads() {
       setShowPreOrderConfirmModal(true); return;
     }
 
-    // Use the value directly as status (it comes from dynamic config)
     const updatePayload: Record<string, unknown> = {
-      status: newStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
+      status: normalizedStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
-    // Check if this status routes to another panel — if so, clear assignment
     const selectedOpt = availableStatuses.find(s => s.value === newStatus);
     if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
       updatePayload.assigned_to = null;
@@ -357,7 +354,12 @@ export default function EmployeeLeads() {
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
       if (cnt >= DELETE_SHEET_THRESHOLD) updatePayload.status = "tl_delete_sheet";
     }
-    await supabase.from("leads").update(updatePayload).eq("id", lead.id);
+    const { error } = await supabase.from("leads").update(updatePayload).eq("id", lead.id);
+    if (error) {
+      toast.error("Lead আপডেট করা যায়নি");
+      console.error(error);
+      return;
+    }
     toast.success("Lead আপডেট হয়েছে");
     loadLeads();
   };
