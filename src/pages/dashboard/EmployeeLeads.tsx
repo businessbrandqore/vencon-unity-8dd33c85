@@ -108,6 +108,7 @@ export default function EmployeeLeads() {
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
 
   const [products, setProducts] = useState<InventoryItem[]>([]);
+  const [giftNames, setGiftNames] = useState<string[]>([]);
   const [currentOrderLead, setCurrentOrderLead] = useState<LeadRow | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderAddress, setOrderAddress] = useState("");
@@ -123,7 +124,10 @@ export default function EmployeeLeads() {
   const [orderCardName, setOrderCardName] = useState("");
   const [orderMedia, setOrderMedia] = useState("");
   const [orderUpsell, setOrderUpsell] = useState("");
-  const [orderSuccessRatio, setOrderSuccessRatio] = useState<number | "">("")
+  const [orderSuccessRatio, setOrderSuccessRatio] = useState<number | "">(""); 
+  const [districtSearch, setDistrictSearch] = useState("");
+  const [thanaSearch, setThanaSearch] = useState("");
+  const [locationAutoDetected, setLocationAutoDetected] = useState(false);
 
   const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
