@@ -398,11 +398,11 @@ export default function EmployeeLeads() {
       address: [pocDistrict, pocThana, pocAddress].filter(Boolean).join(", ") || currentPreOrderConfirmLead.address,
       product: pocProduct, quantity: 1, price: products.find(p => p.product_name === pocProduct)?.unit_price || 0,
       agent_id: user.id, tl_id: currentPreOrderConfirmLead.tl_id, lead_id: currentPreOrderConfirmLead.id,
-      status: "pending_cso", district: pocDistrict || null, thana: pocThana || null,
+      status: "pending_tl", district: pocDistrict || null, thana: pocThana || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     const selectedStatus = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
-    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
+    await supabase.from("leads").update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
     setShowPreOrderConfirmModal(false);
     toast.success("Pre-Order Confirm হয়েছে ✓");
     loadLeads();
