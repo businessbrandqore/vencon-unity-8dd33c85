@@ -390,6 +390,34 @@ export default function EmployeeLeads() {
     loadLeads();
   };
 
+  // Extract dynamic raw-data column keys from special_note JSON across all leads
+  const rawDataKeys = useMemo(() => {
+    const keySet = new Set<string>();
+    leads.forEach(lead => {
+      if (!lead.special_note) return;
+      try {
+        const parsed = JSON.parse(lead.special_note);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          Object.keys(parsed).forEach(k => keySet.add(k));
+        }
+      } catch { /* not JSON */ }
+    });
+    return Array.from(keySet);
+  }, [leads]);
+
+  const parseSpecialNote = (note: string | null): Record<string, string> => {
+    if (!note) return {};
+    try {
+      const parsed = JSON.parse(note);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const result: Record<string, string> = {};
+        Object.entries(parsed).forEach(([k, v]) => { result[k] = v != null ? String(v) : ""; });
+        return result;
+      }
+    } catch { /* not JSON */ }
+    return {};
+  };
+
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
 
   if (!checkedIn) {
@@ -409,92 +437,167 @@ export default function EmployeeLeads() {
     );
   }
 
-  const renderLeadTable = (leadList: LeadRow[]) => (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-muted-foreground">
-            <th className="py-2 px-2 text-left">#</th>
-            <th className="py-2 px-2 text-left">কাস্টমার</th>
-            <th className="py-2 px-2 text-left">ফোন</th>
-            <th className="py-2 px-2 text-left">ঠিকানা</th>
-            <th className="py-2 px-2 text-left">স্ট্যাটাস</th>
-            <th className="py-2 px-2 text-left">কল</th>
-          </tr>
-        </thead>
-        <tbody>
-          {leadList.map((lead, idx) => {
-            const requeueRemaining = getRequeueRemaining(lead);
-            const isRequeued = requeueRemaining !== null && requeueRemaining > 0;
-            return (
-              <tr key={lead.id} className={cn("border-b border-border", isRequeued && "opacity-50 pointer-events-none bg-muted/30")}>
-                <td className="py-2 px-2">{idx + 1}</td>
-                <td className="py-2 px-2">{lead.name || "—"}</td>
-                <td className="py-2 px-2">{lead.phone || "—"}</td>
-                <td className="py-2 px-2 max-w-[150px] truncate">{lead.address || "—"}</td>
-                <td className="py-2 px-2 min-w-[180px]">
-                  {isRequeued ? (
-                    <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
-                  ) : (
-                    <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
-                      setLeadStatuses(p => ({ ...p, [lead.id]: v }));
-                      const ns = v.toLowerCase().replace(/\s+/g, "_");
-                      // Modal statuses - open form
-                      if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
-                        setCurrentOrderLead(lead);
-                        setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-                        setOrderGiftName(""); setOrderAdvancePayment(0);
-                        setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
-                        setOrderUpsell(""); setOrderSuccessRatio("");
-                        const detected = detectLocation(lead.address || "");
-                        setOrderDistrict(detected.district); setOrderThana(detected.thana);
-                        setLocationAutoDetected(!!(detected.district));
-                        setDistrictSearch(""); setThanaSearch("");
-                        setTimeout(() => setShowOrderModal(true), 100);
-                      } else if (ns === "pre_order") {
-                        setCurrentPreOrderLead(lead);
-                        setPreOrderDate(undefined); setPreOrderNote("");
-                        setTimeout(() => setShowPreOrderModal(true), 100);
-                      } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
-                        setCurrentPreOrderConfirmLead(lead);
-                        const detected = detectLocation(lead.address || "");
-                        setPocDistrict(detected.district); setPocThana(detected.thana);
-                        setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
-                        setTimeout(() => setShowPreOrderConfirmModal(true), 100);
-                      } else {
-                        // Non-modal status: auto-save immediately
-                        setTimeout(() => {
-                          handleLeadSave({ ...lead, __overrideStatus: v } as any);
-                        }, 50);
-                      }
-                    }}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
+  const renderLeadTable = (leadList: LeadRow[]) => {
+    // Fixed columns: #, name, phone, address
+    // Then raw data keys from special_note
+    // Then HR dynamic columns (dropdowns + notes) + call count
+    const dropdownCols = dynamicColumns.filter(c => c.type === "dropdown");
+    const noteCols = dynamicColumns.filter(c => c.type === "note");
+    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length + 1; // +1 for call
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="py-2 px-2 text-left">#</th>
+              <th className="py-2 px-2 text-left">কাস্টমার</th>
+              <th className="py-2 px-2 text-left">ফোন</th>
+              <th className="py-2 px-2 text-left">ঠিকানা</th>
+              {rawDataKeys.map(key => (
+                <th key={key} className="py-2 px-2 text-left whitespace-nowrap">{key}</th>
+              ))}
+              {dropdownCols.map(col => (
+                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+              ))}
+              {noteCols.map(col => (
+                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+              ))}
+              <th className="py-2 px-2 text-left">কল</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leadList.map((lead, idx) => {
+              const requeueRemaining = getRequeueRemaining(lead);
+              const isRequeued = requeueRemaining !== null && requeueRemaining > 0;
+              const rawData = parseSpecialNote(lead.special_note);
+              return (
+                <tr key={lead.id} className={cn("border-b border-border", isRequeued && "opacity-50 pointer-events-none bg-muted/30")}>
+                  <td className="py-2 px-2">{idx + 1}</td>
+                  <td className="py-2 px-2 whitespace-nowrap">{lead.name || "—"}</td>
+                  <td className="py-2 px-2 whitespace-nowrap">{lead.phone || "—"}</td>
+                  <td className="py-2 px-2 max-w-[150px] truncate">{lead.address || "—"}</td>
+                  {rawDataKeys.map(key => (
+                    <td key={key} className="py-2 px-2 max-w-[150px] truncate">{rawData[key] || "—"}</td>
+                  ))}
+                  {dropdownCols.map(col => (
+                    <td key={col.id} className="py-2 px-2 min-w-[180px]">
+                      {isRequeued ? (
+                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
+                      ) : (
+                        <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
+                          setLeadStatuses(p => ({ ...p, [lead.id]: v }));
+                          const ns = v.toLowerCase().replace(/\s+/g, "_");
+                          if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
+                            setCurrentOrderLead(lead);
+                            setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+                            setOrderGiftName(""); setOrderAdvancePayment(0);
+                            setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+                            setOrderUpsell(""); setOrderSuccessRatio("");
+                            const detected = detectLocation(lead.address || "");
+                            setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                            setLocationAutoDetected(!!(detected.district));
+                            setDistrictSearch(""); setThanaSearch("");
+                            setTimeout(() => setShowOrderModal(true), 100);
+                          } else if (ns === "pre_order") {
+                            setCurrentPreOrderLead(lead);
+                            setPreOrderDate(undefined); setPreOrderNote("");
+                            setTimeout(() => setShowPreOrderModal(true), 100);
+                          } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
+                            setCurrentPreOrderConfirmLead(lead);
+                            const detected = detectLocation(lead.address || "");
+                            setPocDistrict(detected.district); setPocThana(detected.thana);
+                            setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                            setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                          } else {
+                            setTimeout(() => {
+                              handleLeadSave({ ...lead, __overrideStatus: v } as any);
+                            }, 50);
+                          }
+                        }}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={col.name_bn || "স্ট্যাটাস"} /></SelectTrigger>
+                          <SelectContent>
+                            {col.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label_bn || o.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </td>
+                  ))}
+                  {/* Fallback: if no dynamic dropdown columns, show fallback statuses */}
+                  {dropdownCols.length === 0 && (
+                    <td className="py-2 px-2 min-w-[180px]">
+                      {isRequeued ? (
+                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
+                      ) : (
+                        <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
+                          setLeadStatuses(p => ({ ...p, [lead.id]: v }));
+                          const ns = v.toLowerCase().replace(/\s+/g, "_");
+                          if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
+                            setCurrentOrderLead(lead);
+                            setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+                            setOrderGiftName(""); setOrderAdvancePayment(0);
+                            setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+                            setOrderUpsell(""); setOrderSuccessRatio("");
+                            const detected = detectLocation(lead.address || "");
+                            setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                            setLocationAutoDetected(!!(detected.district));
+                            setDistrictSearch(""); setThanaSearch("");
+                            setTimeout(() => setShowOrderModal(true), 100);
+                          } else if (ns === "pre_order") {
+                            setCurrentPreOrderLead(lead);
+                            setPreOrderDate(undefined); setPreOrderNote("");
+                            setTimeout(() => setShowPreOrderModal(true), 100);
+                          } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
+                            setCurrentPreOrderConfirmLead(lead);
+                            const detected = detectLocation(lead.address || "");
+                            setPocDistrict(detected.district); setPocThana(detected.thana);
+                            setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                            setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                          } else {
+                            setTimeout(() => {
+                              handleLeadSave({ ...lead, __overrideStatus: v } as any);
+                            }, 50);
+                          }
+                        }}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
+                          <SelectContent>
+                            {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label_bn || s.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </td>
+                  )}
+                  {noteCols.map(col => (
+                    <td key={col.id} className="py-2 px-2 min-w-[120px]">
+                      <Input
+                        className="h-8 text-xs"
+                        placeholder={col.name_bn || col.name}
+                        value={leadNotes[`${lead.id}_${col.id}`] || ""}
+                        onChange={e => setLeadNotes(p => ({ ...p, [`${lead.id}_${col.id}`]: e.target.value }))}
+                      />
+                    </td>
+                  ))}
+                  <td className="py-2 px-2 min-w-[70px]">
+                    <Select value={String(leadCalledTimes[lead.id] || lead.called_time || 1)} onValueChange={v => setLeadCalledTimes(p => ({ ...p, [lead.id]: Number(v) }))}>
+                      <SelectTrigger className="h-8 text-xs w-14"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label_bn || s.label}</SelectItem>)}
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
                       </SelectContent>
                     </Select>
-                  )}
-                </td>
-                <td className="py-2 px-2 min-w-[70px]">
-                  <Select value={String(leadCalledTimes[lead.id] || lead.called_time || 1)} onValueChange={v => setLeadCalledTimes(p => ({ ...p, [lead.id]: Number(v) }))}>
-                    <SelectTrigger className="h-8 text-xs w-14"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </td>
-              </tr>
-            );
-          })}
-          {leadList.length === 0 && (
-            <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">কোনো লিড নেই — টিম লিডার অ্যাসাইন করলে এখানে দেখাবে</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+                  </td>
+                </tr>
+              );
+            })}
+            {leadList.length === 0 && (
+              <tr><td colSpan={totalCols} className="py-8 text-center text-muted-foreground">কোনো লিড নেই — টিম লিডার অ্যাসাইন করলে এখানে দেখাবে</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 pb-20">
