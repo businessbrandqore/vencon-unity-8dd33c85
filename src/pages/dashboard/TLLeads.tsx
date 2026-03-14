@@ -492,24 +492,7 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
-  const sections = useMemo(() => {
-    const s: { key: string; label: string; icon: string; count: number }[] = [];
-    if (isProcessing) {
-      s.push({ key: "processing", label: isBn ? "প্রসেসিং ডাটা" : "Processing", icon: "⚙️", count: processingLeads.length });
-    } else {
-      s.push({ key: "assign", label: isBn ? "ফ্রেশ লিড" : "Fresh Leads", icon: "🎯", count: freshLeads.length });
-    }
-    s.push({ key: "agent_activity", label: isBn ? "এজেন্ট কার্যক্রম" : "Agent Activity", icon: "👥", count: agentLeads.length });
-    s.push({ key: "cso", label: "CSO Pending", icon: "📋", count: csoOrders.length });
-    s.push({ key: "calldone", label: "Call Done", icon: "✅", count: callDoneOrders.length });
-    if (!isProcessing) {
-      s.push({ key: "preorders", label: isBn ? "প্রি-অর্ডার" : "Pre-Orders", icon: "📅", count: preOrders.length });
-      s.push({ key: "silver", label: isBn ? "সিলভার" : "Silver", icon: "🥈", count: silverData.length });
-      s.push({ key: "golden", label: isBn ? "গোল্ডেন" : "Golden", icon: "🥇", count: goldenData.length });
-      s.push({ key: "deletesheet", label: isBn ? "ডিলিট শীট" : "Delete Sheet", icon: "🗑️", count: deleteSheetLeads.length });
-    }
-    return s;
-  }, [isProcessing, isBn, freshLeads, agentLeads, csoOrders, callDoneOrders, preOrders, silverData, goldenData, deleteSheetLeads, processingLeads]);
+  const isProcessing = campaignMode === "processing";
 
   if (!user) return null;
 
