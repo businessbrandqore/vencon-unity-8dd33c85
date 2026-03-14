@@ -1143,7 +1143,9 @@ const TLLeads = () => {
 
       case "golden":
         return (
-          <Card>
+          <div className="space-y-4">
+            {renderDataSendSection()}
+            <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">
                 🥇 {isBn ? "গোল্ডেন ডাটা" : "Golden Data"}
