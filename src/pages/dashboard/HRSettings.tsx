@@ -377,6 +377,131 @@ const HRSettings = () => {
           </div>
         </TabsContent>
 
+        {/* Products & Gifts Tab */}
+        <TabsContent value="products" className="mt-4">
+          <div className="border border-border p-4 space-y-6">
+            {/* Product Names */}
+            <div className="space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {isBn ? "প্রোডাক্ট তালিকা" : "Product List"}
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">
+                {isBn ? "অর্ডার ফর্মে যে প্রোডাক্টের নাম ড্রপডাউনে দেখাবে।" : "Product names shown in order form dropdown."}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  placeholder={isBn ? "প্রোডাক্টের নাম লিখুন" : "Enter product name"}
+                  className="bg-background border-border text-foreground flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newProductName.trim()) {
+                      const updated = [...productNames, newProductName.trim()];
+                      setProductNames(updated);
+                      setNewProductName("");
+                      saveGroup("product_names", updated);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!newProductName.trim()) return;
+                    const updated = [...productNames, newProductName.trim()];
+                    setProductNames(updated);
+                    setNewProductName("");
+                    saveGroup("product_names", updated);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {productNames.map((name, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body bg-secondary text-foreground border border-border rounded">
+                    {name}
+                    <button
+                      onClick={() => {
+                        const updated = productNames.filter((_, idx) => idx !== i);
+                        setProductNames(updated);
+                        saveGroup("product_names", updated);
+                      }}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {productNames.length === 0 && (
+                  <span className="text-xs text-muted-foreground font-body">{isBn ? "কোনো প্রোডাক্ট যোগ করা হয়নি" : "No products added"}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-border" />
+
+            {/* Gift Names */}
+            <div className="space-y-3">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {isBn ? "গিফট তালিকা" : "Gift List"}
+              </h3>
+              <p className="text-xs text-muted-foreground font-body">
+                {isBn ? "অর্ডার ফর্মে যে গিফটের নাম ড্রপডাউনে দেখাবে।" : "Gift names shown in order form dropdown."}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newGiftName}
+                  onChange={(e) => setNewGiftName(e.target.value)}
+                  placeholder={isBn ? "গিফটের নাম লিখুন" : "Enter gift name"}
+                  className="bg-background border-border text-foreground flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newGiftName.trim()) {
+                      const updated = [...giftNames, newGiftName.trim()];
+                      setGiftNames(updated);
+                      setNewGiftName("");
+                      saveGroup("gift_names", updated);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!newGiftName.trim()) return;
+                    const updated = [...giftNames, newGiftName.trim()];
+                    setGiftNames(updated);
+                    setNewGiftName("");
+                    saveGroup("gift_names", updated);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {isBn ? "যোগ" : "Add"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {giftNames.map((name, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body bg-secondary text-foreground border border-border rounded">
+                    {name}
+                    <button
+                      onClick={() => {
+                        const updated = giftNames.filter((_, idx) => idx !== i);
+                        setGiftNames(updated);
+                        saveGroup("gift_names", updated);
+                      }}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {giftNames.length === 0 && (
+                  <span className="text-xs text-muted-foreground font-body">{isBn ? "কোনো গিফট যোগ করা হয়নি" : "No gifts added"}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* Invoice Tab */}
         <TabsContent value="invoice" className="mt-4">
           <div className="border border-border p-4 space-y-4">
