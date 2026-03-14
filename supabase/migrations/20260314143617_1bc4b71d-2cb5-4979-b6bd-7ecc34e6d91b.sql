@@ -1,0 +1,1 @@
+UPDATE users SET role = 'telesales_executive' WHERE role = 'Telesales Executive'
