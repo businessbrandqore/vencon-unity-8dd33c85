@@ -219,6 +219,22 @@ export default function EmployeeAttendance() {
     if (data) setLeaves(data as LeaveRequest[]);
   };
 
+  const handleAppealSubmit = async () => {
+    if (!user || !appealAttendanceId || !appealExplanation.trim()) { toast.error("কারণ লিখুন"); return; }
+    setAppealSubmitting(true);
+    const { error } = await supabase.from("attendance_appeals").insert({
+      user_id: user.id, attendance_id: appealAttendanceId, explanation: appealExplanation.trim(),
+    });
+    if (error) { toast.error("আপিল পাঠাতে সমস্যা"); console.error(error); }
+    else {
+      toast.success("আপিল পাঠানো হয়েছে — HR রিভিউ করবে");
+      setExistingAppeals(p => ({ ...p, [appealAttendanceId]: "pending" }));
+    }
+    setAppealSubmitting(false);
+    setShowAppealModal(false);
+    setAppealExplanation("");
+  };
+
   const statusColor = (s: string | null) => {
     if (s === "approved") return "text-green-400 border-green-600/50";
     if (s === "rejected") return "text-destructive border-destructive/50";
