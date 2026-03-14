@@ -530,6 +530,7 @@ const TLLeads = () => {
   const renderContent = () => {
     switch (activeSection) {
       case "assign": {
+        return (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
