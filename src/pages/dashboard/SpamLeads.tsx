@@ -136,8 +136,8 @@ export default function SpamLeads() {
         title="লিড ডিলিট করুন"
         description="এই লিডটি চিরতরে মুছে ফেলা হবে। আপনি কি নিশ্চিত?"
         onConfirm={handleDelete}
-        confirmText="ডিলিট"
-        variant="destructive"
+        confirmLabel="ডিলিট"
+        destructive
       />
     </div>
   );
