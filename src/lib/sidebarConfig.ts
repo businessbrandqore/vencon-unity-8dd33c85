@@ -31,6 +31,7 @@ import {
   CalendarCheck,
   Trash2,
   Award,
+  ShieldBan,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
