@@ -395,34 +395,25 @@ const TLLeads = () => {
     if (!user || !selectedCampaign) { setDistAgents([]); return; }
     const load = async () => {
       if (activeSection === "cso") {
-        // CSO section: show CSO role users
+        // CSO section: show all active employees (not just CSO role)
         const { data } = await supabase
           .from("users")
           .select("id, name")
-          .eq("role", "cso")
-          .eq("is_active", true);
+          .eq("is_active", true)
+          .in("panel", ["employee", "tl", "hr"])
+          .order("name");
         if (!data) { setDistAgents([]); return; }
         setDistAgents(data.map((u: any) => ({ id: u.id, name: u.name })));
       } else {
-        // Agent sections: filter by role type
+        // Agent sections: show all active employees
         const { data } = await supabase
-          .from("campaign_agent_roles")
-          .select("agent_id, is_bronze, is_silver, users!campaign_agent_roles_agent_id_fkey(id, name)")
-          .eq("campaign_id", selectedCampaign)
-          .eq("tl_id", getEffectiveTlId());
+          .from("users")
+          .select("id, name")
+          .eq("is_active", true)
+          .in("panel", ["employee", "tl", "hr"])
+          .order("name");
         if (!data) { setDistAgents([]); return; }
-        let filtered;
-        if (activeSection === "silver") {
-          filtered = data.filter((r: any) => r.is_silver);
-        } else if (activeSection === "golden") {
-          // Golden agents: show silver agents (they handle golden tier)
-          filtered = data.filter((r: any) => r.is_silver);
-        } else {
-          filtered = data.filter((r: any) => distDataMode === "lead" ? r.is_bronze : r.is_silver);
-        }
-        const unique = new Map<string, string>();
-        filtered.forEach((r: any) => { if (r.users) unique.set(r.users.id, r.users.name); });
-        setDistAgents(Array.from(unique, ([id, name]) => ({ id, name })));
+        setDistAgents(data.map((u: any) => ({ id: u.id, name: u.name })));
       }
       setDistAgent("");
     };
