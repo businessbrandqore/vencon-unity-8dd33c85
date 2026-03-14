@@ -223,24 +223,8 @@ function OptionRow({
   onToggle: () => void;
 }) {
   const colorInfo = getColorInfo(option.color || "gray");
-  const panelLocations = option.next_panel ? (PANEL_DESTINATIONS[option.next_panel] || []) : [];
-
-  // Fetch users for the selected panel
-  const { data: panelUsers = [] } = useQuery({
-    queryKey: ["panel-users", option.next_panel],
-    queryFn: async () => {
-      if (!option.next_panel) return [];
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, name, role")
-        .eq("panel", option.next_panel)
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!option.next_panel,
-  });
+  const derivedPanel = option.next_role ? (ROLE_PANEL_MAP[option.next_role] || null) : null;
+  const panelLocations = derivedPanel ? (PANEL_DESTINATIONS[derivedPanel] || []) : [];
 
   return (
     <div className={`border rounded-md overflow-hidden ${colorInfo.bg}`}>
