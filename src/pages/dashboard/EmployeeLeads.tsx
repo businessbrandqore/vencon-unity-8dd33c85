@@ -377,9 +377,18 @@ export default function EmployeeLeads() {
       upsell: orderUpsell || null, success_ratio: orderSuccessRatio || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
-    // Use the actual selected status value from dynamic config
-    const selectedStatus = leadStatuses[currentOrderLead.id] || "order_confirm";
-    await supabase.from("leads").update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
+    const selectedStatusRaw = leadStatuses[currentOrderLead.id] || "order_confirm";
+    const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
+    const { error: leadUpdateError } = await supabase
+      .from("leads")
+      .update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() })
+      .eq("id", currentOrderLead.id);
+    if (leadUpdateError) {
+      toast.error("অর্ডার হয়েছে, কিন্তু লিড আপডেট হয়নি");
+      console.error(leadUpdateError);
+      loadLeads();
+      return;
+    }
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
     loadLeads();
