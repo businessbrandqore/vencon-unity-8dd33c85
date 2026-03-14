@@ -314,64 +314,81 @@ function OptionRow({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5">
-            <div>
-              <Label className="text-[10px] text-muted-foreground">রঙ</Label>
-              <Select value={option.color || "gray"} onValueChange={(v) => onUpdate({ color: v })}>
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_COLORS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border`} />
-                        {c.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">রঙ</Label>
+            <Select value={option.color || "gray"} onValueChange={(v) => onUpdate({ color: v })}>
+              <SelectTrigger className="h-7 mt-0.5 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_COLORS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border`} />
+                      {c.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Routes (multiple destinations) */}
+          <div className="border rounded-md p-2 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] text-muted-foreground font-medium">কোথায় কোথায় যাবে</Label>
+              <Button variant="outline" size="sm" className="h-5 text-[10px] px-2" onClick={addRoute}>
+                <Plus className="h-2.5 w-2.5 mr-0.5" /> রুট যোগ
+              </Button>
             </div>
-            <div>
-              <Label className="text-[10px] text-muted-foreground">কোন পদে যাবে</Label>
-              <Select
-                value={option.next_role || NO_OPTION}
-                onValueChange={(v) => {
-                  const role = v === NO_OPTION ? "" : v;
-                  const panel = role ? (ROLE_PANEL_MAP[role] || "") : "";
-                  onUpdate({ next_role: role, next_panel: panel as AppPanel | "", next_location: "" });
-                }}
-              >
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
-                  {ALL_ROLES_WITH_PANEL.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-[10px] text-muted-foreground">কোথায় যাবে</Label>
-              <Select
-                value={option.next_location || NO_OPTION}
-                onValueChange={(v) => onUpdate({ next_location: v === NO_OPTION ? "" : v })}
-                disabled={!derivedPanel}
-              >
-                <SelectTrigger className="h-7 mt-0.5 text-xs">
-                  <SelectValue placeholder={derivedPanel ? "—" : "আগে পদ দিন"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
-                  {panelLocations.map((loc) => (
-                    <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {routes.length === 0 && (
+              <p className="text-[10px] text-muted-foreground text-center py-1">কোনো রুট নেই — এখানেই থাকবে</p>
+            )}
+            {routes.map((route, rIdx) => {
+              const routePanel = route.next_role ? (ROLE_PANEL_MAP[route.next_role] || null) : null;
+              const routeLocations = routePanel ? (PANEL_DESTINATIONS[routePanel] || []) : [];
+              return (
+                <div key={route.id} className="flex items-center gap-1.5 bg-muted/30 rounded px-1.5 py-1">
+                  <span className="text-[10px] text-muted-foreground w-4 flex-shrink-0">{rIdx + 1}.</span>
+                  <Select
+                    value={route.next_role || NO_OPTION}
+                    onValueChange={(v) => {
+                      const role = v === NO_OPTION ? "" : v;
+                      const panel = role ? (ROLE_PANEL_MAP[role] || "") : "";
+                      updateRoute(rIdx, { next_role: role, next_panel: panel as AppPanel | "", next_location: "" });
+                    }}
+                  >
+                    <SelectTrigger className="h-6 text-[10px] flex-1">
+                      <SelectValue placeholder="পদ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
+                      {ALL_ROLES_WITH_PANEL.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={route.next_location || NO_OPTION}
+                    onValueChange={(v) => updateRoute(rIdx, { next_location: v === NO_OPTION ? "" : v })}
+                    disabled={!routePanel}
+                  >
+                    <SelectTrigger className="h-6 text-[10px] flex-1">
+                      <SelectValue placeholder={routePanel ? "লোকেশন" : "—"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_OPTION}>— নেই —</SelectItem>
+                      {routeLocations.map((loc) => (
+                        <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 text-destructive" onClick={() => removeRoute(rIdx)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-4">
