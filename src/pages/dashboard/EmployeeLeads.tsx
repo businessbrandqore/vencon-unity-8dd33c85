@@ -202,8 +202,10 @@ export default function EmployeeLeads() {
 
   const loadLeads = useCallback(async () => {
     if (!user) return;
+    // Load all leads assigned to this agent, excluding terminal statuses
+    const terminalStatuses = ["negative","not_interested","cancelled","wrong_number","duplicate","already_ordered"];
     const { data } = await supabase.from("leads").select("*").eq("assigned_to", user.id)
-      .not("status", "in", '("order_confirm","pre_order_confirm","negative","not_interested","cancelled","wrong_number","duplicate","already_ordered")');
+      .not("status", "in", `(${terminalStatuses.join(",")})`);
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
@@ -277,10 +279,11 @@ export default function EmployeeLeads() {
     const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
     const note = leadNotes[lead.id] ?? lead.special_note;
 
-    // Normalize to snake_case for comparison
-    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
+    // The value comes directly from dynamic config (e.g. "_order_confirm", "pre_order_confirm")
+    // Use includes/endsWith to match modal triggers regardless of prefix
+    const normalizedStatus = newStatus.toLowerCase().replace(/\s+/g, "_");
 
-    if (statusKey === "order_confirm") {
+    if (normalizedStatus.endsWith("order_confirm") && !normalizedStatus.includes("pre_order")) {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
       setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
@@ -288,21 +291,22 @@ export default function EmployeeLeads() {
       setOrderUpsell(""); setOrderSuccessRatio("");
       setShowOrderModal(true); return;
     }
-    if (statusKey === "pre_order") {
+    if (normalizedStatus === "pre_order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
       setShowPreOrderModal(true); return;
     }
-    if (statusKey === "pre_order_confirm") {
+    if (normalizedStatus.includes("pre_order_confirm") || normalizedStatus.includes("pre_order") && normalizedStatus.includes("confirm")) {
       setCurrentPreOrderConfirmLead(lead);
       setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
       setShowPreOrderConfirmModal(true); return;
     }
 
+    // Use the value directly as status (it comes from dynamic config)
     const updatePayload: Record<string, unknown> = {
-      status: statusKey, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
+      status: newStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
-    if (REQUEUE_STATUS_VALUES.includes(statusKey)) {
+    if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
@@ -326,7 +330,9 @@ export default function EmployeeLeads() {
       upsell: orderUpsell || null, success_ratio: orderSuccessRatio || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
-    await supabase.from("leads").update({ status: "order_confirm", called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
+    // Use the actual selected status value from dynamic config
+    const selectedStatus = leadStatuses[currentOrderLead.id] || "order_confirm";
+    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
     loadLeads();
@@ -338,7 +344,8 @@ export default function EmployeeLeads() {
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
-    await supabase.from("leads").update({ status: "pre_order", called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
+    const selectedStatus = leadStatuses[currentPreOrderLead.id] || "pre_order";
+    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
     loadLeads();
@@ -357,7 +364,8 @@ export default function EmployeeLeads() {
       status: "pending_cso", district: pocDistrict || null, thana: pocThana || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
-    await supabase.from("leads").update({ status: "pre_order_confirm", called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
+    const selectedStatus = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
+    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
     setShowPreOrderConfirmModal(false);
     toast.success("Pre-Order Confirm হয়েছে ✓");
     loadLeads();
