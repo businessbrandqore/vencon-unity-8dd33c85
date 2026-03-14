@@ -120,6 +120,7 @@ const PanelLogin = () => {
 
         {/* Left branding */}
         <div className="hidden lg:flex flex-1 flex-col justify-end p-12">
+          <img src={venconLogo} alt="Vencon" className="w-24 h-24 rounded-2xl shadow-lg mb-6" />
           <h1 className="font-heading text-6xl font-bold tracking-[0.25em] text-foreground">
             VENCON
           </h1>
