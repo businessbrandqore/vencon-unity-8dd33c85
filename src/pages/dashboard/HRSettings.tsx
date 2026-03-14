@@ -93,11 +93,15 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
-      if (row.key === "attendance_deduction_config") {
+      if (row.key === "gift_names") {
+        if (row.value && Array.isArray(row.value)) setGiftNames(row.value as string[]);
+      } else if (row.key === "product_names") {
+        if (row.value && Array.isArray(row.value)) setProductNames(row.value as string[]);
+      } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
           setDeduction(val);
