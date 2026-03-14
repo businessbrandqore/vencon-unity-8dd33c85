@@ -443,7 +443,7 @@ export default function EmployeeLeads() {
     // Then HR dynamic columns (dropdowns + notes) + call count
     const dropdownCols = dynamicColumns.filter(c => c.type === "dropdown");
     const noteCols = dynamicColumns.filter(c => c.type === "note");
-    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length + 1; // +1 for call
+    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length;
 
     return (
       <div className="overflow-x-auto">
