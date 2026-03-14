@@ -1018,48 +1018,7 @@ const TLLeads = () => {
 
       {/* Main Layout: Left Panel + Right Content */}
       <div className="flex gap-4">
-        {/* Left Panel */}
-        <div className="w-56 shrink-0">
-          <Card className="sticky top-4">
-            <CardContent className="p-2 space-y-1">
-              <p className="text-xs font-medium text-muted-foreground px-2 pt-1 pb-1.5">{isBn ? "ক্যাটাগরি" : "Categories"}</p>
-              {sections.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setActiveSection(s.key)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                    activeSection === s.key
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span>{s.icon}</span>
-                    <span className="truncate">{s.label}</span>
-                  </span>
-                  <Badge variant={activeSection === s.key ? "secondary" : "outline"} className="ml-1 text-xs px-1.5 min-w-[24px] justify-center">
-                    {s.count}
-                  </Badge>
-                </button>
-              ))}
-
-              {/* HR Config indicator */}
-              {dynamicColumns.length > 0 && (
-                <div className="mt-3 px-2 pt-2 border-t border-border">
-                  <p className="text-[10px] text-muted-foreground mb-1">{isBn ? "HR কনফিগ" : "HR Config"}</p>
-                  {dynamicColumns.map(col => (
-                    <div key={col.id} className="text-[10px] text-muted-foreground truncate">
-                      {col.type === "dropdown" ? "📋" : "📝"} {isBn ? col.name_bn || col.name : col.name}
-                      {col.type === "dropdown" && ` (${col.options.length})`}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Content */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
           {renderContent()}
         </div>
