@@ -360,7 +360,7 @@ export default function EmployeeLeads() {
     const { error } = await supabase.from("orders").insert({
       customer_name: currentOrderLead.name, phone: currentOrderLead.phone, address: orderAddress,
       product: orderProduct, quantity: orderQty, price: orderPrice, agent_id: user.id,
-      tl_id: currentOrderLead.tl_id, lead_id: currentOrderLead.id, status: "pending_cso",
+      tl_id: currentOrderLead.tl_id, lead_id: currentOrderLead.id, status: "pending_tl",
       district: orderDistrict || null, thana: orderThana || null, gift_name: orderGiftName || null,
       advance_payment: orderAdvancePayment || 0, payment_method: orderPaymentMethod || null,
       card_name: orderCardName || null, order_media: orderMedia || null,
@@ -369,7 +369,7 @@ export default function EmployeeLeads() {
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
     // Use the actual selected status value from dynamic config
     const selectedStatus = leadStatuses[currentOrderLead.id] || "order_confirm";
-    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
+    await supabase.from("leads").update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() }).eq("id", currentOrderLead.id);
     setShowOrderModal(false);
     toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
     loadLeads();
