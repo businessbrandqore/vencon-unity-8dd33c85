@@ -1010,11 +1010,6 @@ const TLLeads = () => {
                       <TableCell>{(o as any).district || "—"}</TableCell>
                       <TableCell>{(o as any).agent?.name || "—"}</TableCell>
                       <TableCell className="text-xs">{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline" onClick={() => handleSendToCso(o.id)}>
-                          <Send className="h-3 w-3 mr-1" />CSO
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
