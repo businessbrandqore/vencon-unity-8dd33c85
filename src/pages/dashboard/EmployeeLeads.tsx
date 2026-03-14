@@ -443,7 +443,7 @@ export default function EmployeeLeads() {
     // Then HR dynamic columns (dropdowns + notes) + call count
     const dropdownCols = dynamicColumns.filter(c => c.type === "dropdown");
     const noteCols = dynamicColumns.filter(c => c.type === "note");
-    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length + 1; // +1 for call
+    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length;
 
     return (
       <div className="overflow-x-auto">
@@ -463,7 +463,6 @@ export default function EmployeeLeads() {
               {noteCols.map(col => (
                 <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
               ))}
-              <th className="py-2 px-2 text-left">কল</th>
             </tr>
           </thead>
           <tbody>
@@ -577,16 +576,6 @@ export default function EmployeeLeads() {
                       />
                     </td>
                   ))}
-                  <td className="py-2 px-2 min-w-[70px]">
-                    <Select value={String(leadCalledTimes[lead.id] || lead.called_time || 1)} onValueChange={v => setLeadCalledTimes(p => ({ ...p, [lead.id]: Number(v) }))}>
-                      <SelectTrigger className="h-8 text-xs w-14"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
                 </tr>
               );
             })}
@@ -664,7 +653,12 @@ export default function EmployeeLeads() {
       </div>
 
       {/* Order Confirm Modal */}
-      <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
+      <Dialog open={showOrderModal} onOpenChange={(open) => {
+        if (!open && currentOrderLead) {
+          setLeadStatuses(p => { const n = { ...p }; delete n[currentOrderLead.id]; return n; });
+        }
+        setShowOrderModal(open);
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Order Confirmation</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -813,7 +807,12 @@ export default function EmployeeLeads() {
       </Dialog>
 
       {/* Pre-Order Modal (simple) */}
-      <Dialog open={showPreOrderModal} onOpenChange={setShowPreOrderModal}>
+      <Dialog open={showPreOrderModal} onOpenChange={(open) => {
+        if (!open && currentPreOrderLead) {
+          setLeadStatuses(p => { const n = { ...p }; delete n[currentPreOrderLead.id]; return n; });
+        }
+        setShowPreOrderModal(open);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>প্রি-অর্ডার</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -842,7 +841,12 @@ export default function EmployeeLeads() {
       </Dialog>
 
       {/* Pre-Order Confirm Modal */}
-      <Dialog open={showPreOrderConfirmModal} onOpenChange={setShowPreOrderConfirmModal}>
+      <Dialog open={showPreOrderConfirmModal} onOpenChange={(open) => {
+        if (!open && currentPreOrderConfirmLead) {
+          setLeadStatuses(p => { const n = { ...p }; delete n[currentPreOrderConfirmLead.id]; return n; });
+        }
+        setShowPreOrderConfirmModal(open);
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Pre-Order Confirm</DialogTitle></DialogHeader>
           <div className="space-y-3">
