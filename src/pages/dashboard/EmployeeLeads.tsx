@@ -248,6 +248,22 @@ export default function EmployeeLeads() {
       const { data } = await supabase.from("inventory").select("id, product_name, unit_price");
       if (data) setProducts(data as InventoryItem[]);
     })();
+    // Load product names from app_settings and merge with inventory
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "product_names").maybeSingle();
+      if (data?.value && Array.isArray(data.value)) {
+        const settingsProducts = (data.value as string[]).map((name, i) => ({
+          id: `setting-${i}`,
+          product_name: name,
+          unit_price: 0,
+        }));
+        setProducts(prev => {
+          const existingNames = new Set(prev.map(p => p.product_name));
+          const newOnes = settingsProducts.filter(p => !existingNames.has(p.product_name));
+          return [...prev, ...newOnes];
+        });
+      }
+    })();
     // Load gift names from app_settings
     (async () => {
       const { data } = await supabase.from("app_settings").select("value").eq("key", "gift_names").maybeSingle();
