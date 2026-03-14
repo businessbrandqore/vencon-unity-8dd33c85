@@ -278,18 +278,25 @@ const TLLeads = () => {
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
 
-    // Fresh leads: show leads for this campaign that are unassigned
-    // Include leads with tl_id matching OR tl_id null (newly imported, not yet assigned to a TL)
-    let freshQ = supabase.from("leads").select("*")
+    // Fresh leads: show campaign fresh data from HR + TL-owned fresh leads for assignment
+    let freshQ = supabase
+      .from("leads")
+      .select("*")
       .eq("campaign_id", selectedCampaign)
-      .is("assigned_to", null).eq("status", "fresh")
-      .or("agent_type.is.null,agent_type.eq.bronze")
+      .is("assigned_to", null)
+      .eq("status", "fresh")
       .order("created_at", { ascending: false })
       .limit(500);
-    if (!isBDO) {
+
+    if (isBDO) {
+      freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
+    } else {
       const tlId = getEffectiveTlId();
-      freshQ = freshQ.or(`tl_id.eq.${tlId},tl_id.is.null`);
+      freshQ = freshQ.or(
+        `and(agent_type.is.null,tl_id.eq.${tlId}),and(agent_type.eq.bronze,tl_id.eq.${tlId}),and(agent_type.is.null,tl_id.is.null),and(agent_type.eq.bronze,tl_id.is.null)`,
+      );
     }
+
     const { data: fresh } = await freshQ;
     setFreshLeads(fresh || []);
 
@@ -337,7 +344,7 @@ const TLLeads = () => {
       .is("assigned_to", null)
       .order("created_at", { ascending: false });
     if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) silverQ = silverQ.eq("tl_id", null); // Silver leads have tl_id cleared by progress_lead_after_cs, but campaign_id remains
+    if (!isBDO) silverQ = silverQ.is("tl_id", null); // Silver leads have tl_id cleared by progress_lead_after_cs, but campaign_id remains
     const { data: silverLeadsData } = await silverQ;
     setSilverData((silverLeadsData || []).map(l => ({
       id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
@@ -412,7 +419,8 @@ const TLLeads = () => {
       { leadId, agentId, type: "silver" },
       isBn ? "সিলভার এজেন্ট অ্যাসাইন" : "Silver agent assignment",
       async () => {
-        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", tl_id: user?.id }).eq("id", leadId);
+        const tlId = getEffectiveTlId();
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", tl_id: tlId }).eq("id", leadId);
         toast.success(isBn ? "Silver agent assign হয়েছে" : "Silver agent assigned");
       }
     );
