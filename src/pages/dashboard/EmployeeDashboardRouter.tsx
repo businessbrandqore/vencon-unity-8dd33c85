@@ -19,40 +19,43 @@ export default function EmployeeDashboardRouter() {
 
   if (!user) return null;
 
-  // TS/Silver/Golden dashboard handles its own attendance flow internally
-  if (user.role === "telesales_executive" || user.role === "silver_agent" || user.role === "golden_agent") {
+  // Roles whose dashboards handle attendance flow internally (EmployeeTSDashboard)
+  // Must NOT be wrapped in AttendanceGate to avoid double checkout button
+  const TS_LIKE_ROLES = ["telesales_executive", "silver_agent", "golden_agent"];
+
+  if (TS_LIKE_ROLES.includes(user.role)) {
     return <EmployeeTSDashboard />;
   }
 
+  // Gate-exempt roles (warehouse/maintenance/office) skip AttendanceGate
+  if (GATE_EXEMPT_ROLES.includes(user.role)) {
+    switch (user.role) {
+      case "warehouse_assistant": return <WarehouseAssistantDashboard />;
+      case "warehouse_supervisor": return <WarehouseSupervisorDashboard />;
+      case "inventory_manager": return <InventoryManagerDashboard />;
+      case "maintenance_officer": return <MaintenanceOfficerDashboard />;
+      case "office_assistant": return <OfficeAssistantDashboard />;
+      default: return <EmployeeTSDashboard />;
+    }
+  }
+
+  // Roles that need AttendanceGate wrapper
   const getDashboard = () => {
     switch (user.role) {
-      case "warehouse_assistant":
-        return <WarehouseAssistantDashboard />;
-      case "warehouse_supervisor":
-        return <WarehouseSupervisorDashboard />;
-      case "inventory_manager":
-        return <InventoryManagerDashboard />;
-      case "cs_executive":
-        return <CSExecutiveDashboard />;
-      case "cso":
-        return <CSODashboard />;
-      case "delivery_coordinator":
-        return <DeliveryCoordinatorDashboard />;
-      case "group_leader":
-        return <GroupLeaderDashboard />;
-      case "maintenance_officer":
-        return <MaintenanceOfficerDashboard />;
-      case "office_assistant":
-        return <OfficeAssistantDashboard />;
-      default:
-        return <EmployeeTSDashboard />;
+      case "cs_executive": return <CSExecutiveDashboard />;
+      case "cso": return <CSODashboard />;
+      case "delivery_coordinator": return <DeliveryCoordinatorDashboard />;
+      case "group_leader": return <GroupLeaderDashboard />;
+      default: return <EmployeeTSDashboard />;
     }
   };
 
-  // Warehouse roles skip AttendanceGate
-  if (GATE_EXEMPT_ROLES.includes(user.role)) {
-    return getDashboard();
+  // For roles that go through AttendanceGate, EmployeeTSDashboard default case
+  // already handles attendance internally — so skip the gate for default too
+  const dashboard = getDashboard();
+  if (dashboard.type === EmployeeTSDashboard) {
+    return dashboard; // skip gate — it handles attendance internally
   }
 
-  return <AttendanceGate>{getDashboard()}</AttendanceGate>;
+  return <AttendanceGate>{dashboard}</AttendanceGate>;
 }
