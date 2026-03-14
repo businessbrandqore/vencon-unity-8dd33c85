@@ -653,7 +653,12 @@ export default function EmployeeLeads() {
       </div>
 
       {/* Order Confirm Modal */}
-      <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
+      <Dialog open={showOrderModal} onOpenChange={(open) => {
+        if (!open && currentOrderLead) {
+          setLeadStatuses(p => { const n = { ...p }; delete n[currentOrderLead.id]; return n; });
+        }
+        setShowOrderModal(open);
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Order Confirmation</DialogTitle></DialogHeader>
           <div className="space-y-3">
