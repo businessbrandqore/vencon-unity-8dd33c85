@@ -999,13 +999,7 @@ const TLLeads = () => {
         </Select>
       </div>
 
-      {/* Main Layout: Left Panel + Right Content */}
-      <div className="flex gap-4">
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {renderContent()}
-        </div>
-      </div>
+      {renderContent()}
 
       {/* Delete Confirm Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
