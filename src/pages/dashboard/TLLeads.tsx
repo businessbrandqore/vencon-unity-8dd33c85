@@ -492,8 +492,6 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
-  const isProcessing = campaignMode === "processing";
-
   if (!user) return null;
 
   // Render content based on active section
