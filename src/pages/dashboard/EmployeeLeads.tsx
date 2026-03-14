@@ -313,9 +313,11 @@ export default function EmployeeLeads() {
       setPreOrderDate(undefined); setPreOrderNote("");
       setShowPreOrderModal(true); return;
     }
-    if (normalizedStatus.includes("pre_order_confirm") || normalizedStatus.includes("pre_order") && normalizedStatus.includes("confirm")) {
+    if (normalizedStatus.includes("pre_order_confirm") || (normalizedStatus.includes("pre_order") && normalizedStatus.includes("confirm"))) {
       setCurrentPreOrderConfirmLead(lead);
-      setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+      const detected = detectLocation(lead.address || "");
+      setPocDistrict(detected.district); setPocThana(detected.thana);
+      setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
       setShowPreOrderConfirmModal(true); return;
     }
 
