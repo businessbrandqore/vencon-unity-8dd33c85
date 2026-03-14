@@ -226,6 +226,26 @@ const TLLeads = () => {
     if (c) setCampaignMode(c.data_mode);
   }, [selectedCampaign, campaigns]);
 
+  // Load dynamic columns from campaign_data_operations
+  useEffect(() => {
+    if (!selectedCampaign) return;
+    (async () => {
+      const { data: configData } = await supabase.from("campaign_data_operations")
+        .select("fields_config").eq("campaign_id", selectedCampaign).maybeSingle();
+      if (!configData?.fields_config) { setDynamicColumns([]); return; }
+      const configs = configData.fields_config as unknown as RoleColumnConfig[];
+      // Collect all columns from all roles for TL overview
+      const allCols: StatusColumn[] = [];
+      const seenIds = new Set<string>();
+      configs.forEach(rc => {
+        rc.columns?.forEach(col => {
+          if (!seenIds.has(col.id)) { seenIds.add(col.id); allCols.push(col); }
+        });
+      });
+      setDynamicColumns(allCols);
+    })();
+  }, [selectedCampaign]);
+
   const loadAgents = useCallback(async () => {
     if (!user || !selectedCampaign) return;
     let rolesQ = supabase
