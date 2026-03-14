@@ -364,7 +364,8 @@ export default function EmployeeLeads() {
       status: "pending_cso", district: pocDistrict || null, thana: pocThana || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
-    await supabase.from("leads").update({ status: "pre_order_confirm", called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
+    const selectedStatus = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
+    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
     setShowPreOrderConfirmModal(false);
     toast.success("Pre-Order Confirm হয়েছে ✓");
     loadLeads();
