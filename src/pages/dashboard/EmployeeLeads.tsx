@@ -15,8 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Target, AlertTriangle, Database, Send } from "lucide-react";
+import { CalendarIcon, Target, AlertTriangle, Database, Send, Search } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 
 interface LeadRow {
   id: string;
@@ -107,6 +108,7 @@ export default function EmployeeLeads() {
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
 
   const [products, setProducts] = useState<InventoryItem[]>([]);
+  const [giftNames, setGiftNames] = useState<string[]>([]);
   const [currentOrderLead, setCurrentOrderLead] = useState<LeadRow | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderAddress, setOrderAddress] = useState("");
@@ -122,7 +124,10 @@ export default function EmployeeLeads() {
   const [orderCardName, setOrderCardName] = useState("");
   const [orderMedia, setOrderMedia] = useState("");
   const [orderUpsell, setOrderUpsell] = useState("");
-  const [orderSuccessRatio, setOrderSuccessRatio] = useState<number | "">("")
+  const [orderSuccessRatio, setOrderSuccessRatio] = useState<number | "">(""); 
+  const [districtSearch, setDistrictSearch] = useState("");
+  const [thanaSearch, setThanaSearch] = useState("");
+  const [locationAutoDetected, setLocationAutoDetected] = useState(false);
 
   const [currentPreOrderLead, setCurrentPreOrderLead] = useState<LeadRow | null>(null);
   const [showPreOrderModal, setShowPreOrderModal] = useState(false);
@@ -243,6 +248,13 @@ export default function EmployeeLeads() {
       const { data } = await supabase.from("inventory").select("id, product_name, unit_price");
       if (data) setProducts(data as InventoryItem[]);
     })();
+    // Load gift names from app_settings
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "gift_names").maybeSingle();
+      if (data?.value && Array.isArray(data.value)) {
+        setGiftNames(data.value as string[]);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -273,8 +285,8 @@ export default function EmployeeLeads() {
   const salesRatio = metrics.orders > 0 ? ((metrics.orders / Math.max(leads.length + metrics.orders, 1)) * 100).toFixed(1) : "0";
   const receiveRatio = metrics.orders > 0 ? ((metrics.delivered / metrics.orders) * 100).toFixed(1) : "0";
 
-  const handleLeadSave = async (lead: LeadRow) => {
-    const newStatus = leadStatuses[lead.id];
+  const handleLeadSave = async (lead: LeadRow & { __overrideStatus?: string }) => {
+    const newStatus = (lead as any).__overrideStatus || leadStatuses[lead.id];
     if (!newStatus || !user) return;
     const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
     const note = leadNotes[lead.id] ?? lead.special_note;
@@ -286,9 +298,14 @@ export default function EmployeeLeads() {
     if (normalizedStatus.endsWith("order_confirm") && !normalizedStatus.includes("pre_order")) {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-      setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
+      setOrderGiftName(""); setOrderAdvancePayment(0);
       setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
       setOrderUpsell(""); setOrderSuccessRatio("");
+      // Auto-detect district/thana from lead address
+      const detected = detectLocation(lead.address || "");
+      setOrderDistrict(detected.district); setOrderThana(detected.thana);
+      setLocationAutoDetected(!!(detected.district));
+      setDistrictSearch(""); setThanaSearch("");
       setShowOrderModal(true); return;
     }
     if (normalizedStatus === "pre_order") {
@@ -296,9 +313,11 @@ export default function EmployeeLeads() {
       setPreOrderDate(undefined); setPreOrderNote("");
       setShowPreOrderModal(true); return;
     }
-    if (normalizedStatus.includes("pre_order_confirm") || normalizedStatus.includes("pre_order") && normalizedStatus.includes("confirm")) {
+    if (normalizedStatus.includes("pre_order_confirm") || (normalizedStatus.includes("pre_order") && normalizedStatus.includes("confirm"))) {
       setCurrentPreOrderConfirmLead(lead);
-      setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+      const detected = detectLocation(lead.address || "");
+      setPocDistrict(detected.district); setPocThana(detected.thana);
+      setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
       setShowPreOrderConfirmModal(true); return;
     }
 
@@ -401,7 +420,6 @@ export default function EmployeeLeads() {
             <th className="py-2 px-2 text-left">ঠিকানা</th>
             <th className="py-2 px-2 text-left">স্ট্যাটাস</th>
             <th className="py-2 px-2 text-left">কল</th>
-            <th className="py-2 px-2"></th>
           </tr>
         </thead>
         <tbody>
@@ -420,14 +438,18 @@ export default function EmployeeLeads() {
                   ) : (
                     <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
                       setLeadStatuses(p => ({ ...p, [lead.id]: v }));
-                      // Auto-open form for order/pre-order statuses
                       const ns = v.toLowerCase().replace(/\s+/g, "_");
+                      // Modal statuses - open form
                       if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
                         setCurrentOrderLead(lead);
                         setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-                        setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
+                        setOrderGiftName(""); setOrderAdvancePayment(0);
                         setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
                         setOrderUpsell(""); setOrderSuccessRatio("");
+                        const detected = detectLocation(lead.address || "");
+                        setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                        setLocationAutoDetected(!!(detected.district));
+                        setDistrictSearch(""); setThanaSearch("");
                         setTimeout(() => setShowOrderModal(true), 100);
                       } else if (ns === "pre_order") {
                         setCurrentPreOrderLead(lead);
@@ -435,8 +457,15 @@ export default function EmployeeLeads() {
                         setTimeout(() => setShowPreOrderModal(true), 100);
                       } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
                         setCurrentPreOrderConfirmLead(lead);
-                        setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                        const detected = detectLocation(lead.address || "");
+                        setPocDistrict(detected.district); setPocThana(detected.thana);
+                        setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
                         setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                      } else {
+                        // Non-modal status: auto-save immediately
+                        setTimeout(() => {
+                          handleLeadSave({ ...lead, __overrideStatus: v } as any);
+                        }, 50);
                       }
                     }}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
@@ -456,16 +485,11 @@ export default function EmployeeLeads() {
                     </SelectContent>
                   </Select>
                 </td>
-                <td className="py-2 px-2">
-                  <Button size="sm" variant="outline" onClick={() => handleLeadSave(lead)} disabled={!leadStatuses[lead.id]} className="h-7 text-xs border-[hsl(var(--panel-employee))] text-[hsl(var(--panel-employee))]">
-                    সেভ
-                  </Button>
-                </td>
               </tr>
             );
           })}
           {leadList.length === 0 && (
-            <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">কোনো লিড নেই — টিম লিডার অ্যাসাইন করলে এখানে দেখাবে</td></tr>
+            <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">কোনো লিড নেই — টিম লিডার অ্যাসাইন করলে এখানে দেখাবে</td></tr>
           )}
         </tbody>
       </table>
@@ -551,11 +575,33 @@ export default function EmployeeLeads() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>District</Label>
-                <Input value={orderDistrict} onChange={e => setOrderDistrict(e.target.value)} className="mt-1" placeholder="জেলা লিখুন" />
+                <Select value={orderDistrict} onValueChange={v => { setOrderDistrict(v); setOrderThana(""); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    <div className="px-2 pb-2">
+                      <Input placeholder="খুঁজুন..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    {BD_DISTRICTS
+                      .filter(d => !districtSearch || d.name.toLowerCase().includes(districtSearch.toLowerCase()) || d.name_bn.includes(districtSearch))
+                      .map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {locationAutoDetected && orderDistrict && <p className="text-xs text-emerald-500 mt-0.5">✓ অটো-ডিটেক্ট হয়েছে</p>}
+                {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
               </div>
               <div>
                 <Label>Thana</Label>
-                <Input value={orderThana} onChange={e => setOrderThana(e.target.value)} className="mt-1" placeholder="থানা লিখুন" />
+                <Select value={orderThana} onValueChange={setOrderThana} disabled={!orderDistrict}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    <div className="px-2 pb-2">
+                      <Input placeholder="খুঁজুন..." value={thanaSearch} onChange={e => setThanaSearch(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    {(BD_DISTRICTS.find(d => d.name === orderDistrict)?.thanas || [])
+                      .filter(t => !thanaSearch || t.name.toLowerCase().includes(thanaSearch.toLowerCase()) || t.name_bn.includes(thanaSearch))
+                      .map(t => <SelectItem key={t.name} value={t.name}>{t.name_bn} ({t.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -570,13 +616,19 @@ export default function EmployeeLeads() {
               <div>
                 <Label>Product Name *</Label>
                 <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="প্রোডাক্ট নির্বাচন" /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Gift Name</Label>
-                <Input value={orderGiftName} onChange={e => setOrderGiftName(e.target.value)} className="mt-1" placeholder="Select gift" />
+                <Select value={orderGiftName} onValueChange={setOrderGiftName}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="গিফট নির্বাচন" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">কোনো গিফট নেই</SelectItem>
+                    {giftNames.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -615,6 +667,7 @@ export default function EmployeeLeads() {
                 <Select value={orderMedia} onValueChange={setOrderMedia}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select media" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="lead">Lead</SelectItem>
                     <SelectItem value="phone_call">Phone Call</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="facebook">Facebook</SelectItem>
@@ -697,11 +750,22 @@ export default function EmployeeLeads() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>District</Label>
-                <Input value={pocDistrict} onChange={e => setPocDistrict(e.target.value)} className="mt-1" placeholder="জেলা লিখুন" />
+                <Select value={pocDistrict} onValueChange={v => { setPocDistrict(v); setPocThana(""); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {BD_DISTRICTS.map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {!pocDistrict && currentPreOrderConfirmLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
               </div>
               <div>
                 <Label>Thana</Label>
-                <Input value={pocThana} onChange={e => setPocThana(e.target.value)} className="mt-1" placeholder="থানা লিখুন" />
+                <Select value={pocThana} onValueChange={setPocThana} disabled={!pocDistrict}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {(BD_DISTRICTS.find(d => d.name === pocDistrict)?.thanas || []).map(t => <SelectItem key={t.name} value={t.name}>{t.name_bn} ({t.name})</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
