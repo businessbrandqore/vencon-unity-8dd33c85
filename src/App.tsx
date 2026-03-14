@@ -54,6 +54,7 @@ import ProfileSettings from "./pages/dashboard/ProfileSettings";
 import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
 import WarehouseDispatchPage from "./pages/dashboard/WarehouseDispatchPage";
 import DataTracker from "./pages/dashboard/DataTracker";
+import SpamLeads from "./pages/dashboard/SpamLeads";
 import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
@@ -132,6 +133,7 @@ const App = () => (
               <Route path="/tl/analytics" element={<TLAnalytics />} />
               <Route path="/tl/agent-assignment" element={<BDOAgentAssignment />} />
               <Route path="/tl/atl-approvals" element={<TLATLApprovals />} />
+              <Route path="/tl/spam" element={<SpamLeads />} />
               <Route path="/tl/chat" element={<ChatPage />} />
               <Route path="/tl/notifications" element={<NotificationsPage />} />
               <Route path="/tl/settings" element={<ProfileSettings />} />
@@ -146,6 +148,7 @@ const App = () => (
               <Route path="/employee/steadfast" element={<SteadfastMonitoring />} />
               <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
               <Route path="/employee/cs-leads" element={<CSExecutiveDashboard />} />
+              <Route path="/employee/spam" element={<SpamLeads />} />
               <Route path="/employee/attendance" element={<EmployeeAttendance />} />
               <Route path="/employee/salary" element={<EmployeeSalary />} />
               <Route path="/employee/chat" element={<ChatPage />} />

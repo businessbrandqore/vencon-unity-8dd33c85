@@ -52,6 +52,7 @@ interface ColumnOption {
   next_panel?: AppPanel | "";
   next_location?: string;
   note?: string;
+  is_spam?: boolean;
 }
 type ColumnType = "dropdown" | "note";
 interface StatusColumn {
@@ -184,10 +185,10 @@ export default function EmployeeLeads() {
     if (dynamicColumns.length > 0) {
       const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
       if (dropdownCol?.options?.length) {
-        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location }));
+        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location, is_spam: o.is_spam }));
       }
     }
-    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined }));
+    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined, is_spam: undefined }));
   }, [dynamicColumns]);
 
   // Note columns from dynamic config
@@ -214,6 +215,7 @@ export default function EmployeeLeads() {
     // Load all leads assigned to this agent, excluding terminal/routed statuses
     const excludeStatuses = ["negative","not_interested","cancelled","wrong_number","duplicate","already_ordered","order_confirm","pre_order_confirm","pre_order","pending_tl","pending_cso"];
     const { data } = await supabase.from("leads").select("*").eq("assigned_to", user.id)
+      .eq("is_spam", false)
       .not("status", "in", `(${excludeStatuses.join(",")})`);
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
@@ -345,6 +347,9 @@ export default function EmployeeLeads() {
       status: normalizedStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
     const selectedOpt = availableStatuses.find(s => s.value === newStatus);
+    if (selectedOpt?.is_spam) {
+      updatePayload.is_spam = true;
+    }
     if (selectedOpt?.next_panel && selectedOpt.next_panel !== "employee") {
       updatePayload.assigned_to = null;
     }

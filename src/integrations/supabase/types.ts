@@ -997,6 +997,7 @@ export type Database = {
           created_at: string | null
           id: string
           import_source: string | null
+          is_spam: boolean
           name: string | null
           phone: string | null
           requeue_at: string | null
@@ -1018,6 +1019,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           import_source?: string | null
+          is_spam?: boolean
           name?: string | null
           phone?: string | null
           requeue_at?: string | null
@@ -1039,6 +1041,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           import_source?: string | null
+          is_spam?: boolean
           name?: string | null
           phone?: string | null
           requeue_at?: string | null

@@ -31,6 +31,7 @@ interface ColumnOption {
   next_location?: string;
   next_role?: string;
   note?: string;
+  is_spam?: boolean;
 }
 
 type ColumnType = "dropdown" | "note";
@@ -341,15 +342,29 @@ function OptionRow({
             </div>
           </div>
 
-          <div>
-            <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
-            <Textarea
-              value={option.note || ""}
-              onChange={(e) => onUpdate({ note: e.target.value })}
-              placeholder="নির্দেশনা..."
-              className="mt-0.5 text-xs min-h-[40px]"
-              rows={1}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Label className="text-[10px] text-muted-foreground">নোট (ঐচ্ছিক)</Label>
+              <Textarea
+                value={option.note || ""}
+                onChange={(e) => onUpdate({ note: e.target.value })}
+                placeholder="নির্দেশনা..."
+                className="mt-0.5 text-xs min-h-[40px]"
+                rows={1}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 pt-3">
+              <input
+                type="checkbox"
+                id={`spam-${option.id}`}
+                checked={!!option.is_spam}
+                onChange={(e) => onUpdate({ is_spam: e.target.checked })}
+                className="h-3.5 w-3.5 rounded border-muted-foreground"
+              />
+              <Label htmlFor={`spam-${option.id}`} className="text-[10px] text-destructive font-medium cursor-pointer whitespace-nowrap">
+                স্প্যাম
+              </Label>
+            </div>
           </div>
         </div>
       )}
