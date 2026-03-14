@@ -310,7 +310,7 @@ const TLLeads = () => {
     setFreshLeads(fresh || []);
 
     let csoQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
-      .eq("status", "pending_cso").order("created_at", { ascending: false });
+      .eq("status", "pending_tl").order("created_at", { ascending: false });
     if (!isBDO) csoQ = csoQ.eq("tl_id", getEffectiveTlId());
     const { data: cso } = await csoQ;
     setCsoOrders(cso || []);
