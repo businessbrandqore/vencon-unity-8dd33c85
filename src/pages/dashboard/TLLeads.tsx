@@ -799,8 +799,6 @@ const TLLeads = () => {
                         <TableHead key={key} className="text-xs">{key}</TableHead>
                       ))}
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
-                      <TableHead>Assign To</TableHead>
-                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
