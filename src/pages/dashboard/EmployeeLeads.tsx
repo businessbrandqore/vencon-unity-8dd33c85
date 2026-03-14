@@ -248,6 +248,13 @@ export default function EmployeeLeads() {
       const { data } = await supabase.from("inventory").select("id, product_name, unit_price");
       if (data) setProducts(data as InventoryItem[]);
     })();
+    // Load gift names from app_settings
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "gift_names").maybeSingle();
+      if (data?.value && Array.isArray(data.value)) {
+        setGiftNames(data.value as string[]);
+      }
+    })();
   }, []);
 
   useEffect(() => {
