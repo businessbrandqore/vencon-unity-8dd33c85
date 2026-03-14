@@ -8,6 +8,7 @@ const corsHeaders = {
 
 // Auto-detect field names dynamically
 function findField(obj: Record<string, unknown>, patterns: string[]): string {
+  // Exact match first
   for (const pattern of patterns) {
     const p = pattern.toLowerCase();
     for (const [key, val] of Object.entries(obj)) {
@@ -34,15 +35,28 @@ function extractName(obj: Record<string, unknown>): string {
   if (directName) return directName;
 
   // Try combining first + last name
-  const firstName = findField(obj, ["first_name", "billing_first_name", "fname"]);
-  const lastName = findField(obj, ["last_name", "billing_last_name", "lname"]);
+  const firstName = findField(obj, ["first_name", "billing_first_name", "fname", "billing.first_name"]);
+  const lastName = findField(obj, ["last_name", "billing_last_name", "lname", "billing.last_name"]);
   if (firstName || lastName) return [firstName, lastName].filter(Boolean).join(" ");
 
   return "";
 }
 
 function extractPhone(obj: Record<string, unknown>): string {
-  return findField(obj, ["phone", "billing_phone", "tel", "mobile", "phone_number", "contact"]);
+  const raw = findField(obj, [
+    "phone", "billing_phone", "billing.phone", "tel", "mobile",
+    "phone_number", "contact", "billing_phone_number",
+    "wcf_phone", "wcf_billing_phone"
+  ]);
+  // Clean phone: remove non-digit chars except leading +
+  if (raw) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    // Validate: must be at least 7 digits
+    if (cleaned.replace(/\D/g, "").length >= 7) {
+      return cleaned;
+    }
+  }
+  return raw; // Return raw even if short, let downstream handle
 }
 
 function extractAddress(obj: Record<string, unknown>): string {
@@ -50,13 +64,14 @@ function extractAddress(obj: Record<string, unknown>): string {
   const direct = findField(obj, ["address", "full_address"]);
   if (direct) return direct;
 
-  // Build from parts
+  // Build from parts - include more WooCommerce/CartFlows patterns
   const parts = [
-    findField(obj, ["address_1", "billing_address_1", "address1", "street"]),
-    findField(obj, ["address_2", "billing_address_2", "address2"]),
-    findField(obj, ["city", "billing_city", "town"]),
-    findField(obj, ["state", "billing_state", "district"]),
-    findField(obj, ["postcode", "billing_postcode", "zip"]),
+    findField(obj, ["address_1", "billing_address_1", "billing.address_1", "address1", "street"]),
+    findField(obj, ["address_2", "billing_address_2", "billing.address_2", "address2"]),
+    findField(obj, ["city", "billing_city", "billing.city", "town"]),
+    findField(obj, ["state", "billing_state", "billing.state", "district"]),
+    findField(obj, ["postcode", "billing_postcode", "billing.postcode", "zip"]),
+    findField(obj, ["country", "billing_country", "billing.country"]),
   ].filter(Boolean);
 
   return parts.join(", ") || "";
@@ -75,6 +90,29 @@ function flattenObject(obj: unknown, prefix = ""): Record<string, unknown> {
     }
   }
   return result;
+}
+
+// Extract from WooCommerce-style nested billing object
+function extractFromBilling(rawLead: Record<string, unknown>): { name: string; phone: string; address: string } {
+  const billing = rawLead.billing as Record<string, unknown> | undefined;
+  if (!billing || typeof billing !== "object") return { name: "", phone: "", address: "" };
+
+  const firstName = String(billing.first_name || "").trim();
+  const lastName = String(billing.last_name || "").trim();
+  const name = [firstName, lastName].filter(Boolean).join(" ");
+  const phone = String(billing.phone || "").trim();
+  const address = [
+    billing.address_1, billing.address_2, billing.city, billing.state, billing.postcode, billing.country
+  ].filter(Boolean).map(v => String(v).trim()).join(", ");
+
+  return { name, phone, address };
+}
+
+// Extract from extra_fields nested object (our PHP snippet format)
+function extractFromExtraFields(rawLead: Record<string, unknown>): Record<string, unknown> {
+  const extra = rawLead.extra_fields as Record<string, unknown> | undefined;
+  if (!extra || typeof extra !== "object") return {};
+  return extra;
 }
 
 Deno.serve(async (req) => {
@@ -204,24 +242,59 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const leads = Array.isArray(body) ? body : [body];
 
+    console.log(`[import-leads] Received ${leads.length} lead(s) for campaign ${campaignId}, mode: ${dataMode}`);
+    if (leads.length > 0) {
+      console.log("[import-leads] Sample payload keys:", Object.keys(leads[0]));
+      console.log("[import-leads] Sample payload:", JSON.stringify(leads[0]).slice(0, 500));
+    }
+
     let imported = 0;
     let skippedDuplicates = 0;
 
     for (const rawLead of leads) {
-      // Flatten nested objects for easier field detection
-      const lead = { ...flattenObject(rawLead) };
-      // Also keep top-level arrays/objects accessible
-      for (const [k, v] of Object.entries(rawLead)) {
-        if (!(k in lead)) lead[k] = v;
+      // Strategy 1: Check for our PHP snippet format (customer_name, phone, address, extra_fields)
+      let name = "";
+      let phone = "";
+      let address = "";
+
+      if (rawLead.customer_name || rawLead.phone) {
+        // Our PHP snippet sends data in this format
+        name = String(rawLead.customer_name || "").trim();
+        phone = String(rawLead.phone || "").trim();
+        address = String(rawLead.address || "").trim();
+        console.log("[import-leads] Using direct fields: name=", name, "phone=", phone);
       }
 
-      // Dynamically extract core fields
-      const name = extractName(lead);
-      const phone = extractPhone(lead);
-      const address = extractAddress(lead);
+      // Strategy 2: Check for WooCommerce REST API / nested billing object
+      if (!phone && rawLead.billing && typeof rawLead.billing === "object") {
+        const billingData = extractFromBilling(rawLead as Record<string, unknown>);
+        name = name || billingData.name;
+        phone = phone || billingData.phone;
+        address = address || billingData.address;
+        console.log("[import-leads] Using billing object: name=", name, "phone=", phone);
+      }
+
+      // Strategy 3: Flatten and fuzzy match
+      if (!phone && !name) {
+        const lead = { ...flattenObject(rawLead) };
+        for (const [k, v] of Object.entries(rawLead)) {
+          if (!(k in lead)) lead[k] = v;
+        }
+        // Also merge extra_fields into flat object for searching
+        const extraFields = extractFromExtraFields(rawLead as Record<string, unknown>);
+        for (const [k, v] of Object.entries(extraFields)) {
+          if (!(k in lead)) lead[k] = v;
+        }
+
+        name = extractName(lead);
+        phone = extractPhone(lead);
+        address = address || extractAddress(lead);
+        console.log("[import-leads] Using fuzzy match: name=", name, "phone=", phone);
+      }
 
       // Must have at least phone or name
       if (!phone && !name) {
+        console.log("[import-leads] Skipped - no name or phone found in:", JSON.stringify(rawLead).slice(0, 200));
         skippedDuplicates++;
         continue;
       }
@@ -251,7 +324,7 @@ Deno.serve(async (req) => {
         phone: phoneClean || null,
         address: address || null,
         campaign_id: campaignId,
-        source: dataMode === "processing" ? "processing" : "wordpress_webhook",
+        source: dataMode === "processing" ? "processing" : sourceName,
         import_source: dataMode === "processing" ? "processing" : "webhook",
         special_note: specialNote,
         status: "fresh",
