@@ -15,8 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Target, AlertTriangle, Database, Send } from "lucide-react";
+import { CalendarIcon, Target, AlertTriangle, Database, Send, Search } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 
 interface LeadRow {
   id: string;
