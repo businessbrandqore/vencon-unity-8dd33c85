@@ -789,7 +789,8 @@ const TLLeads = () => {
                 </Table>
               </div>
             </CardContent>
-          </Card>
+           </Card>
+          </div>
         );
       }
 
