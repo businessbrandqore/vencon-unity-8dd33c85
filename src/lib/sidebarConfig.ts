@@ -74,10 +74,10 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
   tl: [
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/tl/dashboard" },
     { titleKey: "leads", icon: Target, path: "/tl/leads" },
-    { titleKey: "my_leads", icon: Phone, path: "/tl/my-leads", roles: ["Assistant Team Leader"] },
-    { titleKey: "my_orders", icon: Package, path: "/tl/my-orders", roles: ["Assistant Team Leader"] },
     { titleKey: "data_tracker", icon: BarChart3, path: "/tl/data-tracker", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "data_requests", icon: Database, path: "/tl/data-requests", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
+    { titleKey: "my_leads", icon: Phone, path: "/tl/my-leads", roles: ["Assistant Team Leader"] },
+    { titleKey: "my_orders", icon: Package, path: "/tl/my-orders", roles: ["Assistant Team Leader"] },
     { titleKey: "my_team", icon: UserCheck, path: "/tl/my-team", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "analytics", icon: BarChart3, path: "/tl/analytics", roles: ["team_leader", "Assistant Team Leader", "Business Development And Marketing Manager"] },
     { titleKey: "tl_approvals_bdo", icon: ShieldCheck, path: "/tl/agent-assignment", roles: ["Business Development And Marketing Manager"] },
