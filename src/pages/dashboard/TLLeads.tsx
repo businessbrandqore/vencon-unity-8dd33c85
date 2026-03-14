@@ -342,6 +342,20 @@ const TLLeads = () => {
     setGoldenData((goldenLeadsData || []).map(l => ({
       id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
     })));
+
+    // Agent leads: all assigned leads for this campaign (for TL monitoring)
+    let agentQ = supabase.from("leads").select("*, users!leads_assigned_to_fkey(name)")
+      .eq("campaign_id", selectedCampaign)
+      .not("assigned_to", "is", null)
+      .not("status", "in", "(fresh)")
+      .order("updated_at", { ascending: false })
+      .limit(200);
+    if (!isBDO) agentQ = agentQ.eq("tl_id", getEffectiveTlId());
+    const { data: agentLeadsData } = await agentQ;
+    setAgentLeads((agentLeadsData || []).map((l: any) => ({
+      ...l,
+      agent_name: l.users?.name || "—",
+    })));
   }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
