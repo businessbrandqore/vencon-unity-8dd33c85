@@ -992,12 +992,12 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "জেলা" : "District"}</TableHead>
                     <TableHead>Agent</TableHead>
                     <TableHead>{isBn ? "সময়" : "Time"}</TableHead>
-                    <TableHead>{isBn ? "অ্যাকশন" : "Action"}</TableHead>
+                    
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {csoOrders.length === 0 ? (
-                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">{isBn ? "কোনো pending order নেই" : "No pending orders"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">{isBn ? "কোনো pending order নেই" : "No pending orders"}</TableCell></TableRow>
                   ) : csoOrders.map((o) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-mono text-xs">{o.id.slice(0, 8)}</TableCell>
@@ -1010,11 +1010,6 @@ const TLLeads = () => {
                       <TableCell>{(o as any).district || "—"}</TableCell>
                       <TableCell>{(o as any).agent?.name || "—"}</TableCell>
                       <TableCell className="text-xs">{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline" onClick={() => handleSendToCso(o.id)}>
-                          <Send className="h-3 w-3 mr-1" />CSO
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
