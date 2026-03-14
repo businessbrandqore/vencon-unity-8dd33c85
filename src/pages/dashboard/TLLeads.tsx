@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,13 +11,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 interface Agent { id: string; name: string; }
-interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; }
+interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; }
 interface Order { id: string; customer_name: string | null; phone: string | null; product: string | null; agent_id: string | null; created_at: string | null; status: string | null; cs_note: string | null; cs_rating: string | null; agent?: { name: string }; }
 interface PreOrder { id: string; lead_id: string | null; scheduled_date: string | null; agent_id: string | null; note: string | null; status: string | null; lead?: { name: string | null; phone: string | null; }; agent?: { name: string; }; }
 interface SilverGoldenLead { id: string; name: string | null; phone: string | null; address: string | null; source: string | null; created_at: string | null; product?: string | null; price?: number | null; }
+
+// Dynamic config types (from campaign_data_operations)
+type AppPanel = "sa" | "hr" | "tl" | "employee";
+interface ColumnOption {
+  id: string; value: string; label: string; label_bn: string; color?: string;
+  next_panel?: AppPanel | ""; next_location?: string;
+}
+type ColumnType = "dropdown" | "note";
+interface StatusColumn { id: string; name: string; name_bn: string; type: ColumnType; options: ColumnOption[]; }
+interface RoleColumnConfig { role: string; columns: StatusColumn[]; }
 
 const TLLeads = () => {
   const { user } = useAuth();
@@ -38,7 +49,9 @@ const TLLeads = () => {
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
   const [deleteSheetLeads, setDeleteSheetLeads] = useState<Lead[]>([]);
   const [processingLeads, setProcessingLeads] = useState<Lead[]>([]);
-
+  const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
+  const [agentFilter, setAgentFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
@@ -60,6 +73,32 @@ const TLLeads = () => {
   const isGL = normalizedRole === "group_leader";
   
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
+  const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
+
+  // Load dynamic columns for the selected campaign
+  const statusLabelMap = useMemo(() => {
+    const map: Record<string, { label: string; label_bn: string; color?: string }> = {};
+    dynamicColumns.forEach(col => {
+      if (col.type === "dropdown") {
+        col.options.forEach(opt => {
+          map[opt.value] = { label: opt.label, label_bn: opt.label_bn, color: opt.color };
+        });
+      }
+    });
+    return map;
+  }, [dynamicColumns]);
+
+  const getStatusLabel = useCallback((status: string | null) => {
+    if (!status) return "—";
+    const mapped = statusLabelMap[status];
+    if (mapped) return isBn ? (mapped.label_bn || mapped.label) : mapped.label;
+    return status.replace(/_/g, " ");
+  }, [statusLabelMap, isBn]);
+
+  const getStatusColor = useCallback((status: string | null) => {
+    if (!status) return "";
+    return statusLabelMap[status]?.color || "";
+  }, [statusLabelMap]);
 
   // Get the effective TL id for data queries (ATL/GL uses their assigned TL's id)
   const getEffectiveTlId = useCallback((campaignId?: string) => {
@@ -187,6 +226,26 @@ const TLLeads = () => {
     if (c) setCampaignMode(c.data_mode);
   }, [selectedCampaign, campaigns]);
 
+  // Load dynamic columns from campaign_data_operations
+  useEffect(() => {
+    if (!selectedCampaign) return;
+    (async () => {
+      const { data: configData } = await supabase.from("campaign_data_operations")
+        .select("fields_config").eq("campaign_id", selectedCampaign).maybeSingle();
+      if (!configData?.fields_config) { setDynamicColumns([]); return; }
+      const configs = configData.fields_config as unknown as RoleColumnConfig[];
+      // Collect all columns from all roles for TL overview
+      const allCols: StatusColumn[] = [];
+      const seenIds = new Set<string>();
+      configs.forEach(rc => {
+        rc.columns?.forEach(col => {
+          if (!seenIds.has(col.id)) { seenIds.add(col.id); allCols.push(col); }
+        });
+      });
+      setDynamicColumns(allCols);
+    })();
+  }, [selectedCampaign]);
+
   const loadAgents = useCallback(async () => {
     if (!user || !selectedCampaign) return;
     let rolesQ = supabase
@@ -282,6 +341,20 @@ const TLLeads = () => {
     const { data: goldenLeadsData } = await goldenQ;
     setGoldenData((goldenLeadsData || []).map(l => ({
       id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
+    })));
+
+    // Agent leads: all assigned leads for this campaign (for TL monitoring)
+    let agentQ = supabase.from("leads").select("*, users!leads_assigned_to_fkey(name)")
+      .eq("campaign_id", selectedCampaign)
+      .not("assigned_to", "is", null)
+      .not("status", "in", "(fresh)")
+      .order("updated_at", { ascending: false })
+      .limit(200);
+    if (!isBDO) agentQ = agentQ.eq("tl_id", getEffectiveTlId());
+    const { data: agentLeadsData } = await agentQ;
+    setAgentLeads((agentLeadsData || []).map((l: any) => ({
+      ...l,
+      agent_name: l.users?.name || "—",
     })));
   }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
@@ -487,6 +560,9 @@ const TLLeads = () => {
               {isBn ? "Lead Assign" : "Assign Leads"} ({freshLeads.length})
             </TabsTrigger>
           )}
+          <TabsTrigger value="agent_activity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            {isBn ? "এজেন্ট কার্যক্রম" : "Agent Activity"} ({agentLeads.length})
+          </TabsTrigger>
           <TabsTrigger value="cso" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             CSO Pending ({csoOrders.length})
           </TabsTrigger>
@@ -501,10 +577,10 @@ const TLLeads = () => {
               <TabsTrigger value="deletesheet" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 Delete Sheet ({deleteSheetLeads.length})
               </TabsTrigger>
-              <TabsTrigger value="silver" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
+              <TabsTrigger value="silver" className="data-[state=active]:bg-muted data-[state=active]:text-foreground">
                 🥈 Silver ({silverData.length})
               </TabsTrigger>
-              <TabsTrigger value="golden" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+              <TabsTrigger value="golden" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                 🥇 Golden ({goldenData.length})
               </TabsTrigger>
             </>
@@ -628,6 +704,95 @@ const TLLeads = () => {
             </Card>
           </TabsContent>
         )}
+
+        {/* Agent Activity Tab */}
+        <TabsContent value="agent_activity">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-heading">
+                {isBn ? "এজেন্ট কার্যক্রম — HR কনফিগ সহ" : "Agent Activity — With HR Config"}
+              </CardTitle>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Select value={agentFilter} onValueChange={setAgentFilter}>
+                  <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "এজেন্ট ফিল্টার" : "Filter Agent"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isBn ? "সব এজেন্ট" : "All Agents"}</SelectItem>
+                    {allAgents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "স্ট্যাটাস ফিল্টার" : "Filter Status"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isBn ? "সব স্ট্যাটাস" : "All Statuses"}</SelectItem>
+                    {Object.entries(statusLabelMap).map(([val, info]) => (
+                      <SelectItem key={val} value={val}>{isBn ? (info.label_bn || info.label) : info.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {dynamicColumns.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  <span className="text-xs text-muted-foreground">{isBn ? "HR কনফিগ কলাম:" : "HR Config Columns:"}</span>
+                  {dynamicColumns.map(col => (
+                    <Badge key={col.id} variant="outline" className="text-xs">
+                      {isBn ? col.name_bn || col.name : col.name}
+                      {col.type === "dropdown" ? ` (${col.options.length})` : " 📝"}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>{isBn ? "এজেন্ট" : "Agent"}</TableHead>
+                    <TableHead>{isBn ? "কাস্টমার" : "Customer"}</TableHead>
+                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                    <TableHead>{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                    <TableHead>{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
+                    <TableHead>{isBn ? "কল" : "Calls"}</TableHead>
+                    <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
+                    <TableHead>{isBn ? "আপডেট" : "Updated"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    let filtered = agentLeads;
+                    if (agentFilter !== "all") filtered = filtered.filter((l: any) => l.assigned_to === agentFilter);
+                    if (statusFilter !== "all") filtered = filtered.filter(l => l.status === statusFilter);
+                    if (filtered.length === 0) return (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                        {isBn ? "কোনো এজেন্ট লিড নেই" : "No agent leads found"}
+                      </TableCell></TableRow>
+                    );
+                    return filtered.map((lead: any, i: number) => {
+                      const color = getStatusColor(lead.status);
+                      return (
+                        <TableRow key={lead.id}>
+                          <TableCell>{i + 1}</TableCell>
+                          <TableCell className="font-medium">{lead.agent_name || "—"}</TableCell>
+                          <TableCell>{lead.name || "—"}</TableCell>
+                          <TableCell>{lead.phone || "—"}</TableCell>
+                          <TableCell className="max-w-[120px] truncate">{lead.address || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" style={color ? { borderColor: color, color: color } : {}}>
+                              {getStatusLabel(lead.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">{lead.called_time || 0}</TableCell>
+                          <TableCell className="max-w-[150px] truncate text-xs">{lead.special_note || "—"}</TableCell>
+                          <TableCell className="text-xs">{lead.updated_at ? new Date(lead.updated_at).toLocaleString() : "—"}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* CSO Pending */}
         <TabsContent value="cso">
