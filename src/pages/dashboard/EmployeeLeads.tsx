@@ -277,10 +277,11 @@ export default function EmployeeLeads() {
     const calledTime = leadCalledTimes[lead.id] || lead.called_time || 1;
     const note = leadNotes[lead.id] ?? lead.special_note;
 
-    // Normalize to snake_case for comparison
-    const statusKey = newStatus.toLowerCase().replace(/\s+/g, "_");
+    // The value comes directly from dynamic config (e.g. "_order_confirm", "pre_order_confirm")
+    // Use includes/endsWith to match modal triggers regardless of prefix
+    const normalizedStatus = newStatus.toLowerCase().replace(/\s+/g, "_");
 
-    if (statusKey === "order_confirm") {
+    if (normalizedStatus.endsWith("order_confirm") && !normalizedStatus.includes("pre_order")) {
       setCurrentOrderLead(lead);
       setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
       setOrderDistrict(""); setOrderThana(""); setOrderGiftName(""); setOrderAdvancePayment(0);
@@ -288,21 +289,22 @@ export default function EmployeeLeads() {
       setOrderUpsell(""); setOrderSuccessRatio("");
       setShowOrderModal(true); return;
     }
-    if (statusKey === "pre_order") {
+    if (normalizedStatus === "pre_order") {
       setCurrentPreOrderLead(lead);
       setPreOrderDate(undefined); setPreOrderNote("");
       setShowPreOrderModal(true); return;
     }
-    if (statusKey === "pre_order_confirm") {
+    if (normalizedStatus.includes("pre_order_confirm") || normalizedStatus.includes("pre_order") && normalizedStatus.includes("confirm")) {
       setCurrentPreOrderConfirmLead(lead);
       setPocDistrict(""); setPocThana(""); setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
       setShowPreOrderConfirmModal(true); return;
     }
 
+    // Use the value directly as status (it comes from dynamic config)
     const updatePayload: Record<string, unknown> = {
-      status: statusKey, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
+      status: newStatus, called_time: calledTime, special_note: note, called_date: new Date().toISOString(),
     };
-    if (REQUEUE_STATUS_VALUES.includes(statusKey)) {
+    if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
