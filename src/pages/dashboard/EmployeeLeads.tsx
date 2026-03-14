@@ -396,12 +396,27 @@ export default function EmployeeLeads() {
 
   const handlePreOrderSubmit = async () => {
     if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
-    await supabase.from("pre_orders").insert({
+    const { error: preOrderError } = await supabase.from("pre_orders").insert({
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
-    const selectedStatus = leadStatuses[currentPreOrderLead.id] || "pre_order";
-    await supabase.from("leads").update({ status: selectedStatus, called_date: new Date().toISOString() }).eq("id", currentPreOrderLead.id);
+    if (preOrderError) {
+      toast.error("Pre-order তৈরিতে সমস্যা");
+      console.error(preOrderError);
+      return;
+    }
+    const selectedStatusRaw = leadStatuses[currentPreOrderLead.id] || "pre_order";
+    const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
+    const { error: leadUpdateError } = await supabase
+      .from("leads")
+      .update({ status: selectedStatus, called_date: new Date().toISOString() })
+      .eq("id", currentPreOrderLead.id);
+    if (leadUpdateError) {
+      toast.error("Pre-order হয়েছে, কিন্তু লিড আপডেট হয়নি");
+      console.error(leadUpdateError);
+      loadLeads();
+      return;
+    }
     setShowPreOrderModal(false);
     toast.success("Pre-order তৈরি হয়েছে ✓");
     loadLeads();
@@ -420,8 +435,18 @@ export default function EmployeeLeads() {
       status: "pending_tl", district: pocDistrict || null, thana: pocThana || null,
     } as any);
     if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
-    const selectedStatus = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
-    await supabase.from("leads").update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() }).eq("id", currentPreOrderConfirmLead.id);
+    const selectedStatusRaw = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
+    const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
+    const { error: leadUpdateError } = await supabase
+      .from("leads")
+      .update({ status: selectedStatus, assigned_to: null, called_date: new Date().toISOString() })
+      .eq("id", currentPreOrderConfirmLead.id);
+    if (leadUpdateError) {
+      toast.error("Pre-Order হয়েছে, কিন্তু লিড আপডেট হয়নি");
+      console.error(leadUpdateError);
+      loadLeads();
+      return;
+    }
     setShowPreOrderConfirmModal(false);
     toast.success("Pre-Order Confirm হয়েছে ✓");
     loadLeads();
