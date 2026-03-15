@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Inbox, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,33 @@ interface TLOption {
   name: string;
 }
 
+// Dynamic config types (from campaign_data_operations)
+type AppPanel = "sa" | "hr" | "tl" | "employee";
+interface ColumnOption {
+  id: string;
+  value: string;
+  label: string;
+  label_bn: string;
+  color?: string;
+  next_panel?: AppPanel | "";
+  next_location?: string;
+  routes?: Array<{ next_role: string; next_panel: AppPanel | ""; next_location: string }>;
+  note?: string;
+  is_spam?: boolean;
+}
+type ColumnType = "dropdown" | "note";
+interface StatusColumn {
+  id: string;
+  name: string;
+  name_bn: string;
+  type: ColumnType;
+  options: ColumnOption[];
+}
+interface RoleColumnConfig {
+  role: string;
+  columns: StatusColumn[];
+}
+
 export default function CSOLeads() {
   const { user } = useAuth();
   const [pendingOrders, setPendingOrders] = useState<OrderRow[]>([]);
@@ -72,8 +99,41 @@ export default function CSOLeads() {
   // My data requests
   const [myRequests, setMyRequests] = useState<any[]>([]);
 
+  // Dynamic columns from HR Data Operations
+  const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [orderStatuses, setOrderStatuses] = useState<Record<string, string>>({});
+  const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
+
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+
+  // Load dynamic config from campaign_data_operations for CSO role
+  useEffect(() => {
+    (async () => {
+      // Load all campaign data operations configs and find CSO role
+      const { data: allConfigs } = await supabase
+        .from("campaign_data_operations")
+        .select("campaign_id, fields_config");
+
+      if (allConfigs && allConfigs.length > 0) {
+        // Search across all campaigns for a "cso" role config
+        for (const config of allConfigs) {
+          const configs = config.fields_config as unknown as RoleColumnConfig[];
+          if (!Array.isArray(configs)) continue;
+          const csoConfig = configs.find(c => c.role === "cso");
+          if (csoConfig?.columns?.length) {
+            setDynamicColumns(csoConfig.columns);
+            break;
+          }
+        }
+      }
+      setConfigLoaded(true);
+    })();
+  }, []);
+
+  const dropdownCols = useMemo(() => dynamicColumns.filter(c => c.type === "dropdown"), [dynamicColumns]);
+  const noteCols = useMemo(() => dynamicColumns.filter(c => c.type === "note"), [dynamicColumns]);
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
@@ -185,6 +245,67 @@ export default function CSOLeads() {
     return () => { supabase.removeChannel(channel); };
   }, [loadOrders]);
 
+  // Handle dynamic status selection for an order
+  const handleDynamicStatusChange = async (order: OrderRow, statusValue: string) => {
+    if (!user) return;
+
+    const selectedOpt = dropdownCols.flatMap(c => c.options).find(o => o.value === statusValue);
+    const normalizedStatus = statusValue.toLowerCase().trim().replace(/\s+/g, "_");
+
+    // Determine action based on routing config
+    // If the option routes to a non-employee panel (like warehouse), treat as approve
+    const hasWarehouseRoute = normalizedStatus.includes("approve") || normalizedStatus.includes("send_today") ||
+      (selectedOpt?.next_location && selectedOpt.next_location.toLowerCase().includes("warehouse")) ||
+      (selectedOpt?.routes?.some(r => r.next_role?.toLowerCase().includes("warehouse")));
+
+    const isReject = normalizedStatus.includes("reject") || normalizedStatus.includes("cancel");
+
+    if (isReject) {
+      // Open reject dialog for reason
+      setRejectOrderId(order.id);
+      setOrderStatuses(p => ({ ...p, [order.id]: statusValue }));
+      return;
+    }
+
+    if (hasWarehouseRoute) {
+      // Approve - send to warehouse
+      const { error } = await supabase.from("orders").update({
+        status: "send_today",
+        cso_id: user.id,
+        cso_approved_at: new Date().toISOString(),
+      }).eq("id", order.id);
+
+      if (error) {
+        toast.error("Approve করতে সমস্যা হয়েছে");
+        return;
+      }
+      toast.success(`অর্ডার #${order.id.slice(0, 8)} Approved — Warehouse-এ পাঠানো হয়েছে ✓`);
+      loadOrders();
+      return;
+    }
+
+    // Default: update order status based on the selected value
+    const updatePayload: Record<string, unknown> = {
+      status: normalizedStatus,
+      cso_id: user.id,
+      cso_approved_at: new Date().toISOString(),
+    };
+
+    // If note exists for this order, include it
+    const noteKey = Object.keys(orderNotes).find(k => k.startsWith(order.id));
+    if (noteKey && orderNotes[noteKey]) {
+      updatePayload.cs_note = orderNotes[noteKey];
+    }
+
+    const { error } = await supabase.from("orders").update(updatePayload).eq("id", order.id);
+    if (error) {
+      toast.error("স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে");
+      return;
+    }
+    toast.success(`অর্ডার স্ট্যাটাস আপডেট হয়েছে ✓`);
+    loadOrders();
+  };
+
   const handleApprove = async (order: OrderRow) => {
     if (!user) return;
     const { error } = await supabase.from("orders").update({
@@ -287,6 +408,9 @@ export default function CSOLeads() {
       default: return <Badge variant="outline">{s}</Badge>;
     }
   };
+
+  // Check if dynamic config is available
+  const hasDynamicConfig = configLoaded && dropdownCols.length > 0;
 
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
 
@@ -396,7 +520,19 @@ export default function CSOLeads() {
                       <th className="py-2 px-2 text-right">মূল্য</th>
                       <th className="py-2 px-2 text-left">Agent</th>
                       <th className="py-2 px-2 text-left">সময়</th>
-                      <th className="py-2 px-2 text-center">Action</th>
+                      {/* Dynamic columns from HR Data Operations */}
+                      {hasDynamicConfig ? (
+                        <>
+                          {dropdownCols.map(col => (
+                            <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+                          ))}
+                          {noteCols.map(col => (
+                            <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+                          ))}
+                        </>
+                      ) : (
+                        <th className="py-2 px-2 text-center">Action</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -415,30 +551,68 @@ export default function CSOLeads() {
                         <td className="py-2 px-2 text-right font-medium">৳{o.price || 0}</td>
                         <td className="py-2 px-2 text-xs">{o.agent_id ? (agentMap[o.agent_id] || "—") : "—"}</td>
                         <td className="py-2 px-2 text-xs">{o.created_at ? new Date(o.created_at).toLocaleTimeString("bn-BD") : "—"}</td>
-                        <td className="py-2 px-2">
-                          <div className="flex gap-1 justify-center">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(o)}
-                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" /> Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setRejectOrderId(o.id)}
-                              className="h-7 text-xs"
-                            >
-                              <XCircle className="h-3 w-3 mr-1" /> Reject
-                            </Button>
-                          </div>
-                        </td>
+                        {/* Dynamic columns or fallback */}
+                        {hasDynamicConfig ? (
+                          <>
+                            {dropdownCols.map(col => (
+                              <td key={col.id} className="py-2 px-2 min-w-[180px]">
+                                <Select
+                                  value={orderStatuses[o.id] || ""}
+                                  onValueChange={v => {
+                                    setOrderStatuses(p => ({ ...p, [o.id]: v }));
+                                    handleDynamicStatusChange(o, v);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder={col.name_bn || "স্ট্যাটাস"} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {col.options.map(opt => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label_bn || opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            ))}
+                            {noteCols.map(col => (
+                              <td key={col.id} className="py-2 px-2 min-w-[120px]">
+                                <Input
+                                  className="h-8 text-xs"
+                                  placeholder={col.name_bn || col.name}
+                                  value={orderNotes[`${o.id}_${col.id}`] || ""}
+                                  onChange={e => setOrderNotes(p => ({ ...p, [`${o.id}_${col.id}`]: e.target.value }))}
+                                />
+                              </td>
+                            ))}
+                          </>
+                        ) : (
+                          <td className="py-2 px-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                size="sm"
+                                onClick={() => handleApprove(o)}
+                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setRejectOrderId(o.id)}
+                                className="h-7 text-xs"
+                              >
+                                <XCircle className="h-3 w-3 mr-1" /> Reject
+                              </Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                     {filteredPending.length === 0 && (
                       <tr>
-                        <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                        <td colSpan={9 + (hasDynamicConfig ? dropdownCols.length + noteCols.length : 1)} className="py-8 text-center text-muted-foreground">
                           কোনো pending অর্ডার নেই ✓
                         </td>
                       </tr>
