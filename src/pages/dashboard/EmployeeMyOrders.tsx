@@ -131,7 +131,7 @@ export default function EmployeeMyOrders() {
   return (
     <div className="space-y-5">
       <h1 className="font-heading text-xl flex items-center gap-2">
-        <Package className="h-5 w-5 text-primary" /> আমার অর্ডার
+        <Package className="h-5 w-5 text-primary" /> {t("my_orders")}
       </h1>
 
       {/* Search & Filter */}
