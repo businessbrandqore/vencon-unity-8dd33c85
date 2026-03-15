@@ -849,15 +849,15 @@ export default function EmployeeLeads() {
             {/* Payment Method & Card */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Payment Method</Label>
+                <Label>{t("payment_method")}</Label>
                 <Select value={orderPaymentMethod} onValueChange={setOrderPaymentMethod}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_method")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cod">Cash on Delivery</SelectItem>
-                    <SelectItem value="bkash">বিকাশ</SelectItem>
-                    <SelectItem value="nagad">নগদ</SelectItem>
-                    <SelectItem value="rocket">রকেট</SelectItem>
-                    <SelectItem value="bank">ব্যাংক ট্রান্সফার</SelectItem>
+                    <SelectItem value="cod">{t("cod")}</SelectItem>
+                    <SelectItem value="bkash">{t("bkash")}</SelectItem>
+                    <SelectItem value="nagad">{t("nagad")}</SelectItem>
+                    <SelectItem value="rocket">{t("rocket")}</SelectItem>
+                    <SelectItem value="bank">{t("bank_transfer")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
