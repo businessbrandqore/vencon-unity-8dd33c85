@@ -908,7 +908,7 @@ export default function EmployeeLeads() {
                 </Select>
               </div>
               <div>
-                <Label>Success Ratio (1-100) *</Label>
+                <Label>{t("success_ratio_label")} *</Label>
                 <Input type="number" min={1} max={100} value={orderSuccessRatio} onChange={e => setOrderSuccessRatio(e.target.value ? Number(e.target.value) : "")} className="mt-1" placeholder="1-100" />
               </div>
             </div>
