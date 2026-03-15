@@ -730,12 +730,12 @@ export default function EmployeeLeads() {
         <div className="flex gap-2 flex-wrap text-xs">
           {pendingRequests.filter(r => r.status === 'pending').length > 0 && (
             <Badge variant="outline" className="text-amber-500 border-amber-500/50">
-              ⏳ {pendingRequests.filter(r => r.status === 'pending').length}টি রিকোয়েস্ট পেন্ডিং
+              ⏳ {pendingRequests.filter(r => r.status === 'pending').length} {t("requests_pending")}
             </Badge>
           )}
           {pendingRequests.filter(r => r.status === 'fulfilled').length > 0 && (
             <Badge variant="outline" className="text-emerald-500 border-emerald-500/50">
-              ✓ {pendingRequests.filter(r => r.status === 'fulfilled').length}টি পূরণ হয়েছে
+              ✓ {pendingRequests.filter(r => r.status === 'fulfilled').length} {t("requests_fulfilled")}
             </Badge>
           )}
         </div>
