@@ -69,7 +69,7 @@ const formatDuration = (seconds: number) => {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
-const ChatCallOverlay = ({ currentUserId, onCallStateChange }: ChatCallOverlayProps) => {
+const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOutgoingCallHandled }: ChatCallOverlayProps) => {
   const [status, setStatus] = useState<CallStatus>("idle");
   const [callInfo, setCallInfo] = useState<CallInfo | null>(null);
   const [duration, setDuration] = useState(0);
