@@ -26,6 +26,7 @@ interface ConvoDisplay {
   memberCount: number;
   isAdmin: boolean;
   is_muted: boolean;
+  last_message_at: string;
 }
 
 interface Message {
