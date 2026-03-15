@@ -248,7 +248,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <Package className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
-          Warehouse — Dispatch Orders
+          {t("warehouse_dispatch_title")}
         </h1>
         <div className="flex flex-wrap gap-2 items-center">
           {/* Campaign filter */}
