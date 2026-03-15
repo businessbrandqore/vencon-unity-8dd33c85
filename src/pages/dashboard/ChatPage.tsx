@@ -337,8 +337,12 @@ const ChatPage = () => {
   );
 
   const groups = filteredConvos?.filter((c) => c.type === "group") || [];
-  const dms = filteredConvos?.filter((c) => c.type !== "group") || [];
   const selectedConvoData = conversations?.find((c) => c.id === selectedConvo);
+
+  // Filter users for DM tab
+  const filteredUsers = allUsers?.filter((u) =>
+    !searchTerm || u.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   const getInitials = (name: string) =>
     name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
