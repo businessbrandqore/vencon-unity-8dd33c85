@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Building2, Truck, RotateCcw, Lock, Unlock, ShieldAlert } from "lucide-react";
+import { Building2, Truck, RotateCcw } from "lucide-react";
 
 interface CompanyInfo {
   company_name: string;
