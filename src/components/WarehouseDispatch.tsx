@@ -240,7 +240,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
   const currentStock = (item: any) =>
     (item.stock_in || 0) - (item.dispatched || 0) + (item.returned || 0) - (item.damaged || 0);
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
   return (
     <div className="space-y-6">
