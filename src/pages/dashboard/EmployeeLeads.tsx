@@ -436,7 +436,7 @@ export default function EmployeeLeads() {
       return;
     }
     setShowOrderModal(false);
-    toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
+    toast.success(t("order_confirmed_success"));
     setLeads((prev) => prev.filter((item) => item.id !== currentOrderLead.id));
     loadLeads();
   };
