@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Search, Send, Users, MessageCircle, Plus, SmilePlus, Phone,
+  Search, Send, Users, MessageCircle, SmilePlus, Phone,
   Hash, MessageSquare, Lock,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
