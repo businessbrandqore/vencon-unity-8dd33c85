@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Users, Trash2, Settings, SmilePlus, Shield, Hash, Lock, Unlock, UserPlus, UserMinus } from "lucide-react";
 import { toast } from "sonner";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const DEFAULT_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🔥", "👏", "💯", "🙏", "😍", "🤔", "👀", "✅", "❌"];
 
