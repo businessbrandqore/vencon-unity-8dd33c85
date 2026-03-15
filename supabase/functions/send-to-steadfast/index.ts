@@ -315,5 +315,4 @@ async function processDispatch(
     JSON.stringify({ success: false, error: friendlyError, technical_error: lastError || null }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
-  );
 }
