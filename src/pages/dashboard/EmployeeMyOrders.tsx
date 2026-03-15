@@ -183,7 +183,7 @@ export default function EmployeeMyOrders() {
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => {
-            const info = getStatusInfo(order);
+            const info = getStatusInfo(order, isBn);
             const activeStep = getActiveStep(order);
             return (
               <Card
