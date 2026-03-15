@@ -158,6 +158,15 @@ export default function EmployeeLeads() {
   const [dataRequestLoading, setDataRequestLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
+  // WhatsApp states
+  const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  const [waSenderNumber, setWaSenderNumber] = useState("");
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waSelectedTemplate, setWaSelectedTemplate] = useState("");
+  const [waRecipientPhone, setWaRecipientPhone] = useState("");
+  const [waCurrentLead, setWaCurrentLead] = useState<LeadRow | null>(null);
+  const [waSending, setWaSending] = useState(false);
+
   // Load dynamic config from campaign_data_operations
   useEffect(() => {
     if (!user) return;
