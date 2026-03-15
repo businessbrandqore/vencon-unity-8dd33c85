@@ -110,6 +110,7 @@ const FraudChecker = () => {
     if (level === "moderate") return isBn ? "⚠️ মোটামুটি — সতর্কতার সাথে পাঠান" : "⚠️ Moderate — Send with caution";
     if (level === "risky") return isBn ? "🔶 ঝুঁকিপূর্ণ — অগ্রিম পেমেন্ট নিন" : "🔶 Risky — Take advance payment";
     if (level === "dangerous") return isBn ? "🔴 বিপজ্জনক — পাঠানো উচিত নয়" : "🔴 Dangerous — Do not send";
+    if (level === "new_customer") return isBn ? "🆕 নতুন কাস্টমার — কোনো ডেলিভারি হিস্টোরি নেই" : "🆕 New Customer — No delivery history";
     return isBn ? "❓ কোনো ডাটা নেই" : "❓ No data";
   };
 
