@@ -448,7 +448,7 @@ export default function EmployeeLeads() {
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
     if (preOrderError) {
-      toast.error("Pre-order তৈরিতে সমস্যা");
+      toast.error(t("pre_order_error"));
       console.error(preOrderError);
       return;
     }
