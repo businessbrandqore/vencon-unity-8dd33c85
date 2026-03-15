@@ -593,7 +593,7 @@ export default function EmployeeLeads() {
                   {dropdownCols.map(col => (
                     <td key={col.id} className="py-2 px-2 min-w-[180px]">
                       {isRequeued ? (
-                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
+                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
                       ) : (
                         <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
                           setLeadStatuses(p => ({ ...p, [lead.id]: v }));
