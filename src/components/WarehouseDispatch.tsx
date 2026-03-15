@@ -219,7 +219,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
         toast.success(`Consignment ID: ${data.consignment_id}`);
       }
     } catch {
-      toast.error("SteadFast পাঠাতে সমস্যা হয়েছে");
+      toast.error(t("steadfast_error"));
     }
     setSending((p) => { const n = new Set(p); n.delete(order.id); return n; });
     loadOrders();
