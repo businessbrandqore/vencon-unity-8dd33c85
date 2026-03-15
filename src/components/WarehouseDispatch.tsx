@@ -344,17 +344,17 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
       {dispatchedOrders.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-heading">Dispatched ({dispatchedOrders.length})</CardTitle>
+            <CardTitle className="text-sm font-heading">{t("order_dispatched")} ({n(dispatchedOrders.length)})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
-                    <th className="py-2 px-2 text-left">Order ID</th>
-                    <th className="py-2 px-2 text-left">Customer</th>
-                    <th className="py-2 px-2 text-left">Product</th>
-                    <th className="py-2 px-2 text-left">Consignment ID</th>
+                    <th className="py-2 px-2 text-left">{t("order_id")}</th>
+                    <th className="py-2 px-2 text-left">{t("customer")}</th>
+                    <th className="py-2 px-2 text-left">{t("product")}</th>
+                    <th className="py-2 px-2 text-left">{t("consignment_id")}</th>
                   </tr>
                 </thead>
                 <tbody>
