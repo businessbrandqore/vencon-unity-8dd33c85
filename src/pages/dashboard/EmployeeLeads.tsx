@@ -422,7 +422,7 @@ export default function EmployeeLeads() {
       card_name: orderCardName || null, order_media: orderMedia || null,
       upsell: orderUpsell || null, success_ratio: orderSuccessRatio || null,
     } as any);
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
+    if (error) { toast.error(t("order_create_error")); console.error(error); return; }
     const selectedStatusRaw = leadStatuses[currentOrderLead.id] || "order_confirm";
     const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
     const { error: leadUpdateError } = await supabase
