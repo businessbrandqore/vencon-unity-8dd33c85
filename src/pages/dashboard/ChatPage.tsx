@@ -648,6 +648,26 @@ const ChatPage = () => {
               </div>
             ) : (
               <div className="border-t border-border p-3 flex gap-2 bg-card shrink-0">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={imageInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadImage(file);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="shrink-0"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                </Button>
                 <Input
                   placeholder="Message লিখুন..."
                   value={messageText}
