@@ -484,6 +484,47 @@ const ChatPage = () => {
 
   const emojis = allowedEmojis || ["👍", "❤️", "😂", "😮", "😢", "🎉"];
 
+  const formatCallDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${minutes}:${secs}`;
+  };
+
+  const callStatusText = (call: CallLog) => {
+    if (call.status === "missed") return "মিসড কল";
+    if (call.status === "rejected") return "কল রিজেক্টেড";
+    if (call.status === "ringing") return "কল হচ্ছে";
+    if (call.status === "active") return "কল চলছে";
+    if (call.duration_seconds !== null) {
+      return `কল শেষ (${formatCallDuration(call.duration_seconds)})`;
+    }
+    return "কল শেষ";
+  };
+
+  const timelineItems = useMemo(() => {
+    const messageItems = (messages || []).map((msg) => ({
+      id: `msg-${msg.id}`,
+      type: "message" as const,
+      sortAt: msg.created_at,
+      message: msg,
+    }));
+
+    const callItems = (callLogs || []).map((call) => ({
+      id: `call-${call.id}`,
+      type: "call" as const,
+      sortAt: call.started_at || call.created_at,
+      call,
+    }));
+
+    return [...messageItems, ...callItems].sort(
+      (a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime()
+    );
+  }, [messages, callLogs]);
+
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
       {/* Call overlay */}
