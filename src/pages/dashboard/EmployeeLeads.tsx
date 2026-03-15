@@ -822,9 +822,9 @@ export default function EmployeeLeads() {
             {/* Product & Gift */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Product Name *</Label>
+                <Label>{t("product_name")} *</Label>
                 <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="প্রোডাক্ট নির্বাচন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product_ph")} /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
