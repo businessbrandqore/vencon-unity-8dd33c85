@@ -60,10 +60,8 @@ const SASettings = () => {
           if (!val) continue;
           if (row.key === "company_info") setCompany((p) => ({ ...p, ...val }));
           if (row.key === "steadfast_config") setSteadfast((p) => ({ ...p, ...val }));
-          if (row.key === "site_locked") setSiteLocked(!!(val as any)?.locked);
         }
       }
-      if (siteLocked === null) setSiteLocked(false);
       setLoading(false);
     };
     load();
