@@ -569,10 +569,10 @@ export default function EmployeeLeads() {
                 <th key={key} className="py-2 px-2 text-left whitespace-nowrap">{key}</th>
               ))}
               {dropdownCols.map(col => (
-                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{isBn ? (col.name_bn || col.name) : col.name}</th>
               ))}
               {noteCols.map(col => (
-                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{isBn ? (col.name_bn || col.name) : col.name}</th>
               ))}
             </tr>
           </thead>
