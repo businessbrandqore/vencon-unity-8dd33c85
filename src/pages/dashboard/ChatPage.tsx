@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface ConvoDisplay {
   isAdmin: boolean;
   is_muted: boolean;
   last_message_at: string;
+  unreadCount: number;
 }
 
 interface Message {
@@ -56,6 +58,7 @@ interface CallLog {
 const ChatPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedConvo, setSelectedConvo] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,8 +67,20 @@ const ChatPage = () => {
   const [threadParent, setThreadParent] = useState<Message | null>(null);
   const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+  const lastTypingBroadcast = useRef(0);
+
+  // Handle deep-link from notification ?convo=xxx
+  useEffect(() => {
+    const convoParam = searchParams.get("convo");
+    if (convoParam) {
+      setSelectedConvo(convoParam);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch allowed emojis
   const { data: allowedEmojis } = useQuery({
@@ -95,7 +110,7 @@ const ChatPage = () => {
     },
   });
 
-  // Fetch conversations with display names
+  // Fetch conversations with display names + unread counts
   const { data: conversations, refetch: refetchConvos } = useQuery({
     queryKey: ["chat-conversations", user?.id],
     queryFn: async () => {
@@ -131,6 +146,19 @@ const ChatPage = () => {
 
       const nameMap = new Map((usersData || []).map((u) => [u.id, u.name]));
 
+      // Get unread counts per conversation
+      const unreadCounts = new Map<string, number>();
+      for (const convoId of convoIds) {
+        const { count } = await supabase
+          .from("chat_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", convoId)
+          .is("reply_to_id", null)
+          .neq("sender_id", user!.id)
+          .not("read_by", "cs", `{${user!.id}}`);
+        unreadCounts.set(convoId, count || 0);
+      }
+
       return convos.map((c) => {
         const members = (allParts || []).filter((p) => p.conversation_id === c.id);
         const myPart = parts.find((p) => p.conversation_id === c.id);
@@ -154,6 +182,7 @@ const ChatPage = () => {
           isAdmin: myPart?.is_admin || false,
           is_muted: (c as any).is_muted || false,
           last_message_at: (c as any).last_message_at || c.created_at || "",
+          unreadCount: unreadCounts.get(c.id) || 0,
         } as ConvoDisplay;
       });
     },
@@ -164,7 +193,6 @@ const ChatPage = () => {
   const { data: messages, refetch: refetchMessages } = useQuery({
     queryKey: ["chat-messages", selectedConvo],
     queryFn: async () => {
-      // Fetch top-level messages
       const { data } = await supabase
         .from("chat_messages")
         .select("*")
@@ -174,7 +202,6 @@ const ChatPage = () => {
 
       if (!data) return [];
 
-      // Get reply counts
       const { data: replies } = await supabase
         .from("chat_messages")
         .select("reply_to_id")
@@ -188,7 +215,6 @@ const ChatPage = () => {
         }
       });
 
-      // Get sender names
       const senderIds = [...new Set(data.map((m) => m.sender_id).filter(Boolean))];
       const { data: usersData } = await supabase
         .from("users")
@@ -240,12 +266,7 @@ const ChatPage = () => {
       return data.map((c) => {
         const durationSeconds =
           c.started_at && c.ended_at
-            ? Math.max(
-                0,
-                Math.round(
-                  (new Date(c.ended_at).getTime() - new Date(c.started_at).getTime()) / 1000
-                )
-              )
+            ? Math.max(0, Math.round((new Date(c.ended_at).getTime() - new Date(c.started_at).getTime()) / 1000))
             : null;
 
         return {
@@ -285,32 +306,26 @@ const ChatPage = () => {
       .channel(`chat-${selectedConvo}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages", filter: `conversation_id=eq.${selectedConvo}` }, () => {
         refetchMessages();
+        refetchConvos();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [selectedConvo, refetchMessages]);
+  }, [selectedConvo, refetchMessages, refetchConvos]);
 
   // Realtime for conversation call history
   useEffect(() => {
     if (!selectedConvo) return;
     const channel = supabase
       .channel(`chat-calls-${selectedConvo}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "chat_calls", filter: `conversation_id=eq.${selectedConvo}` },
-        () => {
-          refetchCalls();
-          refetchConvos();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_calls", filter: `conversation_id=eq.${selectedConvo}` }, () => {
+        refetchCalls();
+        refetchConvos();
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [selectedConvo, refetchCalls, refetchConvos]);
 
-  // Realtime for conversations (mute changes, etc)
+  // Realtime for conversations (mute changes, new messages in other convos)
   useEffect(() => {
     const channel = supabase
       .channel("chat-convos-realtime")
@@ -324,6 +339,54 @@ const ChatPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [refetchConvos]);
 
+  // Global realtime for new messages in any conversation (to update unread counts)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("chat-global-msgs")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload: any) => {
+        const msg = payload.new;
+        if (msg.sender_id !== user.id && msg.conversation_id !== selectedConvo) {
+          refetchConvos();
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, selectedConvo, refetchConvos]);
+
+  // Typing indicator via broadcast
+  useEffect(() => {
+    if (!selectedConvo || !user) return;
+    const channel = supabase.channel(`typing-${selectedConvo}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on("broadcast", { event: "typing" }, (payload: any) => {
+        const { userId, userName } = payload.payload;
+        if (userId === user.id) return;
+        setTypingUsers((prev) => {
+          const next = new Map(prev);
+          next.set(userId, userName);
+          return next;
+        });
+        // Auto-clear after 3s
+        setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = new Map(prev);
+            next.delete(userId);
+            return next;
+          });
+        }, 3000);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      setTypingUsers(new Map());
+    };
+  }, [selectedConvo, user]);
+
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -335,13 +398,32 @@ const ChatPage = () => {
     const unread = messages.filter(
       (m) => m.sender_id !== user.id && !(m.read_by || []).includes(user.id)
     );
-    unread.forEach(async (m) => {
-      await supabase
-        .from("chat_messages")
-        .update({ read_by: [...(m.read_by || []), user.id] })
-        .eq("id", m.id);
-    });
+    if (unread.length === 0) return;
+    (async () => {
+      for (const m of unread) {
+        await supabase
+          .from("chat_messages")
+          .update({ read_by: [...(m.read_by || []), user.id] })
+          .eq("id", m.id);
+      }
+      // Refresh unread counts after marking
+      refetchConvos();
+    })();
   }, [selectedConvo, messages, user]);
+
+  const broadcastTyping = () => {
+    if (!selectedConvo || !user) return;
+    const now = Date.now();
+    if (now - lastTypingBroadcast.current < 2000) return;
+    lastTypingBroadcast.current = now;
+
+    const channel = supabase.channel(`typing-${selectedConvo}`);
+    channel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { userId: user.id, userName: user.name },
+    });
+  };
 
   const sendMessage = async () => {
     if (!messageText.trim() || !selectedConvo || !user) return;
@@ -376,8 +458,6 @@ const ChatPage = () => {
 
   const startDM = async (targetUserId: string) => {
     if (!user) return;
-
-    // Check for existing DM
     const { data: myParts } = await supabase
       .from("chat_participants")
       .select("conversation_id")
@@ -470,11 +550,6 @@ const ChatPage = () => {
   const dmConvos = filteredConvos?.filter((c) => c.type === "direct") || [];
   const selectedConvoData = conversations?.find((c) => c.id === selectedConvo);
 
-  // Filter users for DM tab - exclude users who already have a DM conversation
-  const dmUserIds = new Set(dmConvos.map((c) => {
-    // Find the other user in this DM
-    return c.displayName; // We use displayName to match
-  }));
   const filteredUsers = allUsers?.filter((u) =>
     !searchTerm || u.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -485,12 +560,8 @@ const ChatPage = () => {
   const emojis = allowedEmojis || ["👍", "❤️", "😂", "😮", "😢", "🎉"];
 
   const formatCallDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = Math.floor(seconds % 60)
-      .toString()
-      .padStart(2, "0");
+    const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
     return `${minutes}:${secs}`;
   };
 
@@ -499,9 +570,7 @@ const ChatPage = () => {
     if (call.status === "rejected") return "কল রিজেক্টেড";
     if (call.status === "ringing") return "কল হচ্ছে";
     if (call.status === "active") return "কল চলছে";
-    if (call.duration_seconds !== null) {
-      return `কল শেষ (${formatCallDuration(call.duration_seconds)})`;
-    }
+    if (call.duration_seconds !== null) return `কল শেষ (${formatCallDuration(call.duration_seconds)})`;
     return "কল শেষ";
   };
 
@@ -512,18 +581,69 @@ const ChatPage = () => {
       sortAt: msg.created_at,
       message: msg,
     }));
-
     const callItems = (callLogs || []).map((call) => ({
       id: `call-${call.id}`,
       type: "call" as const,
       sortAt: call.started_at || call.created_at,
       call,
     }));
-
     return [...messageItems, ...callItems].sort(
       (a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime()
     );
   }, [messages, callLogs]);
+
+  const typingText = useMemo(() => {
+    const names = Array.from(typingUsers.values());
+    if (names.length === 0) return null;
+    if (names.length === 1) return `${names[0]} টাইপ করছে...`;
+    return `${names.slice(0, 2).join(", ")} টাইপ করছে...`;
+  }, [typingUsers]);
+
+  // Sidebar conversation item renderer
+  const renderConvoItem = (c: ConvoDisplay, isGroup = false) => (
+    <button
+      key={c.id}
+      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
+      className={`w-full text-left ${isGroup ? "px-2 py-1.5" : "px-3 py-2.5"} rounded-md flex items-center gap-${isGroup ? "2" : "3"} transition-colors ${isGroup ? "text-xs" : ""} ${
+        selectedConvo === c.id
+          ? "bg-primary/10 text-primary font-medium"
+          : isGroup
+          ? "text-foreground/70 hover:bg-secondary hover:text-foreground"
+          : "hover:bg-secondary"
+      }`}
+    >
+      {isGroup ? (
+        <>
+          {c.is_muted ? <Lock className="h-3 w-3 shrink-0 text-muted-foreground" /> : <Hash className="h-3 w-3 shrink-0" />}
+          <span className="truncate flex-1">{c.displayName}</span>
+          <span className="text-[9px] text-muted-foreground">{c.memberCount}</span>
+          {c.unreadCount > 0 && (
+            <span className="min-w-[18px] h-[18px] text-[10px] font-bold flex items-center justify-center px-1 bg-primary text-primary-foreground rounded-full">
+              {c.unreadCount > 99 ? "99+" : c.unreadCount}
+            </span>
+          )}
+          {c.is_muted && <Badge variant="outline" className="text-[8px] px-1 py-0">Muted</Badge>}
+        </>
+      ) : (
+        <>
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+            {getInitials(c.displayName)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-foreground">{c.displayName}</span>
+            <span className="block truncate text-[10px] text-muted-foreground">
+              {formatDistanceToNow(new Date(c.last_message_at || c.created_at), { locale: bn, addSuffix: true })}
+            </span>
+          </div>
+          {c.unreadCount > 0 && (
+            <span className="min-w-[18px] h-[18px] text-[10px] font-bold flex items-center justify-center px-1 bg-primary text-primary-foreground rounded-full shrink-0">
+              {c.unreadCount > 99 ? "99+" : c.unreadCount}
+            </span>
+          )}
+        </>
+      )}
+    </button>
+  );
 
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
@@ -552,7 +672,6 @@ const ChatPage = () => {
               className="pl-8 h-7 text-xs"
             />
           </div>
-          {/* Tabs */}
           <div className="flex gap-1 bg-secondary/50 rounded-md p-0.5">
             <button
               onClick={() => setSidebarTab("dm")}
@@ -579,55 +698,18 @@ const ChatPage = () => {
               {groups.length === 0 ? (
                 <p className="text-[10px] text-muted-foreground px-2 py-6 text-center">কোনো গ্রুপ নেই</p>
               ) : (
-                groups.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
-                    className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors text-xs ${
-                      selectedConvo === c.id
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-foreground/70 hover:bg-secondary hover:text-foreground"
-                    }`}
-                  >
-                    {c.is_muted ? <Lock className="h-3 w-3 shrink-0 text-muted-foreground" /> : <Hash className="h-3 w-3 shrink-0" />}
-                    <span className="truncate">{c.displayName}</span>
-                    <span className="text-[9px] text-muted-foreground ml-auto">{c.memberCount}</span>
-                    {c.is_muted && <Badge variant="outline" className="text-[8px] px-1 py-0">Muted</Badge>}
-                  </button>
-                ))
+                groups.map((c) => renderConvoItem(c, true))
               )}
             </div>
           ) : (
             <div className="px-2 pt-2 pb-2">
-              {/* Existing DM conversations sorted by last activity */}
               {dmConvos.length > 0 && (
                 <div className="mb-2">
                   <p className="text-[10px] text-muted-foreground px-2 py-1 uppercase font-semibold">Recent</p>
-                  {dmConvos.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
-                      className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
-                        selectedConvo === c.id
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-secondary"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                        {getInitials(c.displayName)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-foreground">{c.displayName}</span>
-                        <span className="block truncate text-[10px] text-muted-foreground">
-                          {formatDistanceToNow(new Date(c.last_message_at || c.created_at), { locale: bn, addSuffix: true })}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                  {dmConvos.map((c) => renderConvoItem(c))}
                 </div>
               )}
 
-              {/* All users for starting new DMs */}
               <p className="text-[10px] text-muted-foreground px-2 py-1 uppercase font-semibold">All Users</p>
               {filteredUsers.length === 0 ? (
                 <p className="text-[10px] text-muted-foreground px-2 py-6 text-center">কোনো ব্যবহারকারী নেই</p>
@@ -636,7 +718,7 @@ const ChatPage = () => {
                   <button
                     key={u.id}
                     onClick={() => { startDM(u.id); setThreadParent(null); }}
-                    className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors hover:bg-secondary`}
+                    className="w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors hover:bg-secondary"
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                       {getInitials(u.name)}
@@ -677,7 +759,7 @@ const ChatPage = () => {
                 )}
               </div>
               {selectedConvoData?.is_muted && (
-                <Badge variant="outline" className="text-[10px] text-orange-500 border-orange-500/30">
+                <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">
                   <Lock className="h-3 w-3 mr-1" /> Muted
                 </Badge>
               )}
@@ -708,21 +790,16 @@ const ChatPage = () => {
                   return (
                     <div key={item.id} className="group hover:bg-secondary/30 px-2 py-1.5 rounded-md transition-colors">
                       <div className="flex items-start gap-2.5">
-                        {/* Avatar */}
                         <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">
                           {getInitials(msg.sender_name)}
                         </div>
-
                         <div className="flex-1 min-w-0">
-                          {/* Name + time */}
                           <div className="flex items-baseline gap-2">
                             <span className="text-xs font-semibold text-foreground">{msg.sender_name}</span>
                             <span className="text-[10px] text-muted-foreground">
                               {formatDistanceToNow(new Date(msg.created_at), { locale: bn, addSuffix: true })}
                             </span>
                           </div>
-
-                          {/* Content */}
                           {msg.content.startsWith("[image](") && msg.content.endsWith(")") ? (
                             <img
                               src={msg.content.slice(8, -1)}
@@ -733,8 +810,6 @@ const ChatPage = () => {
                           ) : (
                             <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
                           )}
-
-                          {/* Reactions */}
                           {Object.keys(msg.reactions).length > 0 && (
                             <div className="flex gap-1 mt-1.5 flex-wrap">
                               {Object.entries(msg.reactions).map(([emoji, userIds]) => (
@@ -752,8 +827,6 @@ const ChatPage = () => {
                               ))}
                             </div>
                           )}
-
-                          {/* Thread link */}
                           {msg.reply_count > 0 && (
                             <button
                               onClick={() => setThreadParent(msg)}
@@ -763,16 +836,12 @@ const ChatPage = () => {
                               {msg.reply_count} replies
                             </button>
                           )}
-
-                          {/* Read receipt for own messages */}
                           {isOwn && (
                             <span className="text-[10px] text-muted-foreground/50 mt-0.5 block">
                               {(msg.read_by || []).length > 1 ? "✓✓ seen" : "✓"}
                             </span>
                           )}
                         </div>
-
-                        {/* Hover action bar */}
                         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 bg-card border border-border rounded-md px-1 py-0.5 shadow-sm transition-opacity shrink-0">
                           <button
                             onClick={() => setShowReactions(showReactions === msg.id ? null : msg.id)}
@@ -790,8 +859,6 @@ const ChatPage = () => {
                           </button>
                         </div>
                       </div>
-
-                      {/* Reaction picker */}
                       {showReactions === msg.id && (
                         <div className="flex gap-1 mt-1.5 ml-10 bg-card border border-border rounded-full px-2 py-1 shadow-sm w-fit">
                           {emojis.map((emoji) => (
@@ -811,6 +878,20 @@ const ChatPage = () => {
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
+
+            {/* Typing indicator */}
+            {typingText && (
+              <div className="px-4 py-1 border-t border-border bg-card/50">
+                <p className="text-[11px] text-muted-foreground animate-pulse flex items-center gap-1.5">
+                  <span className="flex gap-0.5">
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </span>
+                  {typingText}
+                </p>
+              </div>
+            )}
 
             {/* Muted banner */}
             {selectedConvoData?.is_muted && !selectedConvoData.isAdmin && user?.role !== "hr_manager" ? (
@@ -844,7 +925,10 @@ const ChatPage = () => {
                 <Input
                   placeholder="Message লিখুন..."
                   value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
+                  onChange={(e) => {
+                    setMessageText(e.target.value);
+                    broadcastTyping();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -877,7 +961,6 @@ const ChatPage = () => {
           onClose={() => setThreadParent(null)}
         />
       )}
-
     </div>
   );
 };
