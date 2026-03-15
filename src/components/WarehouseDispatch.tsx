@@ -414,10 +414,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                         <td className="py-2 px-2 text-center">
                           {low ? (
                             <Badge variant="outline" className="text-orange-400 border-orange-500/50">
-                              <AlertTriangle className="h-3 w-3 mr-1" /> Low
+                              <AlertTriangle className="h-3 w-3 mr-1" /> {t("low_stock")}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-green-400 border-green-600/50">OK</Badge>
+                            <Badge variant="outline" className="text-green-400 border-green-600/50">{t("ok")}</Badge>
                           )}
                         </td>
                       </tr>
