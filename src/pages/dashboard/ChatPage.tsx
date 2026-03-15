@@ -424,14 +424,14 @@ const ChatPage = () => {
                   <button
                     key={u.id}
                     onClick={() => { startDM(u.id); setThreadParent(null); }}
-                    className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors text-xs text-foreground/70 hover:bg-secondary hover:text-foreground`}
+                    className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors hover:bg-secondary`}
                   >
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                       {getInitials(u.name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="block truncate text-xs">{u.name}</span>
-                      <span className="block truncate text-[9px] text-muted-foreground">{u.role.replace(/_/g, " ")}</span>
+                      <span className="block truncate text-sm font-medium text-foreground">{u.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{u.role.replace(/_/g, " ")}</span>
                     </div>
                   </button>
                 ))
