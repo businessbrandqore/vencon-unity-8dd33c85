@@ -138,7 +138,7 @@ async function processDispatch(
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await fetch("https://portal.steadfast.com.bd/api/v1/create_order", {
+      const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
