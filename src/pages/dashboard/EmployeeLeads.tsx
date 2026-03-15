@@ -637,7 +637,7 @@ export default function EmployeeLeads() {
                   {dropdownCols.length === 0 && (
                     <td className="py-2 px-2 min-w-[180px]">
                       {isRequeued ? (
-                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
+                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
                       ) : (
                         <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
                           setLeadStatuses(p => ({ ...p, [lead.id]: v }));
