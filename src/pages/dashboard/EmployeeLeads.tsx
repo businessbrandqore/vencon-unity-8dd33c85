@@ -562,9 +562,9 @@ export default function EmployeeLeads() {
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th className="py-2 px-2 text-left">#</th>
-              <th className="py-2 px-2 text-left">কাস্টমার</th>
-              <th className="py-2 px-2 text-left">ফোন</th>
-              <th className="py-2 px-2 text-left">ঠিকানা</th>
+              <th className="py-2 px-2 text-left">{t("customer")}</th>
+              <th className="py-2 px-2 text-left">{t("phone")}</th>
+              <th className="py-2 px-2 text-left">{t("address")}</th>
               {rawDataKeys.map(key => (
                 <th key={key} className="py-2 px-2 text-left whitespace-nowrap">{key}</th>
               ))}
