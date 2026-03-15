@@ -47,7 +47,7 @@ const ChatPage = () => {
   const [selectedConvo, setSelectedConvo] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showNewDM, setShowNewDM] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"dm" | "group">("dm");
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [threadParent, setThreadParent] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
