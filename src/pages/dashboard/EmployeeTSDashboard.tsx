@@ -595,14 +595,38 @@ export default function EmployeeTSDashboard() {
           <DialogHeader><DialogTitle>কর্তন আপিল</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">দেরি বা আগে যাওয়ার কারণ ব্যাখ্যা করুন। HR রিভিউ করে সিদ্ধান্ত নিবে।</p>
+            {appealReasonOptions.attendance_reasons.length > 0 && (
+              <div>
+                <Label className="mb-2 block">কারণ নির্বাচন করুন</Label>
+                <div className="flex flex-wrap gap-2">
+                  {appealReasonOptions.attendance_reasons.map((reason) => (
+                    <label key={reason} className={cn(
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-all",
+                      appealSelectedReasons.includes(reason) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"
+                    )}>
+                      <Checkbox
+                        checked={appealSelectedReasons.includes(reason)}
+                        onCheckedChange={(checked) => {
+                          setAppealSelectedReasons(prev =>
+                            checked ? [...prev, reason] : prev.filter(r => r !== reason)
+                          );
+                        }}
+                        className="h-3.5 w-3.5"
+                      />
+                      {reason}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
-              <Label>কারণ *</Label>
+              <Label>অতিরিক্ত মন্তব্য</Label>
               <Textarea value={appealExplanation} onChange={e => setAppealExplanation(e.target.value)} className="mt-1" rows={3} placeholder="কেন দেরি হয়েছিল বা আগে যেতে হয়েছিল..." />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAppealModal(false)}>বাতিল</Button>
-            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || !appealExplanation.trim()}
+            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || (!appealExplanation.trim() && appealSelectedReasons.length === 0)}
               className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
               {appealSubmitting ? "পাঠানো হচ্ছে..." : "আপিল পাঠান"}
             </Button>
