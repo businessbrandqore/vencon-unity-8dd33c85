@@ -139,7 +139,7 @@ export default function EmployeeMyOrders() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="নাম, ফোন বা অর্ডার আইডি দিয়ে খুঁজুন..."
+            placeholder={t("search_orders")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -148,14 +148,14 @@ export default function EmployeeMyOrders() {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="ফিল্টার" />
+            <SelectValue placeholder={t("filter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">সকল ({stats.total})</SelectItem>
-            <SelectItem value="processing">প্রসেসিং ({stats.processing})</SelectItem>
-            <SelectItem value="in_transit">পথে আছে</SelectItem>
-            <SelectItem value="delivered">ডেলিভারড ({stats.delivered})</SelectItem>
-            <SelectItem value="returned">রিটার্ন/রিজেক্ট ({stats.returned})</SelectItem>
+            <SelectItem value="all">{t("all")} ({n(stats.total)})</SelectItem>
+            <SelectItem value="processing">{t("processing")} ({n(stats.processing)})</SelectItem>
+            <SelectItem value="in_transit">{t("in_transit")}</SelectItem>
+            <SelectItem value="delivered">{t("delivered")} ({n(stats.delivered)})</SelectItem>
+            <SelectItem value="returned">{t("returned_rejected")} ({n(stats.returned)})</SelectItem>
           </SelectContent>
         </Select>
       </div>
