@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 type Step = "verify" | "welcome" | "security" | "terms" | "installing" | "done";
+type WizardMode = "setup" | "locked";
 
-export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
+export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => void; mode?: WizardMode }) => {
   const [step, setStep] = useState<Step>("verify");
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
