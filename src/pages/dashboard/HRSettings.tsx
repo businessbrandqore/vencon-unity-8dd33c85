@@ -90,6 +90,12 @@ const HRSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Appeal reason options
+  const [attendanceReasons, setAttendanceReasons] = useState<string[]>([]);
+  const [newAttendanceReason, setNewAttendanceReason] = useState("");
+  const [leaveReasons, setLeaveReasons] = useState<string[]>([]);
+  const [newLeaveReason, setNewLeaveReason] = useState("");
+
   // WhatsApp template states
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
   const [showWaModal, setShowWaModal] = useState(false);
