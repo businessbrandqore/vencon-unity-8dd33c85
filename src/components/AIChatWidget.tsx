@@ -164,7 +164,7 @@ const AIChatWidget = () => {
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[560px] flex flex-col rounded-2xl shadow-2xl border border-border overflow-hidden bg-background animate-scale-in">
           {/* Header */}
-          <div className="relative bg-gradient-to-r from-primary to-orange-500 px-4 py-3 flex items-center gap-3 shrink-0">
+          <div className="relative px-4 py-3 flex items-center gap-3 shrink-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(24 95% 53%))" }}>
             <div className="relative">
               <div className="w-10 h-10 rounded-full border-2 border-white/30 overflow-hidden">
                 <img src={botLogo} alt="Vencon AI" className="w-full h-full object-cover" />
