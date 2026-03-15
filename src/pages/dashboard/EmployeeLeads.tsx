@@ -1030,17 +1030,17 @@ export default function EmployeeLeads() {
       {/* Data Request Modal */}
       <Dialog open={showDataRequestModal} onOpenChange={setShowDataRequestModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>ডাটা রিকোয়েস্ট</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("data_request_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">আপনার TL-কে নতুন ডাটা পাঠানোর জন্য রিকোয়েস্ট পাঠান।</p>
+            <p className="text-sm text-muted-foreground">{t("data_request_desc")}</p>
             <div>
-              <Label>মেসেজ (ঐচ্ছিক)</Label>
-              <Textarea value={dataRequestMsg} onChange={e => setDataRequestMsg(e.target.value)} className="mt-1" rows={3} placeholder="কি ধরনের ডাটা দরকার..." />
+              <Label>{t("message_optional")}</Label>
+              <Textarea value={dataRequestMsg} onChange={e => setDataRequestMsg(e.target.value)} className="mt-1" rows={3} placeholder={t("data_type_hint")} />
             </div>
           </div>
           <DialogFooter>
             <Button onClick={handleDataRequest} disabled={dataRequestLoading} className="gap-2">
-              <Send className="h-4 w-4" /> {dataRequestLoading ? "পাঠানো হচ্ছে..." : "রিকোয়েস্ট পাঠান"}
+              <Send className="h-4 w-4" /> {dataRequestLoading ? t("sending_request") : t("send_request")}
             </Button>
           </DialogFooter>
         </DialogContent>
