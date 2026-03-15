@@ -64,14 +64,7 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
       }
       if (data.success) {
         toast.success("✓ Verified!");
-        if (mode === "locked") {
-          await supabase.functions.invoke("setup-verification", {
-            body: { action: "unlock", password }
-          });
-          onComplete();
-        } else {
-          setStep("welcome");
-        }
+        setStep("welcome");
       } else {
         toast.error(data.error || "Invalid password");
       }
