@@ -101,7 +101,7 @@ const ChatPage = () => {
         .from("chat_conversations")
         .select("*")
         .in("id", convoIds)
-        .order("created_at", { ascending: false });
+        .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (!convos?.length) return [];
 
