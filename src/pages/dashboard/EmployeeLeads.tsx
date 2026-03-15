@@ -232,7 +232,47 @@ export default function EmployeeLeads() {
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
-  useEffect(() => { if (checkedIn) { loadLeads(); loadMyRequests(); } }, [checkedIn, loadLeads]);
+
+  // Load WhatsApp templates and config
+  useEffect(() => {
+    (async () => {
+      const [{ data: tplData }, { data: cfgData }] = await Promise.all([
+        supabase.from("whatsapp_templates").select("*").eq("is_active", true).order("created_at"),
+        supabase.from("app_settings").select("value").eq("key", "api_config").maybeSingle(),
+      ]);
+      if (tplData) setWaTemplates(tplData);
+      const cfg = cfgData?.value as Record<string, string> | null;
+      if (cfg?.whatsapp_sender) setWaSenderNumber(cfg.whatsapp_sender);
+    })();
+  }, []);
+
+  const handleWhatsAppSend = async () => {
+    if (!waSelectedTemplate || !waRecipientPhone || !waCurrentLead) return;
+    setWaSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: {
+          template_id: waSelectedTemplate,
+          recipient_phone: waRecipientPhone,
+          lead_name: waCurrentLead.name || "",
+          lead_address: waCurrentLead.address || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.method === "wa_link") {
+        window.open(data.wa_link, "_blank");
+        toast.success(isBn ? "WhatsApp ওপেন হচ্ছে..." : "Opening WhatsApp...");
+      } else {
+        toast.success(isBn ? "মেসেজ পাঠানো হয়েছে ✓" : "Message sent ✓");
+      }
+      setShowWaModal(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send");
+    }
+    setWaSending(false);
+  };
+
+
 
   const loadMyRequests = async () => {
     if (!user) return;
