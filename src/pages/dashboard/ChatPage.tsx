@@ -293,7 +293,7 @@ const ChatPage = () => {
         const { data: dmConvos } = await supabase
           .from("chat_conversations")
           .select("id")
-          .eq("type", "dm")
+          .eq("type", "direct")
           .in("id", targetParts.map((p) => p.conversation_id));
 
         if (dmConvos?.length) {
@@ -305,7 +305,7 @@ const ChatPage = () => {
 
     const { data: convo, error } = await supabase
       .from("chat_conversations")
-      .insert({ name: null, type: "dm", created_by: user.id })
+      .insert({ name: null, type: "direct", created_by: user.id })
       .select()
       .single();
 
