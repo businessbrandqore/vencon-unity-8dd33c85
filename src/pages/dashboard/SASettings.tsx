@@ -166,6 +166,7 @@ const SASettings = () => {
   const tabs = [
     { key: "company" as const, label: isBn ? "কোম্পানি তথ্য" : "Company Info", icon: Building2 },
     { key: "steadfast" as const, label: "Steadfast API", icon: Truck },
+    { key: "sitelock" as const, label: isBn ? "সাইট লক" : "Site Lock", icon: ShieldAlert },
     { key: "reset" as const, label: isBn ? "ফ্যাক্টরি রিসেট" : "Factory Reset", icon: RotateCcw },
   ];
 
