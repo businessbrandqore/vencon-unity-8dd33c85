@@ -15,6 +15,8 @@ interface CallInfo {
 interface ChatCallOverlayProps {
   currentUserId: string;
   onCallStateChange?: (active: boolean) => void;
+  outgoingCall?: { conversationId: string; callerName: string } | null;
+  onOutgoingCallHandled?: () => void;
 }
 
 // Simple WhatsApp-like ringtone using Web Audio API
