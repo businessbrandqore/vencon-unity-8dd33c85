@@ -455,7 +455,7 @@ const HRChatAdmin = () => {
         title="Delete Group"
         description="এই গ্রুপ এবং সব messages permanently delete হয়ে যাবে।"
         onConfirm={deleteGroup}
-        variant="destructive"
+        destructive
       />
     </div>
   );
