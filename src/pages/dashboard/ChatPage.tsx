@@ -386,9 +386,14 @@ const ChatPage = () => {
   );
 
   const groups = filteredConvos?.filter((c) => c.type === "group") || [];
+  const dmConvos = filteredConvos?.filter((c) => c.type === "direct") || [];
   const selectedConvoData = conversations?.find((c) => c.id === selectedConvo);
 
-  // Filter users for DM tab
+  // Filter users for DM tab - exclude users who already have a DM conversation
+  const dmUserIds = new Set(dmConvos.map((c) => {
+    // Find the other user in this DM
+    return c.displayName; // We use displayName to match
+  }));
   const filteredUsers = allUsers?.filter((u) =>
     !searchTerm || u.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
