@@ -275,11 +275,6 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
               </Button>
             </>
           )}
-              <Button size="sm" onClick={batchSend} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-primary-foreground">
-                <Send className="h-4 w-4 mr-1" /> SteadFast ({selected.size})
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
