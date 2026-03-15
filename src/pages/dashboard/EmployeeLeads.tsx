@@ -232,6 +232,14 @@ export default function EmployeeLeads() {
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
+  // Load leads on mount and when checkedIn changes
+  useEffect(() => {
+    if (checkedIn && user) {
+      loadLeads();
+      loadMyRequests();
+    }
+  }, [checkedIn, user, loadLeads]);
+
 
   // Load WhatsApp templates and config
   useEffect(() => {
