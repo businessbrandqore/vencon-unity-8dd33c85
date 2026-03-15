@@ -366,7 +366,7 @@ export default function EmployeeMyOrders() {
 
                 {!selected.rider_name && !selected.rider_phone && selected.steadfast_consignment_id && (
                   <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground text-center">
-                    🏍️ রাইডার তথ্য এখনো পাওয়া যায়নি — স্টিডফাস্ট সিংক হলে এখানে দেখাবে
+                    🏍️ {isBn ? "রাইডার তথ্য এখনো পাওয়া যায়নি — স্টিডফাস্ট সিংক হলে এখানে দেখাবে" : "Rider info not available yet — will show once Steadfast syncs"}
                   </div>
                 )}
 
