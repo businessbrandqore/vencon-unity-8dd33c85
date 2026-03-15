@@ -10,50 +10,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-const ADMIN_EMAIL = "business.brand.qore@gmail.com";
-
 type Step = "verify" | "welcome" | "security" | "terms" | "installing" | "done";
 
 export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
   const [step, setStep] = useState<Step>("verify");
-  const [otpCode, setOtpCode] = useState("");
-  const [sending, setSending] = useState(false);
+  const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [installProgress, setInstallProgress] = useState(0);
 
-  const sendCode = async () => {
-    setSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "generate" }
-      });
-      if (error) throw error;
-      setCodeSent(true);
-      toast.success("Verification code sent!");
-    } catch (err: any) {
-      toast.error("Failed to send code");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const verifyCode = async () => {
-    if (otpCode.length !== 6) {
-      toast.error("৬ ডিজিটের কোড দিন");
+  const verifyPassword = async () => {
+    if (!password.trim()) {
+      toast.error("পাসওয়ার্ড লিখুন");
       return;
     }
     setVerifying(true);
     try {
       const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "verify", code: otpCode }
+        body: { action: "verify", password }
       });
       if (error) throw error;
       if (data.success) {
         toast.success("✓ Verified!");
         setStep("welcome");
       } else {
-        toast.error(data.error || "Invalid code");
+        toast.error(data.error || "Invalid password");
       }
     } catch (err: any) {
       toast.error("Verification failed");
