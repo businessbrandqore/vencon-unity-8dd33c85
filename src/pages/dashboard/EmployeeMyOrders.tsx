@@ -163,10 +163,10 @@ export default function EmployeeMyOrders() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: "মোট", value: stats.total, color: "" },
-          { label: "প্রসেসিং", value: stats.processing, color: "text-amber-600" },
-          { label: "ডেলিভারড", value: stats.delivered, color: "text-emerald-600" },
-          { label: "রিটার্ন", value: stats.returned, color: "text-destructive" },
+          { label: t("total"), value: stats.total, color: "" },
+          { label: t("processing"), value: stats.processing, color: "text-amber-600" },
+          { label: t("delivered"), value: stats.delivered, color: "text-emerald-600" },
+          { label: isBn ? "রিটার্ন" : "Returned", value: stats.returned, color: "text-destructive" },
         ].map(s => (
           <Card key={s.label}>
             <CardContent className="pt-4 pb-4 text-center">
