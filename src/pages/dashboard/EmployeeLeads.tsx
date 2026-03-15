@@ -496,7 +496,7 @@ export default function EmployeeLeads() {
       return;
     }
     setShowPreOrderConfirmModal(false);
-    toast.success("Pre-Order Confirm হয়েছে ✓");
+    toast.success(t("pre_order_confirm_success"));
     setLeads((prev) => prev.filter((item) => item.id !== currentPreOrderConfirmLead.id));
     loadLeads();
   };
