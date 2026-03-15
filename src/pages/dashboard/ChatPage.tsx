@@ -477,6 +477,36 @@ const ChatPage = () => {
             </div>
           ) : (
             <div className="px-2 pt-2 pb-2">
+              {/* Existing DM conversations sorted by last activity */}
+              {dmConvos.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[10px] text-muted-foreground px-2 py-1 uppercase font-semibold">Recent</p>
+                  {dmConvos.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
+                        selectedConvo === c.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-secondary"
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                        {getInitials(c.displayName)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">{c.displayName}</span>
+                        <span className="block truncate text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(c.last_message_at || c.created_at), { locale: bn, addSuffix: true })}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* All users for starting new DMs */}
+              <p className="text-[10px] text-muted-foreground px-2 py-1 uppercase font-semibold">All Users</p>
               {filteredUsers.length === 0 ? (
                 <p className="text-[10px] text-muted-foreground px-2 py-6 text-center">কোনো ব্যবহারকারী নেই</p>
               ) : (
