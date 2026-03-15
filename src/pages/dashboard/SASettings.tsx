@@ -52,7 +52,7 @@ const SASettings = () => {
       const { data } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["company_info", "steadfast_config", "site_locked"]);
+        .in("key", ["company_info", "steadfast_config"]);
 
       if (data) {
         for (const row of data) {
