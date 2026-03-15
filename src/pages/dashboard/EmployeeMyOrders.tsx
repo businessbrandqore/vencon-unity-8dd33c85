@@ -217,7 +217,7 @@ export default function EmployeeMyOrders() {
                   {/* Mini Pipeline Tracker */}
                   {!info.isFailed && (
                     <div className="flex items-center gap-0.5">
-                      {PIPELINE_STEPS.map((step, idx) => {
+                      {PIPELINE_KEYS.map((step, idx) => {
                         const isActive = idx <= activeStep;
                         const isCurrent = idx === activeStep;
                         return (
