@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     for (const order of orders) {
       try {
         const response = await fetch(
-          `https://portal.steadfast.com.bd/api/v1/status_by_cid/${order.steadfast_consignment_id}`,
+          `https://portal.packzy.com/api/v1/status_by_cid/${order.steadfast_consignment_id}`,
           {
             headers: { "Api-Key": apiKey, "Secret-Key": secretKey },
           }

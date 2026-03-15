@@ -16,7 +16,7 @@ interface CourierResult {
 
 async function checkSteadfast(phone: string, apiKey: string, secretKey: string): Promise<CourierResult> {
   try {
-    const res = await fetch(`https://portal.steadfast.com.bd/api/v1/fraud_check/${phone}`, {
+    const res = await fetch(`https://portal.packzy.com/api/v1/fraud_check/${phone}`, {
       method: 'GET',
       headers: {
         'Api-Key': apiKey,

@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
         });
       }
       try {
-        const res = await fetch("https://portal.steadfast.com.bd/api/v1/get_balance", {
+        const res = await fetch("https://portal.packzy.com/api/v1/get_balance", {
           headers: { "Api-Key": api_key, "Secret-Key": secret_key },
         });
         const data = await res.json();
@@ -138,7 +138,7 @@ async function processDispatch(
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await fetch("https://portal.steadfast.com.bd/api/v1/create_order", {
+      const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
