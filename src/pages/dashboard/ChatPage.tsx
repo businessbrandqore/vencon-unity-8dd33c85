@@ -79,6 +79,7 @@ const ChatPage = () => {
     const convoParam = searchParams.get("convo");
     if (convoParam) {
       setSelectedConvo(convoParam);
+      setMobileShowChat(true);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
