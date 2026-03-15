@@ -299,11 +299,13 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                   <th className="py-2 px-2 text-left">Order ID</th>
                   <th className="py-2 px-2 text-left">Customer</th>
                   <th className="py-2 px-2 text-left">Address</th>
-                  <th className="py-2 px-2 text-left">Product</th>
-                  <th className="py-2 px-2 text-right">Qty</th>
-                  <th className="py-2 px-2 text-right">Price</th>
-                  <th className="py-2 px-2 text-left">CSO Time</th>
-                  <th className="py-2 px-2">Actions</th>
+                   <th className="py-2 px-2 text-left">Product</th>
+                   <th className="py-2 px-2 text-left">Agent</th>
+                   <th className="py-2 px-2 text-left">CSO</th>
+                   <th className="py-2 px-2 text-right">Qty</th>
+                   <th className="py-2 px-2 text-right">Price</th>
+                   <th className="py-2 px-2 text-left">CSO Time</th>
+                   <th className="py-2 px-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
