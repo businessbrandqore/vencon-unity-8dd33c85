@@ -142,7 +142,13 @@ const HRSettings = () => {
         });
       } else if (row.key === "fraud_checker_config") {
         const val = row.value as Record<string, string>;
-        Object.assign(merged, { fraudbd_api_key: val.fraudbd_api_key });
+        Object.assign(merged, {
+          fc_steadfast_api_key: val.steadfast_api_key,
+          fc_steadfast_secret_key: val.steadfast_secret_key,
+          fc_pathao_username: val.pathao_username,
+          fc_pathao_password: val.pathao_password,
+          fc_redx_access_token: val.redx_access_token,
+        });
       } else {
         const val = row.value as Record<string, string>;
         Object.assign(merged, val);
