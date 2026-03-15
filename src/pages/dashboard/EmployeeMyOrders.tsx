@@ -229,7 +229,7 @@ export default function EmployeeMyOrders() {
                             )}>
                               {idx + 1}
                             </div>
-                            {idx < PIPELINE_STEPS.length - 1 && (
+                            {idx < PIPELINE_KEYS.length - 1 && (
                               <div className={cn("h-0.5 flex-1 mx-0.5", isActive ? "bg-primary/60" : "bg-muted")} />
                             )}
                           </div>
