@@ -328,11 +328,11 @@ export default function EmployeeMyOrders() {
                           {/* Label */}
                           <div className="pt-1">
                             <p className={cn("text-sm font-medium", isCurrent ? "text-primary" : isActive ? "text-foreground" : "text-muted-foreground")}>
-                              {step.label}
-                              {isCurrent && <span className="ml-1.5 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">এখানে আছে</span>}
+                              {t(step.labelKey)}
+                              {isCurrent && <span className="ml-1.5 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{isBn ? "এখানে আছে" : "Current"}</span>}
                             </p>
                             {(isCurrent || isActive) && (
-                              <p className="text-xs text-muted-foreground">{step.description}</p>
+                              <p className="text-xs text-muted-foreground">{isBn ? step.descBn : step.descEn}</p>
                             )}
                           </div>
                         </div>
