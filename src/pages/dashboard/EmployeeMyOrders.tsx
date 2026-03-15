@@ -242,7 +242,7 @@ export default function EmployeeMyOrders() {
                   {(order.rider_name || order.rider_phone) && (
                     <div className="flex items-center gap-3 text-xs bg-blue-500/5 border border-blue-500/20 rounded-md px-3 py-2">
                       <Truck className="h-4 w-4 text-blue-500 shrink-0" />
-                      <span className="text-muted-foreground">রাইডার:</span>
+                      <span className="text-muted-foreground">{t("rider_name")}:</span>
                       {order.rider_name && <span className="font-medium">{order.rider_name}</span>}
                       {order.rider_phone && (
                         <a href={`tel:${order.rider_phone}`} className="text-primary underline ml-auto" onClick={e => e.stopPropagation()}>
