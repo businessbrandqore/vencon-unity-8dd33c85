@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Package, MapPin, Truck, Phone, User, Search, Filter } from "lucide-react";
+import { Package, MapPin, Truck, Phone, User, Search, Filter, CheckCircle, Clock, ShieldCheck, Warehouse, CircleDot, XCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EmptyState from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
@@ -24,22 +24,48 @@ interface OrderRow {
   rider_name: string | null;
   rider_phone: string | null;
   created_at: string | null;
+  district: string | null;
+  thana: string | null;
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending_cso: { label: "CSO পেন্ডিং", color: "bg-yellow-500/10 text-yellow-700 border-yellow-300" },
-  send_today: { label: "আজ পাঠানো হবে", color: "bg-blue-500/10 text-blue-700 border-blue-300" },
-  dispatched: { label: "ডিসপ্যাচ হয়েছে", color: "bg-purple-500/10 text-purple-700 border-purple-300" },
-  call_done: { label: "কল সম্পন্ন", color: "bg-cyan-500/10 text-cyan-700 border-cyan-300" },
-  cancelled: { label: "বাতিল", color: "bg-destructive/10 text-destructive border-destructive/30" },
-};
+// Pipeline steps for order tracking
+const PIPELINE_STEPS = [
+  { key: "pending_tl", label: "TL রিভিউ", icon: Clock, description: "টিম লিডারের অনুমোদনের অপেক্ষায়" },
+  { key: "pending_cso", label: "CSO যাচাই", icon: ShieldCheck, description: "CSO এর যাচাইয়ের অপেক্ষায়" },
+  { key: "send_today", label: "ওয়্যারহাউস", icon: Warehouse, description: "ওয়্যারহাউস থেকে পাঠানো হবে" },
+  { key: "dispatched", label: "ডিসপ্যাচ", icon: Truck, description: "কুরিয়ারে হ্যান্ডওভার হয়েছে" },
+  { key: "delivered", label: "ডেলিভারড", icon: CheckCircle, description: "সফলভাবে ডেলিভারি হয়েছে" },
+];
 
-const DELIVERY_MAP: Record<string, { label: string; color: string }> = {
-  pending: { label: "পেন্ডিং", color: "bg-yellow-500/10 text-yellow-700 border-yellow-300" },
-  in_transit: { label: "পথে আছে", color: "bg-blue-500/10 text-blue-700 border-blue-300" },
-  delivered: { label: "ডেলিভারড ✓", color: "bg-green-500/10 text-green-700 border-green-300" },
-  returned: { label: "রিটার্ন", color: "bg-destructive/10 text-destructive border-destructive/30" },
-};
+function getActiveStep(order: OrderRow): number {
+  const status = order.status || "";
+  const delivery = order.delivery_status || "";
+
+  if (delivery === "delivered") return 4;
+  if (delivery === "in_transit" || status === "dispatched") return 3;
+  if (status === "send_today") return 2;
+  if (status === "pending_cso") return 1;
+  if (status === "pending_tl") return 0;
+  return 0;
+}
+
+function getStatusInfo(order: OrderRow): { label: string; color: string; isFailed: boolean } {
+  const status = order.status || "";
+  const delivery = order.delivery_status || "";
+
+  if (status === "rejected") return { label: "রিজেক্ট", color: "text-destructive", isFailed: true };
+  if (status === "cancelled") return { label: "বাতিল", color: "text-destructive", isFailed: true };
+  if (delivery === "returned") return { label: "রিটার্ন", color: "text-destructive", isFailed: true };
+  if (delivery === "delivered") return { label: "ডেলিভারড ✓", color: "text-emerald-600", isFailed: false };
+  if (delivery === "in_transit") return { label: "পথে আছে", color: "text-blue-600", isFailed: false };
+  if (delivery === "partial_delivered") return { label: "আংশিক ডেলিভারি", color: "text-amber-600", isFailed: false };
+  if (status === "dispatched") return { label: "ডিসপ্যাচ হয়েছে", color: "text-purple-600", isFailed: false };
+  if (status === "send_today") return { label: "ওয়্যারহাউসে", color: "text-blue-600", isFailed: false };
+  if (status === "pending_cso") return { label: "CSO পেন্ডিং", color: "text-amber-600", isFailed: false };
+  if (status === "pending_tl") return { label: "TL পেন্ডিং", color: "text-amber-600", isFailed: false };
+  if (status === "call_done") return { label: "কল সম্পন্ন", color: "text-cyan-600", isFailed: false };
+  return { label: status || "পেন্ডিং", color: "text-muted-foreground", isFailed: false };
+}
 
 export default function EmployeeMyOrders() {
   const { user } = useAuth();
@@ -49,25 +75,26 @@ export default function EmployeeMyOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  const selectFields = "id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at, district, thana";
+
   useEffect(() => {
     if (!user) return;
     (async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at")
+        .select(selectFields)
         .eq("agent_id", user.id)
         .order("created_at", { ascending: false });
       setOrders((data as OrderRow[]) || []);
       setLoading(false);
     })();
 
-    // Realtime
     const channel = supabase
       .channel("my-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `agent_id=eq.${user.id}` }, () => {
         supabase
           .from("orders")
-          .select("id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at")
+          .select(selectFields)
           .eq("agent_id", user.id)
           .order("created_at", { ascending: false })
           .then(({ data }) => { if (data) setOrders(data as OrderRow[]); });
@@ -77,23 +104,34 @@ export default function EmployeeMyOrders() {
   }, [user]);
 
   const filtered = orders.filter((o) => {
-    const matchSearch = !searchQuery || 
+    const matchSearch = !searchQuery ||
       (o.customer_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (o.phone || "").includes(searchQuery) ||
       (o.id || "").includes(searchQuery);
-    const matchStatus = statusFilter === "all" || o.delivery_status === statusFilter;
-    return matchSearch && matchStatus;
+    if (statusFilter === "all") return matchSearch;
+    if (statusFilter === "processing") return matchSearch && ["pending_tl", "pending_cso", "send_today"].includes(o.status || "");
+    if (statusFilter === "in_transit") return matchSearch && (o.delivery_status === "in_transit" || o.status === "dispatched");
+    if (statusFilter === "delivered") return matchSearch && o.delivery_status === "delivered";
+    if (statusFilter === "returned") return matchSearch && (o.delivery_status === "returned" || o.status === "rejected" || o.status === "cancelled");
+    return matchSearch;
   });
+
+  const stats = {
+    total: orders.length,
+    processing: orders.filter(o => ["pending_tl", "pending_cso", "send_today"].includes(o.status || "")).length,
+    delivered: orders.filter(o => o.delivery_status === "delivered").length,
+    returned: orders.filter(o => o.delivery_status === "returned" || o.status === "rejected").length,
+  };
 
   if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <h1 className="font-heading text-xl flex items-center gap-2">
-        <Package className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> আমার অর্ডার
+        <Package className="h-5 w-5 text-primary" /> আমার অর্ডার
       </h1>
 
-      {/* Filters */}
+      {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -105,90 +143,108 @@ export default function EmployeeMyOrders() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-44">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="স্ট্যাটাস" />
+            <SelectValue placeholder="ফিল্টার" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">সকল</SelectItem>
-            <SelectItem value="pending">পেন্ডিং</SelectItem>
+            <SelectItem value="all">সকল ({stats.total})</SelectItem>
+            <SelectItem value="processing">প্রসেসিং ({stats.processing})</SelectItem>
             <SelectItem value="in_transit">পথে আছে</SelectItem>
-            <SelectItem value="delivered">ডেলিভারড</SelectItem>
-            <SelectItem value="returned">রিটার্ন</SelectItem>
+            <SelectItem value="delivered">ডেলিভারড ({stats.delivered})</SelectItem>
+            <SelectItem value="returned">রিটার্ন/রিজেক্ট ({stats.returned})</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-muted-foreground">মোট</p>
-            <p className="text-2xl font-heading">{orders.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-muted-foreground">পথে আছে</p>
-            <p className="text-2xl font-heading text-blue-600">{orders.filter(o => o.delivery_status === "in_transit").length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-muted-foreground">ডেলিভারড</p>
-            <p className="text-2xl font-heading text-green-600">{orders.filter(o => o.delivery_status === "delivered").length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-muted-foreground">রিটার্ন</p>
-            <p className="text-2xl font-heading text-destructive">{orders.filter(o => o.delivery_status === "returned").length}</p>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: "মোট", value: stats.total, color: "" },
+          { label: "প্রসেসিং", value: stats.processing, color: "text-amber-600" },
+          { label: "ডেলিভারড", value: stats.delivered, color: "text-emerald-600" },
+          { label: "রিটার্ন", value: stats.returned, color: "text-destructive" },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardContent className="pt-4 pb-4 text-center">
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+              <p className={cn("text-2xl font-heading", s.color)}>{s.value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Orders List */}
+      {/* Orders */}
       {filtered.length === 0 ? (
         <EmptyState icon={<Package className="h-12 w-12" />} message="কোনো অর্ডার পাওয়া যায়নি" />
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => {
-            const ds = DELIVERY_MAP[order.delivery_status || "pending"] || DELIVERY_MAP.pending;
-            const os = STATUS_MAP[order.status || "pending_cso"] || STATUS_MAP.pending_cso;
+            const info = getStatusInfo(order);
+            const activeStep = getActiveStep(order);
             return (
               <Card
                 key={order.id}
-                className="cursor-pointer hover:border-[hsl(var(--panel-employee)/0.5)] transition-colors"
+                className="cursor-pointer hover:border-primary/40 transition-colors"
                 onClick={() => setSelected(order)}
               >
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardContent className="pt-4 pb-4 space-y-3">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2">
                         <p className="font-heading font-bold truncate">{order.customer_name || "—"}</p>
-                        <Badge variant="outline" className={cn("text-xs shrink-0", ds.color)}>{ds.label}</Badge>
+                        <Badge variant="outline" className={cn("text-xs shrink-0 font-medium", info.color, info.isFailed ? "border-destructive/40" : "border-primary/30")}>
+                          {info.label}
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                         <span>{order.product || "—"} × {order.quantity || 1}</span>
-                        <span>৳{(order.price || 0).toLocaleString()}</span>
+                        <span className="font-medium text-foreground">৳{(order.price || 0).toLocaleString()}</span>
                         {order.steadfast_consignment_id && (
-                          <span className="font-mono">CN: {order.steadfast_consignment_id}</span>
+                          <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded">CN: {order.steadfast_consignment_id}</span>
                         )}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {order.created_at ? new Date(order.created_at).toLocaleDateString("bn-BD") : "—"}
-                    </div>
+                    </span>
                   </div>
 
-                  {/* Rider info inline if available */}
+                  {/* Mini Pipeline Tracker */}
+                  {!info.isFailed && (
+                    <div className="flex items-center gap-0.5">
+                      {PIPELINE_STEPS.map((step, idx) => {
+                        const isActive = idx <= activeStep;
+                        const isCurrent = idx === activeStep;
+                        return (
+                          <div key={step.key} className="flex items-center flex-1">
+                            <div className={cn(
+                              "flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-colors shrink-0",
+                              isCurrent ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
+                              isActive ? "bg-primary/80 text-primary-foreground" : "bg-muted text-muted-foreground"
+                            )}>
+                              {idx + 1}
+                            </div>
+                            {idx < PIPELINE_STEPS.length - 1 && (
+                              <div className={cn("h-0.5 flex-1 mx-0.5", isActive ? "bg-primary/60" : "bg-muted")} />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Rider info */}
                   {(order.rider_name || order.rider_phone) && (
-                    <div className="mt-2 flex items-center gap-3 text-xs bg-muted/50 rounded px-3 py-1.5">
-                      <Truck className="h-3.5 w-3.5 text-blue-500" />
+                    <div className="flex items-center gap-3 text-xs bg-blue-500/5 border border-blue-500/20 rounded-md px-3 py-2">
+                      <Truck className="h-4 w-4 text-blue-500 shrink-0" />
                       <span className="text-muted-foreground">রাইডার:</span>
                       {order.rider_name && <span className="font-medium">{order.rider_name}</span>}
                       {order.rider_phone && (
-                        <a href={`tel:${order.rider_phone}`} className="text-primary underline">{order.rider_phone}</a>
+                        <a href={`tel:${order.rider_phone}`} className="text-primary underline ml-auto" onClick={e => e.stopPropagation()}>
+                          📞 {order.rider_phone}
+                        </a>
                       )}
                     </div>
                   )}
@@ -199,93 +255,126 @@ export default function EmployeeMyOrders() {
         </div>
       )}
 
-      {/* Order Detail Modal */}
+      {/* Detail Dialog */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading">অর্ডার বিবরণ</DialogTitle>
+            <DialogTitle className="font-heading">অর্ডার ট্র্যাকিং</DialogTitle>
           </DialogHeader>
-          {selected && (
-            <div className="space-y-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">অর্ডার আইডি</span>
-                  <span className="font-mono text-xs">{selected.id.slice(0, 12)}...</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">গ্রাহক</span>
-                  <span className="font-medium">{selected.customer_name || "—"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">ফোন</span>
-                  <a href={`tel:${selected.phone}`} className="text-primary">{selected.phone || "—"}</a>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> ঠিকানা</span>
-                  <span className="text-right max-w-[60%]">{selected.address || "—"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">পণ্য</span>
-                  <span>{selected.product || "—"} × {selected.quantity || 1}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">মূল্য</span>
-                  <span className="font-bold">৳{(selected.price || 0).toLocaleString()}</span>
+          {selected && (() => {
+            const info = getStatusInfo(selected);
+            const activeStep = getActiveStep(selected);
+            return (
+              <div className="space-y-5">
+                {/* Customer Info */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">গ্রাহক</span>
+                    <span className="font-bold">{selected.customer_name || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ফোন</span>
+                    <a href={`tel:${selected.phone}`} className="text-primary">{selected.phone || "—"}</a>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> ঠিকানা</span>
+                    <span className="text-right max-w-[60%] text-xs">
+                      {[selected.district, selected.thana, selected.address].filter(Boolean).join(", ") || "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">পণ্য</span>
+                    <span>{selected.product || "—"} × {selected.quantity || 1}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">মূল্য</span>
+                    <span className="font-bold text-base">৳{(selected.price || 0).toLocaleString()}</span>
+                  </div>
                 </div>
 
-                <div className="h-px bg-border my-2" />
+                <div className="h-px bg-border" />
 
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">অর্ডার স্ট্যাটাস</span>
-                  <Badge variant="outline" className={cn("text-xs", (STATUS_MAP[selected.status || ""] || STATUS_MAP.pending_cso).color)}>
-                    {(STATUS_MAP[selected.status || ""] || STATUS_MAP.pending_cso).label}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">ডেলিভারি স্ট্যাটাস</span>
-                  <Badge variant="outline" className={cn("text-xs", (DELIVERY_MAP[selected.delivery_status || ""] || DELIVERY_MAP.pending).color)}>
-                    {(DELIVERY_MAP[selected.delivery_status || ""] || DELIVERY_MAP.pending).label}
-                  </Badge>
-                </div>
+                {/* Vertical Pipeline Tracker */}
+                {info.isFailed ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center">
+                    <XCircle className="h-8 w-8 mx-auto text-destructive mb-2" />
+                    <p className="font-heading text-destructive">{info.label}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-0">
+                    <p className="text-xs font-medium text-muted-foreground mb-3">অর্ডার ট্র্যাকিং</p>
+                    {PIPELINE_STEPS.map((step, idx) => {
+                      const isActive = idx <= activeStep;
+                      const isCurrent = idx === activeStep;
+                      const StepIcon = step.icon;
+                      return (
+                        <div key={step.key} className="flex gap-3">
+                          {/* Line + dot */}
+                          <div className="flex flex-col items-center">
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                              isCurrent ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
+                              isActive ? "bg-primary/70 text-primary-foreground" : "bg-muted text-muted-foreground"
+                            )}>
+                              <StepIcon className="h-4 w-4" />
+                            </div>
+                            {idx < PIPELINE_STEPS.length - 1 && (
+                              <div className={cn("w-0.5 h-8", isActive ? "bg-primary/50" : "bg-muted")} />
+                            )}
+                          </div>
+                          {/* Label */}
+                          <div className="pt-1">
+                            <p className={cn("text-sm font-medium", isCurrent ? "text-primary" : isActive ? "text-foreground" : "text-muted-foreground")}>
+                              {step.label}
+                              {isCurrent && <span className="ml-1.5 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">এখানে আছে</span>}
+                            </p>
+                            {(isCurrent || isActive) && (
+                              <p className="text-xs text-muted-foreground">{step.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Rider Section */}
+                {(selected.rider_name || selected.rider_phone) && (
+                  <div className="rounded-lg border border-blue-300/50 bg-blue-50 dark:bg-blue-950/20 p-4">
+                    <p className="font-heading text-sm font-bold flex items-center gap-2 mb-3">
+                      <Truck className="h-4 w-4 text-blue-600" /> কুরিয়ার রাইডার তথ্য
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      {selected.rider_name && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium">{selected.rider_name}</span>
+                        </div>
+                      )}
+                      {selected.rider_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          <a href={`tel:${selected.rider_phone}`} className="text-primary underline text-base font-medium">{selected.rider_phone}</a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {!selected.rider_name && !selected.rider_phone && selected.steadfast_consignment_id && (
+                  <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground text-center">
+                    🏍️ রাইডার তথ্য এখনো পাওয়া যায়নি — স্টিডফাস্ট সিংক হলে এখানে দেখাবে
+                  </div>
+                )}
 
                 {selected.steadfast_consignment_id && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">কনসাইনমেন্ট নং</span>
-                    <span className="font-mono">{selected.steadfast_consignment_id}</span>
+                  <div className="text-center text-xs text-muted-foreground">
+                    কনসাইনমেন্ট: <span className="font-mono">{selected.steadfast_consignment_id}</span>
                   </div>
                 )}
               </div>
-
-              {/* Rider Section */}
-              {(selected.rider_name || selected.rider_phone) && (
-                <div className="rounded-md border border-blue-300/50 bg-blue-50 dark:bg-blue-950/20 p-4">
-                  <p className="font-heading text-sm font-bold flex items-center gap-2 mb-2">
-                    <Truck className="h-4 w-4 text-blue-600" /> কুরিয়ার রাইডার তথ্য
-                  </p>
-                  <div className="space-y-1.5 text-sm">
-                    {selected.rider_name && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{selected.rider_name}</span>
-                      </div>
-                    )}
-                    {selected.rider_phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a href={`tel:${selected.rider_phone}`} className="text-primary underline">{selected.rider_phone}</a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {!selected.rider_name && !selected.rider_phone && selected.delivery_status !== "delivered" && selected.steadfast_consignment_id && (
-                <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground text-center">
-                  রাইডার তথ্য এখনো পাওয়া যায়নি। স্টিডফাস্ট থেকে আপডেট আসলে এখানে দেখাবে।
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
