@@ -540,6 +540,46 @@ export function getRoleName(roleKey: string, lang: Language): string {
   return translations[key]?.[lang] || roleKey.replace(/_/g, " ");
 }
 
+// ─── Attendance Gate ───
+Object.assign(translations, {
+  loading: { bn: "লোড হচ্ছে...", en: "Loading..." },
+  outside_shift: { bn: "শিফটের বাইরে", en: "Outside Shift" },
+  outside_shift_desc: { bn: "আপনার শিফট এখন শুরু হয়নি বা শেষ হয়ে গেছে", en: "Your shift hasn't started yet or has already ended" },
+  desk_report_prompt: { bn: "ডেস্ক ও ফোন রিপোর্ট দিন", en: "Submit Desk & Phone Report" },
+  desk_report_required: { bn: "কাজ শুরু করতে ডেস্ক রিপোর্ট দিতে হবে", en: "Desk report is required to start work" },
+  desk_report: { bn: "ডেস্ক রিপোর্ট", en: "Desk Report" },
+  desk_condition: { bn: "ডেস্কের অবস্থা", en: "Desk Condition" },
+  desk_good: { bn: "ভালো", en: "Good" },
+  desk_acceptable: { bn: "গ্রহণযোগ্য", en: "Acceptable" },
+  desk_needs_repair: { bn: "মেরামত প্রয়োজন", en: "Needs Repair" },
+  details_optional: { bn: "বিস্তারিত (ঐচ্ছিক)", en: "Details (optional)" },
+  mobile_number: { bn: "মোবাইল নাম্বার", en: "Mobile Number" },
+  desk_number_label: { bn: "ডেস্ক নাম্বার", en: "Desk Number" },
+  desk_number_placeholder: { bn: "ডেস্ক নং", en: "Desk No." },
+  remaining_phone_mins: { bn: "অবশিষ্ট ফোন মিনিট", en: "Remaining Phone Minutes" },
+  phone_check_rule: { bn: "📱 মিনিট চেক করার নিয়ম:", en: "📱 How to check minutes:" },
+  save: { bn: "সংরক্ষণ", en: "Save" },
+  desk_report_saved: { bn: "ডেস্ক রিপোর্ট সংরক্ষণ করা হয়েছে", en: "Desk report saved" },
+  select_desk_condition: { bn: "ডেস্কের অবস্থা নির্বাচন করুন", en: "Please select desk condition" },
+  select_today_mood: { bn: "আজকের মুড নির্বাচন করুন", en: "Select Today's Mood" },
+  comment_optional: { bn: "মন্তব্য (ঐচ্ছিক)", en: "Comment (optional)" },
+  select_mood: { bn: "মুড নির্বাচন করুন", en: "Please select a mood" },
+  check_in: { bn: "Check In", en: "Check In" },
+  check_out: { bn: "Check Out", en: "Check Out" },
+  check_out_mood: { bn: "Check Out — মুড নির্বাচন", en: "Check Out — Select Mood" },
+  confirm_check_out: { bn: "Check Out নিশ্চিত করুন", en: "Confirm Check Out" },
+  check_in_success: { bn: "Check In সফল ✓", en: "Check In successful ✓" },
+  check_in_late: { bn: "Check In হয়েছে ({mins} মিনিট দেরি — ৳{amt} কর্তন)", en: "Checked in ({mins} min late — ৳{amt} deduction)" },
+  check_out_success: { bn: "Check Out সফল ✓", en: "Check Out successful ✓" },
+  check_out_early: { bn: "Check Out হয়েছে ({mins} মিনিট আগে — ৳{amt} কর্তন)", en: "Checked out ({mins} min early — ৳{amt} deduction)" },
+  mood_happy: { bn: "খুশি", en: "Happy" },
+  mood_sad: { bn: "দুঃখিত", en: "Sad" },
+  mood_excited: { bn: "উৎসাহিত", en: "Excited" },
+  mood_tired: { bn: "ক্লান্ত", en: "Tired" },
+  mood_neutral: { bn: "সাধারণ", en: "Neutral" },
+  mood_angry: { bn: "রাগান্বিত", en: "Angry" },
+});
+
 // Helper to get translated status name
 export function getStatusName(statusKey: string, lang: Language): string {
   const key = `status_${statusKey}`;
