@@ -308,6 +308,6 @@ async function processDispatch(
 
   return new Response(
     JSON.stringify({ success: false, error: lastError || "SteadFast API request failed" }),
-    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
