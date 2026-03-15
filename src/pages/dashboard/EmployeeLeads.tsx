@@ -875,11 +875,11 @@ export default function EmployeeLeads() {
 
             {/* Quantity & Order Media */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Quantity</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
               <div>
-                <Label>Order Media</Label>
+                <Label>{t("order_media")}</Label>
                 <Select value={orderMedia} onValueChange={setOrderMedia}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select media" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_media")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="lead">Lead</SelectItem>
                     <SelectItem value="phone_call">Phone Call</SelectItem>
