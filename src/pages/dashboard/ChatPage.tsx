@@ -50,6 +50,9 @@ const ChatPage = () => {
   const [sidebarTab, setSidebarTab] = useState<"dm" | "group">("dm");
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [threadParent, setThreadParent] = useState<Message | null>(null);
+  const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch allowed emojis
