@@ -39,7 +39,12 @@ interface Settings {
   cloudinary_cloud_name?: string;
   cloudinary_upload_preset?: string;
   cloudinary_api_key?: string;
-  fraudbd_api_key?: string;
+  // Fraud checker courier credentials
+  fc_steadfast_api_key?: string;
+  fc_steadfast_secret_key?: string;
+  fc_pathao_username?: string;
+  fc_pathao_password?: string;
+  fc_redx_access_token?: string;
 }
 
 interface DeductionTier {
