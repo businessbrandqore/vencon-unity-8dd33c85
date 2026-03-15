@@ -689,10 +689,24 @@ const ChatPage = () => {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-1">
-                {messages?.map((msg) => {
+                {timelineItems.map((item) => {
+                  if (item.type === "call") {
+                    const callTime = item.call.started_at || item.call.created_at;
+                    return (
+                      <div key={item.id} className="flex justify-center py-1">
+                        <div className="px-3 py-1.5 rounded-full border border-border bg-muted/40 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                          <Phone className="h-3 w-3" />
+                          <span>{item.call.caller_name} • {callStatusText(item.call)}</span>
+                          <span>• {formatDistanceToNow(new Date(callTime), { locale: bn, addSuffix: true })}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const msg = item.message;
                   const isOwn = msg.sender_id === user?.id;
                   return (
-                    <div key={msg.id} className="group hover:bg-secondary/30 px-2 py-1.5 rounded-md transition-colors">
+                    <div key={item.id} className="group hover:bg-secondary/30 px-2 py-1.5 rounded-md transition-colors">
                       <div className="flex items-start gap-2.5">
                         {/* Avatar */}
                         <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">
