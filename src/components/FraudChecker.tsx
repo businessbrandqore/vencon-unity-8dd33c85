@@ -97,13 +97,7 @@ const FraudChecker = () => {
     setShowHistory(true);
   };
 
-  const getRiskColor = (level: string) => {
-    if (level === "safe") return "text-green-600";
-    if (level === "moderate") return "text-yellow-600";
-    if (level === "risky") return "text-orange-500";
-    if (level === "dangerous") return "text-red-600";
-    return "text-muted-foreground";
-  };
+  // getRiskColor is defined below after getRiskLabel
 
   const getRiskLabel = (level: string) => {
     if (level === "safe") return isBn ? "✅ নিরাপদ — পণ্য পাঠানো যাবে" : "✅ Safe to deliver";
