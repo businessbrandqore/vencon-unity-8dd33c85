@@ -265,7 +265,7 @@ export default function EmployeeMyOrders() {
             <DialogTitle className="font-heading">{t("order_tracking")}</DialogTitle>
           </DialogHeader>
           {selected && (() => {
-            const info = getStatusInfo(selected);
+            const info = getStatusInfo(selected, isBn);
             const activeStep = getActiveStep(selected);
             return (
               <div className="space-y-5">
