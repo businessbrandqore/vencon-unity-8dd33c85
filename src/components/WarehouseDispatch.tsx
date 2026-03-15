@@ -382,7 +382,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-heading flex items-center gap-2">
-              <Package className="h-4 w-4" /> বর্তমান স্টক
+              <Package className="h-4 w-4" /> {t("current_stock_title")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -390,13 +390,13 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
-                    <th className="py-2 px-2 text-left">Product</th>
-                    <th className="py-2 px-2 text-right">Stock In</th>
-                    <th className="py-2 px-2 text-right">Dispatched</th>
-                    <th className="py-2 px-2 text-right">Returned</th>
-                    <th className="py-2 px-2 text-right">Damaged</th>
-                    <th className="py-2 px-2 text-right">Current Stock</th>
-                    <th className="py-2 px-2 text-center">Status</th>
+                    <th className="py-2 px-2 text-left">{t("product")}</th>
+                    <th className="py-2 px-2 text-right">{t("stock_in")}</th>
+                    <th className="py-2 px-2 text-right">{t("dispatched_stock")}</th>
+                    <th className="py-2 px-2 text-right">{t("returned_stock")}</th>
+                    <th className="py-2 px-2 text-right">{t("damaged")}</th>
+                    <th className="py-2 px-2 text-right">{t("current_stock")}</th>
+                    <th className="py-2 px-2 text-center">{t("status")}</th>
                   </tr>
                 </thead>
                 <tbody>
