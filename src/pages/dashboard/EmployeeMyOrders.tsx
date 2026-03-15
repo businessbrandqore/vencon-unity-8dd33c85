@@ -262,7 +262,7 @@ export default function EmployeeMyOrders() {
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading">অর্ডার ট্র্যাকিং</DialogTitle>
+            <DialogTitle className="font-heading">{t("order_tracking")}</DialogTitle>
           </DialogHeader>
           {selected && (() => {
             const info = getStatusInfo(selected);
