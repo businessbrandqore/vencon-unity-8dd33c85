@@ -372,7 +372,7 @@ export default function EmployeeMyOrders() {
 
                 {selected.steadfast_consignment_id && (
                   <div className="text-center text-xs text-muted-foreground">
-                    কনসাইনমেন্ট: <span className="font-mono">{selected.steadfast_consignment_id}</span>
+                    {t("consignment")}: <span className="font-mono">{selected.steadfast_consignment_id}</span>
                   </div>
                 )}
               </div>
