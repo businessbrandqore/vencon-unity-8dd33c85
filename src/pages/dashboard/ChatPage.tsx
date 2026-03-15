@@ -290,6 +290,26 @@ const ChatPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [selectedConvo, refetchMessages]);
 
+  // Realtime for conversation call history
+  useEffect(() => {
+    if (!selectedConvo) return;
+    const channel = supabase
+      .channel(`chat-calls-${selectedConvo}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "chat_calls", filter: `conversation_id=eq.${selectedConvo}` },
+        () => {
+          refetchCalls();
+          refetchConvos();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConvo, refetchCalls, refetchConvos]);
+
   // Realtime for conversations (mute changes, etc)
   useEffect(() => {
     const channel = supabase
