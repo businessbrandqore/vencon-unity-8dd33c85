@@ -829,6 +829,41 @@ const HRSettings = () => {
                 {isBn ? "সংরক্ষণ ও পরীক্ষা" : "Save & Test"}
               </button>
             </div>
+            {/* Fraud Checker */}
+            <div className="border-t border-border pt-4">
+              <h4 className="font-body text-xs font-bold text-foreground mb-1">
+                {isBn ? "ফ্রড চেকার (FraudBD)" : "Fraud Checker (FraudBD)"}
+              </h4>
+              <p className="text-[10px] text-muted-foreground font-body mb-2">
+                {isBn
+                  ? "fraudbd.com থেকে API Key নিন। এটি Steadfast, Pathao, RedX এর ডেলিভারি হিস্টোরি চেক করবে।"
+                  : "Get API Key from fraudbd.com. Checks delivery history across Steadfast, Pathao, RedX."}
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="font-body text-[10px] text-muted-foreground block mb-1">FraudBD API Key</label>
+                  <Input
+                    type="password"
+                    value={settings.fraudbd_api_key || ""}
+                    onChange={(e) => set("fraudbd_api_key", e.target.value)}
+                    className={fieldClass}
+                    placeholder="your_fraudbd_api_key"
+                  />
+                </div>
+              </div>
+              {settings.fraudbd_api_key && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] text-green-500 font-body">✓ {isBn ? "কনফিগার করা হয়েছে" : "Configured"}</span>
+                </div>
+              )}
+              <button
+                onClick={() => saveGroup("fraud_checker_config", { fraudbd_api_key: settings.fraudbd_api_key })}
+                disabled={saving}
+                className="mt-2 text-[10px] px-2 py-1 border border-border text-foreground hover:bg-secondary"
+              >
+                {isBn ? "সংরক্ষণ" : "Save"}
+              </button>
+            </div>
           </div>
         </TabsContent>
 
