@@ -681,7 +681,7 @@ export default function EmployeeLeads() {
                     <td key={col.id} className="py-2 px-2 min-w-[120px]">
                       <Input
                         className="h-8 text-xs"
-                        placeholder={col.name_bn || col.name}
+                        placeholder={isBn ? (col.name_bn || col.name) : col.name}
                         value={leadNotes[`${lead.id}_${col.id}`] || ""}
                         onChange={e => setLeadNotes(p => ({ ...p, [`${lead.id}_${col.id}`]: e.target.value }))}
                       />
