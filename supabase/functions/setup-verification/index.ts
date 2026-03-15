@@ -6,6 +6,61 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const ADMIN_EMAIL = "business.brand.qore@gmail.com";
+
+async function sendOtpEmail(otp: string): Promise<boolean> {
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) {
+    console.error("[SETUP-VERIFICATION] RESEND_API_KEY not configured");
+    return false;
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "BrandQore <onboarding@resend.dev>",
+        to: [ADMIN_EMAIL],
+        subject: `🔐 BrandQore Setup Verification Code: ${otp}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #0a0a2e; padding: 40px; border-radius: 16px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h1 style="color: #ffffff; font-size: 24px; margin: 0;">BrandQore</h1>
+              <p style="color: #a78bfa; font-size: 14px; margin: 4px 0 0;">Security Verification</p>
+            </div>
+            <div style="background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); border-radius: 12px; padding: 24px; text-align: center;">
+              <p style="color: #ffffff; font-size: 14px; margin: 0 0 16px;">Your verification code is:</p>
+              <div style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #a78bfa; font-family: monospace; padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                ${otp}
+              </div>
+              <p style="color: rgba(255,255,255,0.5); font-size: 12px; margin: 16px 0 0;">This code expires in 10 minutes.</p>
+            </div>
+            <p style="color: rgba(255,255,255,0.3); font-size: 11px; text-align: center; margin-top: 24px;">
+              If you didn't request this code, please ignore this email.
+            </p>
+          </div>
+        `,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      console.log(`[SETUP-VERIFICATION] OTP email sent successfully to ${ADMIN_EMAIL}`);
+      return true;
+    } else {
+      console.error(`[SETUP-VERIFICATION] Resend API error:`, data);
+      return false;
+    }
+  } catch (err) {
+    console.error(`[SETUP-VERIFICATION] Email send error:`, err);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -37,7 +92,7 @@ serve(async (req) => {
       });
     }
 
-    // Generate OTP and store
+    // Generate OTP and send via email
     if (action === 'generate') {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -51,33 +106,29 @@ serve(async (req) => {
 
       if (existing) {
         await supabase.from('app_settings').update({
-          value: { code: otp, expires_at: expiresAt, email: 'business.brand.qore@gmail.com' },
+          value: { code: otp, expires_at: expiresAt, email: ADMIN_EMAIL },
           updated_at: new Date().toISOString()
         }).eq('key', 'setup_otp');
       } else {
         await supabase.from('app_settings').insert({
           key: 'setup_otp',
-          value: { code: otp, expires_at: expiresAt, email: 'business.brand.qore@gmail.com' },
+          value: { code: otp, expires_at: expiresAt, email: ADMIN_EMAIL },
           updated_at: new Date().toISOString()
         });
       }
 
-      console.log(`[SETUP-VERIFICATION] OTP generated for business.brand.qore@gmail.com: ${otp}`);
+      // Send OTP via Resend
+      const emailSent = await sendOtpEmail(otp);
 
-      // Try to send OTP via Supabase Auth magic link (will send a real email)
-      try {
-        await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: 'business.brand.qore@gmail.com',
-        });
-        // The magic link email is sent by Supabase's built-in email
-        // We're using our own OTP code separately
-        console.log(`[SETUP-VERIFICATION] Auth email triggered for business.brand.qore@gmail.com`);
-      } catch (emailErr) {
-        console.log(`[SETUP-VERIFICATION] Auth email failed, OTP available in logs: ${otp}`);
+      if (!emailSent) {
+        console.log(`[SETUP-VERIFICATION] Email send failed. OTP for fallback: ${otp}`);
       }
 
-      return new Response(JSON.stringify({ success: true, message: 'Verification code generated' }), {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: emailSent ? 'Verification code sent to email' : 'Code generated (check logs)',
+        emailSent 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
