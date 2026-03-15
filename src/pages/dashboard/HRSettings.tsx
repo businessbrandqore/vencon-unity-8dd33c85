@@ -129,6 +129,10 @@ const HRSettings = () => {
         if (row.value && Array.isArray(row.value)) setProductNames(row.value as string[]);
       } else if (row.key === "card_names") {
         if (row.value && Array.isArray(row.value)) setCardNames(row.value as string[]);
+      } else if (row.key === "appeal_reason_options") {
+        const val = row.value as any;
+        if (val?.attendance_reasons) setAttendanceReasons(val.attendance_reasons);
+        if (val?.leave_reasons) setLeaveReasons(val.leave_reasons);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
