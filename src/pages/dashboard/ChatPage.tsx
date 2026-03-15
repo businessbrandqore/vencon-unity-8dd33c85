@@ -68,6 +68,7 @@ const ChatPage = () => {
   const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
