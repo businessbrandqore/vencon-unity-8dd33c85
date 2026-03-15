@@ -326,7 +326,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                       <td className="py-2 px-2 text-right">{o.quantity || 1}</td>
                       <td className="py-2 px-2 text-right">৳{o.price || 0}</td>
                       <td className="py-2 px-2 text-xs">
-                        {o.cso_approved_at ? new Date(o.cso_approved_at).toLocaleTimeString("bn-BD") : "—"}
+                        {o.cso_approved_at ? new Date(o.cso_approved_at).toLocaleTimeString(lang === "bn" ? "bn-BD" : "en-US") : "—"}
                       </td>
                     </tr>
                   );
