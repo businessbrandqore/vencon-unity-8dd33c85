@@ -717,9 +717,9 @@ export default function EmployeeLeads() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-6 text-center">
             <Database className="mx-auto mb-2 h-8 w-8 text-primary" />
-            <p className="text-sm text-muted-foreground mb-3">আপনার কোনো লিড নেই। TL-কে ডাটা রিকোয়েস্ট পাঠান।</p>
+            <p className="text-sm text-muted-foreground mb-3">{t("no_leads_request")}</p>
             <Button onClick={() => setShowDataRequestModal(true)} className="gap-2">
-              <Send className="h-4 w-4" /> ডাটা রিকোয়েস্ট পাঠান
+              <Send className="h-4 w-4" /> {t("send_data_request")}
             </Button>
           </CardContent>
         </Card>
