@@ -965,52 +965,52 @@ export default function EmployeeLeads() {
         setShowPreOrderConfirmModal(open);
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Pre-Order Confirm</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("pre_order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Name *</Label><Input value={currentPreOrderConfirmLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-              <div><Label>Phone *</Label><Input value={currentPreOrderConfirmLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("name")} *</Label><Input value={currentPreOrderConfirmLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("phone")} *</Label><Input value={currentPreOrderConfirmLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>District</Label>
+                <Label>{t("district")}</Label>
                 <Select value={pocDistrict} onValueChange={v => { setPocDistrict(v); setPocThana(""); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_district")} /></SelectTrigger>
                   <SelectContent>
                     {BD_DISTRICTS.map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {!pocDistrict && currentPreOrderConfirmLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
+                {!pocDistrict && currentPreOrderConfirmLead?.address && <p className="text-xs text-amber-500 mt-0.5">{t("manual_search")}</p>}
               </div>
               <div>
-                <Label>Thana</Label>
+                <Label>{t("thana")}</Label>
                 <Select value={pocThana} onValueChange={setPocThana} disabled={!pocDistrict}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_thana")} /></SelectTrigger>
                   <SelectContent>
-                    {(BD_DISTRICTS.find(d => d.name === pocDistrict)?.thanas || []).map(t => <SelectItem key={t.name} value={t.name}>{t.name_bn} ({t.name})</SelectItem>)}
+                    {(BD_DISTRICTS.find(d => d.name === pocDistrict)?.thanas || []).map(th => <SelectItem key={th.name} value={th.name}>{th.name_bn} ({th.name})</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Location</Label>
-              <Input value={pocAddress} onChange={e => setPocAddress(e.target.value)} className="mt-1" placeholder="সম্পূর্ণ ঠিকানা" />
+              <Label>{t("location")}</Label>
+              <Input value={pocAddress} onChange={e => setPocAddress(e.target.value)} className="mt-1" placeholder={t("full_address")} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Product *</Label>
+                <Label>{t("product")} *</Label>
                 <Select value={pocProduct} onValueChange={setPocProduct}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product_ph")} /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Preferred Delivery Date *</Label>
+                <Label>{t("preferred_delivery_date")} *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !pocDeliveryDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {pocDeliveryDate ? format(pocDeliveryDate, "PPP") : "তারিখ নির্বাচন"}
+                      {pocDeliveryDate ? format(pocDeliveryDate, "PPP") : t("select_date_ph")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1021,8 +1021,8 @@ export default function EmployeeLeads() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPreOrderConfirmModal(false)}>Cancel</Button>
-            <Button onClick={handlePreOrderConfirmSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">Save Pre-Order</Button>
+            <Button variant="outline" onClick={() => setShowPreOrderConfirmModal(false)}>{t("cancel")}</Button>
+            <Button onClick={handlePreOrderConfirmSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("save_pre_order")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
