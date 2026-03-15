@@ -511,8 +511,32 @@ export default function EmployeeAttendance() {
                 <input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm" />
               </div>
             </div>
+            {appealReasonOptions.leave_reasons.length > 0 && (
+              <div>
+                <Label className="mb-2 block">কারণ নির্বাচন করুন</Label>
+                <div className="flex flex-wrap gap-2">
+                  {appealReasonOptions.leave_reasons.map((reason) => (
+                    <label key={reason} className={cn(
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-all",
+                      leaveSelectedReasons.includes(reason) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"
+                    )}>
+                      <Checkbox
+                        checked={leaveSelectedReasons.includes(reason)}
+                        onCheckedChange={(checked) => {
+                          setLeaveSelectedReasons(prev =>
+                            checked ? [...prev, reason] : prev.filter(r => r !== reason)
+                          );
+                        }}
+                        className="h-3.5 w-3.5"
+                      />
+                      {reason}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
-              <label className="text-sm text-muted-foreground">কারণ</label>
+              <label className="text-sm text-muted-foreground">অতিরিক্ত মন্তব্য</label>
               <Textarea value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} className="mt-1" rows={2} />
             </div>
           </div>
