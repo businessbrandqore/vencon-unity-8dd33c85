@@ -3,57 +3,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { APP_VERSION } from "@/lib/appVersion";
 import brandQoreLogo from "@/assets/brandqore-logo.jpg";
 import {
-  Shield, Zap, FileText, CheckCircle2, Mail, Lock, Users,
+  Shield, Zap, FileText, CheckCircle2, Lock, Users,
   BarChart3, MessageSquare, Package, Clock, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-const ADMIN_EMAIL = "business.brand.qore@gmail.com";
-
 type Step = "verify" | "welcome" | "security" | "terms" | "installing" | "done";
 
 export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
   const [step, setStep] = useState<Step>("verify");
-  const [otpCode, setOtpCode] = useState("");
-  const [sending, setSending] = useState(false);
+  const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [installProgress, setInstallProgress] = useState(0);
 
-  const sendCode = async () => {
-    setSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "generate" }
-      });
-      if (error) throw error;
-      setCodeSent(true);
-      toast.success("Verification code sent!");
-    } catch (err: any) {
-      toast.error("Failed to send code");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const verifyCode = async () => {
-    if (otpCode.length !== 6) {
-      toast.error("৬ ডিজিটের কোড দিন");
+  const verifyPassword = async () => {
+    if (!password.trim()) {
+      toast.error("পাসওয়ার্ড লিখুন");
       return;
     }
     setVerifying(true);
     try {
       const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "verify", code: otpCode }
+        body: { action: "verify", password }
       });
       if (error) throw error;
       if (data.success) {
         toast.success("✓ Verified!");
         setStep("welcome");
       } else {
-        toast.error(data.error || "Invalid code");
+        toast.error(data.error || "Invalid password");
       }
     } catch (err: any) {
       toast.error("Verification failed");
@@ -168,62 +149,45 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                 <p className="text-white/50 text-sm">অ্যাডমিন অ্যাক্সেস যাচাই করুন</p>
               </div>
 
-              {!codeSent ? (
-                <div className="space-y-4">
-                  <div className="rounded-xl p-4" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.15)" }}>
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 flex-shrink-0" style={{ color: PURPLE_LIGHT }} />
-                      <span className="text-white/70 text-sm truncate">{ADMIN_EMAIL}</span>
-                    </div>
+              <div className="space-y-4">
+                <div className="rounded-xl p-4" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.15)" }}>
+                  <div className="flex items-center gap-3">
+                    <Lock className="w-5 h-5 flex-shrink-0" style={{ color: PURPLE_LIGHT }} />
+                    <span className="text-white/70 text-sm">সেটআপ পাসওয়ার্ড দিন</span>
                   </div>
-                  <Button
-                    onClick={sendCode}
-                    disabled={sending}
-                    className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                    style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
-                  >
-                    {sending ? (
-                      <span className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Sending...
-                      </span>
-                    ) : "Send Verification Code"}
-                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-white/50 text-xs">
-                    ইমেইলে পাঠানো ৬ ডিজিটের কোডটি লিখুন
-                  </p>
+                <div className="relative">
                   <Input
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="000000"
-                    maxLength={6}
-                    className="text-center text-3xl tracking-[0.6em] h-16 rounded-xl font-mono border-purple-500/20 text-white"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="পাসওয়ার্ড লিখুন"
+                    className="h-14 rounded-xl text-lg border-purple-500/20 text-white pr-12"
                     style={{ background: "rgba(124,58,237,0.06)" }}
+                    onKeyDown={(e) => e.key === "Enter" && verifyPassword()}
                   />
-                  <Button
-                    onClick={verifyCode}
-                    disabled={verifying || otpCode.length !== 6}
-                    className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                    style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
-                  >
-                    {verifying ? (
-                      <span className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Verifying...
-                      </span>
-                    ) : "Verify Code"}
-                  </Button>
                   <button
-                    onClick={() => { setCodeSent(false); setOtpCode(""); }}
-                    className="text-purple-400/50 hover:text-purple-400 text-xs underline transition-colors"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
                   >
-                    Resend code
+                    <Eye className="w-5 h-5" />
                   </button>
                 </div>
-              )}
+                <Button
+                  onClick={verifyPassword}
+                  disabled={verifying || !password.trim()}
+                  className="w-full h-12 rounded-xl font-semibold text-white border-0"
+                  style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
+                >
+                  {verifying ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Verifying...
+                    </span>
+                  ) : "Verify & Continue"}
+                </Button>
+              </div>
             </div>
           )}
 
