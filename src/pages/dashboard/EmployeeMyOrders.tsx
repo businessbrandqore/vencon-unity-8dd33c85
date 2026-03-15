@@ -345,7 +345,7 @@ export default function EmployeeMyOrders() {
                 {(selected.rider_name || selected.rider_phone) && (
                   <div className="rounded-lg border border-blue-300/50 bg-blue-50 dark:bg-blue-950/20 p-4">
                     <p className="font-heading text-sm font-bold flex items-center gap-2 mb-3">
-                      <Truck className="h-4 w-4 text-blue-600" /> কুরিয়ার রাইডার তথ্য
+                      <Truck className="h-4 w-4 text-blue-600" /> {isBn ? "কুরিয়ার রাইডার তথ্য" : "Courier Rider Info"}
                     </p>
                     <div className="space-y-2 text-sm">
                       {selected.rider_name && (
