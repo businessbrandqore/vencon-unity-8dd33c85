@@ -87,8 +87,8 @@ const FraudChecker = () => {
     const phone = historyPhone.trim();
 
     const [ordersRes, leadsRes] = await Promise.all([
-      supabase.from("orders").select("id, customer_name, phone, product, status, delivery_status, created_at").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
-      supabase.from("leads").select("id, name, phone, status, created_at, agent_type").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
+      supabase.from("orders").select("id, customer_name, phone, product, status, delivery_status, created_at, address, district, thana, price, quantity, advance_payment, payment_method").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
+      supabase.from("leads").select("id, name, phone, status, created_at, agent_type, address, source").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
     ]);
 
     setHistoryOrders((ordersRes.data as HistoryOrder[]) || []);
