@@ -68,6 +68,21 @@ const ChatPage = () => {
     },
   });
 
+  // Fetch Cloudinary config
+  const { data: cloudinaryConfig } = useQuery({
+    queryKey: ["cloudinary-config"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "cloudinary_config")
+        .maybeSingle();
+      if (!data?.value) return null;
+      const val = data.value as Record<string, string>;
+      return val.cloud_name && val.upload_preset ? val : null;
+    },
+  });
+
   // Fetch conversations with display names
   const { data: conversations, refetch: refetchConvos } = useQuery({
     queryKey: ["chat-conversations", user?.id],
