@@ -399,7 +399,13 @@ const ChatPage = () => {
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
       {/* Call overlay */}
-      {user && <ChatCallOverlay currentUserId={user.id} />}
+      {user && (
+        <ChatCallOverlay
+          currentUserId={user.id}
+          outgoingCall={outgoingCall}
+          onOutgoingCallHandled={() => setOutgoingCall(null)}
+        />
+      )}
 
       {/* Sidebar */}
       <div className="w-72 border-r border-border flex flex-col bg-card/50 shrink-0">
