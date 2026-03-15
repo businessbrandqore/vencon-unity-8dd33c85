@@ -623,36 +623,6 @@ const ChatPage = () => {
         />
       )}
 
-      {/* New DM Modal */}
-      {showNewDM && (
-        <div className="fixed inset-0 bg-background/80 z-50 flex items-center justify-center" onClick={() => setShowNewDM(false)}>
-          <div className="bg-card border border-border rounded-lg w-96 max-h-[500px] overflow-hidden shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-border">
-              <h3 className="font-heading text-sm font-semibold">New Direct Message</h3>
-            </div>
-            <div className="p-3 border-b border-border">
-              <Input placeholder="Search users..." className="h-8 text-xs" />
-            </div>
-            <ScrollArea className="max-h-80">
-              {allUsers?.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => startDM(u.id)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-secondary border-b border-border/50 flex items-center gap-3 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                    {getInitials(u.name)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{u.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{u.role.replace(/_/g, " ")} • {u.panel}</p>
-                  </div>
-                </button>
-              ))}
-            </ScrollArea>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
