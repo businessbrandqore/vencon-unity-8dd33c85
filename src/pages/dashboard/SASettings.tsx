@@ -24,10 +24,7 @@ const SASettings = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
 
-  const [activeTab, setActiveTab] = useState<"company" | "steadfast" | "sitelock" | "reset">("company");
-  const [siteLocked, setSiteLocked] = useState<boolean | null>(null);
-  const [lockLoading, setLockLoading] = useState(false);
-  const [lockPassword, setLockPassword] = useState("");
+  const [activeTab, setActiveTab] = useState<"company" | "steadfast" | "reset">("company");
 
   const [company, setCompany] = useState<CompanyInfo>({
     company_name: "VENCON",
