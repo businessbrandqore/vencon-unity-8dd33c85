@@ -305,8 +305,8 @@ export default function EmployeeMyOrders() {
                   </div>
                 ) : (
                   <div className="space-y-0">
-                    <p className="text-xs font-medium text-muted-foreground mb-3">অর্ডার ট্র্যাকিং</p>
-                    {PIPELINE_STEPS.map((step, idx) => {
+                    <p className="text-xs font-medium text-muted-foreground mb-3">{t("order_tracking")}</p>
+                    {PIPELINE_KEYS.map((step, idx) => {
                       const isActive = idx <= activeStep;
                       const isCurrent = idx === activeStep;
                       const StepIcon = step.icon;
