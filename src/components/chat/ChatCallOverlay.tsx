@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Phone, PhoneOff, PhoneCall, X } from "lucide-react";
+import { Phone, PhoneOff, PhoneCall } from "lucide-react";
 
 type CallStatus = "idle" | "calling" | "incoming" | "connected";
 
@@ -19,7 +19,6 @@ interface ChatCallOverlayProps {
   onOutgoingCallHandled?: () => void;
 }
 
-// Simple WhatsApp-like ringtone using Web Audio API
 const createRingtone = () => {
   let intervalId: number | null = null;
   let audioCtx: AudioContext | null = null;
@@ -75,15 +74,35 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
   const [duration, setDuration] = useState(0);
   const ringtoneRef = useRef(createRingtone());
   const timerRef = useRef<number | null>(null);
-  const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+
+  // Use refs for realtime handler to avoid stale closures
+  const callInfoRef = useRef<CallInfo | null>(null);
+  const statusRef = useRef<CallStatus>("idle");
+  callInfoRef.current = callInfo;
+  statusRef.current = status;
+
+  const endCallCleanup = useCallback(() => {
+    ringtoneRef.current.stop();
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    localStreamRef.current = null;
+    setStatus("idle");
+    setCallInfo(null);
+    setDuration(0);
+    onCallStateChange?.(false);
+  }, [onCallStateChange]);
+
+  const endCallCleanupRef = useRef(endCallCleanup);
+  endCallCleanupRef.current = endCallCleanup;
 
   // Handle outgoing call trigger from parent
   useEffect(() => {
     if (!outgoingCall || status !== "idle") return;
     (async () => {
       const { data: call, error } = await supabase
-        .from("chat_calls" as any)
+        .from("chat_calls")
         .insert({
           conversation_id: outgoingCall.conversationId,
           caller_id: currentUserId,
@@ -97,43 +116,42 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
         return;
       }
 
-      setCallInfo({
-        callId: (call as any).id,
+      const newCallInfo: CallInfo = {
+        callId: call.id,
         conversationId: outgoingCall.conversationId,
         callerId: currentUserId,
         callerName: outgoingCall.callerName,
-      });
+      };
+      setCallInfo(newCallInfo);
       setStatus("calling");
       ringtoneRef.current.play();
       onOutgoingCallHandled?.();
 
       // Auto-timeout after 30s
+      const callId = call.id;
       setTimeout(async () => {
-        setStatus((prev) => {
-          if (prev === "calling") {
-            supabase
-              .from("chat_calls" as any)
-              .update({ status: "missed", ended_at: new Date().toISOString() })
-              .eq("id", (call as any).id)
-              .then(() => {});
-            endCallCleanup();
-          }
-          return prev;
-        });
+        if (statusRef.current === "calling" && callInfoRef.current?.callId === callId) {
+          await supabase
+            .from("chat_calls")
+            .update({ status: "missed", ended_at: new Date().toISOString() })
+            .eq("id", callId);
+          endCallCleanupRef.current();
+        }
       }, 30000);
     })();
   }, [outgoingCall]);
 
-  // Listen for incoming calls & call status updates
+  // Listen for incoming calls & call status updates - stable subscription
   useEffect(() => {
     const channel = supabase
-      .channel("call-signals")
+      .channel(`call-signals-${currentUserId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_calls" },
         async (payload: any) => {
           const call = payload.new;
           if (call.caller_id === currentUserId || call.status !== "ringing") return;
+          if (statusRef.current !== "idle") return; // Already in a call
 
           // Check if I'm a participant
           const { data: part } = await supabase
@@ -167,9 +185,11 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
         { event: "UPDATE", schema: "public", table: "chat_calls" },
         (payload: any) => {
           const call = payload.new;
-          if (!callInfo || call.id !== callInfo.callId) return;
+          const ci = callInfoRef.current;
+          const st = statusRef.current;
+          if (!ci || call.id !== ci.callId) return;
 
-          if (call.status === "active" && status === "calling") {
+          if (call.status === "active" && st === "calling") {
             ringtoneRef.current.stop();
             setStatus("connected");
             setDuration(0);
@@ -178,7 +198,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           }
 
           if (call.status === "ended" || call.status === "rejected" || call.status === "missed") {
-            endCallCleanup();
+            endCallCleanupRef.current();
           }
         }
       )
@@ -187,29 +207,14 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, callInfo, status]);
-
-  const endCallCleanup = useCallback(() => {
-    ringtoneRef.current.stop();
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-    peerRef.current?.close();
-    peerRef.current = null;
-    localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    localStreamRef.current = null;
-    setStatus("idle");
-    setCallInfo(null);
-    setDuration(0);
-    onCallStateChange?.(false);
-  }, [onCallStateChange]);
-
+  }, [currentUserId]); // Only depend on currentUserId - use refs for everything else
 
   const acceptCall = async () => {
     if (!callInfo) return;
     ringtoneRef.current.stop();
 
     await supabase
-      .from("chat_calls" as any)
+      .from("chat_calls")
       .update({ status: "active", started_at: new Date().toISOString() })
       .eq("id", callInfo.callId);
 
@@ -218,19 +223,16 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     timerRef.current = window.setInterval(() => setDuration((d) => d + 1), 1000);
     onCallStateChange?.(true);
 
-    // Try WebRTC audio
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
-      // In a full implementation, we'd exchange SDP via Realtime broadcast
-      // For now, audio capture is started but peer connection needs signaling
     } catch {}
   };
 
   const rejectCall = async () => {
     if (!callInfo) return;
     await supabase
-      .from("chat_calls" as any)
+      .from("chat_calls")
       .update({ status: "rejected", ended_at: new Date().toISOString() })
       .eq("id", callInfo.callId);
     endCallCleanup();
@@ -239,7 +241,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
   const endCall = async () => {
     if (!callInfo) return;
     await supabase
-      .from("chat_calls" as any)
+      .from("chat_calls")
       .update({ status: "ended", ended_at: new Date().toISOString() })
       .eq("id", callInfo.callId);
     endCallCleanup();
@@ -250,14 +252,12 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
   return (
     <div className="fixed inset-0 bg-background/90 z-[100] flex items-center justify-center">
       <div className="bg-card border border-border rounded-2xl p-8 w-80 text-center shadow-2xl">
-        {/* Avatar */}
         <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
           status === "connected" ? "bg-emerald-500/20" : "bg-primary/20 animate-pulse"
         }`}>
           <PhoneCall className={`h-8 w-8 ${status === "connected" ? "text-emerald-500" : "text-primary"}`} />
         </div>
 
-        {/* Status text */}
         <h3 className="text-lg font-semibold text-foreground mb-1">
           {status === "calling" && "Calling..."}
           {status === "incoming" && callInfo?.callerName}
@@ -269,7 +269,6 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           {status === "connected" && formatDuration(duration)}
         </p>
 
-        {/* Action buttons */}
         <div className="flex items-center justify-center gap-4">
           {status === "incoming" && (
             <>
