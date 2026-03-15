@@ -240,7 +240,7 @@ export default function EmployeeLeads() {
     if (!tlId) {
       // Try campaign_agent_roles
       const { data: carData } = await supabase.from("campaign_agent_roles").select("tl_id, campaign_id").eq("agent_id", user.id).limit(1);
-      if (!carData?.[0]?.tl_id) { toast.error("টিম লিডার পাওয়া যায়নি"); setDataRequestLoading(false); return; }
+      toast.error(isBn ? "টিম লিডার পাওয়া যায়নি" : "Team leader not found"); setDataRequestLoading(false); return;
       await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: carData[0].tl_id, campaign_id: carData[0].campaign_id, message: dataRequestMsg || null });
     } else {
       await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: tlId, message: dataRequestMsg || null });
