@@ -50,22 +50,22 @@ function getActiveStep(order: OrderRow): number {
   return 0;
 }
 
-function getStatusInfo(order: OrderRow): { label: string; color: string; isFailed: boolean } {
+function getStatusInfo(order: OrderRow, isBn: boolean): { label: string; color: string; isFailed: boolean } {
   const status = order.status || "";
   const delivery = order.delivery_status || "";
 
-  if (status === "rejected") return { label: "রিজেক্ট", color: "text-destructive", isFailed: true };
-  if (status === "cancelled") return { label: "বাতিল", color: "text-destructive", isFailed: true };
-  if (delivery === "returned") return { label: "রিটার্ন", color: "text-destructive", isFailed: true };
-  if (delivery === "delivered") return { label: "ডেলিভারড ✓", color: "text-emerald-600", isFailed: false };
-  if (delivery === "in_transit") return { label: "পথে আছে", color: "text-blue-600", isFailed: false };
-  if (delivery === "partial_delivered") return { label: "আংশিক ডেলিভারি", color: "text-amber-600", isFailed: false };
-  if (status === "dispatched") return { label: "ডিসপ্যাচ হয়েছে", color: "text-purple-600", isFailed: false };
-  if (status === "send_today") return { label: "ওয়্যারহাউসে", color: "text-blue-600", isFailed: false };
-  if (status === "pending_cso") return { label: "CSO পেন্ডিং", color: "text-amber-600", isFailed: false };
-  if (status === "pending_tl") return { label: "TL পেন্ডিং", color: "text-amber-600", isFailed: false };
-  if (status === "call_done") return { label: "কল সম্পন্ন", color: "text-cyan-600", isFailed: false };
-  return { label: status || "পেন্ডিং", color: "text-muted-foreground", isFailed: false };
+  if (status === "rejected") return { label: isBn ? "রিজেক্ট" : "Rejected", color: "text-destructive", isFailed: true };
+  if (status === "cancelled") return { label: isBn ? "বাতিল" : "Cancelled", color: "text-destructive", isFailed: true };
+  if (delivery === "returned") return { label: isBn ? "রিটার্ন" : "Returned", color: "text-destructive", isFailed: true };
+  if (delivery === "delivered") return { label: isBn ? "ডেলিভারড ✓" : "Delivered ✓", color: "text-emerald-600", isFailed: false };
+  if (delivery === "in_transit") return { label: isBn ? "পথে আছে" : "In Transit", color: "text-blue-600", isFailed: false };
+  if (delivery === "partial_delivered") return { label: isBn ? "আংশিক ডেলিভারি" : "Partial Delivery", color: "text-amber-600", isFailed: false };
+  if (status === "dispatched") return { label: isBn ? "ডিসপ্যাচ হয়েছে" : "Dispatched", color: "text-purple-600", isFailed: false };
+  if (status === "send_today") return { label: isBn ? "ওয়্যারহাউসে" : "At Warehouse", color: "text-blue-600", isFailed: false };
+  if (status === "pending_cso") return { label: isBn ? "CSO পেন্ডিং" : "CSO Pending", color: "text-amber-600", isFailed: false };
+  if (status === "pending_tl") return { label: isBn ? "TL পেন্ডিং" : "TL Pending", color: "text-amber-600", isFailed: false };
+  if (status === "call_done") return { label: isBn ? "কল সম্পন্ন" : "Call Done", color: "text-cyan-600", isFailed: false };
+  return { label: status || (isBn ? "পেন্ডিং" : "Pending"), color: "text-muted-foreground", isFailed: false };
 }
 
 export default function EmployeeMyOrders() {
