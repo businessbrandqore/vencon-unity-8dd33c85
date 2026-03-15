@@ -31,6 +31,13 @@ interface HistoryOrder {
   status: string | null;
   delivery_status: string | null;
   created_at: string | null;
+  address: string | null;
+  district: string | null;
+  thana: string | null;
+  price: number | null;
+  quantity: number | null;
+  advance_payment: number | null;
+  payment_method: string | null;
 }
 
 const FraudChecker = () => {
@@ -80,8 +87,8 @@ const FraudChecker = () => {
     const phone = historyPhone.trim();
 
     const [ordersRes, leadsRes] = await Promise.all([
-      supabase.from("orders").select("id, customer_name, phone, product, status, delivery_status, created_at").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
-      supabase.from("leads").select("id, name, phone, status, created_at, agent_type").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
+      supabase.from("orders").select("id, customer_name, phone, product, status, delivery_status, created_at, address, district, thana, price, quantity, advance_payment, payment_method").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
+      supabase.from("leads").select("id, name, phone, status, created_at, agent_type, address, source").ilike("phone", `%${phone.slice(-10)}%`).order("created_at", { ascending: false }).limit(50),
     ]);
 
     setHistoryOrders((ordersRes.data as HistoryOrder[]) || []);
@@ -90,20 +97,24 @@ const FraudChecker = () => {
     setShowHistory(true);
   };
 
-  const getRiskColor = (level: string) => {
-    if (level === "safe") return "text-green-600";
-    if (level === "moderate") return "text-yellow-600";
-    if (level === "risky") return "text-orange-500";
-    if (level === "dangerous") return "text-red-600";
-    return "text-muted-foreground";
-  };
+  
 
   const getRiskLabel = (level: string) => {
     if (level === "safe") return isBn ? "✅ নিরাপদ — পণ্য পাঠানো যাবে" : "✅ Safe to deliver";
     if (level === "moderate") return isBn ? "⚠️ মোটামুটি — সতর্কতার সাথে পাঠান" : "⚠️ Moderate — Send with caution";
     if (level === "risky") return isBn ? "🔶 ঝুঁকিপূর্ণ — অগ্রিম পেমেন্ট নিন" : "🔶 Risky — Take advance payment";
     if (level === "dangerous") return isBn ? "🔴 বিপজ্জনক — পাঠানো উচিত নয়" : "🔴 Dangerous — Do not send";
+    if (level === "new_customer") return isBn ? "🆕 নতুন কাস্টমার — কোনো ডেলিভারি হিস্টোরি নেই" : "🆕 New Customer — No delivery history";
     return isBn ? "❓ কোনো ডাটা নেই" : "❓ No data";
+  };
+
+  const getRiskColor = (level: string) => {
+    if (level === "safe") return "text-green-600";
+    if (level === "moderate") return "text-yellow-600";
+    if (level === "risky") return "text-orange-500";
+    if (level === "dangerous") return "text-red-600";
+    if (level === "new_customer") return "text-blue-500";
+    return "text-muted-foreground";
   };
 
   const getRiskIcon = (level: string) => {
@@ -111,6 +122,7 @@ const FraudChecker = () => {
     if (level === "moderate") return <ShieldAlert className="h-5 w-5 text-yellow-600" />;
     if (level === "risky") return <AlertTriangle className="h-5 w-5 text-orange-500" />;
     if (level === "dangerous") return <ShieldX className="h-5 w-5 text-red-600" />;
+    if (level === "new_customer") return <HelpCircle className="h-5 w-5 text-blue-500" />;
     return <HelpCircle className="h-5 w-5 text-muted-foreground" />;
   };
 
@@ -253,7 +265,7 @@ const FraudChecker = () => {
 
       {/* History Popup Dialog */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Phone className="h-4 w-4" />
@@ -262,6 +274,38 @@ const FraudChecker = () => {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Summary Stats */}
+            {historyOrders.length > 0 && (() => {
+              const delivered = historyOrders.filter(o => o.delivery_status === 'delivered').length;
+              const cancelled = historyOrders.filter(o => ['cancelled', 'returned'].includes(o.delivery_status || '')).length;
+              const pending = historyOrders.filter(o => !['delivered', 'cancelled', 'returned'].includes(o.delivery_status || '')).length;
+              const totalPrice = historyOrders.reduce((s, o) => s + (o.price || 0), 0);
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  <div className="bg-secondary rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-foreground">{historyOrders.length}</div>
+                    <div className="text-[10px] text-muted-foreground">{isBn ? "মোট অর্ডার" : "Total Orders"}</div>
+                  </div>
+                  <div className="bg-green-500/10 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-green-600">{delivered}</div>
+                    <div className="text-[10px] text-muted-foreground">{isBn ? "ডেলিভার্ড" : "Delivered"}</div>
+                  </div>
+                  <div className="bg-red-500/10 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-red-500">{cancelled}</div>
+                    <div className="text-[10px] text-muted-foreground">{isBn ? "ক্যান্সেল/রিটার্ন" : "Cancel/Return"}</div>
+                  </div>
+                  <div className="bg-yellow-500/10 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-yellow-600">{pending}</div>
+                    <div className="text-[10px] text-muted-foreground">{isBn ? "পেন্ডিং" : "Pending"}</div>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-primary">৳{totalPrice}</div>
+                    <div className="text-[10px] text-muted-foreground">{isBn ? "মোট মূল্য" : "Total Value"}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Orders */}
             <div>
               <h4 className="font-heading text-sm font-bold text-foreground mb-2">
@@ -270,13 +314,18 @@ const FraudChecker = () => {
               {historyOrders.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{isBn ? "কোনো অর্ডার নেই" : "No orders found"}</p>
               ) : (
-                <div className="border border-border rounded overflow-hidden">
+                <div className="border border-border rounded overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead className="bg-secondary">
                       <tr>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "তারিখ" : "Date"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "কাস্টমার" : "Customer"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "পণ্য" : "Product"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "মূল্য" : "Price"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "পরিমাণ" : "Qty"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "অগ্রিম" : "Advance"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "ঠিকানা" : "Address"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "জেলা" : "District"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "স্ট্যাটাস" : "Status"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "ডেলিভারি" : "Delivery"}</th>
                       </tr>
@@ -284,15 +333,20 @@ const FraudChecker = () => {
                     <tbody className="divide-y divide-border">
                       {historyOrders.map((o) => (
                         <tr key={o.id} className="hover:bg-accent/30">
-                          <td className="px-2 py-1.5">{o.created_at ? new Date(o.created_at).toLocaleDateString("bn-BD") : "-"}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{o.created_at ? new Date(o.created_at).toLocaleDateString("bn-BD") : "-"}</td>
                           <td className="px-2 py-1.5">{o.customer_name || "-"}</td>
                           <td className="px-2 py-1.5">{o.product || "-"}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">৳{o.price || 0}</td>
+                          <td className="px-2 py-1.5">{o.quantity || 1}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{o.advance_payment ? `৳${o.advance_payment}` : "-"}</td>
+                          <td className="px-2 py-1.5 max-w-[120px] truncate" title={o.address || ""}>{o.address || "-"}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{[o.district, o.thana].filter(Boolean).join(", ") || "-"}</td>
                           <td className="px-2 py-1.5">
                             <Badge variant="outline" className="text-[9px]">{o.status || "-"}</Badge>
                           </td>
                           <td className="px-2 py-1.5">
                             <Badge
-                              variant={o.delivery_status === "delivered" ? "default" : o.delivery_status === "returned" ? "destructive" : "outline"}
+                              variant={o.delivery_status === "delivered" ? "default" : o.delivery_status === "returned" || o.delivery_status === "cancelled" ? "destructive" : "outline"}
                               className="text-[9px]"
                             >
                               {o.delivery_status || "-"}
@@ -314,13 +368,15 @@ const FraudChecker = () => {
               {historyLeads.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{isBn ? "কোনো লিড নেই" : "No leads found"}</p>
               ) : (
-                <div className="border border-border rounded overflow-hidden">
+                <div className="border border-border rounded overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead className="bg-secondary">
                       <tr>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "তারিখ" : "Date"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "নাম" : "Name"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "ফোন" : "Phone"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "ঠিকানা" : "Address"}</th>
+                        <th className="px-2 py-1.5 text-left font-bold">{isBn ? "সোর্স" : "Source"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "স্ট্যাটাস" : "Status"}</th>
                         <th className="px-2 py-1.5 text-left font-bold">{isBn ? "টাইপ" : "Type"}</th>
                       </tr>
@@ -328,9 +384,11 @@ const FraudChecker = () => {
                     <tbody className="divide-y divide-border">
                       {historyLeads.map((l: any) => (
                         <tr key={l.id} className="hover:bg-accent/30">
-                          <td className="px-2 py-1.5">{l.created_at ? new Date(l.created_at).toLocaleDateString("bn-BD") : "-"}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleDateString("bn-BD") : "-"}</td>
                           <td className="px-2 py-1.5">{l.name || "-"}</td>
                           <td className="px-2 py-1.5">{l.phone || "-"}</td>
+                          <td className="px-2 py-1.5 max-w-[120px] truncate" title={l.address || ""}>{l.address || "-"}</td>
+                          <td className="px-2 py-1.5">{l.source || "-"}</td>
                           <td className="px-2 py-1.5">
                             <Badge variant="outline" className="text-[9px]">{l.status || "-"}</Badge>
                           </td>
