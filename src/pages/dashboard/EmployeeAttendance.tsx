@@ -214,12 +214,13 @@ export default function EmployeeAttendance() {
 
   const handleLeaveSubmit = async () => {
     if (!user || !leaveStart || !leaveEnd) { toast.error("তারিখ দিন"); return; }
+    const combinedReason = [...leaveSelectedReasons, leaveReason].filter(Boolean).join(" | ");
     await supabase.from("leave_requests").insert({
-      user_id: user.id, start_date: leaveStart, end_date: leaveEnd, reason: leaveReason || null,
+      user_id: user.id, start_date: leaveStart, end_date: leaveEnd, reason: combinedReason || null,
     });
     toast.success("ছুটির আবেদন জমা হয়েছে ✓");
     setShowLeaveModal(false);
-    setLeaveStart(""); setLeaveEnd(""); setLeaveReason("");
+    setLeaveStart(""); setLeaveEnd(""); setLeaveReason(""); setLeaveSelectedReasons([]);
     const { data } = await supabase.from("leave_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     if (data) setLeaves(data as LeaveRequest[]);
   };
