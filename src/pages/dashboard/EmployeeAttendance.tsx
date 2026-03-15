@@ -85,6 +85,7 @@ export default function EmployeeAttendance() {
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealAttendanceId, setAppealAttendanceId] = useState("");
   const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSelectedReasons, setAppealSelectedReasons] = useState<string[]>([]);
   const [appealSubmitting, setAppealSubmitting] = useState(false);
   const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
 
