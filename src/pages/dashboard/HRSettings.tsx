@@ -840,35 +840,80 @@ const HRSettings = () => {
                 {isBn ? "সংরক্ষণ ও পরীক্ষা" : "Save & Test"}
               </button>
             </div>
-            {/* Fraud Checker */}
+            {/* Fraud Checker - Individual Courier APIs */}
             <div className="border-t border-border pt-4">
               <h4 className="font-body text-xs font-bold text-foreground mb-1">
-                {isBn ? "ফ্রড চেকার (FraudBD)" : "Fraud Checker (FraudBD)"}
+                {isBn ? "ফ্রড চেকার (কুরিয়ার API)" : "Fraud Checker (Courier APIs)"}
               </h4>
-              <p className="text-[10px] text-muted-foreground font-body mb-2">
+              <p className="text-[10px] text-muted-foreground font-body mb-3">
                 {isBn
-                  ? "fraudbd.com থেকে API Key নিন। এটি Steadfast, Pathao, RedX এর ডেলিভারি হিস্টোরি চেক করবে।"
-                  : "Get API Key from fraudbd.com. Checks delivery history across Steadfast, Pathao, RedX."}
+                  ? "Steadfast, Pathao, RedX এর আলাদা আলাদা API ক্রেডেনশিয়াল দিন। ফোন নাম্বার দিয়ে ডেলিভারি হিস্টোরি চেক করা হবে।"
+                  : "Provide individual API credentials for Steadfast, Pathao, RedX to check delivery history by phone."}
               </p>
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="font-body text-[10px] text-muted-foreground block mb-1">FraudBD API Key</label>
-                  <Input
-                    type="password"
-                    value={settings.fraudbd_api_key || ""}
-                    onChange={(e) => set("fraudbd_api_key", e.target.value)}
-                    className={fieldClass}
-                    placeholder="your_fraudbd_api_key"
-                  />
+
+              {/* Steadfast */}
+              <div className="mb-3 p-2 border border-border rounded bg-secondary/30">
+                <h5 className="font-body text-[11px] font-bold text-foreground mb-2">Steadfast Courier</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-body text-[10px] text-muted-foreground block mb-1">API Key</label>
+                    <Input type="password" value={settings.fc_steadfast_api_key || ""} onChange={(e) => set("fc_steadfast_api_key", e.target.value)} className={fieldClass} placeholder="Steadfast API Key" />
+                  </div>
+                  <div>
+                    <label className="font-body text-[10px] text-muted-foreground block mb-1">Secret Key</label>
+                    <Input type="password" value={settings.fc_steadfast_secret_key || ""} onChange={(e) => set("fc_steadfast_secret_key", e.target.value)} className={fieldClass} placeholder="Steadfast Secret Key" />
+                  </div>
                 </div>
               </div>
-              {settings.fraudbd_api_key && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[10px] text-green-500 font-body">✓ {isBn ? "কনফিগার করা হয়েছে" : "Configured"}</span>
+
+              {/* Pathao */}
+              <div className="mb-3 p-2 border border-border rounded bg-secondary/30">
+                <h5 className="font-body text-[11px] font-bold text-foreground mb-2">Pathao Courier</h5>
+                <p className="text-[9px] text-muted-foreground mb-2">
+                  {isBn ? "merchant.pathao.com এ লগইন করার ইমেইল ও পাসওয়ার্ড দিন" : "Enter your merchant.pathao.com login email & password"}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-body text-[10px] text-muted-foreground block mb-1">{isBn ? "ইমেইল/ইউজারনেম" : "Email/Username"}</label>
+                    <Input value={settings.fc_pathao_username || ""} onChange={(e) => set("fc_pathao_username", e.target.value)} className={fieldClass} placeholder="merchant@example.com" />
+                  </div>
+                  <div>
+                    <label className="font-body text-[10px] text-muted-foreground block mb-1">{isBn ? "পাসওয়ার্ড" : "Password"}</label>
+                    <Input type="password" value={settings.fc_pathao_password || ""} onChange={(e) => set("fc_pathao_password", e.target.value)} className={fieldClass} placeholder="••••••••" />
+                  </div>
+                </div>
+              </div>
+
+              {/* RedX */}
+              <div className="mb-3 p-2 border border-border rounded bg-secondary/30">
+                <h5 className="font-body text-[11px] font-bold text-foreground mb-2">RedX Courier</h5>
+                <p className="text-[9px] text-muted-foreground mb-2">
+                  {isBn ? "RedX মার্চেন্ট প্যানেল থেকে Access Token নিন" : "Get Access Token from RedX merchant panel"}
+                </p>
+                <div>
+                  <label className="font-body text-[10px] text-muted-foreground block mb-1">Access Token</label>
+                  <Input type="password" value={settings.fc_redx_access_token || ""} onChange={(e) => set("fc_redx_access_token", e.target.value)} className={fieldClass} placeholder="RedX Access Token" />
+                </div>
+              </div>
+
+              {(settings.fc_steadfast_api_key || settings.fc_pathao_username || settings.fc_redx_access_token) && (
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-[10px] text-green-500 font-body">
+                    ✓ {isBn ? "কনফিগার করা হয়েছে" : "Configured"}:
+                    {settings.fc_steadfast_api_key ? " Steadfast" : ""}
+                    {settings.fc_pathao_username ? " Pathao" : ""}
+                    {settings.fc_redx_access_token ? " RedX" : ""}
+                  </span>
                 </div>
               )}
               <button
-                onClick={() => saveGroup("fraud_checker_config", { fraudbd_api_key: settings.fraudbd_api_key })}
+                onClick={() => saveGroup("fraud_checker_config", {
+                  steadfast_api_key: settings.fc_steadfast_api_key,
+                  steadfast_secret_key: settings.fc_steadfast_secret_key,
+                  pathao_username: settings.fc_pathao_username,
+                  pathao_password: settings.fc_pathao_password,
+                  redx_access_token: settings.fc_redx_access_token,
+                })}
                 disabled={saving}
                 className="mt-2 text-[10px] px-2 py-1 border border-border text-foreground hover:bg-secondary"
               >
