@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search, Send, Users, MessageCircle, SmilePlus, Phone,
-  Hash, MessageSquare, Lock, ImagePlus, Loader2,
+  Hash, MessageSquare, Lock, ImagePlus, Loader2, ArrowLeft,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { bn } from "date-fns/locale";
@@ -68,6 +68,7 @@ const ChatPage = () => {
   const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -78,6 +79,7 @@ const ChatPage = () => {
     const convoParam = searchParams.get("convo");
     if (convoParam) {
       setSelectedConvo(convoParam);
+      setMobileShowChat(true);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
@@ -603,7 +605,7 @@ const ChatPage = () => {
   const renderConvoItem = (c: ConvoDisplay, isGroup = false) => (
     <button
       key={c.id}
-      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
+      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); setMobileShowChat(true); }}
       className={`w-full text-left ${isGroup ? "px-2 py-1.5" : "px-3 py-2.5"} rounded-md flex items-center gap-${isGroup ? "2" : "3"} transition-colors ${isGroup ? "text-xs" : ""} ${
         selectedConvo === c.id
           ? "bg-primary/10 text-primary font-medium"
@@ -656,8 +658,8 @@ const ChatPage = () => {
         />
       )}
 
-      {/* Sidebar */}
-      <div className="w-72 border-r border-border flex flex-col bg-card/50 shrink-0">
+      {/* Sidebar - hidden on mobile when chat is open */}
+      <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full md:w-72 border-r border-border flex-col bg-card/50 md:shrink-0`}>
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
@@ -717,7 +719,7 @@ const ChatPage = () => {
                 filteredUsers.map((u) => (
                   <button
                     key={u.id}
-                    onClick={() => { startDM(u.id); setThreadParent(null); }}
+                    onClick={() => { startDM(u.id); setThreadParent(null); setMobileShowChat(true); }}
                     className="w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors hover:bg-secondary"
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
@@ -735,8 +737,8 @@ const ChatPage = () => {
         </ScrollArea>
       </div>
 
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main chat area - hidden on mobile when sidebar is showing */}
+      <div className={`${!mobileShowChat ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0`}>
         {!selectedConvo ? (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
@@ -748,7 +750,13 @@ const ChatPage = () => {
         ) : (
           <>
             {/* Header */}
-            <div className="h-12 border-b border-border flex items-center px-4 bg-card shrink-0 gap-3">
+            <div className="h-12 border-b border-border flex items-center px-2 sm:px-4 bg-card shrink-0 gap-2 sm:gap-3">
+              <button
+                onClick={() => setMobileShowChat(false)}
+                className="md:hidden p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   {selectedConvoData?.type === "group" ? <Hash className="h-3.5 w-3.5" /> : null}
