@@ -143,6 +143,38 @@ const HRSettings = () => {
     setLoading(false);
   };
 
+  const fetchWaTemplates = async () => {
+    const { data } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
+    if (data) setWaTemplates(data);
+  };
+
+  const handleWaTemplateSave = async () => {
+    if (!user || !waName.trim() || !waBody.trim()) return;
+    setSaving(true);
+    if (waEditId) {
+      await supabase.from("whatsapp_templates").update({ name: waName, body: waBody, image_url: waImageUrl || null }).eq("id", waEditId);
+    } else {
+      await supabase.from("whatsapp_templates").insert({ name: waName, body: waBody, image_url: waImageUrl || null, created_by: user.id });
+    }
+    toast({ title: isBn ? "টেমপ্লেট সংরক্ষিত ✓" : "Template saved ✓" });
+    setSaving(false);
+    setShowWaModal(false);
+    setWaName(""); setWaBody(""); setWaImageUrl(""); setWaEditId(null);
+    fetchWaTemplates();
+  };
+
+  const handleWaTemplateDelete = async (id: string) => {
+    await supabase.from("whatsapp_templates").delete().eq("id", id);
+    toast({ title: isBn ? "মুছে ফেলা হয়েছে" : "Deleted" });
+    fetchWaTemplates();
+  };
+
+  const handleWaImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const url = await uploadFile(file, "whatsapp-templates");
+    if (url) setWaImageUrl(url);
+  };
+
   const saveGroup = async (key: string, values: any) => {
     if (!user) return;
     setSaving(true);
