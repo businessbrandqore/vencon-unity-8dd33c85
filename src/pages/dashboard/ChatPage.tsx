@@ -142,6 +142,7 @@ const ChatPage = () => {
           memberCount: members.length,
           isAdmin: myPart?.is_admin || false,
           is_muted: (c as any).is_muted || false,
+          last_message_at: (c as any).last_message_at || c.created_at || "",
         } as ConvoDisplay;
       });
     },
