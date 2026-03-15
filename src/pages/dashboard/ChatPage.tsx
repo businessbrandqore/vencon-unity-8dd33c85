@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search, Send, Users, MessageCircle, SmilePlus, Phone,
-  Hash, MessageSquare, Lock, ImagePlus, Loader2,
+  Hash, MessageSquare, Lock, ImagePlus, Loader2, ArrowLeft,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { bn } from "date-fns/locale";
