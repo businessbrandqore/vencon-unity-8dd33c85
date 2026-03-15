@@ -741,6 +741,22 @@ export default function EmployeeLeads() {
                       />
                     </td>
                   ))}
+                  {waTemplates.length > 0 && (
+                    <td className="py-2 px-2 text-center">
+                      <button
+                        onClick={() => {
+                          setWaCurrentLead(lead);
+                          setWaRecipientPhone(lead.phone || "");
+                          setWaSelectedTemplate("");
+                          setShowWaModal(true);
+                        }}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                        title={isBn ? "WhatsApp মেসেজ পাঠান" : "Send WhatsApp"}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
