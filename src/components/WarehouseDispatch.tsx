@@ -214,7 +214,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
         body: { order_id: order.id, sent_by: user.id },
       });
       if (error || !data?.success) {
-        toast.error(`SteadFast send failed — Order #${order.id.slice(0, 8)}`);
+        const errorMessage = data?.error || error?.message || "Unknown error";
+        toast.error(`SteadFast send failed — Order #${order.id.slice(0, 8)}`, {
+          description: String(errorMessage),
+        });
       } else {
         toast.success(`Consignment ID: ${data.consignment_id}`);
       }

@@ -6,6 +6,45 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const STEADFAST_BASE_URLS = [
+  "https://portal.packzy.com/api/v1",
+  "https://portal.steadfast.com.bd/api/v1",
+];
+
+type ApiBody = {
+  raw: string;
+  json: Record<string, unknown> | null;
+};
+
+async function readApiBody(response: Response): Promise<ApiBody> {
+  const raw = await response.text();
+  if (!raw) return { raw: "", json: null };
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return { raw, json: parsed };
+  } catch {
+    return { raw, json: null };
+  }
+}
+
+function getApiMessage(status: number, body: ApiBody): string {
+  if (body.json) {
+    const msg =
+      body.json.message ??
+      body.json.error ??
+      body.json.msg ??
+      body.json.details ??
+      body.json.status;
+
+    if (typeof msg === "string" && msg.trim()) return msg.trim();
+    return JSON.stringify(body.json);
+  }
+
+  if (body.raw?.trim()) return body.raw.trim();
+  return `HTTP ${status}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,26 +66,38 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      try {
-        const res = await fetch("https://portal.packzy.com/api/v1/get_balance", {
-          headers: { "Api-Key": api_key, "Secret-Key": secret_key },
-        });
-        const data = await res.json();
-        if (res.ok && data.status === 200) {
-          return new Response(JSON.stringify({ success: true, balance: data.current_balance, message: "Connected successfully" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+      let lastError = "";
+      for (const baseUrl of STEADFAST_BASE_URLS) {
+        try {
+          const res = await fetch(`${baseUrl}/get_balance`, {
+            headers: { "Api-Key": api_key, "Secret-Key": secret_key, "Accept": "application/json" },
           });
+          const parsed = await readApiBody(res);
+          const msg = getApiMessage(res.status, parsed);
+
+          if (res.ok && parsed.json && Number(parsed.json.status) === 200) {
+            return new Response(
+              JSON.stringify({
+                success: true,
+                balance: parsed.json.current_balance ?? parsed.json.balance ?? 0,
+                message: "Connected successfully",
+                gateway: new URL(baseUrl).host,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          lastError = `[${new URL(baseUrl).host}] ${msg}`;
+        } catch (e) {
+          lastError = `[${new URL(baseUrl).host}] ${(e as Error).message}`;
         }
-        return new Response(JSON.stringify({ success: false, error: data.message || "Authentication failed" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: (e as Error).message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
+
+      return new Response(JSON.stringify({ success: false, error: lastError || "Authentication failed" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // --- Normal dispatch mode ---
@@ -136,77 +187,92 @@ async function processDispatch(
   const orderShort = orderId.slice(0, 8);
 
   let lastError = "";
+  const errorBag = new Set<string>();
+
   for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Api-Key": apiKey,
-          "Secret-Key": secretKey,
-        },
-        body: JSON.stringify({
-          invoice: orderId,
-          recipient_name: order.customer_name || "N/A",
-          recipient_phone: order.phone || "",
-          recipient_address: order.address || "",
-          cod_amount: (order.price as number) || 0,
-          note: `Vencon Order ${orderId}`,
-        }),
-      });
+    for (const baseUrl of STEADFAST_BASE_URLS) {
+      try {
+        const response = await fetch(`${baseUrl}/create_order`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Api-Key": apiKey,
+            "Secret-Key": secretKey,
+          },
+          body: JSON.stringify({
+            invoice: orderId,
+            recipient_name: order.customer_name || "N/A",
+            recipient_phone: order.phone || "",
+            recipient_address: order.address || "",
+            cod_amount: Number(order.price || 0),
+            note: `Vencon Order ${orderId}`,
+          }),
+        });
 
-      const data = await response.json();
+        const parsed = await readApiBody(response);
+        const json = parsed.json;
+        const nestedConsignmentId = (json?.consignment as Record<string, unknown> | undefined)?.consignment_id as string | undefined;
+        const rootConsignmentId = json?.consignment_id as string | undefined;
 
-      if (response.ok && (data.status === 200 || response.status === 200)) {
-        const consignmentId =
-          data.consignment?.consignment_id || data.consignment_id || `SF-${Date.now()}`;
+        const apiSuccess =
+          response.ok &&
+          ((json && Number(json.status) === 200) || Boolean(nestedConsignmentId) || Boolean(rootConsignmentId));
 
-        await supabase
-          .from("orders")
-          .update({
-            steadfast_consignment_id: consignmentId,
-            status: "dispatched",
-            delivery_status: "pending",
-            warehouse_sent_at: new Date().toISOString(),
-            steadfast_send_failed: false,
-          })
-          .eq("id", orderId);
+        if (apiSuccess) {
+          const consignmentId = nestedConsignmentId || rootConsignmentId || `SF-${Date.now()}`;
 
-        // Notify Delivery Coordinator
-        const { data: dcUsers } = await supabase
-          .from("users")
-          .select("id")
-          .eq("role", "delivery_coordinator")
-          .eq("is_active", true);
+          await supabase
+            .from("orders")
+            .update({
+              steadfast_consignment_id: consignmentId,
+              status: "dispatched",
+              delivery_status: "pending",
+              warehouse_sent_at: new Date().toISOString(),
+              steadfast_send_failed: false,
+            })
+            .eq("id", orderId);
 
-        if (dcUsers?.length) {
-          await supabase.from("notifications").insert(
-            dcUsers.map((u: { id: string }) => ({
-              user_id: u.id,
-              title: "নতুন dispatch",
-              message: `Consignment: ${consignmentId} — Order #${orderShort}`,
-              type: "info",
-            }))
+          // Notify Delivery Coordinator
+          const { data: dcUsers } = await supabase
+            .from("users")
+            .select("id")
+            .eq("role", "delivery_coordinator")
+            .eq("is_active", true);
+
+          if (dcUsers?.length) {
+            await supabase.from("notifications").insert(
+              dcUsers.map((u: { id: string }) => ({
+                user_id: u.id,
+                title: "নতুন dispatch",
+                message: `Consignment: ${consignmentId} — Order #${orderShort}`,
+                type: "info",
+              }))
+            );
+          }
+
+          await supabase.from("audit_logs").insert({
+            action: "steadfast_dispatch_success",
+            target_table: "orders",
+            target_id: orderId,
+            actor_id: (order.warehouse_sent_by as string) || null,
+            details: { consignment_id: consignmentId, attempts: attempt, gateway: new URL(baseUrl).host },
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, consignment_id: consignmentId, gateway: new URL(baseUrl).host }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        await supabase.from("audit_logs").insert({
-          action: "steadfast_dispatch_success",
-          target_table: "orders",
-          target_id: orderId,
-          actor_id: order.warehouse_sent_by as string || null,
-          details: { consignment_id: consignmentId, attempts: attempt },
-        });
-
-        return new Response(
-          JSON.stringify({ success: true, consignment_id: consignmentId }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        const gatewayError = `[${new URL(baseUrl).host}] ${getApiMessage(response.status, parsed)}`;
+        errorBag.add(gatewayError);
+        lastError = Array.from(errorBag).join(" | ");
+      } catch (e) {
+        const gatewayError = `[${new URL(baseUrl).host}] ${(e as Error).message}`;
+        errorBag.add(gatewayError);
+        lastError = Array.from(errorBag).join(" | ");
       }
-
-      lastError = JSON.stringify(data);
-    } catch (e) {
-      lastError = (e as Error).message;
     }
 
     if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
@@ -236,12 +302,17 @@ async function processDispatch(
     action: "steadfast_send_failed",
     target_table: "orders",
     target_id: orderId,
-    actor_id: order.warehouse_sent_by as string || null,
+    actor_id: (order.warehouse_sent_by as string) || null,
     details: { error: lastError, attempts: 3 },
   });
 
+  const friendlyError =
+    lastError.includes("Account is not active")
+      ? "SteadFast account is not active for order API. SteadFast merchant panel থেকে order API activate করুন।"
+      : (lastError || "SteadFast API request failed");
+
   return new Response(
-    JSON.stringify({ success: false, error: lastError }),
-    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    JSON.stringify({ success: false, error: friendlyError, technical_error: lastError || null }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
