@@ -399,6 +399,114 @@ export const translations: TranslationMap = {
   all: { bn: "সব", en: "All" },
   info: { bn: "তথ্য", en: "Info" },
   warning: { bn: "সতর্কতা", en: "Warning" },
+
+  // ─── Warehouse Dispatch ───
+  warehouse_dispatch_title: { bn: "ওয়্যারহাউস — ডিসপ্যাচ অর্ডার", en: "Warehouse — Dispatch Orders" },
+  ready_for_dispatch: { bn: "Dispatch-এর জন্য প্রস্তুত", en: "Ready for Dispatch" },
+  no_pending_orders: { bn: "কোনো pending order নেই", en: "No pending orders" },
+  all_campaigns: { bn: "সব ক্যাম্পেইন", en: "All Campaigns" },
+  order_id: { bn: "অর্ডার আইডি", en: "Order ID" },
+  agent: { bn: "এজেন্ট", en: "Agent" },
+  cso: { bn: "CSO", en: "CSO" },
+  cso_time: { bn: "CSO সময়", en: "CSO Time" },
+  invoice: { bn: "ইনভয়েস", en: "Invoice" },
+  steadfast_send: { bn: "SteadFast-এ পাঠান", en: "Send to SteadFast" },
+  steadfast_error: { bn: "SteadFast পাঠাতে সমস্যা হয়েছে", en: "SteadFast send failed" },
+  popup_blocked: { bn: "পপ-আপ ব্লক হয়েছে", en: "Pop-up blocked" },
+  send_failed_badge: { bn: "পাঠাতে ব্যর্থ ✗", en: "Send Failed ✗" },
+  current_stock_title: { bn: "বর্তমান স্টক", en: "Current Stock" },
+  ok: { bn: "ঠিক আছে", en: "OK" },
+
+  // ─── Employee My Orders ───
+  my_orders_title: { bn: "আমার অর্ডার", en: "My Orders" },
+  order_tracking: { bn: "অর্ডার ট্র্যাকিং", en: "Order Tracking" },
+  processing: { bn: "প্রসেসিং", en: "Processing" },
+  in_transit: { bn: "পথে আছে", en: "In Transit" },
+  delivered: { bn: "ডেলিভারি হয়েছে", en: "Delivered" },
+  returned_rejected: { bn: "রিটার্ন/রিজেক্ট", en: "Returned/Rejected" },
+  search_orders: { bn: "অর্ডার খুঁজুন...", en: "Search orders..." },
+  tl_review: { bn: "TL রিভিউ", en: "TL Review" },
+  cso_verify: { bn: "CSO যাচাই", en: "CSO Verify" },
+  warehouse_step: { bn: "ওয়্যারহাউস", en: "Warehouse" },
+  dispatch_step: { bn: "ডিসপ্যাচ", en: "Dispatch" },
+  delivered_step: { bn: "ডেলিভারড", en: "Delivered" },
+  rider_name: { bn: "রাইডার", en: "Rider" },
+  rider_phone: { bn: "রাইডার ফোন", en: "Rider Phone" },
+  no_orders: { bn: "কোনো অর্ডার নেই", en: "No orders found" },
+  order_details: { bn: "অর্ডারের বিবরণ", en: "Order Details" },
+
+  // ─── CSO Leads ───
+  cso_leads_title: { bn: "CSO লিড", en: "CSO Leads" },
+  pending_review: { bn: "পেন্ডিং রিভিউ", en: "Pending Review" },
+  completed: { bn: "সম্পন্ন", en: "Completed" },
+  
+  // ─── Employee Leads ───
+  employee_leads_title: { bn: "আমার লিড", en: "My Leads" },
+  call_time: { bn: "কল সময়", en: "Call Time" },
+  special_note: { bn: "বিশেষ নোট", en: "Special Note" },
+  time: { bn: "সময়", en: "Time" },
+
+  // ─── CS Executive ───
+  cs_dashboard_title: { bn: "কাস্টমার সাপোর্ট ড্যাশবোর্ড", en: "Customer Support Dashboard" },
+  pending_calls: { bn: "পেন্ডিং কল", en: "Pending Calls" },
+  completed_calls: { bn: "সম্পন্ন কল", en: "Completed Calls" },
+
+  // ─── CSO Dashboard ───
+  cso_dashboard_title: { bn: "CSO ড্যাশবোর্ড", en: "CSO Dashboard" },
+  orders_reviewed: { bn: "রিভিউ সম্পন্ন", en: "Orders Reviewed" },
+  orders_pending: { bn: "পেন্ডিং অর্ডার", en: "Pending Orders" },
+
+  // ─── Group Leader ───
+  group_members_title: { bn: "গ্রুপ সদস্য", en: "Group Members" },
+  confirmed_orders: { bn: "কনফার্মড অর্ডার", en: "Confirmed Orders" },
+  delivered_orders: { bn: "ডেলিভারড অর্ডার", en: "Delivered Orders" },
+
+  // ─── Delivery Coordinator ───
+  dc_dashboard_title: { bn: "ডেলিভারি কোঅর্ডিনেটর ড্যাশবোর্ড", en: "Delivery Coordinator Dashboard" },
+  total_dispatched: { bn: "মোট ডিসপ্যাচ", en: "Total Dispatched" },
+  total_delivered: { bn: "মোট ডেলিভারি", en: "Total Delivered" },
+  total_returned: { bn: "মোট রিটার্ন", en: "Total Returned" },
+
+  // ─── Inventory Manager ───
+  im_dashboard_title: { bn: "ইনভেন্টরি ম্যানেজার ড্যাশবোর্ড", en: "Inventory Manager Dashboard" },
+  low_stock_alert: { bn: "স্টক কম সতর্কতা", en: "Low Stock Alert" },
+  total_products: { bn: "মোট পণ্য", en: "Total Products" },
+
+  // ─── Warehouse roles ───
+  wa_dashboard_title: { bn: "ওয়্যারহাউস অ্যাসিস্ট্যান্ট ড্যাশবোর্ড", en: "Warehouse Assistant Dashboard" },
+  ws_dashboard_title: { bn: "ওয়্যারহাউস সুপারভাইজার ড্যাশবোর্ড", en: "Warehouse Supervisor Dashboard" },
+  
+  // ─── Office Assistant ───
+  oa_dashboard_title: { bn: "অফিস অ্যাসিস্ট্যান্ট ড্যাশবোর্ড", en: "Office Assistant Dashboard" },
+
+  // ─── Maintenance Officer ───
+  mo_dashboard_title: { bn: "মেইনটেন্যান্স অফিসার ড্যাশবোর্ড", en: "Maintenance Officer Dashboard" },
+  total_budget: { bn: "মোট বাজেট", en: "Total Budget" },
+  total_spent: { bn: "মোট ব্যয়", en: "Total Spent" },
+  remaining_budget: { bn: "অবশিষ্ট বাজেট", en: "Remaining Budget" },
+
+  // ─── BDO ───
+  bdo_dashboard_title: { bn: "বিডিও ড্যাশবোর্ড", en: "BDO Dashboard" },
+
+  // ─── Common Table Headers ───
+  serial: { bn: "#", en: "#" },
+  order: { bn: "অর্ডার", en: "Order" },
+  source: { bn: "সোর্স", en: "Source" },
+  campaign: { bn: "ক্যাম্পেইন", en: "Campaign" },
+  current_position: { bn: "বর্তমান অবস্থান", en: "Current Position" },
+  rider: { bn: "রাইডার", en: "Rider" },
+
+  // ─── Profile ───
+  profile_settings: { bn: "প্রোফাইল সেটিংস", en: "Profile Settings" },
+  change_password: { bn: "পাসওয়ার্ড পরিবর্তন করুন", en: "Change Password" },
+  current_password: { bn: "বর্তমান পাসওয়ার্ড", en: "Current Password" },
+  new_password: { bn: "নতুন পাসওয়ার্ড", en: "New Password" },
+  confirm_password: { bn: "পাসওয়ার্ড নিশ্চিত করুন", en: "Confirm Password" },
+
+  // ─── Steadfast Monitoring ───
+  steadfast_title: { bn: "স্টিডফাস্ট মনিটরিং", en: "Steadfast Monitoring" },
+  consignment: { bn: "কনসাইনমেন্ট", en: "Consignment" },
+  delivery_status: { bn: "ডেলিভারি স্ট্যাটাস", en: "Delivery Status" },
 };
 
 // Bengali numerals

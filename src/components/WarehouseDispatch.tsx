@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ interface Props {
 
 export default function WarehouseDispatch({ showStock = false }: Props) {
   const { user } = useAuth();
+  const { t, n, lang } = useLanguage();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState<Set<string>>(new Set());
@@ -173,7 +175,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
   /* ── Invoice generation with HR layout config ── */
   const generateInvoice = (orderList: OrderRow[]) => {
     const w = window.open("", "_blank");
-    if (!w) { toast.error("Pop-up blocked"); return; }
+    if (!w) { toast.error(t("popup_blocked")); return; }
 
     const perPage = invoicePerPage;
     const cols = perPage <= 4 ? 2 : 3;
@@ -217,7 +219,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
         toast.success(`Consignment ID: ${data.consignment_id}`);
       }
     } catch {
-      toast.error("SteadFast পাঠাতে সমস্যা হয়েছে");
+      toast.error(t("steadfast_error"));
     }
     setSending((p) => { const n = new Set(p); n.delete(order.id); return n; });
     loadOrders();
@@ -238,7 +240,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
   const currentStock = (item: any) =>
     (item.stock_in || 0) - (item.dispatched || 0) + (item.returned || 0) - (item.damaged || 0);
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
   return (
     <div className="space-y-6">
@@ -246,7 +248,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <Package className="h-5 w-5 text-[hsl(var(--panel-employee))]" />
-          Warehouse — Dispatch Orders
+          {t("warehouse_dispatch_title")}
         </h1>
         <div className="flex flex-wrap gap-2 items-center">
           {/* Campaign filter */}
@@ -254,10 +256,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={campaignFilter} onValueChange={setCampaignFilter}>
               <SelectTrigger className="h-8 w-[180px] text-xs">
-                <SelectValue placeholder="সব ক্যাম্পেইন" />
+                <SelectValue placeholder={t("all_campaigns")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+                <SelectItem value="all">{t("all_campaigns")}</SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
@@ -268,10 +270,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
           {selected.size > 0 && (
             <>
               <Button size="sm" variant="outline" onClick={batchPrint}>
-                <Printer className="h-4 w-4 mr-1" /> Invoice ({selected.size})
+                <Printer className="h-4 w-4 mr-1" /> {t("invoice")} ({n(selected.size)})
               </Button>
               <Button size="sm" onClick={batchSend} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-primary-foreground">
-                <Send className="h-4 w-4 mr-1" /> SteadFast ({selected.size})
+                <Send className="h-4 w-4 mr-1" /> SteadFast ({n(selected.size)})
               </Button>
             </>
           )}
@@ -282,7 +284,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-heading">
-            Dispatch-এর জন্য প্রস্তুত ({sendableOrders.length})
+            {t("ready_for_dispatch")} ({n(sendableOrders.length)})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -296,15 +298,15 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                       onCheckedChange={toggleAll}
                     />
                   </th>
-                  <th className="py-2 px-2 text-left">Order ID</th>
-                  <th className="py-2 px-2 text-left">Customer</th>
-                  <th className="py-2 px-2 text-left">Address</th>
-                   <th className="py-2 px-2 text-left">Product</th>
-                   <th className="py-2 px-2 text-left">Agent</th>
-                   <th className="py-2 px-2 text-left">CSO</th>
-                   <th className="py-2 px-2 text-right">Qty</th>
-                   <th className="py-2 px-2 text-right">Price</th>
-                   <th className="py-2 px-2 text-left">CSO Time</th>
+                   <th className="py-2 px-2 text-left">{t("order_id")}</th>
+                   <th className="py-2 px-2 text-left">{t("customer")}</th>
+                   <th className="py-2 px-2 text-left">{t("address")}</th>
+                   <th className="py-2 px-2 text-left">{t("product")}</th>
+                   <th className="py-2 px-2 text-left">{t("agent")}</th>
+                   <th className="py-2 px-2 text-left">{t("cso")}</th>
+                   <th className="py-2 px-2 text-right">{t("quantity")}</th>
+                   <th className="py-2 px-2 text-right">{t("price")}</th>
+                   <th className="py-2 px-2 text-left">{t("cso_time")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,13 +326,13 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                       <td className="py-2 px-2 text-right">{o.quantity || 1}</td>
                       <td className="py-2 px-2 text-right">৳{o.price || 0}</td>
                       <td className="py-2 px-2 text-xs">
-                        {o.cso_approved_at ? new Date(o.cso_approved_at).toLocaleTimeString("bn-BD") : "—"}
+                        {o.cso_approved_at ? new Date(o.cso_approved_at).toLocaleTimeString(lang === "bn" ? "bn-BD" : "en-US") : "—"}
                       </td>
                     </tr>
                   );
                 })}
                 {sendableOrders.length === 0 && (
-                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
+                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">{t("no_pending_orders")}</td></tr>
                 )}
               </tbody>
             </table>
@@ -342,17 +344,17 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
       {dispatchedOrders.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-heading">Dispatched ({dispatchedOrders.length})</CardTitle>
+            <CardTitle className="text-sm font-heading">{t("order_dispatched")} ({n(dispatchedOrders.length)})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
-                    <th className="py-2 px-2 text-left">Order ID</th>
-                    <th className="py-2 px-2 text-left">Customer</th>
-                    <th className="py-2 px-2 text-left">Product</th>
-                    <th className="py-2 px-2 text-left">Consignment ID</th>
+                    <th className="py-2 px-2 text-left">{t("order_id")}</th>
+                    <th className="py-2 px-2 text-left">{t("customer")}</th>
+                    <th className="py-2 px-2 text-left">{t("product")}</th>
+                    <th className="py-2 px-2 text-left">{t("consignment_id")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -380,7 +382,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-heading flex items-center gap-2">
-              <Package className="h-4 w-4" /> বর্তমান স্টক
+              <Package className="h-4 w-4" /> {t("current_stock_title")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -388,13 +390,13 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
-                    <th className="py-2 px-2 text-left">Product</th>
-                    <th className="py-2 px-2 text-right">Stock In</th>
-                    <th className="py-2 px-2 text-right">Dispatched</th>
-                    <th className="py-2 px-2 text-right">Returned</th>
-                    <th className="py-2 px-2 text-right">Damaged</th>
-                    <th className="py-2 px-2 text-right">Current Stock</th>
-                    <th className="py-2 px-2 text-center">Status</th>
+                    <th className="py-2 px-2 text-left">{t("product")}</th>
+                    <th className="py-2 px-2 text-right">{t("stock_in")}</th>
+                    <th className="py-2 px-2 text-right">{t("dispatched_stock")}</th>
+                    <th className="py-2 px-2 text-right">{t("returned_stock")}</th>
+                    <th className="py-2 px-2 text-right">{t("damaged")}</th>
+                    <th className="py-2 px-2 text-right">{t("current_stock")}</th>
+                    <th className="py-2 px-2 text-center">{t("status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -412,10 +414,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                         <td className="py-2 px-2 text-center">
                           {low ? (
                             <Badge variant="outline" className="text-orange-400 border-orange-500/50">
-                              <AlertTriangle className="h-3 w-3 mr-1" /> Low
+                              <AlertTriangle className="h-3 w-3 mr-1" /> {t("low_stock")}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-green-400 border-green-600/50">OK</Badge>
+                            <Badge variant="outline" className="text-green-400 border-green-600/50">{t("ok")}</Badge>
                           )}
                         </td>
                       </tr>
