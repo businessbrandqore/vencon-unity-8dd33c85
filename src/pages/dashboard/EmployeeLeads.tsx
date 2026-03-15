@@ -862,11 +862,11 @@ export default function EmployeeLeads() {
                 </Select>
               </div>
               <div>
-                <Label>Card Name</Label>
+                <Label>{t("card_name_label")}</Label>
                 <Select value={orderCardName} onValueChange={setOrderCardName}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select card" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_card")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Card</SelectItem>
+                    <SelectItem value="none">{t("no_card")}</SelectItem>
                     {cardNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
