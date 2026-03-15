@@ -529,7 +529,7 @@ export default function EmployeeLeads() {
     return {};
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
   if (!checkedIn) {
     return (
