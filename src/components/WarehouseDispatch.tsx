@@ -59,12 +59,34 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
   const loadOrders = useCallback(async () => {
     const { data } = await supabase
       .from("orders")
-      .select("id, customer_name, phone, address, product, quantity, price, lead_id, cso_approved_at, steadfast_consignment_id, steadfast_send_failed, status")
+      .select("id, customer_name, phone, address, product, quantity, price, lead_id, cso_approved_at, steadfast_consignment_id, steadfast_send_failed, status, agent_id, cso_id")
       .in("status", ["send_today", "dispatched"])
       .order("cso_approved_at", { ascending: true });
 
     if (data) {
-      setOrders(data as OrderRow[]);
+      // Resolve agent & CSO names
+      const userIds = [...new Set([
+        ...data.map((o: any) => o.agent_id).filter(Boolean),
+        ...data.map((o: any) => o.cso_id).filter(Boolean),
+      ])] as string[];
+
+      let nameMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", userIds);
+        if (users) {
+          users.forEach((u: any) => { nameMap[u.id] = u.name; });
+        }
+      }
+
+      const enriched = (data as OrderRow[]).map((o) => ({
+        ...o,
+        agent_name: o.agent_id ? nameMap[o.agent_id] || "—" : "—",
+        cso_name: o.cso_id ? nameMap[o.cso_id] || "—" : "—",
+      }));
+      setOrders(enriched);
 
       // Build campaign map from lead_ids
       const leadIds = [...new Set(data.map((o: any) => o.lead_id).filter(Boolean))] as string[];
