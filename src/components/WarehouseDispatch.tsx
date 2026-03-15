@@ -305,6 +305,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                    <th className="py-2 px-2 text-right">Qty</th>
                    <th className="py-2 px-2 text-right">Price</th>
                    <th className="py-2 px-2 text-left">CSO Time</th>
+                </tr>
               </thead>
               <tbody>
                 {sendableOrders.map((o) => {
