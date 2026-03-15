@@ -171,7 +171,7 @@ export default function EmployeeMyOrders() {
           <Card key={s.label}>
             <CardContent className="pt-4 pb-4 text-center">
               <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className={cn("text-2xl font-heading", s.color)}>{s.value}</p>
+              <p className={cn("text-2xl font-heading", s.color)}>{n(s.value)}</p>
             </CardContent>
           </Card>
         ))}
