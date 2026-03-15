@@ -321,7 +321,7 @@ export default function EmployeeMyOrders() {
                             )}>
                               <StepIcon className="h-4 w-4" />
                             </div>
-                            {idx < PIPELINE_STEPS.length - 1 && (
+                            {idx < PIPELINE_KEYS.length - 1 && (
                               <div className={cn("w-0.5 h-8", isActive ? "bg-primary/50" : "bg-muted")} />
                             )}
                           </div>
