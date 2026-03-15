@@ -67,30 +67,6 @@ const SASettings = () => {
     load();
   }, []);
 
-  const handleSiteLock = async (lockAction: "lock" | "unlock") => {
-    if (!lockPassword.trim()) {
-      toast.error(isBn ? "BrandQore পাসওয়ার্ড দিন" : "Enter BrandQore password");
-      return;
-    }
-    setLockLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: lockAction, password: lockPassword }
-      });
-      if (error) throw error;
-      if (data?.success) {
-        setSiteLocked(lockAction === "lock");
-        setLockPassword("");
-        toast.success(data.message || (lockAction === "lock" ? "সাইট লক হয়েছে" : "সাইট আনলক হয়েছে"));
-      } else {
-        toast.error(data?.error || "ব্যর্থ হয়েছে");
-      }
-    } catch {
-      toast.error("অপারেশন ব্যর্থ");
-    } finally {
-      setLockLoading(false);
-    }
-  };
 
   const saveSetting = async (key: string, value: Record<string, unknown>) => {
     if (!user) return;
