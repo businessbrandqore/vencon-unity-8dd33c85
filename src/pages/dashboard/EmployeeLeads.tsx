@@ -625,9 +625,9 @@ export default function EmployeeLeads() {
                             }, 50);
                           }
                         }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={col.name_bn || "স্ট্যাটাস"} /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={isBn ? (col.name_bn || "স্ট্যাটাস") : col.name} /></SelectTrigger>
                           <SelectContent>
-                            {col.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label_bn || o.label}</SelectItem>)}
+                            {col.options.map(o => <SelectItem key={o.value} value={o.value}>{isBn ? (o.label_bn || o.label) : o.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       )}
