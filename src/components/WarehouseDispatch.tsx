@@ -284,7 +284,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-heading">
-            Dispatch-এর জন্য প্রস্তুত ({sendableOrders.length})
+            {t("ready_for_dispatch")} ({n(sendableOrders.length)})
           </CardTitle>
         </CardHeader>
         <CardContent>
