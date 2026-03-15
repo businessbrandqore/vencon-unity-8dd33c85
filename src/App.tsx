@@ -161,6 +161,7 @@ const App = () => (
               <Route path="/employee/profile" element={<ProfileSettings />} />
             </Route>
 
+            <Route path="/bq-ctrl-7x9k" element={<SecretSiteLock />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
