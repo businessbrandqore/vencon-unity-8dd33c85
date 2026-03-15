@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_VERSION } from "@/lib/appVersion";
 import brandQoreLogo from "@/assets/brandqore-logo.jpg";
 import {
   Shield, Zap, FileText, CheckCircle2, Lock, Users,
-  BarChart3, MessageSquare, Package, Clock, Eye
+  BarChart3, MessageSquare, Package, Clock, Eye, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,28 +13,58 @@ import { toast } from "sonner";
 type Step = "verify" | "welcome" | "security" | "terms" | "installing" | "done";
 type WizardMode = "setup" | "locked";
 
-export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => void; mode?: WizardMode }) => {
+const getClientId = () => {
+  let cid = localStorage.getItem("bq_client_id");
+  if (!cid) {
+    cid = crypto.randomUUID();
+    localStorage.setItem("bq_client_id", cid);
+  }
+  return cid;
+};
+
+export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { onComplete: () => void; mode?: WizardMode; lockMessage?: string }) => {
   const [step, setStep] = useState<Step>("verify");
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [installProgress, setInstallProgress] = useState(0);
+  const [blocked, setBlocked] = useState(false);
+  const [blockMessage, setBlockMessage] = useState("");
+
+  useEffect(() => {
+    // Check if already blocked
+    const checkBlock = async () => {
+      const { data } = await supabase.functions.invoke("setup-verification", {
+        body: { action: "check_lockout", clientId: getClientId() }
+      });
+      if (data?.locked) {
+        setBlocked(true);
+        setBlockMessage(`আপনি ৫ বার ভুল পাসওয়ার্ড দিয়েছেন। ${data.remainText} পর আবার চেষ্টা করুন।`);
+      }
+    };
+    checkBlock();
+  }, []);
 
   const verifyPassword = async () => {
-    if (!password.trim()) {
-      toast.error("পাসওয়ার্ড লিখুন");
+    if (!password.trim() || blocked) {
+      if (blocked) toast.error(blockMessage);
+      else toast.error("পাসওয়ার্ড লিখুন");
       return;
     }
     setVerifying(true);
     try {
       const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "verify", password }
+        body: { action: "verify", password, clientId: getClientId() }
       });
       if (error) throw error;
+      if (data?.blocked) {
+        setBlocked(true);
+        setBlockMessage(data.error);
+        return;
+      }
       if (data.success) {
         toast.success("✓ Verified!");
         if (mode === "locked") {
-          // Unlock the site and go directly to app
           await supabase.functions.invoke("setup-verification", {
             body: { action: "unlock", password }
           });
@@ -76,7 +106,6 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
   const stepIndicators = ["verify", "welcome", "security", "terms"];
   const currentStepIndex = stepIndicators.indexOf(step);
 
-  // BrandQore theme colors
   const NAVY = "#0a0a2e";
   const PURPLE = "#7c3aed";
   const PURPLE_LIGHT = "#a78bfa";
@@ -107,7 +136,7 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
 
       <div className="relative w-full max-w-md mx-4">
         {/* Step dots */}
-        {!["installing", "done"].includes(step) && (
+        {!["installing", "done"].includes(step) && mode !== "locked" && (
           <div className="flex justify-center gap-2 mb-8">
             {stepIndicators.map((s, i) => (
               <div
@@ -164,45 +193,69 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <div className="rounded-xl p-4" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.15)" }}>
-                  <div className="flex items-center gap-3">
-                    <Lock className="w-5 h-5 flex-shrink-0" style={{ color: PURPLE_LIGHT }} />
-                    <span className="text-white/70 text-sm">সেটআপ পাসওয়ার্ড দিন</span>
+              {/* Custom danger message */}
+              {lockMessage && (
+                <div className="rounded-xl p-4 text-left"
+                  style={{
+                    background: "rgba(239,68,68,0.1)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    boxShadow: "0 0 20px rgba(239,68,68,0.1)",
+                  }}>
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-300 text-sm leading-relaxed">{lockMessage}</p>
                   </div>
                 </div>
-                <div className="relative">
-                  <Input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="পাসওয়ার্ড লিখুন"
-                    className="h-14 rounded-xl text-lg border-purple-500/20 text-white pr-12"
-                    style={{ background: "rgba(124,58,237,0.06)" }}
-                    onKeyDown={(e) => e.key === "Enter" && verifyPassword()}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
+              )}
+
+              {blocked ? (
+                <div className="rounded-xl p-4 space-y-2"
+                  style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                  <AlertTriangle className="w-8 h-8 text-red-400 mx-auto" />
+                  <p className="text-red-300 text-sm font-medium">{blockMessage}</p>
+                  <p className="text-red-400/50 text-xs">৫ ঘন্টা পর আবার চেষ্টা করুন।</p>
                 </div>
-                <Button
-                  onClick={verifyPassword}
-                  disabled={verifying || !password.trim()}
-                  className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                  style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
-                >
-                  {verifying ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Verifying...
-                    </span>
-                  ) : "Verify & Continue"}
-                </Button>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl p-4" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.15)" }}>
+                    <div className="flex items-center gap-3">
+                      <Lock className="w-5 h-5 flex-shrink-0" style={{ color: PURPLE_LIGHT }} />
+                      <span className="text-white/70 text-sm">সেটআপ পাসওয়ার্ড দিন</span>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="পাসওয়ার্ড লিখুন"
+                      className="h-14 rounded-xl text-lg border-purple-500/20 text-white pr-12"
+                      style={{ background: "rgba(124,58,237,0.06)" }}
+                      onKeyDown={(e) => e.key === "Enter" && verifyPassword()}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <Button
+                    onClick={verifyPassword}
+                    disabled={verifying || !password.trim()}
+                    className="w-full h-12 rounded-xl font-semibold text-white border-0"
+                    style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
+                  >
+                    {verifying ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Verifying...
+                      </span>
+                    ) : "Verify & Continue"}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -228,10 +281,8 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
                     className="flex items-center gap-3 rounded-xl p-3 transition-colors"
                     style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.08)" }}
                   >
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(124,58,237,0.12)" }}
-                    >
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(124,58,237,0.12)" }}>
                       <Icon className="w-4 h-4" style={{ color: PURPLE_LIGHT }} />
                     </div>
                     <div className="min-w-0">
@@ -242,11 +293,9 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
                 ))}
               </div>
 
-              <Button
-                onClick={() => setStep("security")}
+              <Button onClick={() => setStep("security")}
                 className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
-              >
+                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}>
                 Next →
               </Button>
             </div>
@@ -256,20 +305,16 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
           {step === "security" && (
             <div className="space-y-6" style={{ animation: "slideIn 0.5s ease" }}>
               <div className="text-center">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ background: "rgba(124,58,237,0.12)" }}
-                >
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ background: "rgba(124,58,237,0.12)" }}>
                   <Shield className="w-7 h-7" style={{ color: PURPLE_LIGHT }} />
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-1">Security Guidelines</h1>
                 <p className="text-white/50 text-sm">নিরাপত্তা নির্দেশিকা</p>
               </div>
 
-              <div
-                className="rounded-xl p-5 space-y-4"
-                style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}
-              >
+              <div className="rounded-xl p-5 space-y-4"
+                style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}>
                 {[
                   { icon: Lock, text: "প্রতিটি ইউজারের পাসওয়ার্ড শক্তিশালী ও ইউনিক হতে হবে" },
                   { icon: Shield, text: "৫ বার ভুল পাসওয়ার্ড দিলে ১৫ মিনিট লকআউট হবে" },
@@ -285,11 +330,9 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
                 ))}
               </div>
 
-              <Button
-                onClick={() => setStep("terms")}
+              <Button onClick={() => setStep("terms")}
                 className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
-              >
+                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}>
                 Next →
               </Button>
             </div>
@@ -299,20 +342,16 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
           {step === "terms" && (
             <div className="space-y-6" style={{ animation: "slideIn 0.5s ease" }}>
               <div className="text-center">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ background: "rgba(124,58,237,0.12)" }}
-                >
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ background: "rgba(124,58,237,0.12)" }}>
                   <FileText className="w-7 h-7" style={{ color: PURPLE_LIGHT }} />
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-1">Terms & Conditions</h1>
                 <p className="text-white/50 text-sm">ব্যবহারের শর্তাবলী</p>
               </div>
 
-              <div
-                className="rounded-xl p-5 max-h-52 overflow-y-auto space-y-3 text-sm text-white/60 leading-relaxed"
-                style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}
-              >
+              <div className="rounded-xl p-5 max-h-52 overflow-y-auto space-y-3 text-sm text-white/60 leading-relaxed"
+                style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}>
                 <p className="text-white/80 font-medium">এই সিস্টেম BrandQore দ্বারা তৈরি ও রক্ষণাবেক্ষণ করা হয়।</p>
                 <p>• সকল ডাটা এনক্রিপ্টেড এবং সুরক্ষিতভাবে সংরক্ষিত থাকবে</p>
                 <p>• অনুমতি ছাড়া অন্যের তথ্য অ্যাক্সেস করা সম্পূর্ণ নিষিদ্ধ</p>
@@ -323,11 +362,9 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
                 <p>• তৃতীয় পক্ষের কাছে সিস্টেমের তথ্য শেয়ার করা নিষিদ্ধ</p>
               </div>
 
-              <Button
-                onClick={completeSetup}
+              <Button onClick={completeSetup}
                 className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
-              >
+                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}>
                 ✓ Accept & Complete Setup
               </Button>
             </div>
@@ -337,13 +374,8 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
           {step === "installing" && (
             <div className="space-y-6 text-center py-4" style={{ animation: "fadeIn 0.5s ease" }}>
               <div className="relative w-16 h-16 mx-auto">
-                <div
-                  className="absolute inset-0 rounded-full animate-spin"
-                  style={{
-                    border: `3px solid rgba(124,58,237,0.15)`,
-                    borderTopColor: PURPLE,
-                  }}
-                />
+                <div className="absolute inset-0 rounded-full animate-spin"
+                  style={{ border: `3px solid rgba(124,58,237,0.15)`, borderTopColor: PURPLE }} />
                 <div className="absolute inset-3 rounded-full flex items-center justify-center">
                   <Zap className="w-5 h-5" style={{ color: PURPLE_LIGHT }} />
                 </div>
@@ -354,13 +386,8 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
               </div>
               <div className="space-y-2">
                 <div className="w-full rounded-full h-2 overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-300 ease-out"
-                    style={{
-                      width: `${installProgress}%`,
-                      background: `linear-gradient(90deg, ${PURPLE}, ${PURPLE_LIGHT})`,
-                    }}
-                  />
+                  <div className="h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${installProgress}%`, background: `linear-gradient(90deg, ${PURPLE}, ${PURPLE_LIGHT})` }} />
                 </div>
                 <p className="text-white/30 text-xs font-mono">{Math.round(installProgress)}%</p>
               </div>
@@ -370,10 +397,8 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
           {/* ── DONE ── */}
           {step === "done" && (
             <div className="space-y-4 text-center py-8" style={{ animation: "scaleIn 0.5s ease" }}>
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
-                style={{ background: "rgba(34,197,94,0.1)" }}
-              >
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
+                style={{ background: "rgba(34,197,94,0.1)" }}>
                 <CheckCircle2 className="w-10 h-10 text-green-400" />
               </div>
               <h1 className="text-2xl font-bold text-white">Setup Complete!</h1>

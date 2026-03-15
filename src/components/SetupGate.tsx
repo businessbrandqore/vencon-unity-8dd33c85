@@ -5,6 +5,7 @@ import { SetupWizard } from "./SetupWizard";
 
 export const SetupGate = ({ children }: { children: ReactNode }) => {
   const [status, setStatus] = useState<"checking" | "setup" | "locked" | "ready">("checking");
+  const [lockMessage, setLockMessage] = useState("");
 
   useEffect(() => {
     const checkSetup = async () => {
@@ -13,6 +14,8 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
           body: { action: "check", version: APP_VERSION }
         });
         if (error) throw error;
+
+        if (data?.lockMessage) setLockMessage(data.lockMessage);
 
         if (data?.isLocked) {
           setStatus("locked");
@@ -43,7 +46,7 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
   }
 
   if (status === "locked") {
-    return <SetupWizard mode="locked" onComplete={() => setStatus("ready")} />;
+    return <SetupWizard mode="locked" lockMessage={lockMessage} onComplete={() => setStatus("ready")} />;
   }
 
   if (status === "setup") {
