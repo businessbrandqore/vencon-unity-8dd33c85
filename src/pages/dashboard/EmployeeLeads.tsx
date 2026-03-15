@@ -442,7 +442,7 @@ export default function EmployeeLeads() {
   };
 
   const handlePreOrderSubmit = async () => {
-    if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
+    if (!currentPreOrderLead || !user || !preOrderDate) { toast.error(t("select_date_error")); return; }
     const { error: preOrderError } = await supabase.from("pre_orders").insert({
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
