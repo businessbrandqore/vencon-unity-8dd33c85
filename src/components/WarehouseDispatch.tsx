@@ -23,6 +23,10 @@ interface OrderRow {
   steadfast_consignment_id: string | null;
   steadfast_send_failed: boolean | null;
   status: string | null;
+  agent_id: string | null;
+  cso_id: string | null;
+  agent_name?: string;
+  cso_name?: string;
 }
 
 interface CampaignInfo {
@@ -55,12 +59,34 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
   const loadOrders = useCallback(async () => {
     const { data } = await supabase
       .from("orders")
-      .select("id, customer_name, phone, address, product, quantity, price, lead_id, cso_approved_at, steadfast_consignment_id, steadfast_send_failed, status")
+      .select("id, customer_name, phone, address, product, quantity, price, lead_id, cso_approved_at, steadfast_consignment_id, steadfast_send_failed, status, agent_id, cso_id")
       .in("status", ["send_today", "dispatched"])
       .order("cso_approved_at", { ascending: true });
 
     if (data) {
-      setOrders(data as OrderRow[]);
+      // Resolve agent & CSO names
+      const userIds = [...new Set([
+        ...data.map((o: any) => o.agent_id).filter(Boolean),
+        ...data.map((o: any) => o.cso_id).filter(Boolean),
+      ])] as string[];
+
+      let nameMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", userIds);
+        if (users) {
+          users.forEach((u: any) => { nameMap[u.id] = u.name; });
+        }
+      }
+
+      const enriched = (data as OrderRow[]).map((o) => ({
+        ...o,
+        agent_name: o.agent_id ? nameMap[o.agent_id] || "—" : "—",
+        cso_name: o.cso_id ? nameMap[o.cso_id] || "—" : "—",
+      }));
+      setOrders(enriched);
 
       // Build campaign map from lead_ids
       const leadIds = [...new Set(data.map((o: any) => o.lead_id).filter(Boolean))] as string[];
@@ -273,11 +299,13 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                   <th className="py-2 px-2 text-left">Order ID</th>
                   <th className="py-2 px-2 text-left">Customer</th>
                   <th className="py-2 px-2 text-left">Address</th>
-                  <th className="py-2 px-2 text-left">Product</th>
-                  <th className="py-2 px-2 text-right">Qty</th>
-                  <th className="py-2 px-2 text-right">Price</th>
-                  <th className="py-2 px-2 text-left">CSO Time</th>
-                  <th className="py-2 px-2">Actions</th>
+                   <th className="py-2 px-2 text-left">Product</th>
+                   <th className="py-2 px-2 text-left">Agent</th>
+                   <th className="py-2 px-2 text-left">CSO</th>
+                   <th className="py-2 px-2 text-right">Qty</th>
+                   <th className="py-2 px-2 text-right">Price</th>
+                   <th className="py-2 px-2 text-left">CSO Time</th>
+                   <th className="py-2 px-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -293,6 +321,8 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                       <td className="py-2 px-2">{o.customer_name || "—"}</td>
                       <td className="py-2 px-2 max-w-[200px] truncate">{o.address || "—"}</td>
                       <td className="py-2 px-2">{o.product || "—"}</td>
+                      <td className="py-2 px-2 text-xs">{o.agent_name || "—"}</td>
+                      <td className="py-2 px-2 text-xs">{o.cso_name || "—"}</td>
                       <td className="py-2 px-2 text-right">{o.quantity || 1}</td>
                       <td className="py-2 px-2 text-right">৳{o.price || 0}</td>
                       <td className="py-2 px-2 text-xs">
@@ -325,7 +355,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                   );
                 })}
                 {sendableOrders.length === 0 && (
-                  <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
+                  <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
                 )}
               </tbody>
             </table>
