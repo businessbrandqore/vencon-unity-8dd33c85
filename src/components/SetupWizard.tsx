@@ -154,8 +154,14 @@ export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => 
           {step === "verify" && (
             <div className="space-y-6 text-center" style={{ animation: "fadeIn 0.5s ease" }}>
               <div>
-                <h1 className="text-2xl font-bold text-white mb-1">Admin Verification</h1>
-                <p className="text-white/50 text-sm">অ্যাডমিন অ্যাক্সেস যাচাই করুন</p>
+                <h1 className="text-2xl font-bold text-white mb-1">
+                  {mode === "locked" ? "🔒 Site Locked" : "Admin Verification"}
+                </h1>
+                <p className="text-white/50 text-sm">
+                  {mode === "locked"
+                    ? "সাইটটি BrandQore দ্বারা লক করা হয়েছে। অ্যাক্সেস পেতে পাসওয়ার্ড দিন।"
+                    : "অ্যাডমিন অ্যাক্সেস যাচাই করুন"}
+                </p>
               </div>
 
               <div className="space-y-4">
