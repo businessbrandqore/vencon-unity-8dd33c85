@@ -187,6 +187,7 @@ async function processDispatch(
   const orderShort = orderId.slice(0, 8);
 
   let lastError = "";
+  const errorBag = new Set<string>();
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     for (const baseUrl of STEADFAST_BASE_URLS) {
@@ -264,9 +265,13 @@ async function processDispatch(
           );
         }
 
-        lastError = `[${new URL(baseUrl).host}] ${getApiMessage(response.status, parsed)}`;
+        const gatewayError = `[${new URL(baseUrl).host}] ${getApiMessage(response.status, parsed)}`;
+        errorBag.add(gatewayError);
+        lastError = Array.from(errorBag).join(" | ");
       } catch (e) {
-        lastError = `[${new URL(baseUrl).host}] ${(e as Error).message}`;
+        const gatewayError = `[${new URL(baseUrl).host}] ${(e as Error).message}`;
+        errorBag.add(gatewayError);
+        lastError = Array.from(errorBag).join(" | ");
       }
     }
 
