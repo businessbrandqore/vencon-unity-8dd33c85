@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Phone, PhoneOff, PhoneCall } from "lucide-react";
+import { Phone, PhoneOff, PhoneCall, Mic, MicOff } from "lucide-react";
 
 type CallStatus = "idle" | "calling" | "incoming" | "connected";
 
@@ -18,6 +18,13 @@ interface ChatCallOverlayProps {
   outgoingCall?: { conversationId: string; callerName: string } | null;
   onOutgoingCallHandled?: () => void;
 }
+
+const ICE_SERVERS: RTCConfiguration = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
+};
 
 const createRingtone = () => {
   let intervalId: number | null = null;
@@ -72,9 +79,13 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
   const [status, setStatus] = useState<CallStatus>("idle");
   const [callInfo, setCallInfo] = useState<CallInfo | null>(null);
   const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
   const ringtoneRef = useRef(createRingtone());
   const timerRef = useRef<number | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const peerRef = useRef<RTCPeerConnection | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const signalingChannelRef = useRef<any>(null);
 
   // Use refs for realtime handler to avoid stale closures
   const callInfoRef = useRef<CallInfo | null>(null);
@@ -86,16 +97,135 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     ringtoneRef.current.stop();
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
+    
+    // Close peer connection
+    peerRef.current?.close();
+    peerRef.current = null;
+    
+    // Stop local audio
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    
+    // Clean up signaling channel
+    if (signalingChannelRef.current) {
+      supabase.removeChannel(signalingChannelRef.current);
+      signalingChannelRef.current = null;
+    }
+    
     setStatus("idle");
     setCallInfo(null);
     setDuration(0);
+    setIsMuted(false);
     onCallStateChange?.(false);
   }, [onCallStateChange]);
 
   const endCallCleanupRef = useRef(endCallCleanup);
   endCallCleanupRef.current = endCallCleanup;
+
+  // Setup WebRTC signaling channel for a call
+  const setupSignaling = useCallback((callId: string, isCaller: boolean) => {
+    const channelName = `webrtc-${callId}`;
+    
+    // Remove existing channel if any
+    if (signalingChannelRef.current) {
+      supabase.removeChannel(signalingChannelRef.current);
+    }
+
+    const channel = supabase.channel(channelName, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on("broadcast", { event: "webrtc-signal" }, async (payload: any) => {
+        const { type, data, from } = payload.payload;
+        if (from === currentUserId) return;
+
+        const pc = peerRef.current;
+        if (!pc) return;
+
+        try {
+          if (type === "offer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            channel.send({
+              type: "broadcast",
+              event: "webrtc-signal",
+              payload: { type: "answer", data: answer, from: currentUserId },
+            });
+          } else if (type === "answer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data));
+          } else if (type === "ice-candidate") {
+            await pc.addIceCandidate(new RTCIceCandidate(data));
+          }
+        } catch (err) {
+          console.error("WebRTC signaling error:", err);
+        }
+      })
+      .subscribe();
+
+    signalingChannelRef.current = channel;
+    return channel;
+  }, [currentUserId]);
+
+  // Create peer connection and start audio
+  const setupPeerConnection = useCallback(async (callId: string, isCaller: boolean) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+
+      const pc = new RTCPeerConnection(ICE_SERVERS);
+      peerRef.current = pc;
+
+      // Add local audio tracks
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      // Handle remote audio
+      pc.ontrack = (event) => {
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(() => {});
+        }
+      };
+
+      // Send ICE candidates via broadcast
+      pc.onicecandidate = (event) => {
+        if (event.candidate && signalingChannelRef.current) {
+          signalingChannelRef.current.send({
+            type: "broadcast",
+            event: "webrtc-signal",
+            payload: {
+              type: "ice-candidate",
+              data: event.candidate.toJSON(),
+              from: currentUserId,
+            },
+          });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+          endCallCleanupRef.current();
+        }
+      };
+
+      // If caller, create and send offer
+      if (isCaller) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        signalingChannelRef.current?.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "offer", data: offer, from: currentUserId },
+        });
+      }
+
+      return pc;
+    } catch (err) {
+      console.error("Failed to setup WebRTC:", err);
+      return null;
+    }
+  }, [currentUserId]);
 
   // Handle outgoing call trigger from parent
   useEffect(() => {
@@ -127,6 +257,9 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       ringtoneRef.current.play();
       onOutgoingCallHandled?.();
 
+      // Setup signaling channel while ringing
+      setupSignaling(call.id, true);
+
       // Auto-timeout after 30s
       const callId = call.id;
       setTimeout(async () => {
@@ -141,7 +274,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     })();
   }, [outgoingCall]);
 
-  // Listen for incoming calls & call status updates - stable subscription
+  // Listen for incoming calls & call status updates
   useEffect(() => {
     const channel = supabase
       .channel(`call-signals-${currentUserId}`)
@@ -151,9 +284,8 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
         async (payload: any) => {
           const call = payload.new;
           if (call.caller_id === currentUserId || call.status !== "ringing") return;
-          if (statusRef.current !== "idle") return; // Already in a call
+          if (statusRef.current !== "idle") return;
 
-          // Check if I'm a participant
           const { data: part } = await supabase
             .from("chat_participants")
             .select("user_id")
@@ -163,7 +295,6 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
 
           if (!part) return;
 
-          // Get caller name
           const { data: caller } = await supabase
             .from("users")
             .select("name")
@@ -178,23 +309,30 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           });
           setStatus("incoming");
           ringtoneRef.current.play();
+
+          // Setup signaling channel for receiving
+          setupSignaling(call.id, false);
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "chat_calls" },
-        (payload: any) => {
+        async (payload: any) => {
           const call = payload.new;
           const ci = callInfoRef.current;
           const st = statusRef.current;
           if (!ci || call.id !== ci.callId) return;
 
           if (call.status === "active" && st === "calling") {
+            // Other side accepted - start WebRTC as caller
             ringtoneRef.current.stop();
             setStatus("connected");
             setDuration(0);
             timerRef.current = window.setInterval(() => setDuration((d) => d + 1), 1000);
             onCallStateChange?.(true);
+            
+            // Setup peer connection as caller
+            await setupPeerConnection(ci.callId, true);
           }
 
           if (call.status === "ended" || call.status === "rejected" || call.status === "missed") {
@@ -207,7 +345,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]); // Only depend on currentUserId - use refs for everything else
+  }, [currentUserId, setupSignaling, setupPeerConnection]);
 
   const acceptCall = async () => {
     if (!callInfo) return;
@@ -223,10 +361,8 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     timerRef.current = window.setInterval(() => setDuration((d) => d + 1), 1000);
     onCallStateChange?.(true);
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      localStreamRef.current = stream;
-    } catch {}
+    // Setup peer connection as receiver (will wait for offer via signaling)
+    await setupPeerConnection(callInfo.callId, false);
   };
 
   const rejectCall = async () => {
@@ -247,10 +383,23 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     endCallCleanup();
   };
 
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
   if (status === "idle") return null;
 
   return (
     <div className="fixed inset-0 bg-background/90 z-[100] flex items-center justify-center">
+      {/* Hidden audio element for remote audio playback */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+      
       <div className="bg-card border border-border rounded-2xl p-8 w-80 text-center shadow-2xl">
         <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
           status === "connected" ? "bg-emerald-500/20" : "bg-primary/20 animate-pulse"
@@ -291,14 +440,26 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           )}
 
           {(status === "calling" || status === "connected") && (
-            <Button
-              size="lg"
-              variant="destructive"
-              className="rounded-full w-14 h-14"
-              onClick={endCall}
-            >
-              <PhoneOff className="h-6 w-6" />
-            </Button>
+            <div className="flex items-center gap-3">
+              {status === "connected" && (
+                <Button
+                  size="lg"
+                  variant={isMuted ? "secondary" : "outline"}
+                  className="rounded-full w-14 h-14"
+                  onClick={toggleMute}
+                >
+                  {isMuted ? <MicOff className="h-6 w-6 text-destructive" /> : <Mic className="h-6 w-6" />}
+                </Button>
+              )}
+              <Button
+                size="lg"
+                variant="destructive"
+                className="rounded-full w-14 h-14"
+                onClick={endCall}
+              >
+                <PhoneOff className="h-6 w-6" />
+              </Button>
+            </div>
           )}
         </div>
       </div>
