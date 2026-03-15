@@ -70,6 +70,8 @@ function getStatusInfo(order: OrderRow, isBn: boolean): { label: string; color: 
 
 export default function EmployeeMyOrders() {
   const { user } = useAuth();
+  const { t, n, lang } = useLanguage();
+  const isBn = lang === "bn";
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<OrderRow | null>(null);
