@@ -749,7 +749,13 @@ const ChatPage = () => {
         ) : (
           <>
             {/* Header */}
-            <div className="h-12 border-b border-border flex items-center px-4 bg-card shrink-0 gap-3">
+            <div className="h-12 border-b border-border flex items-center px-2 sm:px-4 bg-card shrink-0 gap-2 sm:gap-3">
+              <button
+                onClick={() => setMobileShowChat(false)}
+                className="md:hidden p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   {selectedConvoData?.type === "group" ? <Hash className="h-3.5 w-3.5" /> : null}
