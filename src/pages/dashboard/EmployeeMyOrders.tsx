@@ -210,7 +210,7 @@ export default function EmployeeMyOrders() {
                       </div>
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {order.created_at ? new Date(order.created_at).toLocaleDateString("bn-BD") : "—"}
+                      {order.created_at ? new Date(order.created_at).toLocaleDateString(isBn ? "bn-BD" : "en-US") : "—"}
                     </span>
                   </div>
 
