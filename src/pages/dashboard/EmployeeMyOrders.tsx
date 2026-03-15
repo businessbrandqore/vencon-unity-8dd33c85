@@ -272,26 +272,26 @@ export default function EmployeeMyOrders() {
                 {/* Customer Info */}
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">গ্রাহক</span>
+                    <span className="text-muted-foreground">{t("customer")}</span>
                     <span className="font-bold">{selected.customer_name || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">ফোন</span>
+                    <span className="text-muted-foreground">{t("phone")}</span>
                     <a href={`tel:${selected.phone}`} className="text-primary">{selected.phone || "—"}</a>
                   </div>
                   <div className="flex justify-between items-start">
-                    <span className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> ঠিকানা</span>
+                    <span className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> {t("address")}</span>
                     <span className="text-right max-w-[60%] text-xs">
                       {[selected.district, selected.thana, selected.address].filter(Boolean).join(", ") || "—"}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">পণ্য</span>
-                    <span>{selected.product || "—"} × {selected.quantity || 1}</span>
+                    <span className="text-muted-foreground">{t("product")}</span>
+                    <span>{selected.product || "—"} × {n(selected.quantity || 1)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">মূল্য</span>
-                    <span className="font-bold text-base">৳{(selected.price || 0).toLocaleString()}</span>
+                    <span className="text-muted-foreground">{t("price")}</span>
+                    <span className="font-bold text-base">৳{n(selected.price || 0)}</span>
                   </div>
                 </div>
 
