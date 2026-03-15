@@ -327,7 +327,7 @@ const ChatPage = () => {
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, callLogs]);
 
   // Mark as read
   useEffect(() => {
