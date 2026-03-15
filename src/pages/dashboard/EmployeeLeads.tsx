@@ -931,17 +931,17 @@ export default function EmployeeLeads() {
         setShowPreOrderModal(open);
       }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>প্রি-অর্ডার</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("pre_order")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>কাস্টমার</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>ফোন</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("customer")}</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("phone")}</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             <div>
-              <Label>ডেলিভারি তারিখ</Label>
+              <Label>{t("delivery_date")}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preOrderDate ? format(preOrderDate, "PPP") : "তারিখ নির্বাচন"}
+                    {preOrderDate ? format(preOrderDate, "PPP") : t("select_date_ph")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -949,10 +949,10 @@ export default function EmployeeLeads() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div><Label>নোট</Label><Textarea value={preOrderNote} onChange={e => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
+            <div><Label>{t("note")}</Label><Textarea value={preOrderNote} onChange={e => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">সাবমিট</Button>
+            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("submit")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
