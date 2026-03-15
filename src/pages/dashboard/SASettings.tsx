@@ -55,7 +55,7 @@ const SASettings = () => {
       const { data } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["company_info", "steadfast_config"]);
+        .in("key", ["company_info", "steadfast_config", "site_locked"]);
 
       if (data) {
         for (const row of data) {
@@ -63,12 +63,39 @@ const SASettings = () => {
           if (!val) continue;
           if (row.key === "company_info") setCompany((p) => ({ ...p, ...val }));
           if (row.key === "steadfast_config") setSteadfast((p) => ({ ...p, ...val }));
+          if (row.key === "site_locked") setSiteLocked(!!(val as any)?.locked);
         }
       }
+      if (siteLocked === null) setSiteLocked(false);
       setLoading(false);
     };
     load();
   }, []);
+
+  const handleSiteLock = async (lockAction: "lock" | "unlock") => {
+    if (!lockPassword.trim()) {
+      toast.error(isBn ? "BrandQore পাসওয়ার্ড দিন" : "Enter BrandQore password");
+      return;
+    }
+    setLockLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("setup-verification", {
+        body: { action: lockAction, password: lockPassword }
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setSiteLocked(lockAction === "lock");
+        setLockPassword("");
+        toast.success(data.message || (lockAction === "lock" ? "সাইট লক হয়েছে" : "সাইট আনলক হয়েছে"));
+      } else {
+        toast.error(data?.error || "ব্যর্থ হয়েছে");
+      }
+    } catch {
+      toast.error("অপারেশন ব্যর্থ");
+    } finally {
+      setLockLoading(false);
+    }
+  };
 
   const saveSetting = async (key: string, value: Record<string, unknown>) => {
     if (!user) return;
