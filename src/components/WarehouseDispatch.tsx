@@ -270,10 +270,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
           {selected.size > 0 && (
             <>
               <Button size="sm" variant="outline" onClick={batchPrint}>
-                <Printer className="h-4 w-4 mr-1" /> Invoice ({selected.size})
+                <Printer className="h-4 w-4 mr-1" /> {t("invoice")} ({n(selected.size)})
               </Button>
               <Button size="sm" onClick={batchSend} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-primary-foreground">
-                <Send className="h-4 w-4 mr-1" /> SteadFast ({selected.size})
+                <Send className="h-4 w-4 mr-1" /> SteadFast ({n(selected.size)})
               </Button>
             </>
           )}
