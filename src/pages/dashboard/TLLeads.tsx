@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Send, RefreshCw } from "lucide-react";
+import FraudChecker from "@/components/FraudChecker";
 
 interface Agent { id: string; name: string; }
 interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; }
@@ -1254,6 +1255,7 @@ const TLLeads = () => {
 
   return (
     <div className="space-y-4">
+      <FraudChecker />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>

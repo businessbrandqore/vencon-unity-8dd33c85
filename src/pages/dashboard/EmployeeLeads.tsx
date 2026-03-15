@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCircle } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
+import FraudChecker from "@/components/FraudChecker";
 
 interface LeadRow {
   id: string;
@@ -779,6 +780,7 @@ export default function EmployeeLeads() {
 
   return (
     <div className="space-y-4 pb-20">
+      <FraudChecker />
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl flex items-center gap-2">
           <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> {t("lead_sheet_title")}

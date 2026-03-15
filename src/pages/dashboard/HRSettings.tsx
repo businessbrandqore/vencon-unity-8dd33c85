@@ -39,6 +39,7 @@ interface Settings {
   cloudinary_cloud_name?: string;
   cloudinary_upload_preset?: string;
   cloudinary_api_key?: string;
+  fraudbd_api_key?: string;
 }
 
 interface DeductionTier {
@@ -107,7 +108,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
@@ -134,6 +135,9 @@ const HRSettings = () => {
           cloudinary_upload_preset: val.upload_preset,
           cloudinary_api_key: val.api_key,
         });
+      } else if (row.key === "fraud_checker_config") {
+        const val = row.value as Record<string, string>;
+        Object.assign(merged, { fraudbd_api_key: val.fraudbd_api_key });
       } else {
         const val = row.value as Record<string, string>;
         Object.assign(merged, val);
@@ -823,6 +827,41 @@ const HRSettings = () => {
               </div>
               <button onClick={() => { saveGroup("api_config", { whatsapp_sender: settings.whatsapp_sender, whatsapp_api_key: settings.whatsapp_api_key, steadfast_api_key: settings.steadfast_api_key, steadfast_secret_key: settings.steadfast_secret_key, ai_provider: settings.ai_provider, ai_api_key: settings.ai_api_key }); testConnection("ai"); }} className="mt-2 text-[10px] px-2 py-1 border border-border text-foreground hover:bg-secondary">
                 {isBn ? "সংরক্ষণ ও পরীক্ষা" : "Save & Test"}
+              </button>
+            </div>
+            {/* Fraud Checker */}
+            <div className="border-t border-border pt-4">
+              <h4 className="font-body text-xs font-bold text-foreground mb-1">
+                {isBn ? "ফ্রড চেকার (FraudBD)" : "Fraud Checker (FraudBD)"}
+              </h4>
+              <p className="text-[10px] text-muted-foreground font-body mb-2">
+                {isBn
+                  ? "fraudbd.com থেকে API Key নিন। এটি Steadfast, Pathao, RedX এর ডেলিভারি হিস্টোরি চেক করবে।"
+                  : "Get API Key from fraudbd.com. Checks delivery history across Steadfast, Pathao, RedX."}
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="font-body text-[10px] text-muted-foreground block mb-1">FraudBD API Key</label>
+                  <Input
+                    type="password"
+                    value={settings.fraudbd_api_key || ""}
+                    onChange={(e) => set("fraudbd_api_key", e.target.value)}
+                    className={fieldClass}
+                    placeholder="your_fraudbd_api_key"
+                  />
+                </div>
+              </div>
+              {settings.fraudbd_api_key && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] text-green-500 font-body">✓ {isBn ? "কনফিগার করা হয়েছে" : "Configured"}</span>
+                </div>
+              )}
+              <button
+                onClick={() => saveGroup("fraud_checker_config", { fraudbd_api_key: settings.fraudbd_api_key })}
+                disabled={saving}
+                className="mt-2 text-[10px] px-2 py-1 border border-border text-foreground hover:bg-secondary"
+              >
+                {isBn ? "সংরক্ষণ" : "Save"}
               </button>
             </div>
           </div>
