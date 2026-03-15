@@ -306,8 +306,14 @@ async function processDispatch(
     details: { error: lastError, attempts: 3 },
   });
 
+  const friendlyError =
+    lastError.includes("Account is not active")
+      ? "SteadFast account is not active for order API. SteadFast merchant panel থেকে order API activate করুন।"
+      : (lastError || "SteadFast API request failed");
+
   return new Response(
-    JSON.stringify({ success: false, error: lastError || "SteadFast API request failed" }),
+    JSON.stringify({ success: false, error: friendlyError, technical_error: lastError || null }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
   );
 }
