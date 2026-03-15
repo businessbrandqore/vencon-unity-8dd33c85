@@ -343,11 +343,40 @@ const ChatPage = () => {
 
   const initiateCall = async () => {
     if (!selectedConvo || !user) return;
-    await supabase.from("chat_calls" as any).insert({
-      conversation_id: selectedConvo,
-      caller_id: user.id,
-      status: "ringing",
-    });
+    const convoName = selectedConvoData?.displayName || "Call";
+    setOutgoingCall({ conversationId: selectedConvo, callerName: convoName });
+  };
+
+  const uploadImage = async (file: File) => {
+    if (!cloudinaryConfig || !selectedConvo || !user) {
+      toast.error("Cloudinary কনফিগারেশন সেট করা হয়নি। HR Settings → API ট্যাবে সেট করুন।");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", cloudinaryConfig.upload_preset);
+      formData.append("folder", "chat_images");
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        await supabase.from("chat_messages").insert({
+          content: `[image](${data.secure_url})`,
+          conversation_id: selectedConvo,
+          sender_id: user.id,
+        });
+      } else {
+        toast.error("ছবি আপলোড ব্যর্থ হয়েছে");
+      }
+    } catch {
+      toast.error("ছবি আপলোড ব্যর্থ হয়েছে");
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const filteredConvos = conversations?.filter((c) =>
