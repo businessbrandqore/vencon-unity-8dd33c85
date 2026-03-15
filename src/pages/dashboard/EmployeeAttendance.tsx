@@ -56,6 +56,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 export default function EmployeeAttendance() {
   const { user } = useAuth();
   const deductionConfig = useDeductionConfig();
+  const appealReasonOptions = useAppealReasonOptions();
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
