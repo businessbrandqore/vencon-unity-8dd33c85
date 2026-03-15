@@ -31,6 +31,13 @@ interface HistoryOrder {
   status: string | null;
   delivery_status: string | null;
   created_at: string | null;
+  address: string | null;
+  district: string | null;
+  thana: string | null;
+  price: number | null;
+  quantity: number | null;
+  advance_payment: number | null;
+  payment_method: string | null;
 }
 
 const FraudChecker = () => {
