@@ -782,12 +782,12 @@ export default function EmployeeLeads() {
             {/* District & Thana */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>District</Label>
+                <Label>{t("district")}</Label>
                 <Select value={orderDistrict} onValueChange={v => { setOrderDistrict(v); setOrderThana(""); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_district")} /></SelectTrigger>
                   <SelectContent>
                     <div className="px-2 pb-2">
-                      <Input placeholder="খুঁজুন..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-8 text-xs" />
+                      <Input placeholder={t("search_ph")} value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-8 text-xs" />
                     </div>
                     {BD_DISTRICTS
                       .filter(d => !districtSearch || d.name.toLowerCase().includes(districtSearch.toLowerCase()) || d.name_bn.includes(districtSearch))
