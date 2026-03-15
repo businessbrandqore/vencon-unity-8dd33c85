@@ -537,10 +537,10 @@ export default function EmployeeLeads() {
         <Card className="border-orange-500/30 bg-orange-500/5">
           <CardContent className="py-8 text-center">
             <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-400" />
-            <h2 className="font-heading text-lg mb-2">প্রথমে Check In করুন</h2>
-            <p className="text-sm text-muted-foreground">লিড দেখতে হলে আগে ড্যাশবোর্ড থেকে Check In করতে হবে</p>
+            <h2 className="font-heading text-lg mb-2">{t("check_in_first")}</h2>
+            <p className="text-sm text-muted-foreground">{t("check_in_to_see_leads")}</p>
             <Button variant="outline" className="mt-4" onClick={() => window.location.href = "/employee/dashboard"}>
-              ড্যাশবোর্ডে যান
+              {t("go_to_dashboard")}
             </Button>
           </CardContent>
         </Card>
