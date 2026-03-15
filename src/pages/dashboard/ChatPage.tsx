@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search, Send, Users, MessageCircle, SmilePlus, Phone,
-  Hash, MessageSquare, Lock,
+  Hash, MessageSquare, Lock, ImagePlus, Loader2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { bn } from "date-fns/locale";
@@ -50,6 +50,9 @@ const ChatPage = () => {
   const [sidebarTab, setSidebarTab] = useState<"dm" | "group">("dm");
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [threadParent, setThreadParent] = useState<Message | null>(null);
+  const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch allowed emojis
@@ -62,6 +65,21 @@ const ChatPage = () => {
         .eq("key", "chat_reaction_emojis")
         .maybeSingle();
       return (data?.value as string[]) || ["👍", "❤️", "😂", "😮", "😢", "🎉"];
+    },
+  });
+
+  // Fetch Cloudinary config
+  const { data: cloudinaryConfig } = useQuery({
+    queryKey: ["cloudinary-config"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "cloudinary_config")
+        .maybeSingle();
+      if (!data?.value) return null;
+      const val = data.value as Record<string, string>;
+      return val.cloud_name && val.upload_preset ? val : null;
     },
   });
 
@@ -325,11 +343,40 @@ const ChatPage = () => {
 
   const initiateCall = async () => {
     if (!selectedConvo || !user) return;
-    await supabase.from("chat_calls" as any).insert({
-      conversation_id: selectedConvo,
-      caller_id: user.id,
-      status: "ringing",
-    });
+    const convoName = selectedConvoData?.displayName || "Call";
+    setOutgoingCall({ conversationId: selectedConvo, callerName: convoName });
+  };
+
+  const uploadImage = async (file: File) => {
+    if (!cloudinaryConfig || !selectedConvo || !user) {
+      toast.error("Cloudinary কনফিগারেশন সেট করা হয়নি। HR Settings → API ট্যাবে সেট করুন।");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", cloudinaryConfig.upload_preset);
+      formData.append("folder", "chat_images");
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        await supabase.from("chat_messages").insert({
+          content: `[image](${data.secure_url})`,
+          conversation_id: selectedConvo,
+          sender_id: user.id,
+        });
+      } else {
+        toast.error("ছবি আপলোড ব্যর্থ হয়েছে");
+      }
+    } catch {
+      toast.error("ছবি আপলোড ব্যর্থ হয়েছে");
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const filteredConvos = conversations?.filter((c) =>
@@ -352,7 +399,13 @@ const ChatPage = () => {
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
       {/* Call overlay */}
-      {user && <ChatCallOverlay currentUserId={user.id} />}
+      {user && (
+        <ChatCallOverlay
+          currentUserId={user.id}
+          outgoingCall={outgoingCall}
+          onOutgoingCallHandled={() => setOutgoingCall(null)}
+        />
+      )}
 
       {/* Sidebar */}
       <div className="w-72 border-r border-border flex flex-col bg-card/50 shrink-0">
@@ -497,7 +550,16 @@ const ChatPage = () => {
                           </div>
 
                           {/* Content */}
-                          <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
+                          {msg.content.startsWith("[image](") && msg.content.endsWith(")") ? (
+                            <img
+                              src={msg.content.slice(8, -1)}
+                              alt="shared image"
+                              className="mt-1 max-w-xs rounded-lg border border-border cursor-pointer"
+                              onClick={() => window.open(msg.content.slice(8, -1), "_blank")}
+                            />
+                          ) : (
+                            <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
+                          )}
 
                           {/* Reactions */}
                           {Object.keys(msg.reactions).length > 0 && (
@@ -586,6 +648,26 @@ const ChatPage = () => {
               </div>
             ) : (
               <div className="border-t border-border p-3 flex gap-2 bg-card shrink-0">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={imageInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadImage(file);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="shrink-0"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                </Button>
                 <Input
                   placeholder="Message লিখুন..."
                   value={messageText}
