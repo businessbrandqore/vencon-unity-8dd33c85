@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { APP_VERSION } from "@/lib/appVersion";
 import brandQoreLogo from "@/assets/brandqore-logo.jpg";
 import {
-  Shield, Zap, FileText, CheckCircle2, Mail, Lock, Users,
+  Shield, Zap, FileText, CheckCircle2, Lock, Users,
   BarChart3, MessageSquare, Package, Clock, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
