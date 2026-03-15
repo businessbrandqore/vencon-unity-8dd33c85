@@ -1097,7 +1097,72 @@ export default function EmployeeLeads() {
         </DialogContent>
       </Dialog>
 
-      {/* Data Request Modal */}
+      {/* WhatsApp Send Modal */}
+      <Dialog open={showWaModal} onOpenChange={setShowWaModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-emerald-500" />
+              {isBn ? "WhatsApp মেসেজ পাঠান" : "Send WhatsApp Message"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>{isBn ? "কাস্টমার" : "Customer"}</Label>
+              <Input value={waCurrentLead?.name || ""} readOnly className="mt-1 bg-muted" />
+            </div>
+            <div>
+              <Label>{isBn ? "প্রাপকের নম্বর" : "Recipient Number"}</Label>
+              <Input value={waRecipientPhone} onChange={e => setWaRecipientPhone(e.target.value)} className="mt-1" placeholder="+880..." />
+            </div>
+            <div>
+              <Label>{isBn ? "টেমপ্লেট নির্বাচন করুন" : "Select Template"}</Label>
+              <Select value={waSelectedTemplate} onValueChange={setWaSelectedTemplate}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={isBn ? "টেমপ্লেট বাছুন" : "Choose template"} /></SelectTrigger>
+                <SelectContent>
+                  {waTemplates.map(tpl => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      <span className="flex items-center gap-2">
+                        {tpl.image_url && <img src={tpl.image_url} alt="" className="h-5 w-5 rounded object-cover inline-block" />}
+                        {tpl.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Preview selected template */}
+            {waSelectedTemplate && (() => {
+              const tpl = waTemplates.find(t => t.id === waSelectedTemplate);
+              if (!tpl) return null;
+              const preview = tpl.body
+                .replace(/\{\{name\}\}/g, waCurrentLead?.name || "")
+                .replace(/\{\{phone\}\}/g, waRecipientPhone || "")
+                .replace(/\{\{address\}\}/g, waCurrentLead?.address || "");
+              return (
+                <div className="border border-emerald-500/20 bg-emerald-500/5 rounded p-3 space-y-2">
+                  <p className="text-[10px] font-bold text-emerald-600">{isBn ? "প্রিভিউ" : "Preview"}</p>
+                  {tpl.image_url && <img src={tpl.image_url} alt="" className="w-full max-h-32 object-cover rounded" />}
+                  <p className="text-xs whitespace-pre-wrap text-foreground">{preview}</p>
+                </div>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWaModal(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button
+              onClick={handleWhatsAppSend}
+              disabled={waSending || !waSelectedTemplate || !waRecipientPhone}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Send className="h-4 w-4" />
+              {waSending ? (isBn ? "পাঠানো হচ্ছে..." : "Sending...") : (isBn ? "পাঠান" : "Send")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={showDataRequestModal} onOpenChange={setShowDataRequestModal}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{t("data_request_title")}</DialogTitle></DialogHeader>
