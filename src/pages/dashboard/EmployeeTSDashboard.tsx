@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
+import { useAppealReasonOptions } from "@/hooks/useAppealReasonOptions";
 import { Clock, AlertTriangle, LogOut, TrendingUp, Package, Truck, RotateCcw, XCircle, ShieldAlert, CheckCircle, BarChart3 } from "lucide-react";
 import SalaryCard from "@/components/SalaryCard";
 
@@ -78,8 +80,10 @@ export default function EmployeeTSDashboard() {
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealAttendanceId, setAppealAttendanceId] = useState("");
   const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSelectedReasons, setAppealSelectedReasons] = useState<string[]>([]);
   const [appealSubmitting, setAppealSubmitting] = useState(false);
   const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
+  const appealReasonOptions = useAppealReasonOptions();
 
   /* desk report */
   const [deskCondition, setDeskCondition] = useState("");
@@ -295,10 +299,11 @@ export default function EmployeeTSDashboard() {
   };
 
   const handleAppealSubmit = async () => {
-    if (!user || !appealAttendanceId || !appealExplanation.trim()) { toast.error("কারণ লিখুন"); return; }
+    if (!user || !appealAttendanceId || (!appealExplanation.trim() && appealSelectedReasons.length === 0)) { toast.error("কারণ নির্বাচন বা লিখুন"); return; }
     setAppealSubmitting(true);
+    const combinedExplanation = [...appealSelectedReasons, appealExplanation.trim()].filter(Boolean).join(" | ");
     const { error } = await supabase.from("attendance_appeals").insert({
-      user_id: user.id, attendance_id: appealAttendanceId, explanation: appealExplanation.trim(),
+      user_id: user.id, attendance_id: appealAttendanceId, explanation: combinedExplanation,
     });
     if (error) { toast.error("আপিল পাঠাতে সমস্যা হয়েছে"); console.error(error); }
     else {
@@ -308,6 +313,7 @@ export default function EmployeeTSDashboard() {
     setAppealSubmitting(false);
     setShowAppealModal(false);
     setAppealExplanation("");
+    setAppealSelectedReasons([]);
   };
 
   /* ───── loading ───── */
@@ -589,14 +595,38 @@ export default function EmployeeTSDashboard() {
           <DialogHeader><DialogTitle>কর্তন আপিল</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">দেরি বা আগে যাওয়ার কারণ ব্যাখ্যা করুন। HR রিভিউ করে সিদ্ধান্ত নিবে।</p>
+            {appealReasonOptions.attendance_reasons.length > 0 && (
+              <div>
+                <Label className="mb-2 block">কারণ নির্বাচন করুন</Label>
+                <div className="flex flex-wrap gap-2">
+                  {appealReasonOptions.attendance_reasons.map((reason) => (
+                    <label key={reason} className={cn(
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-all",
+                      appealSelectedReasons.includes(reason) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"
+                    )}>
+                      <Checkbox
+                        checked={appealSelectedReasons.includes(reason)}
+                        onCheckedChange={(checked) => {
+                          setAppealSelectedReasons(prev =>
+                            checked ? [...prev, reason] : prev.filter(r => r !== reason)
+                          );
+                        }}
+                        className="h-3.5 w-3.5"
+                      />
+                      {reason}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
-              <Label>কারণ *</Label>
+              <Label>অতিরিক্ত মন্তব্য</Label>
               <Textarea value={appealExplanation} onChange={e => setAppealExplanation(e.target.value)} className="mt-1" rows={3} placeholder="কেন দেরি হয়েছিল বা আগে যেতে হয়েছিল..." />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAppealModal(false)}>বাতিল</Button>
-            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || !appealExplanation.trim()}
+            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || (!appealExplanation.trim() && appealSelectedReasons.length === 0)}
               className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
               {appealSubmitting ? "পাঠানো হচ্ছে..." : "আপিল পাঠান"}
             </Button>

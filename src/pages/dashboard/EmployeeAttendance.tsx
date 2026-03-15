@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Clock, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut, ShieldAlert } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
+import { useAppealReasonOptions } from "@/hooks/useAppealReasonOptions";
 
 interface AttendanceRow {
   id: string;
@@ -54,6 +56,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 export default function EmployeeAttendance() {
   const { user } = useAuth();
   const deductionConfig = useDeductionConfig();
+  const appealReasonOptions = useAppealReasonOptions();
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,11 +80,13 @@ export default function EmployeeAttendance() {
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
+  const [leaveSelectedReasons, setLeaveSelectedReasons] = useState<string[]>([]);
 
   // Appeal
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealAttendanceId, setAppealAttendanceId] = useState("");
   const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSelectedReasons, setAppealSelectedReasons] = useState<string[]>([]);
   const [appealSubmitting, setAppealSubmitting] = useState(false);
   const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
 
@@ -209,21 +214,23 @@ export default function EmployeeAttendance() {
 
   const handleLeaveSubmit = async () => {
     if (!user || !leaveStart || !leaveEnd) { toast.error("তারিখ দিন"); return; }
+    const combinedReason = [...leaveSelectedReasons, leaveReason].filter(Boolean).join(" | ");
     await supabase.from("leave_requests").insert({
-      user_id: user.id, start_date: leaveStart, end_date: leaveEnd, reason: leaveReason || null,
+      user_id: user.id, start_date: leaveStart, end_date: leaveEnd, reason: combinedReason || null,
     });
     toast.success("ছুটির আবেদন জমা হয়েছে ✓");
     setShowLeaveModal(false);
-    setLeaveStart(""); setLeaveEnd(""); setLeaveReason("");
+    setLeaveStart(""); setLeaveEnd(""); setLeaveReason(""); setLeaveSelectedReasons([]);
     const { data } = await supabase.from("leave_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     if (data) setLeaves(data as LeaveRequest[]);
   };
 
   const handleAppealSubmit = async () => {
-    if (!user || !appealAttendanceId || !appealExplanation.trim()) { toast.error("কারণ লিখুন"); return; }
+    if (!user || !appealAttendanceId || (!appealExplanation.trim() && appealSelectedReasons.length === 0)) { toast.error("কারণ নির্বাচন বা লিখুন"); return; }
     setAppealSubmitting(true);
+    const combinedExplanation = [...appealSelectedReasons, appealExplanation.trim()].filter(Boolean).join(" | ");
     const { error } = await supabase.from("attendance_appeals").insert({
-      user_id: user.id, attendance_id: appealAttendanceId, explanation: appealExplanation.trim(),
+      user_id: user.id, attendance_id: appealAttendanceId, explanation: combinedExplanation,
     });
     if (error) { toast.error("আপিল পাঠাতে সমস্যা"); console.error(error); }
     else {
@@ -233,6 +240,7 @@ export default function EmployeeAttendance() {
     setAppealSubmitting(false);
     setShowAppealModal(false);
     setAppealExplanation("");
+    setAppealSelectedReasons([]);
   };
 
   const statusColor = (s: string | null) => {
@@ -503,8 +511,32 @@ export default function EmployeeAttendance() {
                 <input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full mt-1 rounded-md border border-border bg-background px-3 py-2 text-sm" />
               </div>
             </div>
+            {appealReasonOptions.leave_reasons.length > 0 && (
+              <div>
+                <Label className="mb-2 block">কারণ নির্বাচন করুন</Label>
+                <div className="flex flex-wrap gap-2">
+                  {appealReasonOptions.leave_reasons.map((reason) => (
+                    <label key={reason} className={cn(
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-all",
+                      leaveSelectedReasons.includes(reason) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"
+                    )}>
+                      <Checkbox
+                        checked={leaveSelectedReasons.includes(reason)}
+                        onCheckedChange={(checked) => {
+                          setLeaveSelectedReasons(prev =>
+                            checked ? [...prev, reason] : prev.filter(r => r !== reason)
+                          );
+                        }}
+                        className="h-3.5 w-3.5"
+                      />
+                      {reason}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
-              <label className="text-sm text-muted-foreground">কারণ</label>
+              <label className="text-sm text-muted-foreground">অতিরিক্ত মন্তব্য</label>
               <Textarea value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} className="mt-1" rows={2} />
             </div>
           </div>
@@ -520,14 +552,38 @@ export default function EmployeeAttendance() {
           <DialogHeader><DialogTitle>কর্তন আপিল</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">দেরি বা আগে যাওয়ার কারণ ব্যাখ্যা করুন। HR রিভিউ করে সিদ্ধান্ত নিবে।</p>
+            {appealReasonOptions.attendance_reasons.length > 0 && (
+              <div>
+                <Label className="mb-2 block">কারণ নির্বাচন করুন</Label>
+                <div className="flex flex-wrap gap-2">
+                  {appealReasonOptions.attendance_reasons.map((reason) => (
+                    <label key={reason} className={cn(
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-all",
+                      appealSelectedReasons.includes(reason) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"
+                    )}>
+                      <Checkbox
+                        checked={appealSelectedReasons.includes(reason)}
+                        onCheckedChange={(checked) => {
+                          setAppealSelectedReasons(prev =>
+                            checked ? [...prev, reason] : prev.filter(r => r !== reason)
+                          );
+                        }}
+                        className="h-3.5 w-3.5"
+                      />
+                      {reason}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
-              <Label>কারণ *</Label>
+              <Label>অতিরিক্ত মন্তব্য</Label>
               <Textarea value={appealExplanation} onChange={e => setAppealExplanation(e.target.value)} className="mt-1" rows={3} placeholder="কেন দেরি হয়েছিল..." />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAppealModal(false)}>বাতিল</Button>
-            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || !appealExplanation.trim()}
+            <Button onClick={handleAppealSubmit} disabled={appealSubmitting || (!appealExplanation.trim() && appealSelectedReasons.length === 0)}
               className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
               {appealSubmitting ? "পাঠানো হচ্ছে..." : "আপিল পাঠান"}
             </Button>
