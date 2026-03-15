@@ -102,7 +102,8 @@ const normalizeWorkflowStatus = (value: string) =>
 
 export default function EmployeeLeads() {
   const { user } = useAuth();
-
+  const { t, lang } = useLanguage();
+  const isBn = lang === "bn";
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkedIn, setCheckedIn] = useState(false);
