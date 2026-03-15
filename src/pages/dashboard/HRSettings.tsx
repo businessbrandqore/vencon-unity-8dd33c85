@@ -804,6 +804,111 @@ const HRSettings = () => {
             <button onClick={saveDeduction} disabled={saving} className="px-4 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: BLUE }}>
               {isBn ? "সংরক্ষণ" : "Save"}
             </button>
+
+            {/* Appeal Reason Options */}
+            <div className="border-t border-border pt-6 mt-6">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {isBn ? "আপিল/ছুটির কারণ অপশন" : "Appeal & Leave Reason Options"}
+              </h3>
+              <p className="text-xs text-muted-foreground font-body mt-1 mb-4">
+                {isBn ? "কর্মীরা আপিল বা ছুটির আবেদনে এই অপশনগুলো থেকে কারণ নির্বাচন করতে পারবে।" : "Employees can select from these options when submitting appeals or leave requests."}
+              </p>
+
+              {/* Attendance Appeal Reasons */}
+              <div className="mb-4">
+                <label className="font-body text-xs font-bold text-foreground block mb-2">
+                  {isBn ? "কর্তন আপিল কারণ" : "Attendance Appeal Reasons"}
+                </label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {attendanceReasons.map((r, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground">
+                      {r}
+                      <button onClick={() => setAttendanceReasons(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:text-destructive/80 ml-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {attendanceReasons.length === 0 && <span className="text-xs text-muted-foreground">{isBn ? "কোনো অপশন নেই" : "No options"}</span>}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newAttendanceReason}
+                    onChange={(e) => setNewAttendanceReason(e.target.value)}
+                    placeholder={isBn ? "যেমন: যানজট, অসুস্থতা..." : "e.g. Traffic jam, Illness..."}
+                    className="text-xs h-8"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newAttendanceReason.trim()) {
+                        setAttendanceReasons(prev => [...prev, newAttendanceReason.trim()]);
+                        setNewAttendanceReason("");
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (newAttendanceReason.trim()) {
+                        setAttendanceReasons(prev => [...prev, newAttendanceReason.trim()]);
+                        setNewAttendanceReason("");
+                      }
+                    }}
+                    className="px-3 h-8 text-xs border border-border text-foreground hover:bg-secondary flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> {isBn ? "যোগ" : "Add"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Leave Reasons */}
+              <div className="mb-4">
+                <label className="font-body text-xs font-bold text-foreground block mb-2">
+                  {isBn ? "ছুটির আবেদন কারণ" : "Leave Request Reasons"}
+                </label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {leaveReasons.map((r, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground">
+                      {r}
+                      <button onClick={() => setLeaveReasons(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:text-destructive/80 ml-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {leaveReasons.length === 0 && <span className="text-xs text-muted-foreground">{isBn ? "কোনো অপশন নেই" : "No options"}</span>}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newLeaveReason}
+                    onChange={(e) => setNewLeaveReason(e.target.value)}
+                    placeholder={isBn ? "যেমন: পারিবারিক কারণ, চিকিৎসা..." : "e.g. Family emergency, Medical..."}
+                    className="text-xs h-8"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newLeaveReason.trim()) {
+                        setLeaveReasons(prev => [...prev, newLeaveReason.trim()]);
+                        setNewLeaveReason("");
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (newLeaveReason.trim()) {
+                        setLeaveReasons(prev => [...prev, newLeaveReason.trim()]);
+                        setNewLeaveReason("");
+                      }
+                    }}
+                    className="px-3 h-8 text-xs border border-border text-foreground hover:bg-secondary flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> {isBn ? "যোগ" : "Add"}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => saveGroup("appeal_reason_options", { attendance_reasons: attendanceReasons, leave_reasons: leaveReasons })}
+                disabled={saving}
+                className="px-4 py-1.5 text-xs font-bold text-white"
+                style={{ backgroundColor: BLUE }}
+              >
+                {isBn ? "কারণ অপশন সংরক্ষণ" : "Save Reason Options"}
+              </button>
+            </div>
           </div>
         </TabsContent>
 
