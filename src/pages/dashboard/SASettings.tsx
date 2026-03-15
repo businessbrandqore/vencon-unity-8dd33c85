@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Building2, Truck, RotateCcw, Lock, Unlock, ShieldAlert } from "lucide-react";
+import { Building2, Truck, RotateCcw } from "lucide-react";
 
 interface CompanyInfo {
   company_name: string;
@@ -24,10 +24,7 @@ const SASettings = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
 
-  const [activeTab, setActiveTab] = useState<"company" | "steadfast" | "sitelock" | "reset">("company");
-  const [siteLocked, setSiteLocked] = useState<boolean | null>(null);
-  const [lockLoading, setLockLoading] = useState(false);
-  const [lockPassword, setLockPassword] = useState("");
+  const [activeTab, setActiveTab] = useState<"company" | "steadfast" | "reset">("company");
 
   const [company, setCompany] = useState<CompanyInfo>({
     company_name: "VENCON",
@@ -55,7 +52,7 @@ const SASettings = () => {
       const { data } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["company_info", "steadfast_config", "site_locked"]);
+        .in("key", ["company_info", "steadfast_config"]);
 
       if (data) {
         for (const row of data) {
@@ -63,39 +60,13 @@ const SASettings = () => {
           if (!val) continue;
           if (row.key === "company_info") setCompany((p) => ({ ...p, ...val }));
           if (row.key === "steadfast_config") setSteadfast((p) => ({ ...p, ...val }));
-          if (row.key === "site_locked") setSiteLocked(!!(val as any)?.locked);
         }
       }
-      if (siteLocked === null) setSiteLocked(false);
       setLoading(false);
     };
     load();
   }, []);
 
-  const handleSiteLock = async (lockAction: "lock" | "unlock") => {
-    if (!lockPassword.trim()) {
-      toast.error(isBn ? "BrandQore পাসওয়ার্ড দিন" : "Enter BrandQore password");
-      return;
-    }
-    setLockLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: lockAction, password: lockPassword }
-      });
-      if (error) throw error;
-      if (data?.success) {
-        setSiteLocked(lockAction === "lock");
-        setLockPassword("");
-        toast.success(data.message || (lockAction === "lock" ? "সাইট লক হয়েছে" : "সাইট আনলক হয়েছে"));
-      } else {
-        toast.error(data?.error || "ব্যর্থ হয়েছে");
-      }
-    } catch {
-      toast.error("অপারেশন ব্যর্থ");
-    } finally {
-      setLockLoading(false);
-    }
-  };
 
   const saveSetting = async (key: string, value: Record<string, unknown>) => {
     if (!user) return;
@@ -166,7 +137,6 @@ const SASettings = () => {
   const tabs = [
     { key: "company" as const, label: isBn ? "কোম্পানি তথ্য" : "Company Info", icon: Building2 },
     { key: "steadfast" as const, label: "Steadfast API", icon: Truck },
-    { key: "sitelock" as const, label: isBn ? "সাইট লক" : "Site Lock", icon: ShieldAlert },
     { key: "reset" as const, label: isBn ? "ফ্যাক্টরি রিসেট" : "Factory Reset", icon: RotateCcw },
   ];
 
@@ -265,71 +235,6 @@ const SASettings = () => {
           <button onClick={() => saveSetting("steadfast_config", steadfast as any)} disabled={saving} className="px-5 py-2 text-xs font-heading bg-primary text-primary-foreground rounded-lg disabled:opacity-50">
             {saving ? "..." : isBn ? "সেভ করুন" : "Save"}
           </button>
-        </div>
-      )}
-
-      {activeTab === "sitelock" && (
-        <div className="bg-card border border-border rounded-xl p-6 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${siteLocked ? "bg-destructive/10" : "bg-emerald-500/10"}`}>
-              {siteLocked ? <Lock className="w-6 h-6 text-destructive" /> : <Unlock className="w-6 h-6 text-emerald-500" />}
-            </div>
-            <div>
-              <h3 className="font-heading text-sm font-bold text-foreground">
-                {isBn ? "সাইট লক কন্ট্রোল" : "Site Lock Control"}
-              </h3>
-              <p className="font-body text-xs text-muted-foreground">
-                {siteLocked
-                  ? (isBn ? "🔴 সাইট বর্তমানে লক আছে — কেউ অ্যাক্সেস করতে পারছে না" : "🔴 Site is currently LOCKED")
-                  : (isBn ? "🟢 সাইট বর্তমানে আনলক আছে — সবাই অ্যাক্সেস করতে পারছে" : "🟢 Site is currently UNLOCKED")}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-xl p-4 space-y-3 border border-border bg-muted/30">
-            <p className="font-heading text-xs font-bold text-foreground">
-              {isBn ? "📋 সাইট লক কিভাবে কাজ করে:" : "📋 How Site Lock works:"}
-            </p>
-            <ul className="space-y-2 font-body text-xs text-muted-foreground">
-              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span>{isBn ? "লক করলে সম্পূর্ণ ওয়েবসাইট BrandQore পাসওয়ার্ড স্ক্রিন দেখাবে" : "Locking shows BrandQore password screen"}</li>
-              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span>{isBn ? "কেউ লগিন, ডাটা দেখা বা কিছু অ্যাক্সেস করতে পারবে না" : "Nobody can login or access anything"}</li>
-              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span>{isBn ? "শুধুমাত্র BrandQore পাসওয়ার্ড দিয়ে আনলক করা যাবে" : "Only BrandQore password can unlock"}</li>
-              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span>{isBn ? "যেকোনো হোস্টিং-এ কাজ করবে — ফ্রি বা পেইড" : "Works on any hosting"}</li>
-              <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span>{isBn ? "পেমেন্ট না পেলে বা চুক্তি ভঙ্গ হলে তাৎক্ষণিক লক সম্ভব" : "Instant lock if payment missed"}</li>
-            </ul>
-          </div>
-
-          <div className="space-y-3">
-            <label className={labelClass}>{isBn ? "BrandQore পাসওয়ার্ড দিন:" : "Enter BrandQore password:"}</label>
-            <input
-              type="password"
-              value={lockPassword}
-              onChange={(e) => setLockPassword(e.target.value)}
-              placeholder={isBn ? "পাসওয়ার্ড লিখুন" : "Enter password"}
-              className={inputClass + " max-w-sm"}
-            />
-            <div className="flex gap-3">
-              {siteLocked ? (
-                <button
-                  onClick={() => handleSiteLock("unlock")}
-                  disabled={lockLoading || !lockPassword.trim()}
-                  className="px-6 py-2.5 text-xs font-heading tracking-wide bg-emerald-600 text-white rounded-lg disabled:opacity-40 flex items-center gap-2"
-                >
-                  {lockLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Unlock className="w-3.5 h-3.5" />}
-                  {isBn ? "সাইট আনলক করুন" : "Unlock Site"}
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleSiteLock("lock")}
-                  disabled={lockLoading || !lockPassword.trim()}
-                  className="px-6 py-2.5 text-xs font-heading tracking-wide bg-destructive text-destructive-foreground rounded-lg disabled:opacity-40 flex items-center gap-2"
-                >
-                  {lockLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
-                  {isBn ? "সাইট লক করুন" : "Lock Site"}
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       )}
 

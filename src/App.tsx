@@ -61,6 +61,7 @@ import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
+import SecretSiteLock from "./pages/SecretSiteLock";
 
 const queryClient = new QueryClient();
 
@@ -160,6 +161,7 @@ const App = () => (
               <Route path="/employee/profile" element={<ProfileSettings />} />
             </Route>
 
+            <Route path="/bq-ctrl-7x9k" element={<SecretSiteLock />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
