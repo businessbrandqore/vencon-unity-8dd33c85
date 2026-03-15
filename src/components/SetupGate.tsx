@@ -29,6 +29,22 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
       }
     };
     checkSetup();
+
+    // Poll every 15 seconds to auto-detect unlock from control panel
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("setup-verification", {
+          body: { action: "check", version: APP_VERSION }
+        });
+        if (data && !data.isLocked && data.isComplete) {
+          setStatus("ready");
+        } else if (data && !data.isLocked && !data.isComplete) {
+          setStatus("setup");
+        }
+      } catch {}
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (status === "checking") {

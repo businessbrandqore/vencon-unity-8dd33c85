@@ -64,14 +64,7 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
       }
       if (data.success) {
         toast.success("✓ Verified!");
-        if (mode === "locked") {
-          await supabase.functions.invoke("setup-verification", {
-            body: { action: "unlock", password }
-          });
-          onComplete();
-        } else {
-          setStep("welcome");
-        }
+        setStep("welcome");
       } else {
         toast.error(data.error || "Invalid password");
       }
@@ -180,16 +173,12 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
           </div>
 
           {/* ── VERIFY ── */}
-          {step === "verify" && (
+          {step === "verify" && mode === "locked" && (
             <div className="space-y-6 text-center" style={{ animation: "fadeIn 0.5s ease" }}>
               <div>
-                <h1 className="text-2xl font-bold text-white mb-1">
-                  {mode === "locked" ? "🔒 Site Locked" : "Admin Verification"}
-                </h1>
+                <h1 className="text-2xl font-bold text-white mb-1">🔒 Site Locked</h1>
                 <p className="text-white/50 text-sm">
-                  {mode === "locked"
-                    ? "সাইটটি BrandQore দ্বারা লক করা হয়েছে। অ্যাক্সেস পেতে পাসওয়ার্ড দিন।"
-                    : "অ্যাডমিন অ্যাক্সেস যাচাই করুন"}
+                  সাইটটি BrandQore দ্বারা লক করা হয়েছে। শুধুমাত্র অনুমোদিত অ্যাডমিন কন্ট্রোল প্যানেল থেকে আনলক করা সম্ভব।
                 </p>
               </div>
 
@@ -207,6 +196,24 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
                   </div>
                 </div>
               )}
+
+              <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
+                <div className="flex items-center gap-3 justify-center">
+                  <Lock className="w-5 h-5 text-red-400" />
+                  <span className="text-white/60 text-sm">অ্যাক্সেস সম্পূর্ণভাবে বন্ধ রয়েছে</span>
+                </div>
+              </div>
+
+              <p className="text-white/25 text-xs">আনলক হলে এই পেজ স্বয়ংক্রিয়ভাবে রিফ্রেশ হবে</p>
+            </div>
+          )}
+
+          {step === "verify" && mode !== "locked" && (
+            <div className="space-y-6 text-center" style={{ animation: "fadeIn 0.5s ease" }}>
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-1">Admin Verification</h1>
+                <p className="text-white/50 text-sm">অ্যাডমিন অ্যাক্সেস যাচাই করুন</p>
+              </div>
 
               {blocked ? (
                 <div className="rounded-xl p-4 space-y-2"
