@@ -213,6 +213,56 @@ const ChatPage = () => {
     enabled: !!selectedConvo,
   });
 
+  // Fetch call history for selected conversation
+  const { data: callLogs, refetch: refetchCalls } = useQuery({
+    queryKey: ["chat-calls", selectedConvo],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("chat_calls")
+        .select("id, caller_id, status, created_at, started_at, ended_at")
+        .eq("conversation_id", selectedConvo!)
+        .order("created_at", { ascending: true });
+
+      if (!data) return [];
+
+      const callerIds = [...new Set(data.map((c) => c.caller_id))];
+      let usersData: { id: string; name: string }[] = [];
+      if (callerIds.length > 0) {
+        const { data: callers } = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", callerIds);
+        usersData = callers || [];
+      }
+
+      const callerNameMap = new Map(usersData.map((u) => [u.id, u.name]));
+
+      return data.map((c) => {
+        const durationSeconds =
+          c.started_at && c.ended_at
+            ? Math.max(
+                0,
+                Math.round(
+                  (new Date(c.ended_at).getTime() - new Date(c.started_at).getTime()) / 1000
+                )
+              )
+            : null;
+
+        return {
+          id: c.id,
+          caller_id: c.caller_id,
+          caller_name: callerNameMap.get(c.caller_id) || "Unknown",
+          status: c.status,
+          created_at: c.created_at || "",
+          started_at: c.started_at,
+          ended_at: c.ended_at,
+          duration_seconds: durationSeconds,
+        } as CallLog;
+      });
+    },
+    enabled: !!selectedConvo,
+  });
+
   // All active users for DM list
   const { data: allUsers } = useQuery({
     queryKey: ["all-users-chat"],
