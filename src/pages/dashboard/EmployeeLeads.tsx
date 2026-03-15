@@ -798,12 +798,12 @@ export default function EmployeeLeads() {
                 {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">{t("manual_search")}</p>}
               </div>
               <div>
-                <Label>Thana</Label>
+                <Label>{t("thana")}</Label>
                 <Select value={orderThana} onValueChange={setOrderThana} disabled={!orderDistrict}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_thana")} /></SelectTrigger>
                   <SelectContent>
                     <div className="px-2 pb-2">
-                      <Input placeholder="খুঁজুন..." value={thanaSearch} onChange={e => setThanaSearch(e.target.value)} className="h-8 text-xs" />
+                      <Input placeholder={t("search_ph")} value={thanaSearch} onChange={e => setThanaSearch(e.target.value)} className="h-8 text-xs" />
                     </div>
                     {(BD_DISTRICTS.find(d => d.name === orderDistrict)?.thanas || [])
                       .filter(t => !thanaSearch || t.name.toLowerCase().includes(thanaSearch.toLowerCase()) || t.name_bn.includes(thanaSearch))
