@@ -80,8 +80,10 @@ export default function EmployeeTSDashboard() {
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealAttendanceId, setAppealAttendanceId] = useState("");
   const [appealExplanation, setAppealExplanation] = useState("");
+  const [appealSelectedReasons, setAppealSelectedReasons] = useState<string[]>([]);
   const [appealSubmitting, setAppealSubmitting] = useState(false);
   const [existingAppeals, setExistingAppeals] = useState<Record<string, string>>({});
+  const appealReasonOptions = useAppealReasonOptions();
 
   /* desk report */
   const [deskCondition, setDeskCondition] = useState("");
