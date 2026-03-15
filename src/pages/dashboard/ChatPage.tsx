@@ -657,8 +657,8 @@ const ChatPage = () => {
         />
       )}
 
-      {/* Sidebar */}
-      <div className="w-72 border-r border-border flex flex-col bg-card/50 shrink-0">
+      {/* Sidebar - hidden on mobile when chat is open */}
+      <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full md:w-72 border-r border-border flex-col bg-card/50 md:shrink-0`}>
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
