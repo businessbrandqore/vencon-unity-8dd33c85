@@ -345,7 +345,7 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-6 bg-secondary">
+        <TabsList className="w-full grid grid-cols-7 bg-secondary">
           <TabsTrigger value="general" className="text-xs gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
@@ -353,6 +353,10 @@ const HRSettings = () => {
           <TabsTrigger value="products" className="text-xs gap-1.5">
             <ShoppingBag className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "পণ্য/গিফট" : "Products"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp" className="text-xs gap-1.5">
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="invoice" className="text-xs gap-1.5">
             <FileText className="h-3.5 w-3.5" />
