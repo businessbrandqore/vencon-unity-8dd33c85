@@ -182,7 +182,7 @@ const ChatPage = () => {
     enabled: !!selectedConvo,
   });
 
-  // All users for new DM
+  // All active users for DM list
   const { data: allUsers } = useQuery({
     queryKey: ["all-users-chat"],
     queryFn: async () => {
@@ -194,7 +194,7 @@ const ChatPage = () => {
         .order("name");
       return data || [];
     },
-    enabled: !!user && showNewDM,
+    enabled: !!user,
   });
 
   // Realtime for messages
