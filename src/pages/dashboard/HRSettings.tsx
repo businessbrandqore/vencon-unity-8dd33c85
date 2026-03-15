@@ -108,7 +108,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
