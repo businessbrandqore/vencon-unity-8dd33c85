@@ -305,12 +305,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                    <th className="py-2 px-2 text-right">Qty</th>
                    <th className="py-2 px-2 text-right">Price</th>
                    <th className="py-2 px-2 text-left">CSO Time</th>
-                   <th className="py-2 px-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {sendableOrders.map((o) => {
-                  const isSending = sending.has(o.id);
                   const failed = o.steadfast_send_failed;
                   return (
                     <tr key={o.id} className={cn("border-b border-border", failed && "bg-destructive/5")}>
@@ -328,34 +326,11 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                       <td className="py-2 px-2 text-xs">
                         {o.cso_approved_at ? new Date(o.cso_approved_at).toLocaleTimeString("bn-BD") : "—"}
                       </td>
-                      <td className="py-2 px-2">
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => generateInvoice([o])}>
-                            <Printer className="h-3 w-3" />
-                          </Button>
-                          {failed ? (
-                            <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => sendToSteadfast(o)} disabled={isSending}>
-                              <RefreshCw className={cn("h-3 w-3 mr-1", isSending && "animate-spin")} /> Retry
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-primary-foreground"
-                              onClick={() => sendToSteadfast(o)}
-                              disabled={isSending}
-                            >
-                              {isSending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
-                              {isSending ? "" : "Send"}
-                            </Button>
-                          )}
-                        </div>
-                        {failed && <Badge variant="destructive" className="mt-1 text-xs">Send Failed ✗</Badge>}
-                      </td>
                     </tr>
                   );
                 })}
                 {sendableOrders.length === 0 && (
-                  <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
+                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
                 )}
               </tbody>
             </table>
