@@ -211,16 +211,15 @@ async function processDispatch(
 
         const parsed = await readApiBody(response);
         const json = parsed.json;
+        const nestedConsignmentId = (json?.consignment as Record<string, unknown> | undefined)?.consignment_id as string | undefined;
+        const rootConsignmentId = json?.consignment_id as string | undefined;
 
         const apiSuccess =
           response.ok &&
-          ((json && Number(json.status) === 200) || Boolean(json?.consignment?.consignment_id) || Boolean(json?.consignment_id));
+          ((json && Number(json.status) === 200) || Boolean(nestedConsignmentId) || Boolean(rootConsignmentId));
 
         if (apiSuccess) {
-          const consignmentId =
-            (json?.consignment as Record<string, unknown> | undefined)?.consignment_id ||
-            (json?.consignment_id as string | undefined) ||
-            `SF-${Date.now()}`;
+          const consignmentId = nestedConsignmentId || rootConsignmentId || `SF-${Date.now()}`;
 
           await supabase
             .from("orders")
