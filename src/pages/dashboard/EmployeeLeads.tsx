@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCircle } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
+import FraudChecker from "@/components/FraudChecker";
 
 interface LeadRow {
   id: string;
