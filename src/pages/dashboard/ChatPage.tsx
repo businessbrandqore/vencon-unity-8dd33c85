@@ -42,6 +42,17 @@ interface Message {
   reply_count: number;
 }
 
+interface CallLog {
+  id: string;
+  caller_id: string;
+  caller_name: string;
+  status: string;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number | null;
+}
+
 const ChatPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
