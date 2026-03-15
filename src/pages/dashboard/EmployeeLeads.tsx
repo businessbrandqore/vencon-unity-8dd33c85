@@ -794,8 +794,8 @@ export default function EmployeeLeads() {
                       .map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {locationAutoDetected && orderDistrict && <p className="text-xs text-emerald-500 mt-0.5">✓ অটো-ডিটেক্ট হয়েছে</p>}
-                {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
+                {locationAutoDetected && orderDistrict && <p className="text-xs text-emerald-500 mt-0.5">{t("auto_detected")}</p>}
+                {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">{t("manual_search")}</p>}
               </div>
               <div>
                 <Label>Thana</Label>
