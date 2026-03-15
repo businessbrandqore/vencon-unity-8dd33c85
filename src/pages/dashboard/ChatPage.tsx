@@ -550,7 +550,16 @@ const ChatPage = () => {
                           </div>
 
                           {/* Content */}
-                          <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
+                          {msg.content.startsWith("[image](") && msg.content.endsWith(")") ? (
+                            <img
+                              src={msg.content.slice(8, -1)}
+                              alt="shared image"
+                              className="mt-1 max-w-xs rounded-lg border border-border cursor-pointer"
+                              onClick={() => window.open(msg.content.slice(8, -1), "_blank")}
+                            />
+                          ) : (
+                            <p className="text-sm text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
+                          )}
 
                           {/* Reactions */}
                           {Object.keys(msg.reactions).length > 0 && (
