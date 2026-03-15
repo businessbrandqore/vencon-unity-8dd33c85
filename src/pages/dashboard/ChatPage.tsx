@@ -290,7 +290,6 @@ const ChatPage = () => {
         .in("conversation_id", myParts.map((p) => p.conversation_id));
 
       if (targetParts?.length) {
-        // Check if any of these are DMs
         const { data: dmConvos } = await supabase
           .from("chat_conversations")
           .select("id")
@@ -299,7 +298,6 @@ const ChatPage = () => {
 
         if (dmConvos?.length) {
           setSelectedConvo(dmConvos[0].id);
-          setShowNewDM(false);
           return;
         }
       }
@@ -321,7 +319,6 @@ const ChatPage = () => {
       { conversation_id: convo.id, user_id: targetUserId },
     ]);
 
-    setShowNewDM(false);
     queryClient.invalidateQueries({ queryKey: ["chat-conversations"] });
     setSelectedConvo(convo.id);
   };
