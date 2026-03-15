@@ -100,6 +100,7 @@ const HRSettings = () => {
 
   useEffect(() => {
     fetchSettings();
+    fetchWaTemplates();
   }, []);
 
   const fetchSettings = async () => {
