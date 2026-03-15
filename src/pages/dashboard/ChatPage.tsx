@@ -604,7 +604,7 @@ const ChatPage = () => {
   const renderConvoItem = (c: ConvoDisplay, isGroup = false) => (
     <button
       key={c.id}
-      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
+      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); setMobileShowChat(true); }}
       className={`w-full text-left ${isGroup ? "px-2 py-1.5" : "px-3 py-2.5"} rounded-md flex items-center gap-${isGroup ? "2" : "3"} transition-colors ${isGroup ? "text-xs" : ""} ${
         selectedConvo === c.id
           ? "bg-primary/10 text-primary font-medium"
