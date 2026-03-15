@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,8 @@ const normalizeWorkflowStatus = (value: string) =>
 
 export default function EmployeeLeads() {
   const { user } = useAuth();
-
+  const { t, lang } = useLanguage();
+  const isBn = lang === "bn";
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkedIn, setCheckedIn] = useState(false);
@@ -238,12 +240,12 @@ export default function EmployeeLeads() {
     if (!tlId) {
       // Try campaign_agent_roles
       const { data: carData } = await supabase.from("campaign_agent_roles").select("tl_id, campaign_id").eq("agent_id", user.id).limit(1);
-      if (!carData?.[0]?.tl_id) { toast.error("টিম লিডার পাওয়া যায়নি"); setDataRequestLoading(false); return; }
+      toast.error(isBn ? "টিম লিডার পাওয়া যায়নি" : "Team leader not found"); setDataRequestLoading(false); return;
       await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: carData[0].tl_id, campaign_id: carData[0].campaign_id, message: dataRequestMsg || null });
     } else {
       await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: tlId, message: dataRequestMsg || null });
     }
-    toast.success("ডাটা রিকোয়েস্ট পাঠানো হয়েছে ✓");
+    toast.success(t("data_request_success"));
     setShowDataRequestModal(false);
     setDataRequestMsg("");
     setDataRequestLoading(false);
@@ -409,8 +411,8 @@ export default function EmployeeLeads() {
   };
 
   const handleOrderConfirm = async () => {
-    if (!currentOrderLead || !user || !orderProduct) { toast.error("Product নির্বাচন করুন"); return; }
-    if (!orderPrice || orderPrice <= 0) { toast.error("মূল্য দিন"); return; }
+    if (!currentOrderLead || !user || !orderProduct) { toast.error(t("select_product_error")); return; }
+    if (!orderPrice || orderPrice <= 0) { toast.error(t("enter_price")); return; }
     const { error } = await supabase.from("orders").insert({
       customer_name: currentOrderLead.name, phone: currentOrderLead.phone, address: orderAddress,
       product: orderProduct, quantity: orderQty, price: orderPrice, agent_id: user.id,
@@ -420,7 +422,7 @@ export default function EmployeeLeads() {
       card_name: orderCardName || null, order_media: orderMedia || null,
       upsell: orderUpsell || null, success_ratio: orderSuccessRatio || null,
     } as any);
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
+    if (error) { toast.error(t("order_create_error")); console.error(error); return; }
     const selectedStatusRaw = leadStatuses[currentOrderLead.id] || "order_confirm";
     const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
     const { error: leadUpdateError } = await supabase
@@ -434,19 +436,19 @@ export default function EmployeeLeads() {
       return;
     }
     setShowOrderModal(false);
-    toast.success("অর্ডার নিশ্চিত হয়েছে ✓");
+    toast.success(t("order_confirmed_success"));
     setLeads((prev) => prev.filter((item) => item.id !== currentOrderLead.id));
     loadLeads();
   };
 
   const handlePreOrderSubmit = async () => {
-    if (!currentPreOrderLead || !user || !preOrderDate) { toast.error("তারিখ নির্বাচন করুন"); return; }
+    if (!currentPreOrderLead || !user || !preOrderDate) { toast.error(t("select_date_error")); return; }
     const { error: preOrderError } = await supabase.from("pre_orders").insert({
       lead_id: currentPreOrderLead.id, agent_id: user.id, tl_id: currentPreOrderLead.tl_id,
       scheduled_date: format(preOrderDate, "yyyy-MM-dd"), note: preOrderNote || null,
     });
     if (preOrderError) {
-      toast.error("Pre-order তৈরিতে সমস্যা");
+      toast.error(t("pre_order_error"));
       console.error(preOrderError);
       return;
     }
@@ -463,15 +465,15 @@ export default function EmployeeLeads() {
       return;
     }
     setShowPreOrderModal(false);
-    toast.success("Pre-order তৈরি হয়েছে ✓");
+    toast.success(t("pre_order_success"));
     setLeads((prev) => prev.filter((item) => item.id !== currentPreOrderLead.id));
     loadLeads();
   };
 
   const handlePreOrderConfirmSubmit = async () => {
     if (!currentPreOrderConfirmLead || !user) return;
-    if (!pocProduct) { toast.error("Product নির্বাচন করুন"); return; }
-    if (!pocDeliveryDate) { toast.error("Delivery Date নির্বাচন করুন"); return; }
+    if (!pocProduct) { toast.error(t("select_product_error")); return; }
+    if (!pocDeliveryDate) { toast.error(t("select_delivery_date")); return; }
     // Create order from pre-order confirm
     const { error } = await supabase.from("orders").insert({
       customer_name: currentPreOrderConfirmLead.name, phone: currentPreOrderConfirmLead.phone,
@@ -480,7 +482,7 @@ export default function EmployeeLeads() {
       agent_id: user.id, tl_id: currentPreOrderConfirmLead.tl_id, lead_id: currentPreOrderConfirmLead.id,
       status: "pending_tl", district: pocDistrict || null, thana: pocThana || null,
     } as any);
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
+    if (error) { toast.error(t("order_create_error")); console.error(error); return; }
     const selectedStatusRaw = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
     const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
     const { error: leadUpdateError } = await supabase
@@ -494,7 +496,7 @@ export default function EmployeeLeads() {
       return;
     }
     setShowPreOrderConfirmModal(false);
-    toast.success("Pre-Order Confirm হয়েছে ✓");
+    toast.success(t("pre_order_confirm_success"));
     setLeads((prev) => prev.filter((item) => item.id !== currentPreOrderConfirmLead.id));
     loadLeads();
   };
@@ -527,7 +529,7 @@ export default function EmployeeLeads() {
     return {};
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
   if (!checkedIn) {
     return (
@@ -535,10 +537,10 @@ export default function EmployeeLeads() {
         <Card className="border-orange-500/30 bg-orange-500/5">
           <CardContent className="py-8 text-center">
             <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-orange-400" />
-            <h2 className="font-heading text-lg mb-2">প্রথমে Check In করুন</h2>
-            <p className="text-sm text-muted-foreground">লিড দেখতে হলে আগে ড্যাশবোর্ড থেকে Check In করতে হবে</p>
+            <h2 className="font-heading text-lg mb-2">{t("check_in_first")}</h2>
+            <p className="text-sm text-muted-foreground">{t("check_in_to_see_leads")}</p>
             <Button variant="outline" className="mt-4" onClick={() => window.location.href = "/employee/dashboard"}>
-              ড্যাশবোর্ডে যান
+              {t("go_to_dashboard")}
             </Button>
           </CardContent>
         </Card>
@@ -560,17 +562,17 @@ export default function EmployeeLeads() {
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th className="py-2 px-2 text-left">#</th>
-              <th className="py-2 px-2 text-left">কাস্টমার</th>
-              <th className="py-2 px-2 text-left">ফোন</th>
-              <th className="py-2 px-2 text-left">ঠিকানা</th>
+              <th className="py-2 px-2 text-left">{t("customer")}</th>
+              <th className="py-2 px-2 text-left">{t("phone")}</th>
+              <th className="py-2 px-2 text-left">{t("address")}</th>
               {rawDataKeys.map(key => (
                 <th key={key} className="py-2 px-2 text-left whitespace-nowrap">{key}</th>
               ))}
               {dropdownCols.map(col => (
-                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{isBn ? (col.name_bn || col.name) : col.name}</th>
               ))}
               {noteCols.map(col => (
-                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{col.name_bn || col.name}</th>
+                <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{isBn ? (col.name_bn || col.name) : col.name}</th>
               ))}
             </tr>
           </thead>
@@ -591,7 +593,7 @@ export default function EmployeeLeads() {
                   {dropdownCols.map(col => (
                     <td key={col.id} className="py-2 px-2 min-w-[180px]">
                       {isRequeued ? (
-                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
+                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
                       ) : (
                         <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
                           setLeadStatuses(p => ({ ...p, [lead.id]: v }));
@@ -623,9 +625,9 @@ export default function EmployeeLeads() {
                             }, 50);
                           }
                         }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={col.name_bn || "স্ট্যাটাস"} /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={isBn ? (col.name_bn || "স্ট্যাটাস") : col.name} /></SelectTrigger>
                           <SelectContent>
-                            {col.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label_bn || o.label}</SelectItem>)}
+                            {col.options.map(o => <SelectItem key={o.value} value={o.value}>{isBn ? (o.label_bn || o.label) : o.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       )}
@@ -635,7 +637,7 @@ export default function EmployeeLeads() {
                   {dropdownCols.length === 0 && (
                     <td className="py-2 px-2 min-w-[180px]">
                       {isRequeued ? (
-                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} মিনিটে</Badge>
+                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
                       ) : (
                         <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
                           setLeadStatuses(p => ({ ...p, [lead.id]: v }));
@@ -667,9 +669,9 @@ export default function EmployeeLeads() {
                             }, 50);
                           }
                         }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("status")} /></SelectTrigger>
                           <SelectContent>
-                            {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label_bn || s.label}</SelectItem>)}
+                            {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{isBn ? (s.label_bn || s.label) : s.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       )}
@@ -679,7 +681,7 @@ export default function EmployeeLeads() {
                     <td key={col.id} className="py-2 px-2 min-w-[120px]">
                       <Input
                         className="h-8 text-xs"
-                        placeholder={col.name_bn || col.name}
+                        placeholder={isBn ? (col.name_bn || col.name) : col.name}
                         value={leadNotes[`${lead.id}_${col.id}`] || ""}
                         onChange={e => setLeadNotes(p => ({ ...p, [`${lead.id}_${col.id}`]: e.target.value }))}
                       />
@@ -689,7 +691,7 @@ export default function EmployeeLeads() {
               );
             })}
             {leadList.length === 0 && (
-              <tr><td colSpan={totalCols} className="py-8 text-center text-muted-foreground">কোনো লিড নেই — টিম লিডার অ্যাসাইন করলে এখানে দেখাবে</td></tr>
+              <tr><td colSpan={totalCols} className="py-8 text-center text-muted-foreground">{t("no_leads_empty")}</td></tr>
             )}
           </tbody>
         </table>
@@ -701,12 +703,12 @@ export default function EmployeeLeads() {
     <div className="space-y-4 pb-20">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl flex items-center gap-2">
-          <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> লিড শীট
+          <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> {t("lead_sheet_title")}
         </h1>
         <div className="flex gap-3 text-xs text-muted-foreground">
-          <span>সেলস রেশিও: <strong className="text-foreground">{salesRatio}%</strong></span>
-          <span>রিসিভ রেশিও: <strong className="text-foreground">{receiveRatio}%</strong></span>
-          <span>অর্ডার: <strong className="text-foreground">{metrics.orders}</strong></span>
+          <span>{t("sales_ratio")}: <strong className="text-foreground">{salesRatio}%</strong></span>
+          <span>{t("receive_ratio")}: <strong className="text-foreground">{receiveRatio}%</strong></span>
+          <span>{t("orders_count")}: <strong className="text-foreground">{metrics.orders}</strong></span>
         </div>
       </div>
 
@@ -715,9 +717,9 @@ export default function EmployeeLeads() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-6 text-center">
             <Database className="mx-auto mb-2 h-8 w-8 text-primary" />
-            <p className="text-sm text-muted-foreground mb-3">আপনার কোনো লিড নেই। TL-কে ডাটা রিকোয়েস্ট পাঠান।</p>
+            <p className="text-sm text-muted-foreground mb-3">{t("no_leads_request")}</p>
             <Button onClick={() => setShowDataRequestModal(true)} className="gap-2">
-              <Send className="h-4 w-4" /> ডাটা রিকোয়েস্ট পাঠান
+              <Send className="h-4 w-4" /> {t("send_data_request")}
             </Button>
           </CardContent>
         </Card>
@@ -728,12 +730,12 @@ export default function EmployeeLeads() {
         <div className="flex gap-2 flex-wrap text-xs">
           {pendingRequests.filter(r => r.status === 'pending').length > 0 && (
             <Badge variant="outline" className="text-amber-500 border-amber-500/50">
-              ⏳ {pendingRequests.filter(r => r.status === 'pending').length}টি রিকোয়েস্ট পেন্ডিং
+              ⏳ {pendingRequests.filter(r => r.status === 'pending').length} {t("requests_pending")}
             </Badge>
           )}
           {pendingRequests.filter(r => r.status === 'fulfilled').length > 0 && (
             <Badge variant="outline" className="text-emerald-500 border-emerald-500/50">
-              ✓ {pendingRequests.filter(r => r.status === 'fulfilled').length}টি পূরণ হয়েছে
+              ✓ {pendingRequests.filter(r => r.status === 'fulfilled').length} {t("requests_fulfilled")}
             </Badge>
           )}
         </div>
@@ -743,12 +745,12 @@ export default function EmployeeLeads() {
         <Tabs defaultValue="bronze" className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <TabsList>
-              <TabsTrigger value="bronze">ব্রোঞ্জ লিড ({bronzeLeads.length})</TabsTrigger>
-              <TabsTrigger value="silver">সিল্ভার লিড ({silverLeads.length})</TabsTrigger>
+              <TabsTrigger value="bronze">{t("bronze_leads_tab")} ({bronzeLeads.length})</TabsTrigger>
+              <TabsTrigger value="silver">{t("silver_leads_tab")} ({silverLeads.length})</TabsTrigger>
             </TabsList>
             {leads.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
-                <Send className="h-3.5 w-3.5" /> ডাটা চাই
+                <Send className="h-3.5 w-3.5" /> {t("need_data")}
               </Button>
             )}
           </div>
@@ -769,39 +771,39 @@ export default function EmployeeLeads() {
         setShowOrderModal(open);
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Order Confirmation</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("order_confirmation")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             {/* Name & Phone */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Name *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-              <div><Label>Phone *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("name")} *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("phone")} *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
 
             {/* District & Thana */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>District</Label>
+                <Label>{t("district")}</Label>
                 <Select value={orderDistrict} onValueChange={v => { setOrderDistrict(v); setOrderThana(""); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_district")} /></SelectTrigger>
                   <SelectContent>
                     <div className="px-2 pb-2">
-                      <Input placeholder="খুঁজুন..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-8 text-xs" />
+                      <Input placeholder={t("search_ph")} value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-8 text-xs" />
                     </div>
                     {BD_DISTRICTS
                       .filter(d => !districtSearch || d.name.toLowerCase().includes(districtSearch.toLowerCase()) || d.name_bn.includes(districtSearch))
                       .map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {locationAutoDetected && orderDistrict && <p className="text-xs text-emerald-500 mt-0.5">✓ অটো-ডিটেক্ট হয়েছে</p>}
-                {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
+                {locationAutoDetected && orderDistrict && <p className="text-xs text-emerald-500 mt-0.5">{t("auto_detected")}</p>}
+                {!orderDistrict && currentOrderLead?.address && <p className="text-xs text-amber-500 mt-0.5">{t("manual_search")}</p>}
               </div>
               <div>
-                <Label>Thana</Label>
+                <Label>{t("thana")}</Label>
                 <Select value={orderThana} onValueChange={setOrderThana} disabled={!orderDistrict}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_thana")} /></SelectTrigger>
                   <SelectContent>
                     <div className="px-2 pb-2">
-                      <Input placeholder="খুঁজুন..." value={thanaSearch} onChange={e => setThanaSearch(e.target.value)} className="h-8 text-xs" />
+                      <Input placeholder={t("search_ph")} value={thanaSearch} onChange={e => setThanaSearch(e.target.value)} className="h-8 text-xs" />
                     </div>
                     {(BD_DISTRICTS.find(d => d.name === orderDistrict)?.thanas || [])
                       .filter(t => !thanaSearch || t.name.toLowerCase().includes(thanaSearch.toLowerCase()) || t.name_bn.includes(thanaSearch))
@@ -813,25 +815,25 @@ export default function EmployeeLeads() {
 
             {/* Location / Address */}
             <div>
-              <Label>Location</Label>
-              <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} className="mt-1" placeholder="সম্পূর্ণ ঠিকানা" />
+              <Label>{t("location")}</Label>
+              <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} className="mt-1" placeholder={t("full_address")} />
             </div>
 
             {/* Product & Gift */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Product Name *</Label>
+                <Label>{t("product_name")} *</Label>
                 <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="প্রোডাক্ট নির্বাচন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product_ph")} /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name} (৳{p.unit_price})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Gift Name</Label>
+                <Label>{t("gift_name")}</Label>
                 <Select value={orderGiftName} onValueChange={setOrderGiftName}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="গিফট নির্বাচন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_gift")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">কোনো গিফট নেই</SelectItem>
+                    <SelectItem value="none">{t("no_gift")}</SelectItem>
                     {giftNames.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -840,31 +842,31 @@ export default function EmployeeLeads() {
 
             {/* Amount & Advance */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Amount *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
-              <div><Label>Advance Payment</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
+              <div><Label>{t("amount_label")} *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
+              <div><Label>{t("advance_payment")}</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
             </div>
 
             {/* Payment Method & Card */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Payment Method</Label>
+                <Label>{t("payment_method")}</Label>
                 <Select value={orderPaymentMethod} onValueChange={setOrderPaymentMethod}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_method")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cod">Cash on Delivery</SelectItem>
-                    <SelectItem value="bkash">বিকাশ</SelectItem>
-                    <SelectItem value="nagad">নগদ</SelectItem>
-                    <SelectItem value="rocket">রকেট</SelectItem>
-                    <SelectItem value="bank">ব্যাংক ট্রান্সফার</SelectItem>
+                    <SelectItem value="cod">{t("cod")}</SelectItem>
+                    <SelectItem value="bkash">{t("bkash")}</SelectItem>
+                    <SelectItem value="nagad">{t("nagad")}</SelectItem>
+                    <SelectItem value="rocket">{t("rocket")}</SelectItem>
+                    <SelectItem value="bank">{t("bank_transfer")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Card Name</Label>
+                <Label>{t("card_name_label")}</Label>
                 <Select value={orderCardName} onValueChange={setOrderCardName}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select card" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_card")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Card</SelectItem>
+                    <SelectItem value="none">{t("no_card")}</SelectItem>
                     {cardNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -873,11 +875,11 @@ export default function EmployeeLeads() {
 
             {/* Quantity & Order Media */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Quantity</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
+              <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
               <div>
-                <Label>Order Media</Label>
+                <Label>{t("order_media")}</Label>
                 <Select value={orderMedia} onValueChange={setOrderMedia}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select media" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_media")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="lead">Lead</SelectItem>
                     <SelectItem value="phone_call">Phone Call</SelectItem>
@@ -893,11 +895,11 @@ export default function EmployeeLeads() {
             {/* Upsell & Success Ratio */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Upsell</Label>
+                <Label>{t("upsell")}</Label>
                 <Select value={orderUpsell} onValueChange={setOrderUpsell}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select upsell" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_upsell")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">{t("none")}</SelectItem>
                     <SelectItem value="01_to_02">০১ থেকে ০২</SelectItem>
                     <SelectItem value="02_to_03">০২ থেকে ০৩</SelectItem>
                     <SelectItem value="03_to_04">০৩ থেকে ০৪</SelectItem>
@@ -906,17 +908,17 @@ export default function EmployeeLeads() {
                 </Select>
               </div>
               <div>
-                <Label>Success Ratio (1-100) *</Label>
+                <Label>{t("success_ratio_label")} *</Label>
                 <Input type="number" min={1} max={100} value={orderSuccessRatio} onChange={e => setOrderSuccessRatio(e.target.value ? Number(e.target.value) : "")} className="mt-1" placeholder="1-100" />
               </div>
             </div>
 
             {/* Note */}
-            <div><Label>নোট</Label><Textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
+            <div><Label>{t("note")}</Label><Textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOrderModal(false)}>বাতিল</Button>
-            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">নিশ্চিত করুন</Button>
+            <Button variant="outline" onClick={() => setShowOrderModal(false)}>{t("cancel")}</Button>
+            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -929,17 +931,17 @@ export default function EmployeeLeads() {
         setShowPreOrderModal(open);
       }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>প্রি-অর্ডার</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("pre_order")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>কাস্টমার</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-            <div><Label>ফোন</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("customer")}</Label><Input value={currentPreOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+            <div><Label>{t("phone")}</Label><Input value={currentPreOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             <div>
-              <Label>ডেলিভারি তারিখ</Label>
+              <Label>{t("delivery_date")}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !preOrderDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {preOrderDate ? format(preOrderDate, "PPP") : "তারিখ নির্বাচন"}
+                    {preOrderDate ? format(preOrderDate, "PPP") : t("select_date_ph")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -947,10 +949,10 @@ export default function EmployeeLeads() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div><Label>নোট</Label><Textarea value={preOrderNote} onChange={e => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
+            <div><Label>{t("note")}</Label><Textarea value={preOrderNote} onChange={e => setPreOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">সাবমিট</Button>
+            <Button onClick={handlePreOrderSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("submit")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -963,52 +965,52 @@ export default function EmployeeLeads() {
         setShowPreOrderConfirmModal(open);
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Pre-Order Confirm</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("pre_order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Name *</Label><Input value={currentPreOrderConfirmLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-              <div><Label>Phone *</Label><Input value={currentPreOrderConfirmLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("name")} *</Label><Input value={currentPreOrderConfirmLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("phone")} *</Label><Input value={currentPreOrderConfirmLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>District</Label>
+                <Label>{t("district")}</Label>
                 <Select value={pocDistrict} onValueChange={v => { setPocDistrict(v); setPocThana(""); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="জেলা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_district")} /></SelectTrigger>
                   <SelectContent>
                     {BD_DISTRICTS.map(d => <SelectItem key={d.name} value={d.name}>{d.name_bn} ({d.name})</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {!pocDistrict && currentPreOrderConfirmLead?.address && <p className="text-xs text-amber-500 mt-0.5">⚠ ম্যানুয়ালি খুঁজে নিন</p>}
+                {!pocDistrict && currentPreOrderConfirmLead?.address && <p className="text-xs text-amber-500 mt-0.5">{t("manual_search")}</p>}
               </div>
               <div>
-                <Label>Thana</Label>
+                <Label>{t("thana")}</Label>
                 <Select value={pocThana} onValueChange={setPocThana} disabled={!pocDistrict}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="থানা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_thana")} /></SelectTrigger>
                   <SelectContent>
-                    {(BD_DISTRICTS.find(d => d.name === pocDistrict)?.thanas || []).map(t => <SelectItem key={t.name} value={t.name}>{t.name_bn} ({t.name})</SelectItem>)}
+                    {(BD_DISTRICTS.find(d => d.name === pocDistrict)?.thanas || []).map(th => <SelectItem key={th.name} value={th.name}>{th.name_bn} ({th.name})</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Location</Label>
-              <Input value={pocAddress} onChange={e => setPocAddress(e.target.value)} className="mt-1" placeholder="সম্পূর্ণ ঠিকানা" />
+              <Label>{t("location")}</Label>
+              <Input value={pocAddress} onChange={e => setPocAddress(e.target.value)} className="mt-1" placeholder={t("full_address")} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Product *</Label>
+                <Label>{t("product")} *</Label>
                 <Select value={pocProduct} onValueChange={setPocProduct}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_product_ph")} /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.product_name}>{p.product_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Preferred Delivery Date *</Label>
+                <Label>{t("preferred_delivery_date")} *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left", !pocDeliveryDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {pocDeliveryDate ? format(pocDeliveryDate, "PPP") : "তারিখ নির্বাচন"}
+                      {pocDeliveryDate ? format(pocDeliveryDate, "PPP") : t("select_date_ph")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1019,8 +1021,8 @@ export default function EmployeeLeads() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPreOrderConfirmModal(false)}>Cancel</Button>
-            <Button onClick={handlePreOrderConfirmSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">Save Pre-Order</Button>
+            <Button variant="outline" onClick={() => setShowPreOrderConfirmModal(false)}>{t("cancel")}</Button>
+            <Button onClick={handlePreOrderConfirmSubmit} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("save_pre_order")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1028,17 +1030,17 @@ export default function EmployeeLeads() {
       {/* Data Request Modal */}
       <Dialog open={showDataRequestModal} onOpenChange={setShowDataRequestModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>ডাটা রিকোয়েস্ট</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("data_request_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">আপনার TL-কে নতুন ডাটা পাঠানোর জন্য রিকোয়েস্ট পাঠান।</p>
+            <p className="text-sm text-muted-foreground">{t("data_request_desc")}</p>
             <div>
-              <Label>মেসেজ (ঐচ্ছিক)</Label>
-              <Textarea value={dataRequestMsg} onChange={e => setDataRequestMsg(e.target.value)} className="mt-1" rows={3} placeholder="কি ধরনের ডাটা দরকার..." />
+              <Label>{t("message_optional")}</Label>
+              <Textarea value={dataRequestMsg} onChange={e => setDataRequestMsg(e.target.value)} className="mt-1" rows={3} placeholder={t("data_type_hint")} />
             </div>
           </div>
           <DialogFooter>
             <Button onClick={handleDataRequest} disabled={dataRequestLoading} className="gap-2">
-              <Send className="h-4 w-4" /> {dataRequestLoading ? "পাঠানো হচ্ছে..." : "রিকোয়েস্ট পাঠান"}
+              <Send className="h-4 w-4" /> {dataRequestLoading ? t("sending_request") : t("send_request")}
             </Button>
           </DialogFooter>
         </DialogContent>
