@@ -29,13 +29,13 @@ interface OrderRow {
   thana: string | null;
 }
 
-// Pipeline steps for order tracking
-const PIPELINE_STEPS = [
-  { key: "pending_tl", label: "TL রিভিউ", icon: Clock, description: "টিম লিডারের অনুমোদনের অপেক্ষায়" },
-  { key: "pending_cso", label: "CSO যাচাই", icon: ShieldCheck, description: "CSO এর যাচাইয়ের অপেক্ষায়" },
-  { key: "send_today", label: "ওয়্যারহাউস", icon: Warehouse, description: "ওয়্যারহাউস থেকে পাঠানো হবে" },
-  { key: "dispatched", label: "ডিসপ্যাচ", icon: Truck, description: "কুরিয়ারে হ্যান্ডওভার হয়েছে" },
-  { key: "delivered", label: "ডেলিভারড", icon: CheckCircle, description: "সফলভাবে ডেলিভারি হয়েছে" },
+// Pipeline steps will be translated dynamically
+const PIPELINE_KEYS = [
+  { key: "pending_tl", labelKey: "tl_review", icon: Clock, descBn: "টিম লিডারের অনুমোদনের অপেক্ষায়", descEn: "Waiting for Team Leader approval" },
+  { key: "pending_cso", labelKey: "cso_verify", icon: ShieldCheck, descBn: "CSO এর যাচাইয়ের অপেক্ষায়", descEn: "Waiting for CSO verification" },
+  { key: "send_today", labelKey: "warehouse_step", icon: Warehouse, descBn: "ওয়্যারহাউস থেকে পাঠানো হবে", descEn: "Will be sent from warehouse" },
+  { key: "dispatched", labelKey: "dispatch_step", icon: Truck, descBn: "কুরিয়ারে হ্যান্ডওভার হয়েছে", descEn: "Handed over to courier" },
+  { key: "delivered", labelKey: "delivered_step", icon: CheckCircle, descBn: "সফলভাবে ডেলিভারি হয়েছে", descEn: "Successfully delivered" },
 ];
 
 function getActiveStep(order: OrderRow): number {
