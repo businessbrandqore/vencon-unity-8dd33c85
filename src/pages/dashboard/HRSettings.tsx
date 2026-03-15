@@ -39,6 +39,7 @@ interface Settings {
   cloudinary_cloud_name?: string;
   cloudinary_upload_preset?: string;
   cloudinary_api_key?: string;
+  fraudbd_api_key?: string;
 }
 
 interface DeductionTier {
