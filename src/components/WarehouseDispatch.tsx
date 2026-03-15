@@ -41,6 +41,7 @@ interface Props {
 
 export default function WarehouseDispatch({ showStock = false }: Props) {
   const { user } = useAuth();
+  const { t, n, lang } = useLanguage();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState<Set<string>>(new Set());
