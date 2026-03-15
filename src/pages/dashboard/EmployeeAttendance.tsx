@@ -80,6 +80,7 @@ export default function EmployeeAttendance() {
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
+  const [leaveSelectedReasons, setLeaveSelectedReasons] = useState<string[]>([]);
 
   // Appeal
   const [showAppealModal, setShowAppealModal] = useState(false);
