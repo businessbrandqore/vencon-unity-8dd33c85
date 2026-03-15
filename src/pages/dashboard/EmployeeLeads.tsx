@@ -669,9 +669,9 @@ export default function EmployeeLeads() {
                             }, 50);
                           }
                         }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("status")} /></SelectTrigger>
                           <SelectContent>
-                            {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label_bn || s.label}</SelectItem>)}
+                            {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{isBn ? (s.label_bn || s.label) : s.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       )}
