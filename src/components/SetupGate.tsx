@@ -4,7 +4,7 @@ import { APP_VERSION } from "@/lib/appVersion";
 import { SetupWizard } from "./SetupWizard";
 
 export const SetupGate = ({ children }: { children: ReactNode }) => {
-  const [status, setStatus] = useState<"checking" | "setup" | "ready">("checking");
+  const [status, setStatus] = useState<"checking" | "setup" | "locked" | "ready">("checking");
 
   useEffect(() => {
     const checkSetup = async () => {
@@ -13,9 +13,15 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
           body: { action: "check", version: APP_VERSION }
         });
         if (error) throw error;
-        setStatus(data?.isComplete ? "ready" : "setup");
+
+        if (data?.isLocked) {
+          setStatus("locked");
+        } else if (!data?.isComplete) {
+          setStatus("setup");
+        } else {
+          setStatus("ready");
+        }
       } catch {
-        // If check fails (e.g. function not deployed yet), show setup
         setStatus("setup");
       }
     };
@@ -36,8 +42,12 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  if (status === "locked") {
+    return <SetupWizard mode="locked" onComplete={() => setStatus("ready")} />;
+  }
+
   if (status === "setup") {
-    return <SetupWizard onComplete={() => setStatus("ready")} />;
+    return <SetupWizard mode="setup" onComplete={() => setStatus("ready")} />;
   }
 
   return <>{children}</>;

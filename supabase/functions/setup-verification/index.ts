@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Fixed admin password for setup verification
 const SETUP_PASSWORD = "BrandQore@2024";
 
 serve(async (req) => {
@@ -23,37 +22,51 @@ serve(async (req) => {
     const body = await req.json();
     const { action, password, version } = body;
 
-    // Check if setup is complete for given version
+    // ── CHECK: version + lock status ──
     if (action === 'check') {
-      const { data } = await supabase
+      // Check site lock
+      const { data: lockData } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'site_locked')
+        .single();
+
+      const isLocked = lockData?.value && typeof lockData.value === 'object' && 'locked' in (lockData.value as object)
+        ? (lockData.value as { locked: boolean }).locked
+        : false;
+
+      // Check version
+      const { data: versionData } = await supabase
         .from('app_settings')
         .select('value')
         .eq('key', 'setup_completed_version')
         .single();
 
-      const storedVersion = data?.value && typeof data.value === 'object' && 'version' in (data.value as object)
-        ? (data.value as { version: string }).version
+      const storedVersion = versionData?.value && typeof versionData.value === 'object' && 'version' in (versionData.value as object)
+        ? (versionData.value as { version: string }).version
         : null;
 
-      return new Response(JSON.stringify({ isComplete: storedVersion === version }), {
+      return new Response(JSON.stringify({
+        isComplete: storedVersion === version,
+        isLocked,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Verify password
+    // ── VERIFY PASSWORD ──
     if (action === 'verify') {
       if (password !== SETUP_PASSWORD) {
         return new Response(JSON.stringify({ success: false, error: 'পাসওয়ার্ড ভুল হয়েছে। আবার চেষ্টা করুন।' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Mark setup as complete
+    // ── COMPLETE SETUP ──
     if (action === 'complete') {
       const { data: existing } = await supabase
         .from('app_settings')
@@ -77,6 +90,74 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ── LOCK SITE ──
+    if (action === 'lock') {
+      if (password !== SETUP_PASSWORD) {
+        return new Response(JSON.stringify({ success: false, error: 'পাসওয়ার্ড ভুল' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('key', 'site_locked')
+        .single();
+
+      const lockData = { locked: true, locked_at: new Date().toISOString(), locked_by: 'BrandQore' };
+
+      if (existing) {
+        await supabase.from('app_settings').update({
+          value: lockData,
+          updated_at: new Date().toISOString()
+        }).eq('key', 'site_locked');
+      } else {
+        await supabase.from('app_settings').insert({
+          key: 'site_locked',
+          value: lockData,
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'সাইট লক করা হয়েছে' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ── UNLOCK SITE ──
+    if (action === 'unlock') {
+      if (password !== SETUP_PASSWORD) {
+        return new Response(JSON.stringify({ success: false, error: 'পাসওয়ার্ড ভুল' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('key', 'site_locked')
+        .single();
+
+      const unlockData = { locked: false, unlocked_at: new Date().toISOString() };
+
+      if (existing) {
+        await supabase.from('app_settings').update({
+          value: unlockData,
+          updated_at: new Date().toISOString()
+        }).eq('key', 'site_locked');
+      } else {
+        await supabase.from('app_settings').insert({
+          key: 'site_locked',
+          value: unlockData,
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'সাইট আনলক করা হয়েছে' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

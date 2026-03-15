@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 type Step = "verify" | "welcome" | "security" | "terms" | "installing" | "done";
+type WizardMode = "setup" | "locked";
 
-export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
+export const SetupWizard = ({ onComplete, mode = "setup" }: { onComplete: () => void; mode?: WizardMode }) => {
   const [step, setStep] = useState<Step>("verify");
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -32,7 +33,15 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
       if (error) throw error;
       if (data.success) {
         toast.success("✓ Verified!");
-        setStep("welcome");
+        if (mode === "locked") {
+          // Unlock the site and go directly to app
+          await supabase.functions.invoke("setup-verification", {
+            body: { action: "unlock", password }
+          });
+          onComplete();
+        } else {
+          setStep("welcome");
+        }
       } else {
         toast.error(data.error || "Invalid password");
       }
@@ -145,8 +154,14 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
           {step === "verify" && (
             <div className="space-y-6 text-center" style={{ animation: "fadeIn 0.5s ease" }}>
               <div>
-                <h1 className="text-2xl font-bold text-white mb-1">Admin Verification</h1>
-                <p className="text-white/50 text-sm">অ্যাডমিন অ্যাক্সেস যাচাই করুন</p>
+                <h1 className="text-2xl font-bold text-white mb-1">
+                  {mode === "locked" ? "🔒 Site Locked" : "Admin Verification"}
+                </h1>
+                <p className="text-white/50 text-sm">
+                  {mode === "locked"
+                    ? "সাইটটি BrandQore দ্বারা লক করা হয়েছে। অ্যাক্সেস পেতে পাসওয়ার্ড দিন।"
+                    : "অ্যাডমিন অ্যাক্সেস যাচাই করুন"}
+                </p>
               </div>
 
               <div className="space-y-4">
