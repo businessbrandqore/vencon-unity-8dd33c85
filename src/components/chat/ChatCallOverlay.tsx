@@ -78,7 +78,53 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
-  // Listen for incoming calls
+  // Handle outgoing call trigger from parent
+  useEffect(() => {
+    if (!outgoingCall || status !== "idle") return;
+    (async () => {
+      const { data: call, error } = await supabase
+        .from("chat_calls" as any)
+        .insert({
+          conversation_id: outgoingCall.conversationId,
+          caller_id: currentUserId,
+          status: "ringing",
+        })
+        .select()
+        .single();
+
+      if (error || !call) {
+        onOutgoingCallHandled?.();
+        return;
+      }
+
+      setCallInfo({
+        callId: (call as any).id,
+        conversationId: outgoingCall.conversationId,
+        callerId: currentUserId,
+        callerName: outgoingCall.callerName,
+      });
+      setStatus("calling");
+      ringtoneRef.current.play();
+      onOutgoingCallHandled?.();
+
+      // Auto-timeout after 30s
+      setTimeout(async () => {
+        setStatus((prev) => {
+          if (prev === "calling") {
+            supabase
+              .from("chat_calls" as any)
+              .update({ status: "missed", ended_at: new Date().toISOString() })
+              .eq("id", (call as any).id)
+              .then(() => {});
+            endCallCleanup();
+          }
+          return prev;
+        });
+      }, 30000);
+    })();
+  }, [outgoingCall]);
+
+  // Listen for incoming calls & call status updates
   useEffect(() => {
     const channel = supabase
       .channel("call-signals")
