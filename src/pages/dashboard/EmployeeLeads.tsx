@@ -775,8 +775,8 @@ export default function EmployeeLeads() {
           <div className="space-y-3">
             {/* Name & Phone */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Name *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
-              <div><Label>Phone *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("name")} *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
+              <div><Label>{t("phone")} *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
 
             {/* District & Thana */}
