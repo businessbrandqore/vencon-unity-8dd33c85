@@ -330,7 +330,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                   );
                 })}
                 {sendableOrders.length === 0 && (
-                  <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
+                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">কোনো pending order নেই</td></tr>
                 )}
               </tbody>
             </table>
