@@ -298,15 +298,15 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
                       onCheckedChange={toggleAll}
                     />
                   </th>
-                  <th className="py-2 px-2 text-left">Order ID</th>
-                  <th className="py-2 px-2 text-left">Customer</th>
-                  <th className="py-2 px-2 text-left">Address</th>
-                   <th className="py-2 px-2 text-left">Product</th>
-                   <th className="py-2 px-2 text-left">Agent</th>
-                   <th className="py-2 px-2 text-left">CSO</th>
-                   <th className="py-2 px-2 text-right">Qty</th>
-                   <th className="py-2 px-2 text-right">Price</th>
-                   <th className="py-2 px-2 text-left">CSO Time</th>
+                   <th className="py-2 px-2 text-left">{t("order_id")}</th>
+                   <th className="py-2 px-2 text-left">{t("customer")}</th>
+                   <th className="py-2 px-2 text-left">{t("address")}</th>
+                   <th className="py-2 px-2 text-left">{t("product")}</th>
+                   <th className="py-2 px-2 text-left">{t("agent")}</th>
+                   <th className="py-2 px-2 text-left">{t("cso")}</th>
+                   <th className="py-2 px-2 text-right">{t("quantity")}</th>
+                   <th className="py-2 px-2 text-right">{t("price")}</th>
+                   <th className="py-2 px-2 text-left">{t("cso_time")}</th>
                 </tr>
               </thead>
               <tbody>
