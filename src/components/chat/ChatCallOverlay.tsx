@@ -203,39 +203,6 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     onCallStateChange?.(false);
   }, [onCallStateChange]);
 
-  const initiateCall = async (conversationId: string) => {
-    const { data: call, error } = await supabase
-      .from("chat_calls" as any)
-      .insert({
-        conversation_id: conversationId,
-        caller_id: currentUserId,
-        status: "ringing",
-      })
-      .select()
-      .single();
-
-    if (error || !call) return;
-
-    setCallInfo({
-      callId: (call as any).id,
-      conversationId,
-      callerId: currentUserId,
-      callerName: "You",
-    });
-    setStatus("calling");
-    ringtoneRef.current.play();
-
-    // Auto-timeout after 30s
-    setTimeout(async () => {
-      if (status === "calling") {
-        await supabase
-          .from("chat_calls" as any)
-          .update({ status: "missed", ended_at: new Date().toISOString() })
-          .eq("id", (call as any).id);
-        endCallCleanup();
-      }
-    }, 30000);
-  };
 
   const acceptCall = async () => {
     if (!callInfo) return;
