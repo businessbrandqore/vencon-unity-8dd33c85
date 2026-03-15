@@ -245,7 +245,7 @@ export default function EmployeeLeads() {
     } else {
       await supabase.from("data_requests").insert({ requested_by: user.id, tl_id: tlId, message: dataRequestMsg || null });
     }
-    toast.success("ডাটা রিকোয়েস্ট পাঠানো হয়েছে ✓");
+    toast.success(t("data_request_success"));
     setShowDataRequestModal(false);
     setDataRequestMsg("");
     setDataRequestLoading(false);
