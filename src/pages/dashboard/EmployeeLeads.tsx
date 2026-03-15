@@ -623,6 +623,11 @@ export default function EmployeeLeads() {
               {noteCols.map(col => (
                 <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{isBn ? (col.name_bn || col.name) : col.name}</th>
               ))}
+              {waTemplates.length > 0 && (
+                <th className="py-2 px-2 text-center whitespace-nowrap">
+                  <MessageCircle className="h-3.5 w-3.5 inline" />
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
