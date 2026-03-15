@@ -355,14 +355,11 @@ const ChatPage = () => {
       {user && <ChatCallOverlay currentUserId={user.id} />}
 
       {/* Sidebar */}
-      <div className="w-64 border-r border-border flex flex-col bg-card/50 shrink-0">
+      <div className="w-72 border-r border-border flex flex-col bg-card/50 shrink-0">
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
             <h2 className="font-heading text-sm font-bold text-foreground flex-1">Chat</h2>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setShowNewDM(true)}>
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
@@ -373,59 +370,74 @@ const ChatPage = () => {
               className="pl-8 h-7 text-xs"
             />
           </div>
+          {/* Tabs */}
+          <div className="flex gap-1 bg-secondary/50 rounded-md p-0.5">
+            <button
+              onClick={() => setSidebarTab("dm")}
+              className={`flex-1 text-[11px] py-1 rounded font-medium transition-colors flex items-center justify-center gap-1 ${
+                sidebarTab === "dm" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MessageCircle className="h-3 w-3" /> Direct Message
+            </button>
+            <button
+              onClick={() => setSidebarTab("group")}
+              className={`flex-1 text-[11px] py-1 rounded font-medium transition-colors flex items-center justify-center gap-1 ${
+                sidebarTab === "group" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users className="h-3 w-3" /> Groups
+            </button>
+          </div>
         </div>
 
         <ScrollArea className="flex-1">
-          {/* Groups */}
-          {groups.length > 0 && (
-            <div className="px-2 pt-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pb-1 font-semibold flex items-center gap-1">
-                <Hash className="h-3 w-3" /> Channels
-              </p>
-              {groups.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
-                  className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors text-xs ${
-                    selectedConvo === c.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-foreground/70 hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  {c.is_muted ? <Lock className="h-3 w-3 shrink-0 text-muted-foreground" /> : <Hash className="h-3 w-3 shrink-0" />}
-                  <span className="truncate">{c.displayName}</span>
-                  {c.is_muted && <Badge variant="outline" className="text-[8px] px-1 py-0 ml-auto">Muted</Badge>}
-                </button>
-              ))}
+          {sidebarTab === "group" ? (
+            <div className="px-2 pt-2 pb-2">
+              {groups.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground px-2 py-6 text-center">কোনো গ্রুপ নেই</p>
+              ) : (
+                groups.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
+                    className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors text-xs ${
+                      selectedConvo === c.id
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-foreground/70 hover:bg-secondary hover:text-foreground"
+                    }`}
+                  >
+                    {c.is_muted ? <Lock className="h-3 w-3 shrink-0 text-muted-foreground" /> : <Hash className="h-3 w-3 shrink-0" />}
+                    <span className="truncate">{c.displayName}</span>
+                    <span className="text-[9px] text-muted-foreground ml-auto">{c.memberCount}</span>
+                    {c.is_muted && <Badge variant="outline" className="text-[8px] px-1 py-0">Muted</Badge>}
+                  </button>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="px-2 pt-2 pb-2">
+              {filteredUsers.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground px-2 py-6 text-center">কোনো ব্যবহারকারী নেই</p>
+              ) : (
+                filteredUsers.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => { startDM(u.id); setThreadParent(null); }}
+                    className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors text-xs text-foreground/70 hover:bg-secondary hover:text-foreground`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary shrink-0">
+                      {getInitials(u.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-xs">{u.name}</span>
+                      <span className="block truncate text-[9px] text-muted-foreground">{u.role.replace(/_/g, " ")}</span>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           )}
-
-          {/* DMs */}
-          <div className="px-2 pt-3 pb-2">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pb-1 font-semibold flex items-center gap-1">
-              <MessageCircle className="h-3 w-3" /> Direct Messages
-            </p>
-            {dms.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground px-2 py-3 text-center">No conversations</p>
-            ) : (
-              dms.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
-                  className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors text-xs ${
-                    selectedConvo === c.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-foreground/70 hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[8px] font-bold shrink-0">
-                    {getInitials(c.displayName)}
-                  </div>
-                  <span className="truncate">{c.displayName}</span>
-                </button>
-              ))
-            )}
-          </div>
         </ScrollArea>
       </div>
 
