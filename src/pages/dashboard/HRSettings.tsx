@@ -84,6 +84,15 @@ const HRSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // WhatsApp template states
+  const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waName, setWaName] = useState("");
+  const [waBody, setWaBody] = useState("");
+  const [waImageUrl, setWaImageUrl] = useState("");
+  const [waEditId, setWaEditId] = useState<string | null>(null);
+  const waImageRef = useRef<HTMLInputElement>(null);
+
   const logoRef = useRef<HTMLInputElement>(null);
   const faviconRef = useRef<HTMLInputElement>(null);
   const soundRef = useRef<HTMLInputElement>(null);
