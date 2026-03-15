@@ -114,11 +114,21 @@ const FraudChecker = () => {
     return isBn ? "❓ কোনো ডাটা নেই" : "❓ No data";
   };
 
+  const getRiskColor = (level: string) => {
+    if (level === "safe") return "text-green-600";
+    if (level === "moderate") return "text-yellow-600";
+    if (level === "risky") return "text-orange-500";
+    if (level === "dangerous") return "text-red-600";
+    if (level === "new_customer") return "text-blue-500";
+    return "text-muted-foreground";
+  };
+
   const getRiskIcon = (level: string) => {
     if (level === "safe") return <ShieldCheck className="h-5 w-5 text-green-600" />;
     if (level === "moderate") return <ShieldAlert className="h-5 w-5 text-yellow-600" />;
     if (level === "risky") return <AlertTriangle className="h-5 w-5 text-orange-500" />;
     if (level === "dangerous") return <ShieldX className="h-5 w-5 text-red-600" />;
+    if (level === "new_customer") return <HelpCircle className="h-5 w-5 text-blue-500" />;
     return <HelpCircle className="h-5 w-5 text-muted-foreground" />;
   };
 
