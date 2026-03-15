@@ -691,7 +691,7 @@ export default function EmployeeLeads() {
               );
             })}
             {leadList.length === 0 && (
-              <tr><td colSpan={totalCols} className="py-8 text-center text-muted-foreground">কোনো লিড নেই — টিম লিডার অ্যাসাইন করলে এখানে দেখাবে</td></tr>
+              <tr><td colSpan={totalCols} className="py-8 text-center text-muted-foreground">{t("no_leads_empty")}</td></tr>
             )}
           </tbody>
         </table>
