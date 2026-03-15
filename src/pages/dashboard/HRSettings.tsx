@@ -14,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag } from "lucide-react";
+import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const BLUE = "#1D4ED8";
 
@@ -82,6 +84,15 @@ const HRSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // WhatsApp template states
+  const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waName, setWaName] = useState("");
+  const [waBody, setWaBody] = useState("");
+  const [waImageUrl, setWaImageUrl] = useState("");
+  const [waEditId, setWaEditId] = useState<string | null>(null);
+  const waImageRef = useRef<HTMLInputElement>(null);
+
   const logoRef = useRef<HTMLInputElement>(null);
   const faviconRef = useRef<HTMLInputElement>(null);
   const soundRef = useRef<HTMLInputElement>(null);
@@ -89,6 +100,7 @@ const HRSettings = () => {
 
   useEffect(() => {
     fetchSettings();
+    fetchWaTemplates();
   }, []);
 
   const fetchSettings = async () => {
@@ -129,6 +141,38 @@ const HRSettings = () => {
     });
     setSettings(merged);
     setLoading(false);
+  };
+
+  const fetchWaTemplates = async () => {
+    const { data } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
+    if (data) setWaTemplates(data);
+  };
+
+  const handleWaTemplateSave = async () => {
+    if (!user || !waName.trim() || !waBody.trim()) return;
+    setSaving(true);
+    if (waEditId) {
+      await supabase.from("whatsapp_templates").update({ name: waName, body: waBody, image_url: waImageUrl || null }).eq("id", waEditId);
+    } else {
+      await supabase.from("whatsapp_templates").insert({ name: waName, body: waBody, image_url: waImageUrl || null, created_by: user.id });
+    }
+    toast({ title: isBn ? "টেমপ্লেট সংরক্ষিত ✓" : "Template saved ✓" });
+    setSaving(false);
+    setShowWaModal(false);
+    setWaName(""); setWaBody(""); setWaImageUrl(""); setWaEditId(null);
+    fetchWaTemplates();
+  };
+
+  const handleWaTemplateDelete = async (id: string) => {
+    await supabase.from("whatsapp_templates").delete().eq("id", id);
+    toast({ title: isBn ? "মুছে ফেলা হয়েছে" : "Deleted" });
+    fetchWaTemplates();
+  };
+
+  const handleWaImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const url = await uploadFile(file, "whatsapp-templates");
+    if (url) setWaImageUrl(url);
   };
 
   const saveGroup = async (key: string, values: any) => {
@@ -301,7 +345,7 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-6 bg-secondary">
+        <TabsList className="w-full grid grid-cols-7 bg-secondary">
           <TabsTrigger value="general" className="text-xs gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
@@ -309,6 +353,10 @@ const HRSettings = () => {
           <TabsTrigger value="products" className="text-xs gap-1.5">
             <ShoppingBag className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "পণ্য/গিফট" : "Products"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp" className="text-xs gap-1.5">
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="invoice" className="text-xs gap-1.5">
             <FileText className="h-3.5 w-3.5" />
@@ -567,7 +615,92 @@ const HRSettings = () => {
           </div>
         </TabsContent>
 
-        {/* Invoice Tab */}
+        {/* WhatsApp Templates Tab */}
+        <TabsContent value="whatsapp" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-heading text-sm font-bold text-foreground">
+                  {isBn ? "WhatsApp টেমপ্লেট" : "WhatsApp Templates"}
+                </h3>
+                <p className="text-xs text-muted-foreground font-body mt-1">
+                  {isBn ? "এজেন্টরা লিড শীট থেকে এই টেমপ্লেটগুলো ব্যবহার করে WhatsApp মেসেজ পাঠাতে পারবে।" : "Agents can use these templates to send WhatsApp messages from the lead sheet."}
+                </p>
+              </div>
+              <Button size="sm" onClick={() => { setWaEditId(null); setWaName(""); setWaBody(""); setWaImageUrl(""); setShowWaModal(true); }} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> {isBn ? "নতুন টেমপ্লেট" : "New Template"}
+              </Button>
+            </div>
+
+            {waTemplates.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <MessageCircle className="mx-auto mb-2 h-8 w-8 opacity-40" />
+                {isBn ? "কোনো টেমপ্লেট নেই। উপরে 'নতুন টেমপ্লেট' ক্লিক করুন।" : "No templates yet. Click 'New Template' above."}
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {waTemplates.map(tpl => (
+                  <div key={tpl.id} className="border border-border p-3 flex gap-3 items-start">
+                    {tpl.image_url && (
+                      <img src={tpl.image_url} alt={tpl.name} className="w-16 h-16 object-cover rounded border border-border flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-body text-sm font-bold text-foreground">{tpl.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap line-clamp-3">{tpl.body}</p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button onClick={() => { setWaEditId(tpl.id); setWaName(tpl.name); setWaBody(tpl.body); setWaImageUrl(tpl.image_url || ""); setShowWaModal(true); }} className="text-xs px-2 py-1 border border-border text-foreground hover:bg-secondary">
+                        {isBn ? "সম্পাদনা" : "Edit"}
+                      </button>
+                      <button onClick={() => handleWaTemplateDelete(tpl.id)} className="text-xs px-2 py-1 border border-destructive/30 text-destructive hover:bg-destructive/10">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* WhatsApp Template Modal */}
+        <Dialog open={showWaModal} onOpenChange={setShowWaModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{waEditId ? (isBn ? "টেমপ্লেট সম্পাদনা" : "Edit Template") : (isBn ? "নতুন টেমপ্লেট" : "New Template")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>{isBn ? "টেমপ্লেট নাম" : "Template Name"}</Label>
+                <Input value={waName} onChange={e => setWaName(e.target.value)} className="mt-1" placeholder={isBn ? "যেমন: অর্ডার কনফার্মেশন" : "e.g. Order Confirmation"} />
+              </div>
+              <div>
+                <Label>{isBn ? "মেসেজ বডি" : "Message Body"}</Label>
+                <p className="text-[10px] text-muted-foreground mb-1">
+                  {isBn ? "{{name}}, {{phone}}, {{address}} ব্যবহার করলে অটো রিপ্লেস হবে" : "Use {{name}}, {{phone}}, {{address}} for auto-replacement"}
+                </p>
+                <Textarea value={waBody} onChange={e => setWaBody(e.target.value)} className="mt-1" rows={4} placeholder={isBn ? "আসসালামু আলাইকুম {{name}}, আপনার অর্ডার..." : "Hello {{name}}, your order..."} />
+              </div>
+              <div>
+                <Label>{isBn ? "ছবি (ঐচ্ছিক)" : "Image (Optional)"}</Label>
+                {waImageUrl && <img src={waImageUrl} alt="template" className="w-20 h-20 object-cover rounded mt-1 mb-1 border border-border" />}
+                <input ref={waImageRef} type="file" accept="image/*" onChange={handleWaImageUpload} className="hidden" />
+                <button onClick={() => waImageRef.current?.click()} className="mt-1 text-xs px-3 py-1.5 border border-border text-foreground hover:bg-secondary">
+                  {waImageUrl ? (isBn ? "ছবি পরিবর্তন" : "Change Image") : (isBn ? "ছবি আপলোড" : "Upload Image")}
+                </button>
+                {waImageUrl && <button onClick={() => setWaImageUrl("")} className="ml-2 text-xs text-destructive">{isBn ? "মুছুন" : "Remove"}</button>}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowWaModal(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+              <Button onClick={handleWaTemplateSave} disabled={saving || !waName.trim() || !waBody.trim()}>
+                {saving ? "..." : (isBn ? "সংরক্ষণ" : "Save")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
         <TabsContent value="invoice" className="mt-4">
           <div className="border border-border p-4 space-y-4">
             <h3 className="font-heading text-sm font-bold text-foreground">{isBn ? "ইনভয়েস সেটিংস" : "Invoice Settings"}</h3>

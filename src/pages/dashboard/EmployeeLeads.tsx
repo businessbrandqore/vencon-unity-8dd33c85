@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Target, AlertTriangle, Database, Send, Search } from "lucide-react";
+import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCircle } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 
@@ -158,6 +158,15 @@ export default function EmployeeLeads() {
   const [dataRequestLoading, setDataRequestLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
+  // WhatsApp states
+  const [waTemplates, setWaTemplates] = useState<any[]>([]);
+  const [waSenderNumber, setWaSenderNumber] = useState("");
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waSelectedTemplate, setWaSelectedTemplate] = useState("");
+  const [waRecipientPhone, setWaRecipientPhone] = useState("");
+  const [waCurrentLead, setWaCurrentLead] = useState<LeadRow | null>(null);
+  const [waSending, setWaSending] = useState(false);
+
   // Load dynamic config from campaign_data_operations
   useEffect(() => {
     if (!user) return;
@@ -223,7 +232,47 @@ export default function EmployeeLeads() {
     if (data) setLeads(data as LeadRow[]);
   }, [user]);
 
-  useEffect(() => { if (checkedIn) { loadLeads(); loadMyRequests(); } }, [checkedIn, loadLeads]);
+
+  // Load WhatsApp templates and config
+  useEffect(() => {
+    (async () => {
+      const [{ data: tplData }, { data: cfgData }] = await Promise.all([
+        supabase.from("whatsapp_templates").select("*").eq("is_active", true).order("created_at"),
+        supabase.from("app_settings").select("value").eq("key", "api_config").maybeSingle(),
+      ]);
+      if (tplData) setWaTemplates(tplData);
+      const cfg = cfgData?.value as Record<string, string> | null;
+      if (cfg?.whatsapp_sender) setWaSenderNumber(cfg.whatsapp_sender);
+    })();
+  }, []);
+
+  const handleWhatsAppSend = async () => {
+    if (!waSelectedTemplate || !waRecipientPhone || !waCurrentLead) return;
+    setWaSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: {
+          template_id: waSelectedTemplate,
+          recipient_phone: waRecipientPhone,
+          lead_name: waCurrentLead.name || "",
+          lead_address: waCurrentLead.address || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.method === "wa_link") {
+        window.open(data.wa_link, "_blank");
+        toast.success(isBn ? "WhatsApp ওপেন হচ্ছে..." : "Opening WhatsApp...");
+      } else {
+        toast.success(isBn ? "মেসেজ পাঠানো হয়েছে ✓" : "Message sent ✓");
+      }
+      setShowWaModal(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send");
+    }
+    setWaSending(false);
+  };
+
+
 
   const loadMyRequests = async () => {
     if (!user) return;
@@ -554,7 +603,7 @@ export default function EmployeeLeads() {
     // Then HR dynamic columns (dropdowns + notes) + call count
     const dropdownCols = dynamicColumns.filter(c => c.type === "dropdown");
     const noteCols = dynamicColumns.filter(c => c.type === "note");
-    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length;
+    const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length + (waTemplates.length > 0 ? 1 : 0);
 
     return (
       <div className="overflow-x-auto">
@@ -574,6 +623,11 @@ export default function EmployeeLeads() {
               {noteCols.map(col => (
                 <th key={col.id} className="py-2 px-2 text-left whitespace-nowrap">{isBn ? (col.name_bn || col.name) : col.name}</th>
               ))}
+              {waTemplates.length > 0 && (
+                <th className="py-2 px-2 text-center whitespace-nowrap">
+                  <MessageCircle className="h-3.5 w-3.5 inline" />
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -687,6 +741,22 @@ export default function EmployeeLeads() {
                       />
                     </td>
                   ))}
+                  {waTemplates.length > 0 && (
+                    <td className="py-2 px-2 text-center">
+                      <button
+                        onClick={() => {
+                          setWaCurrentLead(lead);
+                          setWaRecipientPhone(lead.phone || "");
+                          setWaSelectedTemplate("");
+                          setShowWaModal(true);
+                        }}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                        title={isBn ? "WhatsApp মেসেজ পাঠান" : "Send WhatsApp"}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -1027,7 +1097,72 @@ export default function EmployeeLeads() {
         </DialogContent>
       </Dialog>
 
-      {/* Data Request Modal */}
+      {/* WhatsApp Send Modal */}
+      <Dialog open={showWaModal} onOpenChange={setShowWaModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-emerald-500" />
+              {isBn ? "WhatsApp মেসেজ পাঠান" : "Send WhatsApp Message"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>{isBn ? "কাস্টমার" : "Customer"}</Label>
+              <Input value={waCurrentLead?.name || ""} readOnly className="mt-1 bg-muted" />
+            </div>
+            <div>
+              <Label>{isBn ? "প্রাপকের নম্বর" : "Recipient Number"}</Label>
+              <Input value={waRecipientPhone} onChange={e => setWaRecipientPhone(e.target.value)} className="mt-1" placeholder="+880..." />
+            </div>
+            <div>
+              <Label>{isBn ? "টেমপ্লেট নির্বাচন করুন" : "Select Template"}</Label>
+              <Select value={waSelectedTemplate} onValueChange={setWaSelectedTemplate}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={isBn ? "টেমপ্লেট বাছুন" : "Choose template"} /></SelectTrigger>
+                <SelectContent>
+                  {waTemplates.map(tpl => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      <span className="flex items-center gap-2">
+                        {tpl.image_url && <img src={tpl.image_url} alt="" className="h-5 w-5 rounded object-cover inline-block" />}
+                        {tpl.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Preview selected template */}
+            {waSelectedTemplate && (() => {
+              const tpl = waTemplates.find(t => t.id === waSelectedTemplate);
+              if (!tpl) return null;
+              const preview = tpl.body
+                .replace(/\{\{name\}\}/g, waCurrentLead?.name || "")
+                .replace(/\{\{phone\}\}/g, waRecipientPhone || "")
+                .replace(/\{\{address\}\}/g, waCurrentLead?.address || "");
+              return (
+                <div className="border border-emerald-500/20 bg-emerald-500/5 rounded p-3 space-y-2">
+                  <p className="text-[10px] font-bold text-emerald-600">{isBn ? "প্রিভিউ" : "Preview"}</p>
+                  {tpl.image_url && <img src={tpl.image_url} alt="" className="w-full max-h-32 object-cover rounded" />}
+                  <p className="text-xs whitespace-pre-wrap text-foreground">{preview}</p>
+                </div>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWaModal(false)}>{isBn ? "বাতিল" : "Cancel"}</Button>
+            <Button
+              onClick={handleWhatsAppSend}
+              disabled={waSending || !waSelectedTemplate || !waRecipientPhone}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Send className="h-4 w-4" />
+              {waSending ? (isBn ? "পাঠানো হচ্ছে..." : "Sending...") : (isBn ? "পাঠান" : "Send")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={showDataRequestModal} onOpenChange={setShowDataRequestModal}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{t("data_request_title")}</DialogTitle></DialogHeader>
