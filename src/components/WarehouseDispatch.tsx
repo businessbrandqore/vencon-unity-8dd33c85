@@ -23,6 +23,10 @@ interface OrderRow {
   steadfast_consignment_id: string | null;
   steadfast_send_failed: boolean | null;
   status: string | null;
+  agent_id: string | null;
+  cso_id: string | null;
+  agent_name?: string;
+  cso_name?: string;
 }
 
 interface CampaignInfo {
