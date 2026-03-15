@@ -829,11 +829,11 @@ export default function EmployeeLeads() {
                 </Select>
               </div>
               <div>
-                <Label>Gift Name</Label>
+                <Label>{t("gift_name")}</Label>
                 <Select value={orderGiftName} onValueChange={setOrderGiftName}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="গিফট নির্বাচন" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t("select_gift")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">কোনো গিফট নেই</SelectItem>
+                    <SelectItem value="none">{t("no_gift")}</SelectItem>
                     {giftNames.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                   </SelectContent>
                 </Select>
