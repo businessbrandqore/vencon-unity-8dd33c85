@@ -771,7 +771,7 @@ export default function EmployeeLeads() {
         setShowOrderModal(open);
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Order Confirmation</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("order_confirmation")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             {/* Name & Phone */}
             <div className="grid grid-cols-2 gap-3">
