@@ -226,10 +226,11 @@ export default function EmployeeAttendance() {
   };
 
   const handleAppealSubmit = async () => {
-    if (!user || !appealAttendanceId || !appealExplanation.trim()) { toast.error("কারণ লিখুন"); return; }
+    if (!user || !appealAttendanceId || (!appealExplanation.trim() && appealSelectedReasons.length === 0)) { toast.error("কারণ নির্বাচন বা লিখুন"); return; }
     setAppealSubmitting(true);
+    const combinedExplanation = [...appealSelectedReasons, appealExplanation.trim()].filter(Boolean).join(" | ");
     const { error } = await supabase.from("attendance_appeals").insert({
-      user_id: user.id, attendance_id: appealAttendanceId, explanation: appealExplanation.trim(),
+      user_id: user.id, attendance_id: appealAttendanceId, explanation: combinedExplanation,
     });
     if (error) { toast.error("আপিল পাঠাতে সমস্যা"); console.error(error); }
     else {
@@ -239,6 +240,7 @@ export default function EmployeeAttendance() {
     setAppealSubmitting(false);
     setShowAppealModal(false);
     setAppealExplanation("");
+    setAppealSelectedReasons([]);
   };
 
   const statusColor = (s: string | null) => {
