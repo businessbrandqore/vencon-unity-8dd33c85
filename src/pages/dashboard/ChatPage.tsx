@@ -718,7 +718,7 @@ const ChatPage = () => {
                 filteredUsers.map((u) => (
                   <button
                     key={u.id}
-                    onClick={() => { startDM(u.id); setThreadParent(null); }}
+                    onClick={() => { startDM(u.id); setThreadParent(null); setMobileShowChat(true); }}
                     className="w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors hover:bg-secondary"
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
