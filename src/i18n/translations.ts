@@ -579,7 +579,6 @@ Object.assign(translations, {
   mood_neutral: { bn: "সাধারণ", en: "Neutral" },
   mood_angry: { bn: "রাগান্বিত", en: "Angry" },
 });
-}
 
 // Helper to get translated status name
 export function getStatusName(statusKey: string, lang: Language): string {
