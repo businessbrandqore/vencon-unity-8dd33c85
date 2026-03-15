@@ -106,7 +106,7 @@ const ChatPage = () => {
         const myPart = parts.find((p) => p.conversation_id === c.id);
 
         let displayName = c.name || "Group";
-        if (c.type === "dm") {
+        if (c.type === "direct") {
           const otherMember = members.find((m) => m.user_id !== user!.id);
           if (otherMember) {
             displayName = nameMap.get(otherMember.user_id) || "Unknown";
