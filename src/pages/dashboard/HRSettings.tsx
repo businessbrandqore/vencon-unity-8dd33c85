@@ -135,6 +135,9 @@ const HRSettings = () => {
           cloudinary_upload_preset: val.upload_preset,
           cloudinary_api_key: val.api_key,
         });
+      } else if (row.key === "fraud_checker_config") {
+        const val = row.value as Record<string, string>;
+        Object.assign(merged, { fraudbd_api_key: val.fraudbd_api_key });
       } else {
         const val = row.value as Record<string, string>;
         Object.assign(merged, val);
