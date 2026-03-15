@@ -411,8 +411,8 @@ export default function EmployeeLeads() {
   };
 
   const handleOrderConfirm = async () => {
-    if (!currentOrderLead || !user || !orderProduct) { toast.error("Product নির্বাচন করুন"); return; }
-    if (!orderPrice || orderPrice <= 0) { toast.error("মূল্য দিন"); return; }
+    if (!currentOrderLead || !user || !orderProduct) { toast.error(t("select_product_error")); return; }
+    if (!orderPrice || orderPrice <= 0) { toast.error(t("enter_price")); return; }
     const { error } = await supabase.from("orders").insert({
       customer_name: currentOrderLead.name, phone: currentOrderLead.phone, address: orderAddress,
       product: orderProduct, quantity: orderQty, price: orderPrice, agent_id: user.id,
