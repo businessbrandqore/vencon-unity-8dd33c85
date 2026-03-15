@@ -5,25 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShieldCheck, Search, Phone, ChevronUp, ChevronDown, Loader2, ShieldAlert, ShieldX, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Search, Phone, ChevronUp, ChevronDown, Loader2, ShieldAlert, ShieldX, AlertTriangle, HelpCircle } from "lucide-react";
 
-interface CourierSummary {
-  logo?: string;
-  data_type?: string;
-  total?: number;
-  success?: number;
-  cancel?: number;
-  customer_rating?: string;
-  risk_level?: string;
-  message?: string;
-}
-
-interface TotalSummary {
+interface CourierResult {
+  courier: string;
   total: number;
   success: number;
   cancel: number;
-  successRate: number;
-  cancelRate: number;
+  error?: string;
+}
+
+interface FraudData {
+  phone: string;
+  couriers: Record<string, CourierResult>;
+  totalSummary: { total: number; success: number; cancel: number; successRate: number; cancelRate: number };
+  riskLevel: string;
+  riskMessage: string;
 }
 
 interface HistoryOrder {
@@ -43,7 +40,7 @@ const FraudChecker = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [fraudPhone, setFraudPhone] = useState("");
   const [fraudLoading, setFraudLoading] = useState(false);
-  const [fraudResult, setFraudResult] = useState<{ Summaries: Record<string, CourierSummary>; totalSummary: TotalSummary } | null>(null);
+  const [fraudResult, setFraudResult] = useState<FraudData | null>(null);
   const [fraudError, setFraudError] = useState("");
 
   const [historyPhone, setHistoryPhone] = useState("");
@@ -93,32 +90,43 @@ const FraudChecker = () => {
     setShowHistory(true);
   };
 
-  const getRiskColor = (rate: number) => {
-    if (rate >= 80) return "text-green-600";
-    if (rate >= 60) return "text-yellow-600";
-    if (rate >= 40) return "text-orange-500";
-    return "text-red-600";
+  const getRiskColor = (level: string) => {
+    if (level === "safe") return "text-green-600";
+    if (level === "moderate") return "text-yellow-600";
+    if (level === "risky") return "text-orange-500";
+    if (level === "dangerous") return "text-red-600";
+    return "text-muted-foreground";
   };
 
-  const getRiskLabel = (rate: number) => {
-    if (rate >= 80) return isBn ? "✅ নিরাপদ" : "✅ Safe";
-    if (rate >= 60) return isBn ? "⚠️ মোটামুটি নিরাপদ" : "⚠️ Moderate";
-    if (rate >= 40) return isBn ? "🔶 ঝুঁকিপূর্ণ" : "🔶 Risky";
-    return isBn ? "🔴 অত্যন্ত ঝুঁকিপূর্ণ" : "🔴 High Risk";
+  const getRiskLabel = (level: string) => {
+    if (level === "safe") return isBn ? "✅ নিরাপদ — পণ্য পাঠানো যাবে" : "✅ Safe to deliver";
+    if (level === "moderate") return isBn ? "⚠️ মোটামুটি — সতর্কতার সাথে পাঠান" : "⚠️ Moderate — Send with caution";
+    if (level === "risky") return isBn ? "🔶 ঝুঁকিপূর্ণ — অগ্রিম পেমেন্ট নিন" : "🔶 Risky — Take advance payment";
+    if (level === "dangerous") return isBn ? "🔴 বিপজ্জনক — পাঠানো উচিত নয়" : "🔴 Dangerous — Do not send";
+    return isBn ? "❓ কোনো ডাটা নেই" : "❓ No data";
   };
 
-  const getRiskIcon = (rate: number) => {
-    if (rate >= 80) return <ShieldCheck className="h-5 w-5 text-green-600" />;
-    if (rate >= 60) return <ShieldAlert className="h-5 w-5 text-yellow-600" />;
-    if (rate >= 40) return <AlertTriangle className="h-5 w-5 text-orange-500" />;
-    return <ShieldX className="h-5 w-5 text-red-600" />;
+  const getRiskIcon = (level: string) => {
+    if (level === "safe") return <ShieldCheck className="h-5 w-5 text-green-600" />;
+    if (level === "moderate") return <ShieldAlert className="h-5 w-5 text-yellow-600" />;
+    if (level === "risky") return <AlertTriangle className="h-5 w-5 text-orange-500" />;
+    if (level === "dangerous") return <ShieldX className="h-5 w-5 text-red-600" />;
+    return <HelpCircle className="h-5 w-5 text-muted-foreground" />;
+  };
+
+  const getCourierColor = (courier: CourierResult) => {
+    if (courier.error) return "border-muted";
+    if (courier.total === 0) return "border-muted";
+    const rate = (courier.success / courier.total) * 100;
+    if (rate >= 80) return "border-green-500/50";
+    if (rate >= 60) return "border-yellow-500/50";
+    return "border-red-500/50";
   };
 
   return (
     <>
       {/* Sticky Panel */}
       <div className="sticky top-0 z-30 bg-card border border-border rounded-lg shadow-lg mb-4 overflow-hidden">
-        {/* Header - always visible */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="w-full flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-primary/10 to-accent hover:from-primary/15 transition-colors"
@@ -132,7 +140,6 @@ const FraudChecker = () => {
           {collapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronUp className="h-4 w-4 text-muted-foreground" />}
         </button>
 
-        {/* Content - collapsible */}
         {!collapsed && (
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,7 +150,7 @@ const FraudChecker = () => {
                   {isBn ? "কুরিয়ার ফ্রড চেকার" : "Courier Fraud Checker"}
                 </h3>
                 <p className="text-[10px] text-muted-foreground">
-                  {isBn ? "Steadfast, Pathao, RedX এ ডেলিভারি হিস্টোরি চেক করুন" : "Check delivery history on Steadfast, Pathao, RedX"}
+                  {isBn ? "Steadfast, Pathao, RedX থেকে সরাসরি ডেলিভারি হিস্টোরি চেক করুন" : "Check delivery history directly from Steadfast, Pathao, RedX"}
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -165,46 +172,46 @@ const FraudChecker = () => {
 
                 {fraudResult && (
                   <div className="space-y-3">
-                    {/* Overall Score */}
+                    {/* Risk Assessment */}
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary border border-border">
-                      {getRiskIcon(fraudResult.totalSummary.successRate)}
+                      {getRiskIcon(fraudResult.riskLevel)}
                       <div className="flex-1">
-                        <div className={`text-lg font-bold font-heading ${getRiskColor(fraudResult.totalSummary.successRate)}`}>
-                          {fraudResult.totalSummary.successRate.toFixed(1)}%
+                        <div className={`text-lg font-bold font-heading ${getRiskColor(fraudResult.riskLevel)}`}>
+                          {fraudResult.totalSummary.total > 0 ? `${fraudResult.totalSummary.successRate}%` : "N/A"}
                         </div>
-                        <div className={`text-xs font-bold ${getRiskColor(fraudResult.totalSummary.successRate)}`}>
-                          {getRiskLabel(fraudResult.totalSummary.successRate)}
+                        <div className={`text-xs font-bold ${getRiskColor(fraudResult.riskLevel)}`}>
+                          {getRiskLabel(fraudResult.riskLevel)}
                         </div>
                       </div>
                       <div className="text-right text-[10px] text-muted-foreground space-y-0.5">
-                        <div>{isBn ? "মোট" : "Total"}: <span className="font-bold text-foreground">{fraudResult.totalSummary.total}</span></div>
-                        <div className="text-green-600">{isBn ? "সফল" : "Success"}: {fraudResult.totalSummary.success}</div>
-                        <div className="text-red-500">{isBn ? "বাতিল" : "Cancel"}: {fraudResult.totalSummary.cancel}</div>
+                        <div>{isBn ? "মোট অর্ডার" : "Total"}: <span className="font-bold text-foreground">{fraudResult.totalSummary.total}</span></div>
+                        <div className="text-green-600">{isBn ? "সফল ডেলিভারি" : "Delivered"}: {fraudResult.totalSummary.success}</div>
+                        <div className="text-red-500">{isBn ? "বাতিল/রিটার্ন" : "Cancelled"}: {fraudResult.totalSummary.cancel}</div>
                       </div>
                     </div>
 
-                    {/* Individual Couriers */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {Object.entries(fraudResult.Summaries).map(([name, courier]) => (
-                        <div key={name} className="p-2 rounded border border-border bg-background text-center space-y-1">
-                          <div className="text-[10px] font-bold text-foreground">{name}</div>
-                          {courier.data_type === "rating" ? (
-                            <>
-                              <Badge variant={courier.risk_level === "low" ? "default" : "destructive"} className="text-[9px]">
-                                {courier.customer_rating?.replace(/_/g, " ")}
-                              </Badge>
-                            </>
-                          ) : (
-                            <>
-                              <div className="text-xs font-bold text-foreground">{courier.total || 0}</div>
-                              <div className="flex justify-center gap-2 text-[9px]">
-                                <span className="text-green-600">✓{courier.success || 0}</span>
-                                <span className="text-red-500">✗{courier.cancel || 0}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
+                    {/* Individual Courier Results */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.entries(fraudResult.couriers).map(([name, courier]) => {
+                        const rate = courier.total > 0 ? ((courier.success / courier.total) * 100).toFixed(0) : "—";
+                        return (
+                          <div key={name} className={`p-2 rounded border-2 ${getCourierColor(courier)} bg-background text-center space-y-1`}>
+                            <div className="text-[10px] font-bold text-foreground">{name}</div>
+                            {courier.error ? (
+                              <div className="text-[9px] text-muted-foreground">{isBn ? "ত্রুটি" : "Error"}</div>
+                            ) : (
+                              <>
+                                <div className="text-sm font-bold text-foreground">{rate}%</div>
+                                <div className="flex justify-center gap-2 text-[9px]">
+                                  <span className="text-green-600">✓{courier.success}</span>
+                                  <span className="text-muted-foreground">/{courier.total}</span>
+                                  <span className="text-red-500">✗{courier.cancel}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -233,7 +240,6 @@ const FraudChecker = () => {
                   </Button>
                 </div>
 
-                {/* Quick stats if data exists */}
                 {(historyOrders.length > 0 || historyLeads.length > 0) && !showHistory && (
                   <button onClick={() => setShowHistory(true)} className="text-xs text-primary hover:underline">
                     {isBn ? `পাওয়া গেছে: ${historyOrders.length} অর্ডার, ${historyLeads.length} লিড — বিস্তারিত দেখুন` : `Found: ${historyOrders.length} orders, ${historyLeads.length} leads — View details`}
