@@ -472,8 +472,8 @@ export default function EmployeeLeads() {
 
   const handlePreOrderConfirmSubmit = async () => {
     if (!currentPreOrderConfirmLead || !user) return;
-    if (!pocProduct) { toast.error("Product নির্বাচন করুন"); return; }
-    if (!pocDeliveryDate) { toast.error("Delivery Date নির্বাচন করুন"); return; }
+    if (!pocProduct) { toast.error(t("select_product_error")); return; }
+    if (!pocDeliveryDate) { toast.error(t("select_delivery_date")); return; }
     // Create order from pre-order confirm
     const { error } = await supabase.from("orders").insert({
       customer_name: currentPreOrderConfirmLead.name, phone: currentPreOrderConfirmLead.phone,
