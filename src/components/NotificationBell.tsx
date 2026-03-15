@@ -22,6 +22,7 @@ const TYPE_ICONS: Record<string, string> = {
   success: "✅",
   warning: "⚠️",
   error: "❌",
+  chat: "💬",
 };
 
 const playNotificationSound = (volume: number) => {
@@ -41,6 +42,22 @@ const playNotificationSound = (volume: number) => {
   } catch {
     // Audio not available
   }
+};
+
+/** Extract conversation_id from chat notification message format: "chat:<uuid>:<preview>" */
+const parseChatNotification = (message: string | null): { convoId: string | null; preview: string } => {
+  if (!message) return { convoId: null, preview: "" };
+  if (message.startsWith("chat:")) {
+    const firstColon = message.indexOf(":");
+    const secondColon = message.indexOf(":", firstColon + 1);
+    if (secondColon > firstColon) {
+      return {
+        convoId: message.substring(firstColon + 1, secondColon),
+        preview: message.substring(secondColon + 1),
+      };
+    }
+  }
+  return { convoId: null, preview: message };
 };
 
 const NotificationBell = () => {
@@ -124,6 +141,20 @@ const NotificationBell = () => {
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
+  const handleNotificationClick = (ntf: Notification) => {
+    if (!ntf.is_read) markOneRead(ntf.id);
+    setOpen(false);
+
+    // If chat notification, navigate to chat with conversation context
+    if (ntf.type === "chat") {
+      const { convoId } = parseChatNotification(ntf.message);
+      if (convoId && user) {
+        navigate(`/${user.panel}/chat?convo=${convoId}`);
+        return;
+      }
+    }
+  };
+
   if (!user) return null;
 
   const locale = lang === "bn" ? bnLocale : enUS;
@@ -155,23 +186,26 @@ const NotificationBell = () => {
             {notifications.length === 0 ? (
               <p className="p-6 text-xs text-muted-foreground text-center">{t("no_notifications")}</p>
             ) : (
-              notifications.map((ntf) => (
-                <button
-                  key={ntf.id}
-                  onClick={() => { if (!ntf.is_read) markOneRead(ntf.id); setOpen(false); }}
-                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors flex gap-3 ${!ntf.is_read ? "bg-primary/5" : ""}`}
-                >
-                  <span className="text-sm mt-0.5 shrink-0">{TYPE_ICONS[ntf.type || "info"] || "ℹ️"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{ntf.title}</p>
-                    {ntf.message && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{ntf.message}</p>}
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(ntf.created_at), { addSuffix: true, locale })}
-                    </p>
-                  </div>
-                  {!ntf.is_read && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />}
-                </button>
-              ))
+              notifications.map((ntf) => {
+                const { preview } = ntf.type === "chat" ? parseChatNotification(ntf.message) : { preview: ntf.message || "" };
+                return (
+                  <button
+                    key={ntf.id}
+                    onClick={() => handleNotificationClick(ntf)}
+                    className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors flex gap-3 ${!ntf.is_read ? "bg-primary/5" : ""}`}
+                  >
+                    <span className="text-sm mt-0.5 shrink-0">{TYPE_ICONS[ntf.type || "info"] || "ℹ️"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{ntf.title}</p>
+                      {preview && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{preview}</p>}
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(ntf.created_at), { addSuffix: true, locale })}
+                      </p>
+                    </div>
+                    {!ntf.is_read && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />}
+                  </button>
+                );
+              })
             )}
           </div>
 
