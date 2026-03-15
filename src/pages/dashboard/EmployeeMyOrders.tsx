@@ -179,7 +179,7 @@ export default function EmployeeMyOrders() {
 
       {/* Orders */}
       {filtered.length === 0 ? (
-        <EmptyState icon={<Package className="h-12 w-12" />} message="কোনো অর্ডার পাওয়া যায়নি" />
+        <EmptyState icon={<Package className="h-12 w-12" />} message={t("no_orders")} />
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => {
