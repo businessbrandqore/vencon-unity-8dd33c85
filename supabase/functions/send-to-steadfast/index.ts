@@ -16,7 +16,41 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { order_id } = await req.json();
+    const body = await req.json();
+
+    // --- Test connection mode ---
+    if (body.test_connection) {
+      const { api_key, secret_key } = body;
+      if (!api_key || !secret_key) {
+        return new Response(JSON.stringify({ success: false, error: "API Key and Secret Key required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      try {
+        const res = await fetch("https://portal.steadfast.com.bd/api/v1/get_balance", {
+          headers: { "Api-Key": api_key, "Secret-Key": secret_key },
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 200) {
+          return new Response(JSON.stringify({ success: true, balance: data.current_balance, message: "Connected successfully" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ success: false, error: data.message || "Authentication failed" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: (e as Error).message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // --- Normal dispatch mode ---
+    const { order_id } = body;
 
     if (!order_id) {
       return new Response(JSON.stringify({ success: false, error: "order_id required" }), {
@@ -39,31 +73,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Fetch SteadFast API credentials from secrets
-    const sfApiKey = Deno.env.get("STEADFAST_API_KEY");
-    const sfSecretKey = Deno.env.get("STEADFAST_SECRET_KEY");
+    // 2. Fetch SteadFast API credentials
+    // Try env vars first
+    let sfApiKey = Deno.env.get("STEADFAST_API_KEY") || "";
+    let sfSecretKey = Deno.env.get("STEADFAST_SECRET_KEY") || "";
 
+    // Fallback: try app_settings api_config (HR saves here)
     if (!sfApiKey || !sfSecretKey) {
-      // Fallback: try app_settings
+      const { data: apiSettings } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "api_config")
+        .single();
+
+      if (apiSettings?.value) {
+        const val = apiSettings.value as Record<string, string>;
+        sfApiKey = val.steadfast_api_key || "";
+        sfSecretKey = val.steadfast_secret_key || "";
+      }
+    }
+
+    // Legacy fallback: steadfast_api key
+    if (!sfApiKey || !sfSecretKey) {
       const { data: sfSettings } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", "steadfast_api")
         .single();
 
-      const settingsKey = (sfSettings?.value as Record<string, string>)?.api_key;
-      const settingsSecret = (sfSettings?.value as Record<string, string>)?.secret_key;
-
-      if (!settingsKey || !settingsSecret) {
-        await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", order_id);
-        return new Response(JSON.stringify({ success: false, error: "SteadFast API keys not configured" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (sfSettings?.value) {
+        const val = sfSettings.value as Record<string, string>;
+        sfApiKey = val.api_key || "";
+        sfSecretKey = val.secret_key || "";
       }
+    }
 
-      // Use settings keys
-      return await processDispatch(supabase, order, settingsKey, settingsSecret, corsHeaders);
+    if (!sfApiKey || !sfSecretKey) {
+      await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", order_id);
+      return new Response(JSON.stringify({ success: false, error: "SteadFast API keys not configured. HR Settings → API ট্যাবে কনফিগার করুন।" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return await processDispatch(supabase, order, sfApiKey, sfSecretKey, corsHeaders);
@@ -85,7 +135,6 @@ async function processDispatch(
   const orderId = order.id as string;
   const orderShort = orderId.slice(0, 8);
 
-  // 3. Retry up to 3 times
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -108,12 +157,10 @@ async function processDispatch(
 
       const data = await response.json();
 
-      // 4. On success
       if (response.ok && (data.status === 200 || response.status === 200)) {
         const consignmentId =
           data.consignment?.consignment_id || data.consignment_id || `SF-${Date.now()}`;
 
-        // Update order
         await supabase
           .from("orders")
           .update({
@@ -143,7 +190,6 @@ async function processDispatch(
           );
         }
 
-        // Log success
         await supabase.from("audit_logs").insert({
           action: "steadfast_dispatch_success",
           target_table: "orders",
@@ -163,14 +209,12 @@ async function processDispatch(
       lastError = (e as Error).message;
     }
 
-    // Wait 1 second before retry
     if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
   }
 
-  // 5. All 3 retries failed
+  // All retries failed
   await supabase.from("orders").update({ steadfast_send_failed: true }).eq("id", orderId);
 
-  // Notify SA and HR
   const { data: admins } = await supabase
     .from("users")
     .select("id")
@@ -182,13 +226,12 @@ async function processDispatch(
       admins.map((a: { id: string }) => ({
         user_id: a.id,
         title: `⚠️ SteadFast send failed — Order ${orderShort}`,
-        message: `SteadFast-এ অর্ডার পাঠাতে ব্যর্থ হয়েছে। 3 বার retry করা হয়েছে। Error: ${lastError}`,
+        message: `SteadFast-এ অর্ডার পাঠাতে ব্যর্থ হয়েছে। Error: ${lastError}`,
         type: "error",
       }))
     );
   }
 
-  // Log failure
   await supabase.from("audit_logs").insert({
     action: "steadfast_send_failed",
     target_table: "orders",
