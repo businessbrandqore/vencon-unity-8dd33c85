@@ -86,9 +86,15 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
   const stepIndicators = ["verify", "welcome", "security", "terms"];
   const currentStepIndex = stepIndicators.indexOf(step);
 
+  // BrandQore theme colors
+  const NAVY = "#0a0a2e";
+  const PURPLE = "#7c3aed";
+  const PURPLE_LIGHT = "#a78bfa";
+  const PURPLE_GLOW = "rgba(124,58,237,0.3)";
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #111827 40%, #1a0a00 70%, #0a0a0a 100%)" }}>
+      style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #0f0f3d 40%, #1a0a3e 70%, ${NAVY} 100%)` }}>
       
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden">
@@ -101,7 +107,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
               height: Math.random() * 120 + 10,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              background: `radial-gradient(circle, rgba(234,88,12,${Math.random() * 0.08 + 0.02}) 0%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(124,58,237,${Math.random() * 0.08 + 0.02}) 0%, transparent 70%)`,
               animation: `pulse ${Math.random() * 4 + 3}s ease-in-out infinite`,
               animationDelay: `${Math.random() * 3}s`,
             }}
@@ -121,7 +127,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                   width: i <= currentStepIndex ? 32 : 16,
                   height: 6,
                   background: i <= currentStepIndex
-                    ? "linear-gradient(90deg, #ea580c, #f59e0b)"
+                    ? `linear-gradient(90deg, ${PURPLE}, ${PURPLE_LIGHT})`
                     : "rgba(255,255,255,0.15)",
                 }}
               />
@@ -135,21 +141,21 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
           style={{
             background: "rgba(255,255,255,0.04)",
             backdropFilter: "blur(24px)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "0 0 80px rgba(234,88,12,0.05), 0 25px 50px rgba(0,0,0,0.5)",
+            border: "1px solid rgba(124,58,237,0.15)",
+            boxShadow: `0 0 80px ${PURPLE_GLOW}, 0 25px 50px rgba(0,0,0,0.5)`,
           }}
         >
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div
-                className="absolute -inset-2 rounded-2xl blur-md"
-                style={{ background: "linear-gradient(135deg, #ea580c40, #f59e0b40)" }}
+                className="absolute -inset-3 rounded-2xl blur-lg"
+                style={{ background: `linear-gradient(135deg, ${PURPLE}60, ${PURPLE_LIGHT}40)` }}
               />
               <img
                 src={brandQoreLogo}
                 alt="BrandQore"
-                className="relative w-20 h-20 rounded-2xl object-cover ring-2 ring-white/10"
+                className="relative w-24 h-24 rounded-2xl object-cover ring-2 ring-purple-400/20"
               />
             </div>
           </div>
@@ -164,9 +170,9 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
 
               {!codeSent ? (
                 <div className="space-y-4">
-                  <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div className="rounded-xl p-4" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.15)" }}>
                     <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                      <Mail className="w-5 h-5 flex-shrink-0" style={{ color: PURPLE_LIGHT }} />
                       <span className="text-white/70 text-sm truncate">{ADMIN_EMAIL}</span>
                     </div>
                   </div>
@@ -174,7 +180,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                     onClick={sendCode}
                     disabled={sending}
                     className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                    style={{ background: "linear-gradient(135deg, #ea580c, #d97706)" }}
+                    style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
                   >
                     {sending ? (
                       <span className="flex items-center gap-2">
@@ -194,14 +200,14 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     placeholder="000000"
                     maxLength={6}
-                    className="text-center text-3xl tracking-[0.6em] h-16 rounded-xl font-mono border-white/10 text-white"
-                    style={{ background: "rgba(255,255,255,0.04)" }}
+                    className="text-center text-3xl tracking-[0.6em] h-16 rounded-xl font-mono border-purple-500/20 text-white"
+                    style={{ background: "rgba(124,58,237,0.06)" }}
                   />
                   <Button
                     onClick={verifyCode}
                     disabled={verifying || otpCode.length !== 6}
                     className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                    style={{ background: "linear-gradient(135deg, #ea580c, #d97706)" }}
+                    style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
                   >
                     {verifying ? (
                       <span className="flex items-center gap-2">
@@ -212,7 +218,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                   </Button>
                   <button
                     onClick={() => { setCodeSent(false); setOtpCode(""); }}
-                    className="text-orange-400/50 hover:text-orange-400 text-xs underline transition-colors"
+                    className="text-purple-400/50 hover:text-purple-400 text-xs underline transition-colors"
                   >
                     Resend code
                   </button>
@@ -226,7 +232,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
             <div className="space-y-6" style={{ animation: "slideIn 0.5s ease" }}>
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-white mb-1">Welcome to VenCon Unity</h1>
-                <p className="text-orange-400/80 text-sm font-medium">Powered by BrandQore</p>
+                <p className="text-sm font-medium" style={{ color: PURPLE_LIGHT }}>Powered by BrandQore</p>
               </div>
 
               <div className="space-y-2.5">
@@ -241,13 +247,13 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                   <div
                     key={label}
                     className="flex items-center gap-3 rounded-xl p-3 transition-colors"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}
+                    style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.08)" }}
                   >
                     <div
                       className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(234,88,12,0.1)" }}
+                      style={{ background: "rgba(124,58,237,0.12)" }}
                     >
-                      <Icon className="w-4 h-4 text-orange-400" />
+                      <Icon className="w-4 h-4" style={{ color: PURPLE_LIGHT }} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-white font-medium text-sm">{label}</p>
@@ -260,7 +266,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
               <Button
                 onClick={() => setStep("security")}
                 className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                style={{ background: "linear-gradient(135deg, #ea580c, #d97706)" }}
+                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
               >
                 Next →
               </Button>
@@ -273,9 +279,9 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
               <div className="text-center">
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ background: "rgba(234,88,12,0.1)" }}
+                  style={{ background: "rgba(124,58,237,0.12)" }}
                 >
-                  <Shield className="w-7 h-7 text-orange-400" />
+                  <Shield className="w-7 h-7" style={{ color: PURPLE_LIGHT }} />
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-1">Security Guidelines</h1>
                 <p className="text-white/50 text-sm">নিরাপত্তা নির্দেশিকা</p>
@@ -283,7 +289,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
 
               <div
                 className="rounded-xl p-5 space-y-4"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}
               >
                 {[
                   { icon: Lock, text: "প্রতিটি ইউজারের পাসওয়ার্ড শক্তিশালী ও ইউনিক হতে হবে" },
@@ -294,7 +300,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                   { icon: Lock, text: "সকল কার্যক্রম Audit Log-এ রেকর্ড করা হয়" },
                 ].map(({ icon: Icon, text }, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <Icon className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                    <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: PURPLE_LIGHT }} />
                     <p className="text-white/65 text-sm leading-relaxed">{text}</p>
                   </div>
                 ))}
@@ -303,7 +309,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
               <Button
                 onClick={() => setStep("terms")}
                 className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                style={{ background: "linear-gradient(135deg, #ea580c, #d97706)" }}
+                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
               >
                 Next →
               </Button>
@@ -316,9 +322,9 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
               <div className="text-center">
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ background: "rgba(234,88,12,0.1)" }}
+                  style={{ background: "rgba(124,58,237,0.12)" }}
                 >
-                  <FileText className="w-7 h-7 text-orange-400" />
+                  <FileText className="w-7 h-7" style={{ color: PURPLE_LIGHT }} />
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-1">Terms & Conditions</h1>
                 <p className="text-white/50 text-sm">ব্যবহারের শর্তাবলী</p>
@@ -326,7 +332,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
 
               <div
                 className="rounded-xl p-5 max-h-52 overflow-y-auto space-y-3 text-sm text-white/60 leading-relaxed"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}
               >
                 <p className="text-white/80 font-medium">এই সিস্টেম BrandQore দ্বারা তৈরি ও রক্ষণাবেক্ষণ করা হয়।</p>
                 <p>• সকল ডাটা এনক্রিপ্টেড এবং সুরক্ষিতভাবে সংরক্ষিত থাকবে</p>
@@ -341,7 +347,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
               <Button
                 onClick={completeSetup}
                 className="w-full h-12 rounded-xl font-semibold text-white border-0"
-                style={{ background: "linear-gradient(135deg, #ea580c, #d97706)" }}
+                style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)` }}
               >
                 ✓ Accept & Complete Setup
               </Button>
@@ -355,12 +361,12 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                 <div
                   className="absolute inset-0 rounded-full animate-spin"
                   style={{
-                    border: "3px solid rgba(234,88,12,0.15)",
-                    borderTopColor: "#ea580c",
+                    border: `3px solid rgba(124,58,237,0.15)`,
+                    borderTopColor: PURPLE,
                   }}
                 />
                 <div className="absolute inset-3 rounded-full flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-orange-400" />
+                  <Zap className="w-5 h-5" style={{ color: PURPLE_LIGHT }} />
                 </div>
               </div>
               <div>
@@ -373,7 +379,7 @@ export const SetupWizard = ({ onComplete }: { onComplete: () => void }) => {
                     className="h-full rounded-full transition-all duration-300 ease-out"
                     style={{
                       width: `${installProgress}%`,
-                      background: "linear-gradient(90deg, #ea580c, #f59e0b)",
+                      background: `linear-gradient(90deg, ${PURPLE}, ${PURPLE_LIGHT})`,
                     }}
                   />
                 </div>
