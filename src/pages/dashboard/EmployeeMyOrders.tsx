@@ -126,7 +126,7 @@ export default function EmployeeMyOrders() {
     returned: orders.filter(o => o.delivery_status === "returned" || o.status === "rejected").length,
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
   return (
     <div className="space-y-5">
