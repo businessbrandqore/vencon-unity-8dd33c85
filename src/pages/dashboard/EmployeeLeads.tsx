@@ -745,12 +745,12 @@ export default function EmployeeLeads() {
         <Tabs defaultValue="bronze" className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <TabsList>
-              <TabsTrigger value="bronze">ব্রোঞ্জ লিড ({bronzeLeads.length})</TabsTrigger>
-              <TabsTrigger value="silver">সিল্ভার লিড ({silverLeads.length})</TabsTrigger>
+              <TabsTrigger value="bronze">{t("bronze_leads_tab")} ({bronzeLeads.length})</TabsTrigger>
+              <TabsTrigger value="silver">{t("silver_leads_tab")} ({silverLeads.length})</TabsTrigger>
             </TabsList>
             {leads.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
-                <Send className="h-3.5 w-3.5" /> ডাটা চাই
+                <Send className="h-3.5 w-3.5" /> {t("need_data")}
               </Button>
             )}
           </div>
