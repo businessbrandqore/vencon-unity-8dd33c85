@@ -1,0 +1,4 @@
+ALTER TABLE public.chat_calls REPLICA IDENTITY FULL;
+ALTER TABLE public.chat_messages REPLICA IDENTITY FULL;
+ALTER TABLE public.chat_conversations REPLICA IDENTITY FULL;
+ALTER TABLE public.chat_participants REPLICA IDENTITY FULL;
