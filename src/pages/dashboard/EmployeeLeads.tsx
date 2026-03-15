@@ -842,8 +842,8 @@ export default function EmployeeLeads() {
 
             {/* Amount & Advance */}
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Amount *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
-              <div><Label>Advance Payment</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
+              <div><Label>{t("amount_label")} *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
+              <div><Label>{t("advance_payment")}</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
             </div>
 
             {/* Payment Method & Card */}
