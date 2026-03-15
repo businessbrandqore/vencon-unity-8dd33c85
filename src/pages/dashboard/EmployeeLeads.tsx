@@ -815,8 +815,8 @@ export default function EmployeeLeads() {
 
             {/* Location / Address */}
             <div>
-              <Label>Location</Label>
-              <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} className="mt-1" placeholder="সম্পূর্ণ ঠিকানা" />
+              <Label>{t("location")}</Label>
+              <Input value={orderAddress} onChange={e => setOrderAddress(e.target.value)} className="mt-1" placeholder={t("full_address")} />
             </div>
 
             {/* Product & Gift */}
