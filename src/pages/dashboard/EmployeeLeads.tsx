@@ -482,7 +482,7 @@ export default function EmployeeLeads() {
       agent_id: user.id, tl_id: currentPreOrderConfirmLead.tl_id, lead_id: currentPreOrderConfirmLead.id,
       status: "pending_tl", district: pocDistrict || null, thana: pocThana || null,
     } as any);
-    if (error) { toast.error("অর্ডার তৈরিতে সমস্যা"); console.error(error); return; }
+    if (error) { toast.error(t("order_create_error")); console.error(error); return; }
     const selectedStatusRaw = leadStatuses[currentPreOrderConfirmLead.id] || "pre_order_confirm";
     const selectedStatus = normalizeWorkflowStatus(selectedStatusRaw);
     const { error: leadUpdateError } = await supabase
