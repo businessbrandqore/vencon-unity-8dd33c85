@@ -205,8 +205,8 @@ serve(async (req) => {
     let riskLevel: string;
     let riskMessage: string;
     if (totalOrders === 0) {
-      riskLevel = 'unknown';
-      riskMessage = 'No delivery history found';
+      riskLevel = 'new_customer';
+      riskMessage = 'New customer — No delivery history found';
     } else if (successRate >= 80) {
       riskLevel = 'safe';
       riskMessage = 'Safe to deliver - High success rate';
