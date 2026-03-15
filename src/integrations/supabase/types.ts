@@ -534,6 +534,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_muted: boolean | null
+          last_message_at: string | null
           name: string | null
           type: string | null
         }
@@ -542,6 +543,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_muted?: boolean | null
+          last_message_at?: string | null
           name?: string | null
           type?: string | null
         }
@@ -550,6 +552,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_muted?: boolean | null
+          last_message_at?: string | null
           name?: string | null
           type?: string | null
         }

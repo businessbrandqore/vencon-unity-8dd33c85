@@ -26,6 +26,7 @@ interface ConvoDisplay {
   memberCount: number;
   isAdmin: boolean;
   is_muted: boolean;
+  last_message_at: string;
 }
 
 interface Message {
@@ -100,7 +101,7 @@ const ChatPage = () => {
         .from("chat_conversations")
         .select("*")
         .in("id", convoIds)
-        .order("created_at", { ascending: false });
+        .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (!convos?.length) return [];
 
@@ -141,6 +142,7 @@ const ChatPage = () => {
           memberCount: members.length,
           isAdmin: myPart?.is_admin || false,
           is_muted: (c as any).is_muted || false,
+          last_message_at: (c as any).last_message_at || c.created_at || "",
         } as ConvoDisplay;
       });
     },
@@ -384,9 +386,14 @@ const ChatPage = () => {
   );
 
   const groups = filteredConvos?.filter((c) => c.type === "group") || [];
+  const dmConvos = filteredConvos?.filter((c) => c.type === "direct") || [];
   const selectedConvoData = conversations?.find((c) => c.id === selectedConvo);
 
-  // Filter users for DM tab
+  // Filter users for DM tab - exclude users who already have a DM conversation
+  const dmUserIds = new Set(dmConvos.map((c) => {
+    // Find the other user in this DM
+    return c.displayName; // We use displayName to match
+  }));
   const filteredUsers = allUsers?.filter((u) =>
     !searchTerm || u.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -470,6 +477,36 @@ const ChatPage = () => {
             </div>
           ) : (
             <div className="px-2 pt-2 pb-2">
+              {/* Existing DM conversations sorted by last activity */}
+              {dmConvos.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[10px] text-muted-foreground px-2 py-1 uppercase font-semibold">Recent</p>
+                  {dmConvos.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelectedConvo(c.id); setThreadParent(null); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
+                        selectedConvo === c.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-secondary"
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                        {getInitials(c.displayName)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">{c.displayName}</span>
+                        <span className="block truncate text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(c.last_message_at || c.created_at), { locale: bn, addSuffix: true })}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* All users for starting new DMs */}
+              <p className="text-[10px] text-muted-foreground px-2 py-1 uppercase font-semibold">All Users</p>
               {filteredUsers.length === 0 ? (
                 <p className="text-[10px] text-muted-foreground px-2 py-6 text-center">কোনো ব্যবহারকারী নেই</p>
               ) : (
