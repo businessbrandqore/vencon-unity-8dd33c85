@@ -256,10 +256,10 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={campaignFilter} onValueChange={setCampaignFilter}>
               <SelectTrigger className="h-8 w-[180px] text-xs">
-                <SelectValue placeholder="সব ক্যাম্পেইন" />
+                <SelectValue placeholder={t("all_campaigns")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+                <SelectItem value="all">{t("all_campaigns")}</SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
