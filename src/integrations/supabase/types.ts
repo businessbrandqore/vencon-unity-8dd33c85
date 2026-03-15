@@ -483,11 +483,57 @@ export type Database = {
           },
         ]
       }
+      chat_calls: {
+        Row: {
+          caller_id: string
+          conversation_id: string
+          created_at: string | null
+          ended_at: string | null
+          id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          caller_id: string
+          conversation_id: string
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          caller_id?: string
+          conversation_id?: string
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           created_at: string | null
           created_by: string | null
           id: string
+          is_muted: boolean | null
           name: string | null
           type: string | null
         }
@@ -495,6 +541,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          is_muted?: boolean | null
           name?: string | null
           type?: string | null
         }
@@ -502,6 +549,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          is_muted?: boolean | null
           name?: string | null
           type?: string | null
         }
@@ -1859,6 +1907,14 @@ export type Database = {
       }
       is_atl: { Args: { _auth_id: string }; Returns: boolean }
       is_bdo: { Args: { _auth_id: string }; Returns: boolean }
+      is_chat_admin_fn: {
+        Args: { _auth_id: string; _conversation_id: string }
+        Returns: boolean
+      }
+      is_chat_participant: {
+        Args: { _auth_id: string; _conversation_id: string }
+        Returns: boolean
+      }
       is_group_member_of_leader: {
         Args: { _agent_id: string; _leader_id: string }
         Returns: boolean
