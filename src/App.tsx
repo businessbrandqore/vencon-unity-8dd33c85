@@ -61,6 +61,7 @@ import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
+import SecretSiteLock from "./pages/SecretSiteLock";
 
 const queryClient = new QueryClient();
 
