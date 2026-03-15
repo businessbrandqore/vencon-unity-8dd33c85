@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,6 +40,17 @@ interface Message {
   reply_to_id: string | null;
   sender_name: string;
   reply_count: number;
+}
+
+interface CallLog {
+  id: string;
+  caller_id: string;
+  caller_name: string;
+  status: string;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number | null;
 }
 
 const ChatPage = () => {
@@ -202,6 +213,56 @@ const ChatPage = () => {
     enabled: !!selectedConvo,
   });
 
+  // Fetch call history for selected conversation
+  const { data: callLogs, refetch: refetchCalls } = useQuery({
+    queryKey: ["chat-calls", selectedConvo],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("chat_calls")
+        .select("id, caller_id, status, created_at, started_at, ended_at")
+        .eq("conversation_id", selectedConvo!)
+        .order("created_at", { ascending: true });
+
+      if (!data) return [];
+
+      const callerIds = [...new Set(data.map((c) => c.caller_id))];
+      let usersData: { id: string; name: string }[] = [];
+      if (callerIds.length > 0) {
+        const { data: callers } = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", callerIds);
+        usersData = callers || [];
+      }
+
+      const callerNameMap = new Map(usersData.map((u) => [u.id, u.name]));
+
+      return data.map((c) => {
+        const durationSeconds =
+          c.started_at && c.ended_at
+            ? Math.max(
+                0,
+                Math.round(
+                  (new Date(c.ended_at).getTime() - new Date(c.started_at).getTime()) / 1000
+                )
+              )
+            : null;
+
+        return {
+          id: c.id,
+          caller_id: c.caller_id,
+          caller_name: callerNameMap.get(c.caller_id) || "Unknown",
+          status: c.status,
+          created_at: c.created_at || "",
+          started_at: c.started_at,
+          ended_at: c.ended_at,
+          duration_seconds: durationSeconds,
+        } as CallLog;
+      });
+    },
+    enabled: !!selectedConvo,
+  });
+
   // All active users for DM list
   const { data: allUsers } = useQuery({
     queryKey: ["all-users-chat"],
@@ -229,6 +290,26 @@ const ChatPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [selectedConvo, refetchMessages]);
 
+  // Realtime for conversation call history
+  useEffect(() => {
+    if (!selectedConvo) return;
+    const channel = supabase
+      .channel(`chat-calls-${selectedConvo}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "chat_calls", filter: `conversation_id=eq.${selectedConvo}` },
+        () => {
+          refetchCalls();
+          refetchConvos();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConvo, refetchCalls, refetchConvos]);
+
   // Realtime for conversations (mute changes, etc)
   useEffect(() => {
     const channel = supabase
@@ -246,7 +327,7 @@ const ChatPage = () => {
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, callLogs]);
 
   // Mark as read
   useEffect(() => {
@@ -402,6 +483,47 @@ const ChatPage = () => {
     name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
   const emojis = allowedEmojis || ["👍", "❤️", "😂", "😮", "😢", "🎉"];
+
+  const formatCallDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${minutes}:${secs}`;
+  };
+
+  const callStatusText = (call: CallLog) => {
+    if (call.status === "missed") return "মিসড কল";
+    if (call.status === "rejected") return "কল রিজেক্টেড";
+    if (call.status === "ringing") return "কল হচ্ছে";
+    if (call.status === "active") return "কল চলছে";
+    if (call.duration_seconds !== null) {
+      return `কল শেষ (${formatCallDuration(call.duration_seconds)})`;
+    }
+    return "কল শেষ";
+  };
+
+  const timelineItems = useMemo(() => {
+    const messageItems = (messages || []).map((msg) => ({
+      id: `msg-${msg.id}`,
+      type: "message" as const,
+      sortAt: msg.created_at,
+      message: msg,
+    }));
+
+    const callItems = (callLogs || []).map((call) => ({
+      id: `call-${call.id}`,
+      type: "call" as const,
+      sortAt: call.started_at || call.created_at,
+      call,
+    }));
+
+    return [...messageItems, ...callItems].sort(
+      (a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime()
+    );
+  }, [messages, callLogs]);
 
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
@@ -567,10 +689,24 @@ const ChatPage = () => {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-1">
-                {messages?.map((msg) => {
+                {timelineItems.map((item) => {
+                  if (item.type === "call") {
+                    const callTime = item.call.started_at || item.call.created_at;
+                    return (
+                      <div key={item.id} className="flex justify-center py-1">
+                        <div className="px-3 py-1.5 rounded-full border border-border bg-muted/40 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                          <Phone className="h-3 w-3" />
+                          <span>{item.call.caller_name} • {callStatusText(item.call)}</span>
+                          <span>• {formatDistanceToNow(new Date(callTime), { locale: bn, addSuffix: true })}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const msg = item.message;
                   const isOwn = msg.sender_id === user?.id;
                   return (
-                    <div key={msg.id} className="group hover:bg-secondary/30 px-2 py-1.5 rounded-md transition-colors">
+                    <div key={item.id} className="group hover:bg-secondary/30 px-2 py-1.5 rounded-md transition-colors">
                       <div className="flex items-start gap-2.5">
                         {/* Avatar */}
                         <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">
