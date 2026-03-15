@@ -162,7 +162,8 @@ const AIChatWidget = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[560px] flex flex-col rounded-2xl shadow-2xl border border-border overflow-hidden bg-background animate-scale-in">
+        <div className="fixed z-50 flex flex-col shadow-2xl border border-border overflow-hidden bg-background animate-scale-in
+          bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[380px] sm:h-[560px] sm:rounded-2xl">
           {/* Header */}
           <div className="relative px-4 py-3 flex items-center gap-3 shrink-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(24 95% 53%))" }}>
             <div className="relative">
