@@ -914,11 +914,11 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Note */}
-            <div><Label>নোট</Label><Textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
+            <div><Label>{t("note")}</Label><Textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} className="mt-1" rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOrderModal(false)}>বাতিল</Button>
-            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">নিশ্চিত করুন</Button>
+            <Button variant="outline" onClick={() => setShowOrderModal(false)}>{t("cancel")}</Button>
+            <Button onClick={handleOrderConfirm} className="bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
