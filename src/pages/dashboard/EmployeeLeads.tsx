@@ -703,12 +703,12 @@ export default function EmployeeLeads() {
     <div className="space-y-4 pb-20">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl flex items-center gap-2">
-          <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> লিড শীট
+          <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> {t("lead_sheet_title")}
         </h1>
         <div className="flex gap-3 text-xs text-muted-foreground">
-          <span>সেলস রেশিও: <strong className="text-foreground">{salesRatio}%</strong></span>
-          <span>রিসিভ রেশিও: <strong className="text-foreground">{receiveRatio}%</strong></span>
-          <span>অর্ডার: <strong className="text-foreground">{metrics.orders}</strong></span>
+          <span>{t("sales_ratio")}: <strong className="text-foreground">{salesRatio}%</strong></span>
+          <span>{t("receive_ratio")}: <strong className="text-foreground">{receiveRatio}%</strong></span>
+          <span>{t("orders_count")}: <strong className="text-foreground">{metrics.orders}</strong></span>
         </div>
       </div>
 
