@@ -175,7 +175,7 @@ export default function WarehouseDispatch({ showStock = false }: Props) {
   /* ── Invoice generation with HR layout config ── */
   const generateInvoice = (orderList: OrderRow[]) => {
     const w = window.open("", "_blank");
-    if (!w) { toast.error("Pop-up blocked"); return; }
+    if (!w) { toast.error(t("popup_blocked")); return; }
 
     const perPage = invoicePerPage;
     const cols = perPage <= 4 ? 2 : 3;
