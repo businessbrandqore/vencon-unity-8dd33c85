@@ -263,14 +263,40 @@ const HRSettings = () => {
     if (settings.notification_sound && audioRef.current) { audioRef.current.src = settings.notification_sound; audioRef.current.play(); }
   };
 
+  const [testingService, setTestingService] = useState<string | null>(null);
+
   const testConnection = async (service: string) => {
+    // Basic field validation first
     let valid = false;
     switch (service) {
       case "whatsapp": valid = !!(settings.whatsapp_sender && settings.whatsapp_api_key); break;
       case "steadfast": valid = !!(settings.steadfast_api_key && settings.steadfast_secret_key); break;
       case "ai": valid = !!(settings.ai_provider && settings.ai_api_key); break;
     }
-    toast({ title: valid ? (isBn ? "কনফিগারেশন সংরক্ষিত ✓" : "Configuration saved ✓") : (isBn ? "সব ফিল্ড পূরণ করুন" : "Fill all fields"), variant: valid ? "default" : "destructive" });
+    if (!valid) {
+      toast({ title: isBn ? "সব ফিল্ড পূরণ করুন" : "Fill all fields", variant: "destructive" });
+      return;
+    }
+
+    setTestingService(service);
+
+    try {
+      if (service === "steadfast") {
+        const { data, error } = await supabase.functions.invoke("send-to-steadfast", {
+          body: { test_connection: true, api_key: settings.steadfast_api_key, secret_key: settings.steadfast_secret_key },
+        });
+        if (error || !data?.success) {
+          toast({ title: isBn ? "❌ SteadFast সংযোগ ব্যর্থ" : "❌ SteadFast connection failed", description: data?.error || error?.message || "Unknown error", variant: "destructive" });
+        } else {
+          toast({ title: isBn ? "✅ SteadFast সংযুক্ত!" : "✅ SteadFast connected!", description: isBn ? `ব্যালেন্স: ৳${data.balance || "N/A"}` : `Balance: ৳${data.balance || "N/A"}` });
+        }
+      } else {
+        toast({ title: isBn ? "কনফিগারেশন সংরক্ষিত ✓" : "Configuration saved ✓" });
+      }
+    } catch (e) {
+      toast({ title: isBn ? "পরীক্ষা ব্যর্থ" : "Test failed", variant: "destructive" });
+    }
+    setTestingService(null);
   };
 
   const set = (key: keyof Settings, value: string) => setSettings((prev) => ({ ...prev, [key]: value }));
