@@ -1,0 +1,1 @@
+UPDATE public.campaigns SET status = 'active' WHERE id = '0351289a-1d82-4a65-aafa-85d3a3392b45' AND status = 'pending_sa';
