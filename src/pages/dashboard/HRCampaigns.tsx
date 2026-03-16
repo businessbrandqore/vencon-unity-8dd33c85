@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X, Pencil, Save } from "lucide-react";
+import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X, Pencil, Save, Ban, AlertTriangle } from "lucide-react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface Campaign {
   id: string;
@@ -29,6 +30,7 @@ interface Website { id: string; site_name: string; site_url: string; webhook_sec
 const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   paused: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  inactive: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
   pending_sa: "bg-primary/10 text-primary",
   draft: "bg-muted text-muted-foreground",
 };
@@ -68,7 +70,8 @@ const HRCampaigns = () => {
   const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
   const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean; data_mode: string }[]>([]);
   const [saving, setSaving] = useState(false);
-
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
   useEffect(() => { fetchCampaigns(); fetchTLUsers(); }, []);
@@ -227,6 +230,27 @@ const HRCampaigns = () => {
     toast({ title: isBn ? "কপি হয়েছে!" : "Copied!" });
   };
 
+  const handleDeactivate = async () => {
+    if (!detailId) return;
+    await supabase.from("campaigns").update({ status: "inactive" }).eq("id", detailId);
+    toast({ title: isBn ? "ক্যাম্পেইন নিষ্ক্রিয় করা হয়েছে" : "Campaign deactivated" });
+    setConfirmDeactivate(false);
+    setDetailId(null);
+    fetchCampaigns();
+  };
+
+  const handleDelete = async () => {
+    if (!detailId) return;
+    // Delete related data first
+    await supabase.from("campaign_websites").delete().eq("campaign_id", detailId);
+    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
+    await supabase.from("campaign_agent_roles").delete().eq("campaign_id", detailId);
+    await supabase.from("campaigns").delete().eq("id", detailId);
+    toast({ title: isBn ? "ক্যাম্পেইন ডিলিট করা হয়েছে" : "Campaign deleted" });
+    setConfirmDelete(false);
+    setDetailId(null);
+    fetchCampaigns();
+  };
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -274,6 +298,7 @@ const HRCampaigns = () => {
                     {c.status === "active" ? (isBn ? "সক্রিয়" : "Active") :
                      c.status === "paused" ? (isBn ? "বিরতি" : "Paused") :
                      c.status === "pending_sa" ? (isBn ? "SA পেন্ডিং" : "Pending SA") :
+                     c.status === "inactive" ? (isBn ? "নিষ্ক্রিয়" : "Inactive") :
                      c.status}
                   </Badge>
                 </div>
@@ -488,9 +513,9 @@ const HRCampaigns = () => {
 
       {/* Detail Dialog */}
       <Dialog open={!!detailId} onOpenChange={(o) => { if (!o) { setDetailId(null); setEditing(false); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading flex items-center gap-3">
+            <DialogTitle className="font-heading flex items-center gap-3 pr-8">
               <Megaphone className="h-5 w-5 text-primary" />
               {editing ? (
                 <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="font-heading font-bold" />
@@ -536,10 +561,24 @@ const HRCampaigns = () => {
                       </Button>
                     </>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={startEditing}>
-                      <Pencil className="h-3.5 w-3.5 mr-1" />
-                      {isBn ? "এডিট" : "Edit"}
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" onClick={startEditing}>
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        {isBn ? "এডিট" : "Edit"}
+                      </Button>
+                      {detailCampaign.status === "active" && (
+                        <Button size="sm" variant="outline" className="text-yellow-600 border-yellow-600/30 hover:bg-yellow-600/10"
+                          onClick={() => setConfirmDeactivate(true)}>
+                          <Ban className="h-3.5 w-3.5 mr-1" />
+                          {isBn ? "নিষ্ক্রিয়" : "Deactivate"}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                        onClick={() => setConfirmDelete(true)}>
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        {isBn ? "ডিলিট" : "Delete"}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -783,6 +822,26 @@ const HRCampaigns = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Deactivate */}
+      <ConfirmDialog
+        open={confirmDeactivate}
+        onOpenChange={setConfirmDeactivate}
+        title={isBn ? "ক্যাম্পেইন নিষ্ক্রিয় করুন" : "Deactivate Campaign"}
+        description={isBn ? "এই ক্যাম্পেইনটি নিষ্ক্রিয় করলে নতুন ডাটা আসা বন্ধ হবে এবং এজেন্টরা আর এটি দেখতে পাবে না। আপনি কি নিশ্চিত?" : "Deactivating this campaign will stop new data and hide it from agents. Are you sure?"}
+        confirmLabel={isBn ? "নিষ্ক্রিয় করুন" : "Deactivate"}
+        onConfirm={handleDeactivate}
+      />
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={isBn ? "ক্যাম্পেইন ডিলিট করুন" : "Delete Campaign"}
+        description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ওয়েবসাইট, TL অ্যাসাইনমেন্ট স্থায়ীভাবে মুছে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না!" : "⚠️ This campaign and all connected websites, TL assignments will be permanently deleted. This cannot be undone!"}
+        confirmLabel={isBn ? "স্থায়ীভাবে ডিলিট" : "Delete Permanently"}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
