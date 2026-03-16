@@ -69,7 +69,8 @@ const HRCampaigns = () => {
   const [detailTLs, setDetailTLs] = useState<TLUser[]>([]);
   const [editWebsites, setEditWebsites] = useState<{ id?: string; site_name: string; site_url: string; is_active: boolean; data_mode: string }[]>([]);
   const [saving, setSaving] = useState(false);
-
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
   useEffect(() => { fetchCampaigns(); fetchTLUsers(); }, []);
