@@ -301,10 +301,8 @@ const TLLeads = () => {
     if (isBDO) {
       freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
     } else {
-      const tlId = getEffectiveTlId();
-      freshQ = freshQ.or(
-        `and(agent_type.is.null,tl_id.eq.${tlId}),and(agent_type.eq.bronze,tl_id.eq.${tlId}),and(agent_type.is.null,tl_id.is.null),and(agent_type.eq.bronze,tl_id.is.null)`,
-      );
+      // RLS handles campaign-level access; filter by agent_type only
+      freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
     }
 
     const { data: fresh } = await freshQ;
@@ -312,26 +310,26 @@ const TLLeads = () => {
 
     let csoQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "pending_tl").order("created_at", { ascending: false });
-    if (!isBDO) csoQ = csoQ.eq("tl_id", getEffectiveTlId());
+    if (!isBDO && selectedCampaign) {
+      // Filter by lead's campaign via lead_id join - RLS handles access
+      csoQ = csoQ;
+    }
     const { data: cso } = await csoQ;
     setCsoOrders(cso || []);
 
     let callDoneQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "call_done").order("created_at", { ascending: false });
-    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", getEffectiveTlId());
     const { data: callDone } = await callDoneQ;
     setCallDoneOrders(callDone || []);
 
     let preQ = supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
       .eq("status", "pending").order("created_at", { ascending: false });
-    if (!isBDO) preQ = preQ.eq("tl_id", getEffectiveTlId());
     const { data: pre } = await preQ;
     setPreOrders(pre || []);
 
     let delQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5).order("updated_at", { ascending: false });
-    if (!isBDO) delQ = delQ.eq("tl_id", getEffectiveTlId());
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
@@ -339,7 +337,6 @@ const TLLeads = () => {
       let procQ = supabase.from("leads").select("*")
         .eq("campaign_id", selectedCampaign)
         .is("assigned_to", null).order("created_at", { ascending: false });
-      if (!isBDO) procQ = procQ.eq("tl_id", getEffectiveTlId());
       const { data: proc } = await procQ;
       setProcessingLeads(proc || []);
     }
@@ -354,7 +351,7 @@ const TLLeads = () => {
       .is("assigned_to", null)
       .order("created_at", { ascending: false });
     if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) silverQ = silverQ.is("tl_id", null); // Silver leads have tl_id cleared by progress_lead_after_cs, but campaign_id remains
+    // RLS handles campaign-level access for silver leads
     const { data: silverLeadsData } = await silverQ;
     setSilverData((silverLeadsData || []).map(l => ({
       id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,

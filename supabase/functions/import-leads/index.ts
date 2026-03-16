@@ -365,16 +365,18 @@ Deno.serve(async (req) => {
       // Store ALL raw data as JSON in special_note — nothing is lost
       const specialNote = JSON.stringify(rawLead);
 
-      // Auto-assign TL from campaign_tls so lead goes to TL automatically
+      // Auto-assign TL from campaign_tls — prioritize team_leader role
       let autoTlId: string | null = null;
-      const { data: campaignTls } = await supabase
+      const { data: campaignTlRows } = await supabase
         .from("campaign_tls")
-        .select("tl_id")
-        .eq("campaign_id", campaignId)
-        .limit(1)
-        .single();
-      if (campaignTls) {
-        autoTlId = campaignTls.tl_id;
+        .select("tl_id, users!campaign_tls_tl_id_fkey(role)")
+        .eq("campaign_id", campaignId);
+      if (campaignTlRows && campaignTlRows.length > 0) {
+        // Pick team_leader role first, fallback to first entry
+        const primaryTl = campaignTlRows.find(
+          (r: any) => r.users?.role === "team_leader"
+        );
+        autoTlId = primaryTl ? primaryTl.tl_id : campaignTlRows[0].tl_id;
       }
 
       const { error: insertError } = await supabase.from("leads").insert({
