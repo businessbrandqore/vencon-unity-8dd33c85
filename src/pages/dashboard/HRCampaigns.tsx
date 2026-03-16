@@ -809,24 +809,6 @@ const HRCampaigns = () => {
                 </CardContent>
               </Card>
 
-              {/* Lead Stats */}
-              {!editing && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{isBn ? "ডাটা পরিসংখ্যান" : "Data Statistics"}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {Object.entries(detailLeadStats).map(([key, val]) => (
-                        <div key={key} className="bg-background rounded-lg p-3 text-center border border-border">
-                          <p className="text-[10px] text-muted-foreground capitalize">{key}</p>
-                          <p className="font-heading text-lg font-bold text-foreground">{val}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           )}
         </DialogContent>
