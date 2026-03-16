@@ -97,6 +97,17 @@ const SAApprovalsTable = () => {
       })
       .eq("id", approvalId);
 
+    // If approved new_campaign, activate the campaign
+    if (action === "approved" && approval?.type === "new_campaign" && approval.details) {
+      const campaignId = approval.details.campaign_id;
+      if (campaignId) {
+        await supabase
+          .from("campaigns")
+          .update({ status: "active", approved_by: user.id })
+          .eq("id", campaignId);
+      }
+    }
+
     // If approved non_agent_hire, create auth account
     if (action === "approved" && approval?.type === "non_agent_hire" && approval.details) {
       const d = approval.details;
