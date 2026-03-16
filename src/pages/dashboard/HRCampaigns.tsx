@@ -526,61 +526,64 @@ const HRCampaigns = () => {
           </DialogHeader>
           {detailCampaign && (
             <div className="space-y-5">
-              {/* Status + Mode + Edit Button */}
-              <div className="flex items-center gap-3 flex-wrap">
+              {/* Status + Mode Badges */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={statusColors[detailCampaign.status] || statusColors.draft}>
-                  {detailCampaign.status}
+                  {detailCampaign.status === "active" ? (isBn ? "সক্রিয়" : "Active") :
+                   detailCampaign.status === "paused" ? (isBn ? "বিরতি" : "Paused") :
+                   detailCampaign.status === "pending_sa" ? (isBn ? "SA পেন্ডিং" : "Pending SA") :
+                   detailCampaign.status === "inactive" ? (isBn ? "নিষ্ক্রিয়" : "Inactive") :
+                   detailCampaign.status}
                 </Badge>
                 {!editing && (
-                  <div className="flex gap-1.5">
+                  <>
                     {detailWebsites.some(w => w.data_mode === "lead" || !w.data_mode) && (
                       <Badge variant="outline" className="border-primary/30 text-primary">🎯 {isBn ? "লিড" : "Lead"}</Badge>
                     )}
                     {detailWebsites.some(w => w.data_mode === "processing") && (
                       <Badge variant="outline" className="border-primary/30 text-primary">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</Badge>
                     )}
-                    {detailWebsites.length === 0 && (
-                      <Badge variant="outline" className="text-muted-foreground">{isBn ? "ওয়েবসাইট নেই" : "No websites"}</Badge>
+                  </>
+                )}
+              </div>
+
+              {/* Action Buttons - separate row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {editing ? (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                      {isBn ? "বাতিল" : "Cancel"}
+                    </Button>
+                    <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="bg-primary text-primary-foreground">
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      {saving ? (isBn ? "সেভ হচ্ছে..." : "Saving...") : (isBn ? "সেভ করুন" : "Save")}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={startEditing}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      {isBn ? "এডিট" : "Edit"}
+                    </Button>
+                    {(detailCampaign.status === "active" || detailCampaign.status === "paused") && (
+                      <Button size="sm" variant="outline" onClick={() => { togglePause(detailCampaign); setDetailId(null); }}>
+                        {detailCampaign.status === "active" ? (isBn ? "⏸ বিরতি" : "⏸ Pause") : (isBn ? "▶ চালু" : "▶ Resume")}
+                      </Button>
                     )}
-                  </div>
+                    {detailCampaign.status === "active" && (
+                      <Button size="sm" variant="outline" className="text-amber-600 border-amber-600/30 hover:bg-amber-600/10"
+                        onClick={() => setConfirmDeactivate(true)}>
+                        <Ban className="h-3.5 w-3.5 mr-1" />
+                        {isBn ? "নিষ্ক্রিয়" : "Deactivate"}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => setConfirmDelete(true)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      {isBn ? "ডিলিট" : "Delete"}
+                    </Button>
+                  </>
                 )}
-                {(detailCampaign.status === "active" || detailCampaign.status === "paused") && !editing && (
-                  <Button size="sm" variant="outline" onClick={() => { togglePause(detailCampaign); setDetailId(null); }}>
-                    {detailCampaign.status === "active" ? (isBn ? "বিরতি" : "Pause") : (isBn ? "চালু" : "Resume")}
-                  </Button>
-                )}
-                <div className="ml-auto flex gap-2">
-                  {editing ? (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
-                        {isBn ? "বাতিল" : "Cancel"}
-                      </Button>
-                      <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="bg-primary text-primary-foreground">
-                        <Save className="h-3.5 w-3.5 mr-1" />
-                        {saving ? (isBn ? "সেভ হচ্ছে..." : "Saving...") : (isBn ? "সেভ করুন" : "Save")}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button size="sm" variant="outline" onClick={startEditing}>
-                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                        {isBn ? "এডিট" : "Edit"}
-                      </Button>
-                      {detailCampaign.status === "active" && (
-                        <Button size="sm" variant="outline" className="text-yellow-600 border-yellow-600/30 hover:bg-yellow-600/10"
-                          onClick={() => setConfirmDeactivate(true)}>
-                          <Ban className="h-3.5 w-3.5 mr-1" />
-                          {isBn ? "নিষ্ক্রিয়" : "Deactivate"}
-                        </Button>
-                      )}
-                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                        onClick={() => setConfirmDelete(true)}>
-                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                        {isBn ? "ডিলিট" : "Delete"}
-                      </Button>
-                    </>
-                  )}
-                </div>
               </div>
 
               {/* Assigned TLs */}
