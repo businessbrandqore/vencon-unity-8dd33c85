@@ -519,7 +519,7 @@ const HRCampaigns = () => {
 
       {/* Detail Dialog */}
       <Dialog open={!!detailId} onOpenChange={(o) => { if (!o) { setDetailId(null); setEditing(false); } }}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="font-heading flex items-center gap-3 pr-8">
               <Megaphone className="h-5 w-5 text-primary" />
