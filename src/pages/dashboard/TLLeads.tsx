@@ -310,26 +310,26 @@ const TLLeads = () => {
 
     let csoQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "pending_tl").order("created_at", { ascending: false });
-    if (!isBDO) csoQ = csoQ.eq("tl_id", getEffectiveTlId());
+    if (!isBDO && selectedCampaign) {
+      // Filter by lead's campaign via lead_id join - RLS handles access
+      csoQ = csoQ;
+    }
     const { data: cso } = await csoQ;
     setCsoOrders(cso || []);
 
     let callDoneQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
       .eq("status", "call_done").order("created_at", { ascending: false });
-    if (!isBDO) callDoneQ = callDoneQ.eq("tl_id", getEffectiveTlId());
     const { data: callDone } = await callDoneQ;
     setCallDoneOrders(callDone || []);
 
     let preQ = supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
       .eq("status", "pending").order("created_at", { ascending: false });
-    if (!isBDO) preQ = preQ.eq("tl_id", getEffectiveTlId());
     const { data: pre } = await preQ;
     setPreOrders(pre || []);
 
     let delQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5).order("updated_at", { ascending: false });
-    if (!isBDO) delQ = delQ.eq("tl_id", getEffectiveTlId());
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
@@ -337,7 +337,6 @@ const TLLeads = () => {
       let procQ = supabase.from("leads").select("*")
         .eq("campaign_id", selectedCampaign)
         .is("assigned_to", null).order("created_at", { ascending: false });
-      if (!isBDO) procQ = procQ.eq("tl_id", getEffectiveTlId());
       const { data: proc } = await procQ;
       setProcessingLeads(proc || []);
     }
