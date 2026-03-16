@@ -137,6 +137,11 @@ const HRCampaigns = () => {
     }));
     await supabase.from("campaign_websites").insert(siteInserts);
 
+    // Insert TL assignments immediately
+    if (selectedTLs.length > 0) {
+      await supabase.from("campaign_tls").insert(selectedTLs.map((tlId) => ({ campaign_id: camp.id, tl_id: tlId })));
+    }
+
     // SA approval
     const tlNames = tlUsers.filter((u) => selectedTLs.includes(u.id)).map((u) => u.name);
     await supabase.from("sa_approvals").insert({
@@ -145,6 +150,7 @@ const HRCampaigns = () => {
         campaign_id: camp.id, campaign_name: newName.trim(),
         websites: validSites.map((s) => ({ name: s.name, mode: s.dataMode })),
         assigned_tls: tlNames,
+        tl_ids: selectedTLs,
       },
     });
 
