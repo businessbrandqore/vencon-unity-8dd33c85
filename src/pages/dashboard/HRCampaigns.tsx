@@ -839,7 +839,6 @@ const HRCampaigns = () => {
         description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ওয়েবসাইট, TL অ্যাসাইনমেন্ট স্থায়ীভাবে মুছে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না!" : "⚠️ This campaign and all connected websites, TL assignments will be permanently deleted. This cannot be undone!"}
         confirmLabel={isBn ? "স্থায়ীভাবে ডিলিট" : "Delete Permanently"}
         onConfirm={handleDelete}
-        variant="destructive"
       />
     </div>
   );
