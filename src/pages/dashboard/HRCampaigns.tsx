@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X, Pencil, Save, Ban, AlertTriangle } from "lucide-react";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface Campaign {
   id: string;
