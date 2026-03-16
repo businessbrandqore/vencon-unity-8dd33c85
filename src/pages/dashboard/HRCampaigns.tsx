@@ -559,10 +559,24 @@ const HRCampaigns = () => {
                       </Button>
                     </>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={startEditing}>
-                      <Pencil className="h-3.5 w-3.5 mr-1" />
-                      {isBn ? "এডিট" : "Edit"}
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" onClick={startEditing}>
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        {isBn ? "এডিট" : "Edit"}
+                      </Button>
+                      {detailCampaign.status === "active" && (
+                        <Button size="sm" variant="outline" className="text-yellow-600 border-yellow-600/30 hover:bg-yellow-600/10"
+                          onClick={() => setConfirmDeactivate(true)}>
+                          <Ban className="h-3.5 w-3.5 mr-1" />
+                          {isBn ? "নিষ্ক্রিয়" : "Deactivate"}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                        onClick={() => setConfirmDelete(true)}>
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        {isBn ? "ডিলিট" : "Delete"}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
