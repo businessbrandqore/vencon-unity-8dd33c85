@@ -820,6 +820,28 @@ const HRCampaigns = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Deactivate */}
+      <ConfirmDialog
+        open={confirmDeactivate}
+        onOpenChange={setConfirmDeactivate}
+        title={isBn ? "ক্যাম্পেইন নিষ্ক্রিয় করুন" : "Deactivate Campaign"}
+        description={isBn ? "এই ক্যাম্পেইনটি নিষ্ক্রিয় করলে নতুন ডাটা আসা বন্ধ হবে এবং এজেন্টরা আর এটি দেখতে পাবে না। আপনি কি নিশ্চিত?" : "Deactivating this campaign will stop new data and hide it from agents. Are you sure?"}
+        confirmLabel={isBn ? "নিষ্ক্রিয় করুন" : "Deactivate"}
+        onConfirm={handleDeactivate}
+        variant="destructive"
+      />
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={isBn ? "ক্যাম্পেইন ডিলিট করুন" : "Delete Campaign"}
+        description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ওয়েবসাইট, TL অ্যাসাইনমেন্ট স্থায়ীভাবে মুছে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না!" : "⚠️ This campaign and all connected websites, TL assignments will be permanently deleted. This cannot be undone!"}
+        confirmLabel={isBn ? "স্থায়ীভাবে ডিলিট" : "Delete Permanently"}
+        onConfirm={handleDelete}
+        variant="destructive"
+      />
     </div>
   );
 };
