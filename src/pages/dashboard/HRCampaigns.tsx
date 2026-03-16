@@ -298,6 +298,7 @@ const HRCampaigns = () => {
                     {c.status === "active" ? (isBn ? "সক্রিয়" : "Active") :
                      c.status === "paused" ? (isBn ? "বিরতি" : "Paused") :
                      c.status === "pending_sa" ? (isBn ? "SA পেন্ডিং" : "Pending SA") :
+                     c.status === "inactive" ? (isBn ? "নিষ্ক্রিয়" : "Inactive") :
                      c.status}
                   </Badge>
                 </div>
