@@ -351,7 +351,7 @@ const TLLeads = () => {
       .is("assigned_to", null)
       .order("created_at", { ascending: false });
     if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
-    if (!isBDO) silverQ = silverQ.is("tl_id", null); // Silver leads have tl_id cleared by progress_lead_after_cs, but campaign_id remains
+    // RLS handles campaign-level access for silver leads
     const { data: silverLeadsData } = await silverQ;
     setSilverData((silverLeadsData || []).map(l => ({
       id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
