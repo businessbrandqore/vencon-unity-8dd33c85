@@ -829,7 +829,6 @@ const HRCampaigns = () => {
         description={isBn ? "এই ক্যাম্পেইনটি নিষ্ক্রিয় করলে নতুন ডাটা আসা বন্ধ হবে এবং এজেন্টরা আর এটি দেখতে পাবে না। আপনি কি নিশ্চিত?" : "Deactivating this campaign will stop new data and hide it from agents. Are you sure?"}
         confirmLabel={isBn ? "নিষ্ক্রিয় করুন" : "Deactivate"}
         onConfirm={handleDeactivate}
-        variant="destructive"
       />
 
       {/* Confirm Delete */}
