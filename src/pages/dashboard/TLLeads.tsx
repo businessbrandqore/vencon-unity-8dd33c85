@@ -301,10 +301,8 @@ const TLLeads = () => {
     if (isBDO) {
       freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
     } else {
-      const tlId = getEffectiveTlId();
-      freshQ = freshQ.or(
-        `and(agent_type.is.null,tl_id.eq.${tlId}),and(agent_type.eq.bronze,tl_id.eq.${tlId}),and(agent_type.is.null,tl_id.is.null),and(agent_type.eq.bronze,tl_id.is.null)`,
-      );
+      // RLS handles campaign-level access; filter by agent_type only
+      freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
     }
 
     const { data: fresh } = await freshQ;
