@@ -229,6 +229,27 @@ const HRCampaigns = () => {
     toast({ title: isBn ? "কপি হয়েছে!" : "Copied!" });
   };
 
+  const handleDeactivate = async () => {
+    if (!detailId) return;
+    await supabase.from("campaigns").update({ status: "inactive" }).eq("id", detailId);
+    toast({ title: isBn ? "ক্যাম্পেইন নিষ্ক্রিয় করা হয়েছে" : "Campaign deactivated" });
+    setConfirmDeactivate(false);
+    setDetailId(null);
+    fetchCampaigns();
+  };
+
+  const handleDelete = async () => {
+    if (!detailId) return;
+    // Delete related data first
+    await supabase.from("campaign_websites").delete().eq("campaign_id", detailId);
+    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
+    await supabase.from("campaign_agent_roles").delete().eq("campaign_id", detailId);
+    await supabase.from("campaigns").delete().eq("id", detailId);
+    toast({ title: isBn ? "ক্যাম্পেইন ডিলিট করা হয়েছে" : "Campaign deleted" });
+    setConfirmDelete(false);
+    setDetailId(null);
+    fetchCampaigns();
+  };
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
