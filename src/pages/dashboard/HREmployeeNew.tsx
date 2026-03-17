@@ -60,6 +60,7 @@ const HREmployeeNew = () => {
     motherName: "",
     motherPhone: "",
     guardianType: "",
+    dateOfBirth: "",
     email: "",
     password: "",
     role: "",
@@ -125,6 +126,7 @@ const HREmployeeNew = () => {
         mother_name: form.motherName.trim(),
         mother_phone: form.motherPhone.trim(),
         guardian_type: form.guardianType,
+        date_of_birth: form.dateOfBirth || null,
         off_days: [],
         gps_location: (form.gpsLatitude.trim() && form.gpsLongitude.trim()) ? `${form.gpsLatitude.trim()},${form.gpsLongitude.trim()}` : null,
         must_change_password: true,
@@ -304,6 +306,12 @@ const HREmployeeNew = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "জন্ম তারিখ" : "Date of Birth"}
+            </label>
+            <Input type="date" value={form.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className={fieldClass} />
           </div>
         </div>
 

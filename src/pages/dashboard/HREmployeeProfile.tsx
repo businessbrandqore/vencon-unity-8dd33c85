@@ -35,6 +35,7 @@ interface EmployeeData {
   guardian_type?: string;
   off_days?: string[];
   gps_location?: string;
+  date_of_birth?: string | null;
 }
 
 interface AttendanceDay {
@@ -68,6 +69,7 @@ const HREmployeeProfile = () => {
   const [editSalary, setEditSalary] = useState("");
   const [editShiftStart, setEditShiftStart] = useState("");
   const [editShiftEnd, setEditShiftEnd] = useState("");
+  const [editDob, setEditDob] = useState("");
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [currentCampaignId, setCurrentCampaignId] = useState("");
   const [editCampaignId, setEditCampaignId] = useState("");
@@ -98,6 +100,7 @@ const HREmployeeProfile = () => {
         setEditSalary(String(empData.basic_salary || ""));
         setEditShiftStart(empData.shift_start || "");
         setEditShiftEnd(empData.shift_end || "");
+        setEditDob(empData.date_of_birth || "");
       }
       setAttendance(attRes.data || []);
       setLeaves((leaveRes.data || []) as LeaveReq[]);
@@ -140,6 +143,10 @@ const HREmployeeProfile = () => {
     if (editShiftEnd && editShiftEnd !== emp.shift_end) {
       updates.shift_end = editShiftEnd;
       changes.push(`shift_end: ${emp.shift_end} → ${editShiftEnd}`);
+    }
+    if (editDob !== (emp.date_of_birth || "")) {
+      updates.date_of_birth = editDob || null;
+      changes.push(`dob: ${emp.date_of_birth || 'none'} → ${editDob || 'none'}`);
     }
 
     // Handle campaign change
@@ -291,6 +298,7 @@ const HREmployeeProfile = () => {
           { label: isBn ? "পিতার ফোন" : "Father Phone", value: emp.father_phone || "—" },
           { label: isBn ? "মাতার নাম" : "Mother", value: emp.mother_name || "—" },
           { label: isBn ? "অভিভাবক" : "Guardian", value: emp.guardian_type || "—" },
+          { label: isBn ? "জন্ম তারিখ" : "DOB", value: emp.date_of_birth ? new Date(emp.date_of_birth).toLocaleDateString() : "—" },
         ].map((item) => (
           <div key={item.label} className="bg-background p-3">
             <p className="text-[10px] text-muted-foreground">{item.label}</p>
@@ -322,6 +330,14 @@ const HREmployeeProfile = () => {
               {isBn ? "শিফট শেষ" : "Shift End"}
             </label>
             <Input type="time" value={editShiftEnd} onChange={(e) => setEditShiftEnd(e.target.value)} className="bg-background border-border text-foreground" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "জন্ম তারিখ" : "Date of Birth"}
+            </label>
+            <Input type="date" value={editDob} onChange={(e) => setEditDob(e.target.value)} className="bg-background border-border text-foreground" />
           </div>
         </div>
         <div>

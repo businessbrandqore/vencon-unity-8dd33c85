@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2 } from "lucide-react";
+import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2, Cake } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -89,6 +89,8 @@ const HRSettings = () => {
   const [newCardName, setNewCardName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [birthdayMessage, setBirthdayMessage] = useState("");
+  const [birthdayMessageBn, setBirthdayMessageBn] = useState("");
 
   // Appeal reason options
   const [attendanceReasons, setAttendanceReasons] = useState<string[]>([]);
@@ -119,7 +121,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config", "appeal_reason_options"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config", "appeal_reason_options", "birthday_config"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
@@ -133,6 +135,10 @@ const HRSettings = () => {
         const val = row.value as any;
         if (val?.attendance_reasons) setAttendanceReasons(val.attendance_reasons);
         if (val?.leave_reasons) setLeaveReasons(val.leave_reasons);
+      } else if (row.key === "birthday_config") {
+        const val = row.value as any;
+        if (val?.message) setBirthdayMessage(val.message);
+        if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
@@ -396,7 +402,7 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-7 bg-secondary">
+        <TabsList className="w-full grid grid-cols-8 bg-secondary">
           <TabsTrigger value="general" className="text-xs gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
@@ -416,6 +422,10 @@ const HRSettings = () => {
           <TabsTrigger value="attendance" className="text-xs gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "কর্তন" : "Deduction"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="birthday" className="text-xs gap-1.5">
+            <Cake className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{isBn ? "জন্মদিন" : "Birthday"}</span>
           </TabsTrigger>
           <TabsTrigger value="api" className="text-xs gap-1.5">
             <Plug className="h-3.5 w-3.5" />
@@ -1060,6 +1070,50 @@ const HRSettings = () => {
               >
                 {isBn ? "সংরক্ষণ" : "Save"}
               </button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Birthday Tab */}
+        <TabsContent value="birthday" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+              <Cake className="h-4 w-4 text-primary" />
+              {isBn ? "জন্মদিনের শুভেচ্ছা কার্ড কনফিগারেশন" : "Birthday Wish Card Configuration"}
+            </h3>
+            <p className="text-xs text-muted-foreground font-body">
+              {isBn ? "এখানে যা লিখবেন তা জন্মদিনের কার্ডে প্রদর্শিত হবে। {name} লিখলে জন্মদিনের ব্যক্তির নাম স্বয়ংক্রিয়ভাবে বসবে।" : "Write the birthday message here. Use {name} as a placeholder for the birthday person's name."}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "ইংরেজি মেসেজ" : "English Message"}
+                </label>
+                <Textarea
+                  value={birthdayMessage}
+                  onChange={(e) => setBirthdayMessage(e.target.value)}
+                  placeholder="🎂 Happy Birthday {name}! Wishing you a wonderful day filled with joy and success!"
+                  className="bg-background border-border text-foreground min-h-[80px]"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "বাংলা মেসেজ" : "Bengali Message"}
+                </label>
+                <Textarea
+                  value={birthdayMessageBn}
+                  onChange={(e) => setBirthdayMessageBn(e.target.value)}
+                  placeholder="🎂 শুভ জন্মদিন {name}! আপনার জন্মদিন আনন্দ ও সাফল্যে ভরে উঠুক!"
+                  className="bg-background border-border text-foreground min-h-[80px]"
+                />
+              </div>
+              <Button
+                onClick={() => saveGroup("birthday_config", { message: birthdayMessage, message_bn: birthdayMessageBn })}
+                disabled={saving}
+                className="text-xs"
+              >
+                {isBn ? "সংরক্ষণ করুন" : "Save Birthday Config"}
+              </Button>
             </div>
           </div>
         </TabsContent>
