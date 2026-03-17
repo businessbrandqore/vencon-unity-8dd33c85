@@ -144,6 +144,10 @@ const HREmployeeProfile = () => {
       updates.shift_end = editShiftEnd;
       changes.push(`shift_end: ${emp.shift_end} → ${editShiftEnd}`);
     }
+    if (editDob !== (emp.date_of_birth || "")) {
+      updates.date_of_birth = editDob || null;
+      changes.push(`dob: ${emp.date_of_birth || 'none'} → ${editDob || 'none'}`);
+    }
 
     // Handle campaign change
     const effectiveCampaignId = editCampaignId === "none" ? "" : editCampaignId;
