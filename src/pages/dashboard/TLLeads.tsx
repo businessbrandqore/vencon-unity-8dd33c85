@@ -407,7 +407,7 @@ const TLLeads = () => {
       ...l,
       agent_name: l.users?.name || "—",
     })));
-  }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
+  }, [user, selectedCampaign, campaignMode, getEffectiveTlId, selectedWebsite, campaignWebsites]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
