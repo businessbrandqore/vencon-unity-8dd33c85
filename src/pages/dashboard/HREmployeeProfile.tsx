@@ -35,6 +35,7 @@ interface EmployeeData {
   guardian_type?: string;
   off_days?: string[];
   gps_location?: string;
+  date_of_birth?: string | null;
 }
 
 interface AttendanceDay {
