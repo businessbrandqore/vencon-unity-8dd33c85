@@ -198,8 +198,8 @@ const SAAllData = () => {
                   <option key={w.id} value={w.id}>{w.site_name}</option>
                 ))}
               </select>
-            )
-              value={dataModeFilter}
+            )}
+            <select
               onChange={(e) => setDataModeFilter(e.target.value)}
               className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
             >
