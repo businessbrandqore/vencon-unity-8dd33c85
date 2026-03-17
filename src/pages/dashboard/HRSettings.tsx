@@ -402,7 +402,7 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-7 bg-secondary">
+        <TabsList className="w-full grid grid-cols-8 bg-secondary">
           <TabsTrigger value="general" className="text-xs gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
@@ -422,6 +422,10 @@ const HRSettings = () => {
           <TabsTrigger value="attendance" className="text-xs gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "কর্তন" : "Deduction"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="birthday" className="text-xs gap-1.5">
+            <Cake className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{isBn ? "জন্মদিন" : "Birthday"}</span>
           </TabsTrigger>
           <TabsTrigger value="api" className="text-xs gap-1.5">
             <Plug className="h-3.5 w-3.5" />
