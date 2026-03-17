@@ -30,6 +30,8 @@ const ROLES = [
   "Group Leader",
   "Assistant Team Leader",
   "Maintenance Officer",
+  "Cancellation Executive",
+  "Editor",
 ];
 
 

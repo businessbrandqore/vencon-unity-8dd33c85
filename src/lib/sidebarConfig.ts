@@ -32,6 +32,7 @@ import {
   Trash2,
   Award,
   ShieldBan,
+  RotateCcw,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
@@ -107,6 +108,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "dashboard", icon: LayoutDashboard, path: "/employee/dashboard" },
     { titleKey: "leads", icon: Target, path: "/employee/leads", roles: ["telesales_executive", "silver_agent", "golden_agent", "cso"] },
     { titleKey: "leads", icon: Target, path: "/employee/cs-leads", roles: ["cs_executive"] },
+    { titleKey: "cancellation_orders", icon: RotateCcw, path: "/employee/cancellation", roles: ["cancellation_executive", "Cancellation Executive"] },
     { titleKey: "my_orders", icon: Package, path: "/employee/my-orders", roles: ["telesales_executive", "silver_agent", "golden_agent"] },
     { titleKey: "spam", icon: ShieldBan, path: "/employee/spam", roles: ["telesales_executive", "silver_agent", "golden_agent", "cso"] },
     { titleKey: "steadfast_monitoring", icon: Truck, path: "/employee/steadfast", roles: ["delivery_coordinator"] },
