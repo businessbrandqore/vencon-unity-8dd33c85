@@ -60,6 +60,7 @@ const HREmployeeNew = () => {
     motherName: "",
     motherPhone: "",
     guardianType: "",
+    dateOfBirth: "",
     email: "",
     password: "",
     role: "",
