@@ -57,6 +57,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
   const [showClockOutModal, setShowClockOutModal] = useState(false);
   const [clockOutMood, setClockOutMood] = useState("");
   const [clockOutNote, setClockOutNote] = useState("");
+  const [gpsChecking, setGpsChecking] = useState(false);
 
   useEffect(() => {
     if (!user) return;
