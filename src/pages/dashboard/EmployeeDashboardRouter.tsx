@@ -48,8 +48,10 @@ export default function EmployeeDashboardRouter() {
       case "cso": return <CSODashboard />;
       case "delivery_coordinator": return <DeliveryCoordinatorDashboard />;
       case "group_leader": return <GroupLeaderDashboard />;
-      case "cancellation_executive": return <CancellationExecutiveDashboard />;
-      case "editor": return <EditorDashboard />;
+      case "cancellation_executive":
+      case "Cancellation Executive": return <CancellationExecutiveDashboard />;
+      case "editor":
+      case "Editor": return <EditorDashboard />;
       default: return <EmployeeTSDashboard />;
     }
   };
