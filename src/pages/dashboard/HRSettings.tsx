@@ -145,6 +145,12 @@ const HRSettings = () => {
         const val = row.value as any;
         if (val?.message) setBirthdayMessage(val.message);
         if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
+      } else if (row.key === "gps_config") {
+        const val = row.value as any;
+        if (val?.latitude) setGpsLat(String(val.latitude));
+        if (val?.longitude) setGpsLng(String(val.longitude));
+        if (val?.radius_meters) setGpsRadius(String(val.radius_meters));
+        if (val?.enabled !== undefined) setGpsEnabled(val.enabled);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
