@@ -23,12 +23,20 @@ const BirthdayPopup = () => {
   useEffect(() => {
     const checkBirthdays = async () => {
       // Check if already dismissed today
-      const dismissedKey = `birthday_dismissed_${new Date().toISOString().split("T")[0]}`;
-      if (sessionStorage.getItem(dismissedKey)) return;
+      const todayStr = new Date().toISOString().split("T")[0];
+      const dismissedKey = `birthday_dismissed_${todayStr}`;
+      if (localStorage.getItem(dismissedKey)) return;
 
-      const today = new Date();
-      const month = today.getMonth() + 1;
-      const day = today.getDate();
+      // Clean up old keys
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith("birthday_dismissed_") && k !== dismissedKey) {
+          localStorage.removeItem(k);
+        }
+      });
+
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const day = now.getDate();
 
       // Fetch birthday config
       const { data: configData } = await supabase
@@ -81,7 +89,7 @@ const BirthdayPopup = () => {
     } else {
       setOpen(false);
       const dismissedKey = `birthday_dismissed_${new Date().toISOString().split("T")[0]}`;
-      sessionStorage.setItem(dismissedKey, "true");
+      localStorage.setItem(dismissedKey, "true");
     }
   };
 
