@@ -938,6 +938,61 @@ const HRSettings = () => {
           </div>
         </TabsContent>
 
+        {/* GPS Tab */}
+        <TabsContent value="gps" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {isBn ? "GPS লোকেশন কনফিগারেশন" : "GPS Location Configuration"}
+            </h3>
+            <p className="text-xs text-muted-foreground font-body">
+              {isBn ? "অফিসের অক্ষাংশ (Latitude), দ্রাঘিমাংশ (Longitude) এবং সর্বোচ্চ দূরত্ব (মিটার) সেট করুন। কর্মীরা এই রেডিয়াসের বাইরে চেক ইন/আউট করতে পারবে না।" : "Set office Latitude, Longitude, and maximum allowed radius (meters). Employees cannot check in/out outside this radius."}
+            </p>
+            <div className="flex items-center gap-3 mb-2">
+              <label className="font-body text-xs font-bold">{isBn ? "GPS সক্রিয়" : "GPS Enabled"}</label>
+              <input type="checkbox" checked={gpsEnabled} onChange={e => setGpsEnabled(e.target.checked)} className="h-4 w-4" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs">{isBn ? "অক্ষাংশ (Latitude)" : "Latitude"}</Label>
+                <Input value={gpsLat} onChange={e => setGpsLat(e.target.value)} placeholder="23.8103" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">{isBn ? "দ্রাঘিমাংশ (Longitude)" : "Longitude"}</Label>
+                <Input value={gpsLng} onChange={e => setGpsLng(e.target.value)} placeholder="90.4125" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">{isBn ? "রেডিয়াস (মিটার)" : "Radius (meters)"}</Label>
+                <Input type="number" value={gpsRadius} onChange={e => setGpsRadius(e.target.value)} placeholder="500" className="mt-1" />
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(pos => {
+                    setGpsLat(String(pos.coords.latitude));
+                    setGpsLng(String(pos.coords.longitude));
+                    toast({ title: isBn ? "বর্তমান লোকেশন সেট হয়েছে ✓" : "Current location set ✓" });
+                  }, () => {
+                    toast({ title: isBn ? "লোকেশন অ্যাক্সেস ব্যর্থ" : "Location access failed", variant: "destructive" });
+                  });
+                }
+              }}
+              className="px-3 py-1.5 text-xs border border-border text-foreground hover:bg-secondary flex items-center gap-1"
+            >
+              <MapPin className="h-3 w-3" /> {isBn ? "বর্তমান লোকেশন ব্যবহার করুন" : "Use Current Location"}
+            </button>
+            <button
+              onClick={() => saveGroup("gps_config", { latitude: parseFloat(gpsLat) || 0, longitude: parseFloat(gpsLng) || 0, radius_meters: parseInt(gpsRadius) || 500, enabled: gpsEnabled })}
+              disabled={saving}
+              className="px-4 py-1.5 text-xs font-bold text-white"
+              style={{ backgroundColor: BLUE }}
+            >
+              {isBn ? "GPS কনফিগ সংরক্ষণ" : "Save GPS Config"}
+            </button>
+          </div>
+        </TabsContent>
+
         {/* API Tab */}
         <TabsContent value="api" className="mt-4">
           <div className="border border-border p-4 space-y-4">
