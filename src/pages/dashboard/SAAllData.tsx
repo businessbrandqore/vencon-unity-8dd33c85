@@ -12,10 +12,12 @@ const SAAllData = () => {
   const [tab, setTab] = useState<TabKey>("leads");
   const [search, setSearch] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("all");
+  const [websiteFilter, setWebsiteFilter] = useState("all");
   const [dataModeFilter, setDataModeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -32,6 +34,18 @@ const SAAllData = () => {
     };
     loadCampaigns();
   }, []);
+
+  // Load websites when campaign changes
+  useEffect(() => {
+    const loadWebsites = async () => {
+      let q = supabase.from("campaign_websites").select("id, site_name, campaign_id").eq("is_active", true).order("site_name");
+      if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
+      const { data } = await q;
+      setWebsites(data || []);
+      setWebsiteFilter("all");
+    };
+    loadWebsites();
+  }, [campaignFilter]);
 
   useEffect(() => {
     loadData();
