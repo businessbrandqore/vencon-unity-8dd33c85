@@ -254,6 +254,16 @@ export default function EmployeeTSDashboard() {
 
   const handleClockIn = async () => {
     if (!user || !selectedMood) { toast.error("মুড নির্বাচন করুন"); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(gpsResult.errorBn || gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     const nowISO = now.toISOString();
     let isLate = false;
