@@ -23,8 +23,16 @@ const BirthdayPopup = () => {
   useEffect(() => {
     const checkBirthdays = async () => {
       // Check if already dismissed today
-      const dismissedKey = `birthday_dismissed_${new Date().toISOString().split("T")[0]}`;
-      if (sessionStorage.getItem(dismissedKey)) return;
+      const today = new Date().toISOString().split("T")[0];
+      const dismissedKey = `birthday_dismissed_${today}`;
+      if (localStorage.getItem(dismissedKey)) return;
+
+      // Clean up old keys
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith("birthday_dismissed_") && k !== dismissedKey) {
+          localStorage.removeItem(k);
+        }
+      });
 
       const today = new Date();
       const month = today.getMonth() + 1;
