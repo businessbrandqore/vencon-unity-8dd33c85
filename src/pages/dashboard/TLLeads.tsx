@@ -315,6 +315,12 @@ const TLLeads = () => {
       .order("created_at", { ascending: false })
       .limit(500);
 
+    // Website filter
+    if (selectedWebsite !== "all") {
+      const site = campaignWebsites.find(w => w.id === selectedWebsite);
+      if (site) freshQ = freshQ.eq("source", site.site_name);
+    }
+
     if (isBDO) {
       freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
     } else {
