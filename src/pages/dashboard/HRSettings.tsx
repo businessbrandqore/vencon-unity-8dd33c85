@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2, Cake } from "lucide-react";
+import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2, Cake, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -92,6 +92,12 @@ const HRSettings = () => {
   const [birthdayMessage, setBirthdayMessage] = useState("");
   const [birthdayMessageBn, setBirthdayMessageBn] = useState("");
 
+  // GPS config
+  const [gpsLat, setGpsLat] = useState("");
+  const [gpsLng, setGpsLng] = useState("");
+  const [gpsRadius, setGpsRadius] = useState("500");
+  const [gpsEnabled, setGpsEnabled] = useState(false);
+
   // Appeal reason options
   const [attendanceReasons, setAttendanceReasons] = useState<string[]>([]);
   const [newAttendanceReason, setNewAttendanceReason] = useState("");
@@ -121,7 +127,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config", "appeal_reason_options", "birthday_config"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config", "appeal_reason_options", "birthday_config", "gps_config"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
@@ -139,6 +145,12 @@ const HRSettings = () => {
         const val = row.value as any;
         if (val?.message) setBirthdayMessage(val.message);
         if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
+      } else if (row.key === "gps_config") {
+        const val = row.value as any;
+        if (val?.latitude) setGpsLat(String(val.latitude));
+        if (val?.longitude) setGpsLng(String(val.longitude));
+        if (val?.radius_meters) setGpsRadius(String(val.radius_meters));
+        if (val?.enabled !== undefined) setGpsEnabled(val.enabled);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
@@ -402,7 +414,7 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-8 bg-secondary">
+        <TabsList className="w-full grid grid-cols-9 bg-secondary">
           <TabsTrigger value="general" className="text-xs gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
@@ -422,6 +434,10 @@ const HRSettings = () => {
           <TabsTrigger value="attendance" className="text-xs gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{isBn ? "কর্তন" : "Deduction"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="gps" className="text-xs gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">GPS</span>
           </TabsTrigger>
           <TabsTrigger value="birthday" className="text-xs gap-1.5">
             <Cake className="h-3.5 w-3.5" />
@@ -919,6 +935,61 @@ const HRSettings = () => {
                 {isBn ? "কারণ অপশন সংরক্ষণ" : "Save Reason Options"}
               </button>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* GPS Tab */}
+        <TabsContent value="gps" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {isBn ? "GPS লোকেশন কনফিগারেশন" : "GPS Location Configuration"}
+            </h3>
+            <p className="text-xs text-muted-foreground font-body">
+              {isBn ? "অফিসের অক্ষাংশ (Latitude), দ্রাঘিমাংশ (Longitude) এবং সর্বোচ্চ দূরত্ব (মিটার) সেট করুন। কর্মীরা এই রেডিয়াসের বাইরে চেক ইন/আউট করতে পারবে না।" : "Set office Latitude, Longitude, and maximum allowed radius (meters). Employees cannot check in/out outside this radius."}
+            </p>
+            <div className="flex items-center gap-3 mb-2">
+              <label className="font-body text-xs font-bold">{isBn ? "GPS সক্রিয়" : "GPS Enabled"}</label>
+              <input type="checkbox" checked={gpsEnabled} onChange={e => setGpsEnabled(e.target.checked)} className="h-4 w-4" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs">{isBn ? "অক্ষাংশ (Latitude)" : "Latitude"}</Label>
+                <Input value={gpsLat} onChange={e => setGpsLat(e.target.value)} placeholder="23.8103" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">{isBn ? "দ্রাঘিমাংশ (Longitude)" : "Longitude"}</Label>
+                <Input value={gpsLng} onChange={e => setGpsLng(e.target.value)} placeholder="90.4125" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">{isBn ? "রেডিয়াস (মিটার)" : "Radius (meters)"}</Label>
+                <Input type="number" value={gpsRadius} onChange={e => setGpsRadius(e.target.value)} placeholder="500" className="mt-1" />
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(pos => {
+                    setGpsLat(String(pos.coords.latitude));
+                    setGpsLng(String(pos.coords.longitude));
+                    toast({ title: isBn ? "বর্তমান লোকেশন সেট হয়েছে ✓" : "Current location set ✓" });
+                  }, () => {
+                    toast({ title: isBn ? "লোকেশন অ্যাক্সেস ব্যর্থ" : "Location access failed", variant: "destructive" });
+                  });
+                }
+              }}
+              className="px-3 py-1.5 text-xs border border-border text-foreground hover:bg-secondary flex items-center gap-1"
+            >
+              <MapPin className="h-3 w-3" /> {isBn ? "বর্তমান লোকেশন ব্যবহার করুন" : "Use Current Location"}
+            </button>
+            <button
+              onClick={() => saveGroup("gps_config", { latitude: parseFloat(gpsLat) || 0, longitude: parseFloat(gpsLng) || 0, radius_meters: parseInt(gpsRadius) || 500, enabled: gpsEnabled })}
+              disabled={saving}
+              className="px-4 py-1.5 text-xs font-bold text-white"
+              style={{ backgroundColor: BLUE }}
+            >
+              {isBn ? "GPS কনফিগ সংরক্ষণ" : "Save GPS Config"}
+            </button>
           </div>
         </TabsContent>
 

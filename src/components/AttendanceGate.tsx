@@ -10,9 +10,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, LogOut } from "lucide-react";
+import { Clock, AlertTriangle, LogOut, MapPin } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useGpsConfig, validateGpsPosition } from "@/hooks/useGpsConfig";
 
 const MOODS = [
   { value: "happy", emoji: "😊", key: "mood_happy" },
@@ -31,6 +32,7 @@ interface AttendanceGateProps {
 
 export default function AttendanceGate({ children }: AttendanceGateProps) {
   const deductionConfig = useDeductionConfig();
+  const { config: gpsConfig, loading: gpsLoading } = useGpsConfig();
   const { user } = useAuth();
   const { t, lang } = useLanguage();
 
@@ -55,6 +57,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
   const [showClockOutModal, setShowClockOutModal] = useState(false);
   const [clockOutMood, setClockOutMood] = useState("");
   const [clockOutNote, setClockOutNote] = useState("");
+  const [gpsChecking, setGpsChecking] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -116,6 +119,16 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
 
   const handleClockIn = async () => {
     if (!user || !selectedMood) { toast.error(t("select_mood")); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(lang === "bn" ? gpsResult.errorBn! : gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     const nowISO = now.toISOString();
     let isLate = false;
@@ -142,6 +155,16 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
 
   const handleClockOut = async () => {
     if (!user || !clockOutMood) { toast.error(t("select_mood")); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(lang === "bn" ? gpsResult.errorBn! : gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     let earlyOut = false;
     let earlyMinutes = 0;
@@ -164,7 +187,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
     toast.success(earlyOut ? t("check_out_early").replace("{mins}", String(earlyMinutes)).replace("{amt}", String(extraDeduction)) : t("check_out_success"));
   };
 
-  if (!profile || isWithinShift === null || loading) {
+  if (!profile || isWithinShift === null || loading || gpsLoading) {
     return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
   }
 
@@ -242,7 +265,9 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
               ))}
             </div>
             <Textarea value={moodNote} onChange={(e) => setMoodNote(e.target.value)} rows={2} placeholder={t("comment_optional")} />
-            <Button onClick={handleClockIn} disabled={!selectedMood} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("check_in")}</Button>
+            <Button onClick={handleClockIn} disabled={!selectedMood || gpsChecking} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
+              {gpsChecking ? (lang === "bn" ? "📍 লোকেশন যাচাই হচ্ছে..." : "📍 Checking location...") : t("check_in")}
+            </Button>
           </CardContent>
         </Card>
       </div>

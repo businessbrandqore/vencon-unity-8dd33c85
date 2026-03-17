@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { useAppealReasonOptions } from "@/hooks/useAppealReasonOptions";
+import { useGpsConfig, validateGpsPosition } from "@/hooks/useGpsConfig";
 import { Clock, AlertTriangle, LogOut, TrendingUp, Package, Truck, RotateCcw, XCircle, ShieldAlert, CheckCircle, BarChart3 } from "lucide-react";
 import SalaryCard from "@/components/SalaryCard";
 
@@ -59,8 +60,8 @@ export default function EmployeeTSDashboard() {
   const { user } = useAuth();
   const { t, n } = useLanguage();
   const deductionConfig = useDeductionConfig();
-
-  /* user profile with shift info */
+  const { config: gpsConfig } = useGpsConfig();
+  const [gpsChecking, setGpsChecking] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isWithinShift, setIsWithinShift] = useState<boolean | null>(null);
 
@@ -253,6 +254,16 @@ export default function EmployeeTSDashboard() {
 
   const handleClockIn = async () => {
     if (!user || !selectedMood) { toast.error("মুড নির্বাচন করুন"); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(gpsResult.errorBn || gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     const nowISO = now.toISOString();
     let isLate = false;
@@ -277,6 +288,16 @@ export default function EmployeeTSDashboard() {
 
   const handleClockOut = async () => {
     if (!user || !clockOutMood) { toast.error("মুড নির্বাচন করুন"); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(gpsResult.errorBn || gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     let earlyOut = false;
     let earlyMinutes = 0;
