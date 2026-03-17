@@ -57,6 +57,7 @@ import EmployeeMyOrders from "./pages/dashboard/EmployeeMyOrders";
 import WarehouseDispatchPage from "./pages/dashboard/WarehouseDispatchPage";
 import DataTracker from "./pages/dashboard/DataTracker";
 import SpamLeads from "./pages/dashboard/SpamLeads";
+import CancellationExecutiveDashboard from "./pages/dashboard/CancellationExecutiveDashboard";
 import ManagerAttendance from "./pages/dashboard/ManagerAttendance";
 import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
