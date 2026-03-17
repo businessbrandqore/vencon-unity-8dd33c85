@@ -187,7 +187,18 @@ const SAAllData = () => {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <select
+            {websites.length > 0 && (
+              <select
+                value={websiteFilter}
+                onChange={(e) => setWebsiteFilter(e.target.value)}
+                className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
+              >
+                <option value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</option>
+                {websites.map((w) => (
+                  <option key={w.id} value={w.id}>{w.site_name}</option>
+                ))}
+              </select>
+            )
               value={dataModeFilter}
               onChange={(e) => setDataModeFilter(e.target.value)}
               className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
