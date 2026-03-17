@@ -1074,6 +1074,50 @@ const HRSettings = () => {
           </div>
         </TabsContent>
 
+        {/* Birthday Tab */}
+        <TabsContent value="birthday" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+              <Cake className="h-4 w-4 text-primary" />
+              {isBn ? "জন্মদিনের শুভেচ্ছা কার্ড কনফিগারেশন" : "Birthday Wish Card Configuration"}
+            </h3>
+            <p className="text-xs text-muted-foreground font-body">
+              {isBn ? "এখানে যা লিখবেন তা জন্মদিনের কার্ডে প্রদর্শিত হবে। {name} লিখলে জন্মদিনের ব্যক্তির নাম স্বয়ংক্রিয়ভাবে বসবে।" : "Write the birthday message here. Use {name} as a placeholder for the birthday person's name."}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "ইংরেজি মেসেজ" : "English Message"}
+                </label>
+                <Textarea
+                  value={birthdayMessage}
+                  onChange={(e) => setBirthdayMessage(e.target.value)}
+                  placeholder="🎂 Happy Birthday {name}! Wishing you a wonderful day filled with joy and success!"
+                  className="bg-background border-border text-foreground min-h-[80px]"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "বাংলা মেসেজ" : "Bengali Message"}
+                </label>
+                <Textarea
+                  value={birthdayMessageBn}
+                  onChange={(e) => setBirthdayMessageBn(e.target.value)}
+                  placeholder="🎂 শুভ জন্মদিন {name}! আপনার জন্মদিন আনন্দ ও সাফল্যে ভরে উঠুক!"
+                  className="bg-background border-border text-foreground min-h-[80px]"
+                />
+              </div>
+              <Button
+                onClick={() => saveGroup("birthday_config", { message: birthdayMessage, message_bn: birthdayMessageBn })}
+                disabled={saving}
+                className="text-xs"
+              >
+                {isBn ? "সংরক্ষণ করুন" : "Save Birthday Config"}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* Notification Tab */}
         <TabsContent value="notification" className="mt-4">
           <div className="border border-border p-4 space-y-3">
