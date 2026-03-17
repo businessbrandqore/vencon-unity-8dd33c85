@@ -332,6 +332,14 @@ const HREmployeeProfile = () => {
             <Input type="time" value={editShiftEnd} onChange={(e) => setEditShiftEnd(e.target.value)} className="bg-background border-border text-foreground" />
           </div>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "জন্ম তারিখ" : "Date of Birth"}
+            </label>
+            <Input type="date" value={editDob} onChange={(e) => setEditDob(e.target.value)} className="bg-background border-border text-foreground" />
+          </div>
+        </div>
         <div>
           <label className="font-body text-xs text-muted-foreground block mb-1">
             {isBn ? "ক্যাম্পেইন" : "Campaign"}

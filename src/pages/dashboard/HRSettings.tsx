@@ -135,6 +135,10 @@ const HRSettings = () => {
         const val = row.value as any;
         if (val?.attendance_reasons) setAttendanceReasons(val.attendance_reasons);
         if (val?.leave_reasons) setLeaveReasons(val.leave_reasons);
+      } else if (row.key === "birthday_config") {
+        const val = row.value as any;
+        if (val?.message) setBirthdayMessage(val.message);
+        if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
