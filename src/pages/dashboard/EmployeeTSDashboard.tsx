@@ -288,6 +288,16 @@ export default function EmployeeTSDashboard() {
 
   const handleClockOut = async () => {
     if (!user || !clockOutMood) { toast.error("মুড নির্বাচন করুন"); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(gpsResult.errorBn || gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     let earlyOut = false;
     let earlyMinutes = 0;
