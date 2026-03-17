@@ -298,6 +298,7 @@ const HREmployeeProfile = () => {
           { label: isBn ? "পিতার ফোন" : "Father Phone", value: emp.father_phone || "—" },
           { label: isBn ? "মাতার নাম" : "Mother", value: emp.mother_name || "—" },
           { label: isBn ? "অভিভাবক" : "Guardian", value: emp.guardian_type || "—" },
+          { label: isBn ? "জন্ম তারিখ" : "DOB", value: emp.date_of_birth ? new Date(emp.date_of_birth).toLocaleDateString() : "—" },
         ].map((item) => (
           <div key={item.label} className="bg-background p-3">
             <p className="text-[10px] text-muted-foreground">{item.label}</p>
