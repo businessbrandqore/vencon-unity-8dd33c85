@@ -6,6 +6,7 @@ import TopNav from "@/components/TopNav";
 import PanelSidebar from "@/components/PanelSidebar";
 import AIChatWidget from "@/components/AIChatWidget";
 import ATLApprovalBanner from "@/components/ATLApprovalBanner";
+import BirthdayPopup from "@/components/BirthdayPopup";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
@@ -44,6 +45,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
         </main>
       </div>
       <AIChatWidget />
+      <BirthdayPopup />
     </div>
   );
 };
