@@ -32,6 +32,7 @@ interface AttendanceGateProps {
 
 export default function AttendanceGate({ children }: AttendanceGateProps) {
   const deductionConfig = useDeductionConfig();
+  const { config: gpsConfig, loading: gpsLoading } = useGpsConfig();
   const { user } = useAuth();
   const { t, lang } = useLanguage();
 
