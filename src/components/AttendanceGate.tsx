@@ -265,7 +265,9 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
               ))}
             </div>
             <Textarea value={moodNote} onChange={(e) => setMoodNote(e.target.value)} rows={2} placeholder={t("comment_optional")} />
-            <Button onClick={handleClockIn} disabled={!selectedMood} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">{t("check_in")}</Button>
+            <Button onClick={handleClockIn} disabled={!selectedMood || gpsChecking} className="w-full bg-[hsl(var(--panel-employee))] hover:bg-[hsl(var(--panel-employee)/0.8)] text-white">
+              {gpsChecking ? (lang === "bn" ? "📍 লোকেশন যাচাই হচ্ছে..." : "📍 Checking location...") : t("check_in")}
+            </Button>
           </CardContent>
         </Card>
       </div>
