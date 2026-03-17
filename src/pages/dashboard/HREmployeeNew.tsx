@@ -307,6 +307,12 @@ const HREmployeeNew = () => {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <label className="font-body text-xs text-muted-foreground block mb-1">
+              {isBn ? "জন্ম তারিখ" : "Date of Birth"}
+            </label>
+            <Input type="date" value={form.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className={fieldClass} />
+          </div>
         </div>
 
         {/* Account Info */}
