@@ -10,6 +10,8 @@ import DeliveryCoordinatorDashboard from "./DeliveryCoordinatorDashboard";
 import GroupLeaderDashboard from "./GroupLeaderDashboard";
 import MaintenanceOfficerDashboard from "./MaintenanceOfficerDashboard";
 import OfficeAssistantDashboard from "./OfficeAssistantDashboard";
+import CancellationExecutiveDashboard from "./CancellationExecutiveDashboard";
+import EditorDashboard from "./EditorDashboard";
 
 // Roles that bypass AttendanceGate (warehouse roles work on dispatch floor, not desk)
 const GATE_EXEMPT_ROLES = ["warehouse_assistant", "warehouse_supervisor", "inventory_manager", "maintenance_officer", "office_assistant"];
@@ -46,6 +48,8 @@ export default function EmployeeDashboardRouter() {
       case "cso": return <CSODashboard />;
       case "delivery_coordinator": return <DeliveryCoordinatorDashboard />;
       case "group_leader": return <GroupLeaderDashboard />;
+      case "cancellation_executive": return <CancellationExecutiveDashboard />;
+      case "editor": return <EditorDashboard />;
       default: return <EmployeeTSDashboard />;
     }
   };

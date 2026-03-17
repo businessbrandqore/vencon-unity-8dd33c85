@@ -32,6 +32,7 @@ import {
   Trash2,
   Award,
   ShieldBan,
+  RotateCcw,
 } from "lucide-react";
 import { PanelType } from "./panelConfig";
 
