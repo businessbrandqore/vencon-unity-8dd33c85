@@ -43,6 +43,8 @@ const TLLeads = () => {
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [selectedWebsite, setSelectedWebsite] = useState("all");
+  const [campaignWebsites, setCampaignWebsites] = useState<{ id: string; site_name: string }[]>([]);
   const [campaignMode, setCampaignMode] = useState<string>("lead");
   const [bronzeAgents, setBronzeAgents] = useState<Agent[]>([]);
   const [silverAgents, setSilverAgents] = useState<Agent[]>([]);
@@ -240,6 +242,21 @@ const TLLeads = () => {
   useEffect(() => {
     const c = campaigns.find((x) => x.id === selectedCampaign);
     if (c) setCampaignMode(c.data_mode);
+    // Load websites for this campaign
+    if (selectedCampaign) {
+      setSelectedWebsite("all");
+      (async () => {
+        const { data } = await supabase
+          .from("campaign_websites")
+          .select("id, site_name")
+          .eq("campaign_id", selectedCampaign)
+          .eq("is_active", true)
+          .order("site_name");
+        setCampaignWebsites(data || []);
+      })();
+    } else {
+      setCampaignWebsites([]);
+    }
   }, [selectedCampaign, campaigns]);
 
   // Load dynamic columns from campaign_data_operations (filtered by data_mode)
@@ -297,6 +314,12 @@ const TLLeads = () => {
       .eq("status", "fresh")
       .order("created_at", { ascending: false })
       .limit(500);
+
+    // Website filter
+    if (selectedWebsite !== "all") {
+      const site = campaignWebsites.find(w => w.id === selectedWebsite);
+      if (site) freshQ = freshQ.eq("source", site.site_name);
+    }
 
     if (isBDO) {
       freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
@@ -384,7 +407,7 @@ const TLLeads = () => {
       ...l,
       agent_name: l.users?.name || "—",
     })));
-  }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
+  }, [user, selectedCampaign, campaignMode, getEffectiveTlId, selectedWebsite, campaignWebsites]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
@@ -1265,18 +1288,35 @@ const TLLeads = () => {
             </Badge>
           )}
         </div>
-        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-64 border-primary/30">
-            <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
-          </SelectTrigger>
-          <SelectContent>
-            {campaigns.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name} {c.data_mode === "processing" ? "⚙️" : "🎯"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+            <SelectTrigger className="w-52 border-primary/30">
+              <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
+            </SelectTrigger>
+            <SelectContent>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name} {c.data_mode === "processing" ? "⚙️" : "🎯"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {campaignWebsites.length > 0 && (
+            <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+              <SelectTrigger className="w-48 border-primary/30">
+                <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                {campaignWebsites.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.site_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       {renderContent()}

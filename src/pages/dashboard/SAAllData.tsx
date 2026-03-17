@@ -12,10 +12,12 @@ const SAAllData = () => {
   const [tab, setTab] = useState<TabKey>("leads");
   const [search, setSearch] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("all");
+  const [websiteFilter, setWebsiteFilter] = useState("all");
   const [dataModeFilter, setDataModeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -33,9 +35,21 @@ const SAAllData = () => {
     loadCampaigns();
   }, []);
 
+  // Load websites when campaign changes
+  useEffect(() => {
+    const loadWebsites = async () => {
+      let q = supabase.from("campaign_websites").select("id, site_name, campaign_id").eq("is_active", true).order("site_name");
+      if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
+      const { data } = await q;
+      setWebsites(data || []);
+      setWebsiteFilter("all");
+    };
+    loadWebsites();
+  }, [campaignFilter]);
+
   useEffect(() => {
     loadData();
-  }, [tab, campaignFilter, dataModeFilter, statusFilter]);
+  }, [tab, campaignFilter, dataModeFilter, statusFilter, websiteFilter]);
 
   const loadData = async () => {
     setLoading(true);
@@ -58,6 +72,10 @@ const SAAllData = () => {
       let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source").order("created_at", { ascending: false }).limit(200);
       if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (websiteFilter !== "all") {
+        const site = websites.find(w => w.id === websiteFilter);
+        if (site) q = q.eq("source", site.site_name);
+      }
       const { data } = await q;
       let result = data || [];
       if (dataModeFilter === "lead") result = result.filter((l: any) => l.source !== "processing" && l.import_source !== "processing");
@@ -169,8 +187,19 @@ const SAAllData = () => {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+            {websites.length > 0 && (
+              <select
+                value={websiteFilter}
+                onChange={(e) => setWebsiteFilter(e.target.value)}
+                className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
+              >
+                <option value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</option>
+                {websites.map((w) => (
+                  <option key={w.id} value={w.id}>{w.site_name}</option>
+                ))}
+              </select>
+            )}
             <select
-              value={dataModeFilter}
               onChange={(e) => setDataModeFilter(e.target.value)}
               className="bg-card border border-border rounded-lg px-3 py-2 text-xs font-body text-foreground focus:outline-none"
             >

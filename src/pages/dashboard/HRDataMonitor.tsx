@@ -39,6 +39,7 @@ const HRDataMonitor = () => {
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
   const [dataMode, setDataMode] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("leads");
   const [search, setSearch] = useState("");
@@ -56,9 +57,39 @@ const HRDataMonitor = () => {
     },
   });
 
+  // Fetch websites for the selected campaign
+  const { data: websites } = useQuery({
+    queryKey: ["monitor-websites", selectedCampaign],
+    queryFn: async () => {
+      if (selectedCampaign === "all") {
+        const { data, error } = await supabase
+          .from("campaign_websites")
+          .select("id, site_name, campaign_id")
+          .eq("is_active", true)
+          .order("site_name");
+        if (error) throw error;
+        return data;
+      }
+      const { data, error } = await supabase
+        .from("campaign_websites")
+        .select("id, site_name, campaign_id")
+        .eq("campaign_id", selectedCampaign)
+        .eq("is_active", true)
+        .order("site_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Reset website filter when campaign changes
+  const handleCampaignChange = (val: string) => {
+    setSelectedCampaign(val);
+    setSelectedWebsite("all");
+  };
+
   // Fetch leads
   const { data: leads, isLoading: leadsLoading } = useQuery({
-    queryKey: ["monitor-leads", selectedCampaign, dataMode],
+    queryKey: ["monitor-leads", selectedCampaign, dataMode, selectedWebsite],
     queryFn: async () => {
       let q = supabase
         .from("leads")
@@ -66,6 +97,10 @@ const HRDataMonitor = () => {
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (selectedWebsite !== "all") {
+        const site = websites?.find(w => w.id === selectedWebsite);
+        if (site) q = q.eq("source", site.site_name);
+      }
       const { data, error } = await q;
       if (error) throw error;
       let result = data || [];
@@ -137,7 +172,7 @@ const HRDataMonitor = () => {
               <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+          <Select value={selectedCampaign} onValueChange={handleCampaignChange}>
             <SelectTrigger className="w-[220px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
             </SelectTrigger>
@@ -150,6 +185,21 @@ const HRDataMonitor = () => {
               ))}
             </SelectContent>
           </Select>
+          {websites && websites.length > 0 && (
+            <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                {websites.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.site_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
