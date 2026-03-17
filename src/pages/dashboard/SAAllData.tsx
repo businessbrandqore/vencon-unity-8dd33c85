@@ -72,6 +72,10 @@ const SAAllData = () => {
       let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source").order("created_at", { ascending: false }).limit(200);
       if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (websiteFilter !== "all") {
+        const site = websites.find(w => w.id === websiteFilter);
+        if (site) q = q.eq("source", site.site_name);
+      }
       const { data } = await q;
       let result = data || [];
       if (dataModeFilter === "lead") result = result.filter((l: any) => l.source !== "processing" && l.import_source !== "processing");
