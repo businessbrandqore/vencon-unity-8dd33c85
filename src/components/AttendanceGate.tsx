@@ -119,6 +119,16 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
 
   const handleClockIn = async () => {
     if (!user || !selectedMood) { toast.error(t("select_mood")); return; }
+
+    // GPS validation
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(lang === "bn" ? gpsResult.errorBn! : gpsResult.error!);
+      return;
+    }
+
     const now = new Date();
     const nowISO = now.toISOString();
     let isLate = false;
