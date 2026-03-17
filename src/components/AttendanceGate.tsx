@@ -10,9 +10,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, LogOut } from "lucide-react";
+import { Clock, AlertTriangle, LogOut, MapPin } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useGpsConfig, validateGpsPosition } from "@/hooks/useGpsConfig";
 
 const MOODS = [
   { value: "happy", emoji: "😊", key: "mood_happy" },
