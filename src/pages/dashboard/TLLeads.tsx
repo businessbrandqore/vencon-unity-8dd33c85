@@ -242,6 +242,21 @@ const TLLeads = () => {
   useEffect(() => {
     const c = campaigns.find((x) => x.id === selectedCampaign);
     if (c) setCampaignMode(c.data_mode);
+    // Load websites for this campaign
+    if (selectedCampaign) {
+      setSelectedWebsite("all");
+      (async () => {
+        const { data } = await supabase
+          .from("campaign_websites")
+          .select("id, site_name")
+          .eq("campaign_id", selectedCampaign)
+          .eq("is_active", true)
+          .order("site_name");
+        setCampaignWebsites(data || []);
+      })();
+    } else {
+      setCampaignWebsites([]);
+    }
   }, [selectedCampaign, campaigns]);
 
   // Load dynamic columns from campaign_data_operations (filtered by data_mode)
