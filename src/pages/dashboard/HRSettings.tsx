@@ -89,6 +89,8 @@ const HRSettings = () => {
   const [newCardName, setNewCardName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [birthdayMessage, setBirthdayMessage] = useState("");
+  const [birthdayMessageBn, setBirthdayMessageBn] = useState("");
 
   // Appeal reason options
   const [attendanceReasons, setAttendanceReasons] = useState<string[]>([]);
