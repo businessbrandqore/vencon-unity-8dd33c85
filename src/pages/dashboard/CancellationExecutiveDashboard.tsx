@@ -213,7 +213,7 @@ export default function CancellationExecutiveDashboard() {
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">লোড হচ্ছে...</div>
           ) : filtered.length === 0 ? (
-            <EmptyState icon={Package} title="কোনো অর্ডার নেই" description="রিটার্ন বা ক্যান্সেল অর্ডার পাওয়া যায়নি" />
+            <EmptyState title="কোনো অর্ডার নেই" description="রিটার্ন বা ক্যান্সেল অর্ডার পাওয়া যায়নি" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
