@@ -60,8 +60,8 @@ export default function EmployeeTSDashboard() {
   const { user } = useAuth();
   const { t, n } = useLanguage();
   const deductionConfig = useDeductionConfig();
-
-  /* user profile with shift info */
+  const { config: gpsConfig } = useGpsConfig();
+  const [gpsChecking, setGpsChecking] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isWithinShift, setIsWithinShift] = useState<boolean | null>(null);
 
