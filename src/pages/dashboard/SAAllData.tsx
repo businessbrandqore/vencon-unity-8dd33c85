@@ -49,7 +49,7 @@ const SAAllData = () => {
 
   useEffect(() => {
     loadData();
-  }, [tab, campaignFilter, dataModeFilter, statusFilter]);
+  }, [tab, campaignFilter, dataModeFilter, statusFilter, websiteFilter]);
 
   const loadData = async () => {
     setLoading(true);
