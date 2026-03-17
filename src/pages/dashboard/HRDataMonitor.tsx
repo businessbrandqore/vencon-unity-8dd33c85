@@ -172,7 +172,7 @@ const HRDataMonitor = () => {
               <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+          <Select value={selectedCampaign} onValueChange={handleCampaignChange}>
             <SelectTrigger className="w-[220px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
             </SelectTrigger>
@@ -185,6 +185,21 @@ const HRDataMonitor = () => {
               ))}
             </SelectContent>
           </Select>
+          {websites && websites.length > 0 && (
+            <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                {websites.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.site_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
