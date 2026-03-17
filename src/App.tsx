@@ -92,6 +92,7 @@ const App = () => (
               <Route path="/sa/attendance" element={<ManagerAttendance />} />
               <Route path="/sa/settings" element={<SASettings />} />
               <Route path="/sa/notifications" element={<NotificationsPage />} />
+              <Route path="/sa/chat" element={<ChatPage />} />
               <Route path="/sa/profile" element={<ProfileSettings />} />
             </Route>
 
