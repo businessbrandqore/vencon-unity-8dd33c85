@@ -67,6 +67,7 @@ export const translations: TranslationMap = {
   my_leads: { bn: "আমার লিডস", en: "My Leads" },
   salary: { bn: "বেতন", en: "Salary" },
   my_orders: { bn: "আমার অর্ডার", en: "My Orders" },
+  cancellation_orders: { bn: "ক্যান্সেলেশন", en: "Cancellation" },
   profile: { bn: "প্রোফাইল", en: "Profile" },
   notifications: { bn: "নোটিফিকেশন", en: "Notifications" },
   documentation: { bn: "ডকুমেন্টেশন", en: "Documentation" },
