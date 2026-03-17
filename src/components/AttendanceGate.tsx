@@ -187,7 +187,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
     toast.success(earlyOut ? t("check_out_early").replace("{mins}", String(earlyMinutes)).replace("{amt}", String(extraDeduction)) : t("check_out_success"));
   };
 
-  if (!profile || isWithinShift === null || loading) {
+  if (!profile || isWithinShift === null || loading || gpsLoading) {
     return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
   }
 
