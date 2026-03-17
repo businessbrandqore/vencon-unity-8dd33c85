@@ -89,7 +89,7 @@ const BirthdayPopup = () => {
     } else {
       setOpen(false);
       const dismissedKey = `birthday_dismissed_${new Date().toISOString().split("T")[0]}`;
-      sessionStorage.setItem(dismissedKey, "true");
+      localStorage.setItem(dismissedKey, "true");
     }
   };
 
