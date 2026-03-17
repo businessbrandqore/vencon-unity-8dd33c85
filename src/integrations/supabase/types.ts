@@ -1767,6 +1767,7 @@ export type Database = {
           avatar_url: string | null
           basic_salary: number | null
           created_at: string | null
+          date_of_birth: string | null
           department: string | null
           designation: string | null
           email: string
@@ -1795,6 +1796,7 @@ export type Database = {
           avatar_url?: string | null
           basic_salary?: number | null
           created_at?: string | null
+          date_of_birth?: string | null
           department?: string | null
           designation?: string | null
           email: string
@@ -1823,6 +1825,7 @@ export type Database = {
           avatar_url?: string | null
           basic_salary?: number | null
           created_at?: string | null
+          date_of_birth?: string | null
           department?: string | null
           designation?: string | null
           email?: string
