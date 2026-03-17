@@ -23,8 +23,8 @@ const BirthdayPopup = () => {
   useEffect(() => {
     const checkBirthdays = async () => {
       // Check if already dismissed today
-      const today = new Date().toISOString().split("T")[0];
-      const dismissedKey = `birthday_dismissed_${today}`;
+      const todayStr = new Date().toISOString().split("T")[0];
+      const dismissedKey = `birthday_dismissed_${todayStr}`;
       if (localStorage.getItem(dismissedKey)) return;
 
       // Clean up old keys
@@ -34,9 +34,9 @@ const BirthdayPopup = () => {
         }
       });
 
-      const today = new Date();
-      const month = today.getMonth() + 1;
-      const day = today.getDate();
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const day = now.getDate();
 
       // Fetch birthday config
       const { data: configData } = await supabase
