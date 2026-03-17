@@ -100,6 +100,7 @@ const HREmployeeProfile = () => {
         setEditSalary(String(empData.basic_salary || ""));
         setEditShiftStart(empData.shift_start || "");
         setEditShiftEnd(empData.shift_end || "");
+        setEditDob(empData.date_of_birth || "");
       }
       setAttendance(attRes.data || []);
       setLeaves((leaveRes.data || []) as LeaveReq[]);
