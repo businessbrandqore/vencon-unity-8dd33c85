@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { useAppealReasonOptions } from "@/hooks/useAppealReasonOptions";
+import { useGpsConfig, validateGpsPosition } from "@/hooks/useGpsConfig";
 import { Clock, AlertTriangle, LogOut, TrendingUp, Package, Truck, RotateCcw, XCircle, ShieldAlert, CheckCircle, BarChart3 } from "lucide-react";
 import SalaryCard from "@/components/SalaryCard";
 
