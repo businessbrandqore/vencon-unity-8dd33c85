@@ -92,6 +92,12 @@ const HRSettings = () => {
   const [birthdayMessage, setBirthdayMessage] = useState("");
   const [birthdayMessageBn, setBirthdayMessageBn] = useState("");
 
+  // GPS config
+  const [gpsLat, setGpsLat] = useState("");
+  const [gpsLng, setGpsLng] = useState("");
+  const [gpsRadius, setGpsRadius] = useState("500");
+  const [gpsEnabled, setGpsEnabled] = useState(false);
+
   // Appeal reason options
   const [attendanceReasons, setAttendanceReasons] = useState<string[]>([]);
   const [newAttendanceReason, setNewAttendanceReason] = useState("");
