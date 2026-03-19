@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import WarningLights from "@/components/profile/WarningLights";
@@ -68,8 +68,11 @@ interface ComplaintRow {
 const SAEmployeeProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
+  const panel = location.pathname.startsWith("/hr") ? "hr" : "sa";
+  const backPath = panel === "hr" ? "/hr/employees" : "/sa/employees";
 
   const [emp, setEmp] = useState<EmpFull | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -218,7 +221,7 @@ const SAEmployeeProfile = () => {
             {emp.is_active ? (isBn ? "সক্রিয়" : "Active") : (isBn ? "নিষ্ক্রিয়" : "Inactive")}
           </span>
         </div>
-        <button onClick={() => navigate("/sa/employees")} className="text-xs px-3 py-1.5 border border-border text-foreground hover:bg-secondary flex items-center gap-1">
+        <button onClick={() => navigate(backPath)} className="text-xs px-3 py-1.5 border border-border text-foreground hover:bg-secondary flex items-center gap-1">
           <ArrowLeft className="h-3 w-3" /> {isBn ? "তালিকা" : "Back"}
         </button>
       </div>
