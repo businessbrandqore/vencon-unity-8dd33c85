@@ -222,7 +222,7 @@ const SAEmployeeProfile = () => {
             {emp.is_active ? (isBn ? "সক্রিয়" : "Active") : (isBn ? "নিষ্ক্রিয়" : "Inactive")}
           </span>
         </div>
-        <button onClick={() => navigate("/sa/employees")} className="text-xs px-3 py-1.5 border border-border text-foreground hover:bg-secondary flex items-center gap-1">
+        <button onClick={() => navigate(backPath)} className="text-xs px-3 py-1.5 border border-border text-foreground hover:bg-secondary flex items-center gap-1">
           <ArrowLeft className="h-3 w-3" /> {isBn ? "তালিকা" : "Back"}
         </button>
       </div>
