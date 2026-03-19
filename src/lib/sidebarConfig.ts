@@ -54,6 +54,7 @@ export const sidebarMenus: Record<PanelType, SidebarItem[]> = {
     { titleKey: "warehouse", icon: Package, path: "/sa/warehouse" },
     { titleKey: "budget", icon: Wallet, path: "/sa/budget" },
     { titleKey: "payroll", icon: CreditCard, path: "/sa/payroll" },
+    { titleKey: "employees", icon: Users, path: "/sa/employees" },
     { titleKey: "attendance", icon: Clock, path: "/sa/attendance" },
     { titleKey: "audit_logs", icon: ScrollText, path: "/sa/audit-logs" },
     { titleKey: "chat", icon: MessageSquare, path: "/sa/chat" },

@@ -13,6 +13,8 @@ import AttendanceGatedRoute from "./components/AttendanceGatedRoute";
 import CSExecutiveDashboard from "./pages/dashboard/CSExecutiveDashboard";
 import SteadfastMonitoring from "./pages/dashboard/SteadfastMonitoring";
 import SADashboard from "./pages/dashboard/SADashboard";
+import SAEmployees from "./pages/dashboard/SAEmployees";
+import SAEmployeeProfile from "./pages/dashboard/SAEmployeeProfile";
 import SAApprovalsPage from "./pages/dashboard/SAApprovalsPage";
 import SAAuditLogs from "./pages/dashboard/SAAuditLogs";
 import SAAnalytics from "./pages/dashboard/SAAnalytics";
@@ -88,6 +90,8 @@ const App = () => (
               <Route path="/sa/payroll" element={<SAPayroll />} />
               <Route path="/sa/audit-logs" element={<SAAuditLogs />} />
               <Route path="/sa/all-data" element={<SAAllData />} />
+              <Route path="/sa/employees" element={<SAEmployees />} />
+              <Route path="/sa/employees/:id" element={<SAEmployeeProfile />} />
               <Route path="/sa/data-tracker" element={<DataTracker />} />
               <Route path="/sa/attendance" element={<ManagerAttendance />} />
               <Route path="/sa/settings" element={<SASettings />} />
