@@ -70,16 +70,7 @@ interface LiveLeadRow {
 /* ─── Constants ─── */
 const NO_OPTION = "__none__";
 
-const SALES_ROLES = [
-  { value: "telesales_executive", label: "টেলিসেলস (Bronze)" },
-  { value: "silver_agent", label: "সিলভার এজেন্ট" },
-  { value: "golden_agent", label: "গোল্ডেন এজেন্ট" },
-  { value: "assistant_team_leader", label: "ATL" },
-  { value: "cso", label: "CSO" },
-  { value: "cs_executive", label: "CS Executive" },
-  { value: "warehouse_assistant", label: "Warehouse Assistant" },
-  { value: "delivery_coordinator", label: "Delivery Coordinator" },
-];
+// SALES_ROLES is now derived from ALL_ROLES_WITH_PANEL (defined below)
 
 const STATUS_COLORS: { value: string; label: string; bg: string; text: string }[] = [
   { value: "red", label: "লাল", bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-300" },
