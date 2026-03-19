@@ -73,7 +73,6 @@ const SAEmployeeProfile = () => {
   const isBn = t("vencon") === "VENCON";
   const panel = location.pathname.startsWith("/hr") ? "hr" : "sa";
   const backPath = panel === "hr" ? "/hr/employees" : "/sa/employees";
-  const isBn = t("vencon") === "VENCON";
 
   const [emp, setEmp] = useState<EmpFull | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
