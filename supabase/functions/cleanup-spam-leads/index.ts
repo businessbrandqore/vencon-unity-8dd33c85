@@ -16,14 +16,37 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Delete spam leads older than 24 hours
+    // Delete spam leads older than 24 hours — only those assigned to employee-panel agents
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // Get all employee-panel user IDs (agents)
+    const { data: agents, error: agentErr } = await supabase
+      .from("users")
+      .select("id")
+      .eq("panel", "employee");
+
+    if (agentErr) {
+      console.error("Error fetching agents:", agentErr);
+      return new Response(JSON.stringify({ error: agentErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const agentIds = (agents || []).map((a: any) => a.id);
+    if (agentIds.length === 0) {
+      return new Response(JSON.stringify({ success: true, deleted_count: 0 }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: deleted, error } = await supabase
       .from("leads")
       .delete()
       .eq("is_spam", true)
       .lt("updated_at", cutoff)
+      .in("assigned_to", agentIds)
       .select("id");
 
     if (error) {
