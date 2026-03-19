@@ -417,8 +417,24 @@ export default function EmployeeLeads() {
     })();
   }, [user, tick]);
 
-  const bronzeLeads = useMemo(() => leads.filter(l => l.agent_type === "bronze" || !l.agent_type), [leads]);
-  const silverLeads = useMemo(() => leads.filter(l => l.agent_type === "silver"), [leads]);
+  // Apply filters
+  const filteredLeads = useMemo(() => {
+    let result = leads;
+    if (filterCampaignId !== "all") {
+      result = result.filter(l => l.campaign_id === filterCampaignId);
+    }
+    if (filterDataMode !== "all") {
+      const campaignIdsForMode = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(l => l.campaign_id && campaignIdsForMode.includes(l.campaign_id));
+    }
+    if (filterWebsite !== "all") {
+      result = result.filter(l => l.import_source === filterWebsite);
+    }
+    return result;
+  }, [leads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
+  const bronzeLeads = useMemo(() => filteredLeads.filter(l => l.agent_type === "bronze" || !l.agent_type), [filteredLeads]);
+  const silverLeads = useMemo(() => filteredLeads.filter(l => l.agent_type === "silver"), [filteredLeads]);
 
   const getRequeueRemaining = (lead: LeadRow) => {
     if (!lead.requeue_at) return null;
