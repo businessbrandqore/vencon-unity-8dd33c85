@@ -91,7 +91,9 @@ const PANEL_OPTIONS: { value: AppPanel; label: string }[] = [
 
 // All roles with their panel mapping
 const ALL_ROLES_WITH_PANEL: { value: string; label: string; panel: AppPanel }[] = [
-  { value: "telesales_executive", label: "টেলিসেলস এক্সিকিউটিভ", panel: "employee" },
+  { value: "telesales_executive", label: "টেলিসেলস এক্সিকিউটিভ (Bronze)", panel: "employee" },
+  { value: "silver_agent", label: "সিলভার এজেন্ট", panel: "employee" },
+  { value: "golden_agent", label: "গোল্ডেন এজেন্ট", panel: "employee" },
   { value: "cso", label: "CSO (Customer Security Officer)", panel: "employee" },
   { value: "cs_executive", label: "CS Executive", panel: "employee" },
   { value: "warehouse_assistant", label: "Warehouse Assistant", panel: "employee" },
@@ -100,6 +102,8 @@ const ALL_ROLES_WITH_PANEL: { value: string; label: string; panel: AppPanel }[] 
   { value: "delivery_coordinator", label: "Delivery Coordinator", panel: "employee" },
   { value: "maintenance_officer", label: "Maintenance Officer", panel: "employee" },
   { value: "office_assistant", label: "Office Assistant", panel: "employee" },
+  { value: "cancellation_executive", label: "Cancellation Executive", panel: "employee" },
+  { value: "editor", label: "Editor", panel: "employee" },
   { value: "group_leader", label: "Group Leader", panel: "employee" },
   { value: "team_leader", label: "Team Leader", panel: "tl" },
   { value: "assistant_team_leader", label: "Assistant Team Leader (ATL)", panel: "tl" },
@@ -108,6 +112,8 @@ const ALL_ROLES_WITH_PANEL: { value: string; label: string; panel: AppPanel }[] 
   { value: "hr_executive", label: "HR Executive", panel: "hr" },
   { value: "super_admin", label: "Super Admin", panel: "sa" },
 ];
+
+const SALES_ROLES = ALL_ROLES_WITH_PANEL.map(r => ({ value: r.value, label: r.label }));
 
 const getRolePanelMap = (): Record<string, AppPanel> => {
   const map: Record<string, AppPanel> = {};
