@@ -35,6 +35,7 @@ interface LeadRow {
   campaign_id: string | null;
   tl_id: string | null;
   created_at: string | null;
+  import_source: string | null;
 }
 
 interface InventoryItem {
