@@ -68,7 +68,11 @@ interface ComplaintRow {
 const SAEmployeeProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
+  const isBn = t("vencon") === "VENCON";
+  const panel = location.pathname.startsWith("/hr") ? "hr" : "sa";
+  const backPath = panel === "hr" ? "/hr/employees" : "/sa/employees";
   const isBn = t("vencon") === "VENCON";
 
   const [emp, setEmp] = useState<EmpFull | null>(null);
