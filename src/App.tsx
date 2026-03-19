@@ -90,6 +90,8 @@ const App = () => (
               <Route path="/sa/payroll" element={<SAPayroll />} />
               <Route path="/sa/audit-logs" element={<SAAuditLogs />} />
               <Route path="/sa/all-data" element={<SAAllData />} />
+              <Route path="/sa/employees" element={<SAEmployees />} />
+              <Route path="/sa/employees/:id" element={<SAEmployeeProfile />} />
               <Route path="/sa/data-tracker" element={<DataTracker />} />
               <Route path="/sa/attendance" element={<ManagerAttendance />} />
               <Route path="/sa/settings" element={<SASettings />} />
