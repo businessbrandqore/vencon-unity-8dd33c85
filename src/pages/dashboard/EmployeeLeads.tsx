@@ -308,6 +308,42 @@ export default function EmployeeLeads() {
   };
 
 
+      {/* Filters */}
+      {campaigns.length > 0 && (
+        <div className="flex flex-wrap gap-3 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
+              {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder={isBn ? "ডাটা মোড" : "Data Mode"} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব মোড" : "All Modes"}</SelectItem>
+              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = filterCampaignId !== "all"
+              ? websites.filter(w => w.campaign_id === filterCampaignId)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ওয়েবসাইট" : "Website"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
+        </div>
+      )}
+
 
   const loadMyRequests = async () => {
     if (!user) return;
