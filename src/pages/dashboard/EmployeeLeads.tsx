@@ -200,6 +200,24 @@ export default function EmployeeLeads() {
     })();
   }, [user]);
 
+  // Load campaigns & websites for filters
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: carData } = await supabase.from("campaign_agent_roles")
+        .select("campaign_id").eq("agent_id", user.id);
+      const campaignIds = [...new Set((carData || []).map(c => c.campaign_id))];
+      if (campaignIds.length === 0) return;
+
+      const [{ data: campData }, { data: siteData }] = await Promise.all([
+        supabase.from("campaigns").select("id, name, data_mode").in("id", campaignIds),
+        supabase.from("campaign_websites").select("id, site_name, campaign_id").in("campaign_id", campaignIds).eq("is_active", true),
+      ]);
+      if (campData) setCampaigns(campData);
+      if (siteData) setWebsites(siteData);
+    })();
+  }, [user]);
+
   // Compute available statuses from dynamic config or fallback
   const availableStatuses = useMemo(() => {
     if (dynamicColumns.length > 0) {
