@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCircle } from "lucide-react";
+import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCircle, Filter } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 import FraudChecker from "@/components/FraudChecker";
@@ -35,6 +35,7 @@ interface LeadRow {
   campaign_id: string | null;
   tl_id: string | null;
   created_at: string | null;
+  import_source: string | null;
 }
 
 interface InventoryItem {
@@ -159,6 +160,13 @@ export default function EmployeeLeads() {
   const [dataRequestLoading, setDataRequestLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
+  // Filter states
+  const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
+
   // WhatsApp states
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
   const [waSenderNumber, setWaSenderNumber] = useState("");
@@ -190,6 +198,24 @@ export default function EmployeeLeads() {
         setDynamicColumns(roleConfig.columns);
       }
       setConfigLoaded(true);
+    })();
+  }, [user]);
+
+  // Load campaigns & websites for filters
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: carData } = await supabase.from("campaign_agent_roles")
+        .select("campaign_id").eq("agent_id", user.id);
+      const campaignIds = [...new Set((carData || []).map(c => c.campaign_id))];
+      if (campaignIds.length === 0) return;
+
+      const [{ data: campData }, { data: siteData }] = await Promise.all([
+        supabase.from("campaigns").select("id, name, data_mode").in("id", campaignIds),
+        supabase.from("campaign_websites").select("id, site_name, campaign_id").in("campaign_id", campaignIds).eq("is_active", true),
+      ]);
+      if (campData) setCampaigns(campData);
+      if (siteData) setWebsites(siteData);
     })();
   }, [user]);
 
@@ -280,7 +306,6 @@ export default function EmployeeLeads() {
     }
     setWaSending(false);
   };
-
 
 
   const loadMyRequests = async () => {
@@ -392,8 +417,24 @@ export default function EmployeeLeads() {
     })();
   }, [user, tick]);
 
-  const bronzeLeads = useMemo(() => leads.filter(l => l.agent_type === "bronze" || !l.agent_type), [leads]);
-  const silverLeads = useMemo(() => leads.filter(l => l.agent_type === "silver"), [leads]);
+  // Apply filters
+  const filteredLeads = useMemo(() => {
+    let result = leads;
+    if (filterCampaignId !== "all") {
+      result = result.filter(l => l.campaign_id === filterCampaignId);
+    }
+    if (filterDataMode !== "all") {
+      const campaignIdsForMode = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(l => l.campaign_id && campaignIdsForMode.includes(l.campaign_id));
+    }
+    if (filterWebsite !== "all") {
+      result = result.filter(l => l.import_source === filterWebsite);
+    }
+    return result;
+  }, [leads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
+  const bronzeLeads = useMemo(() => filteredLeads.filter(l => l.agent_type === "bronze" || !l.agent_type), [filteredLeads]);
+  const silverLeads = useMemo(() => filteredLeads.filter(l => l.agent_type === "silver"), [filteredLeads]);
 
   const getRequeueRemaining = (lead: LeadRow) => {
     if (!lead.requeue_at) return null;
@@ -791,6 +832,42 @@ export default function EmployeeLeads() {
           <span>{t("orders_count")}: <strong className="text-foreground">{metrics.orders}</strong></span>
         </div>
       </div>
+
+      {/* Filters */}
+      {campaigns.length > 0 && (
+        <div className="flex flex-wrap gap-3 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
+              {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder={isBn ? "ডাটা মোড" : "Data Mode"} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব মোড" : "All Modes"}</SelectItem>
+              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = filterCampaignId !== "all"
+              ? websites.filter(w => w.campaign_id === filterCampaignId)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ওয়েবসাইট" : "Website"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
+        </div>
+      )}
 
       {/* Data Request Button */}
       {leads.length === 0 && (
