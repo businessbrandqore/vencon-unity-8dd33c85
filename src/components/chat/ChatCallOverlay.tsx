@@ -328,45 +328,48 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     })();
   }, [outgoingCall]);
 
-  // Listen for incoming calls & call status updates
+  // Helper to handle an incoming ringing call
+  const handleIncomingCall = useCallback(async (call: any) => {
+    if (call.caller_id === currentUserId || call.status !== "ringing") return;
+    if (statusRef.current !== "idle") return;
+
+    const { data: part } = await supabase
+      .from("chat_participants")
+      .select("user_id")
+      .eq("conversation_id", call.conversation_id)
+      .eq("user_id", currentUserId)
+      .maybeSingle();
+
+    if (!part) return;
+
+    const { data: caller } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", call.caller_id)
+      .single();
+
+    setCallInfo({
+      callId: call.id,
+      conversationId: call.conversation_id,
+      callerId: call.caller_id,
+      callerName: caller?.name || "Unknown",
+    });
+    setStatus("incoming");
+    ringtoneRef.current.play();
+    setupSignaling(call.id, false);
+  }, [currentUserId, setupSignaling]);
+
+  const handleIncomingCallRef = useRef(handleIncomingCall);
+  handleIncomingCallRef.current = handleIncomingCall;
+
+  // Listen for incoming calls & call status updates via realtime
   useEffect(() => {
     const channel = supabase
       .channel(`call-signals-${currentUserId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_calls" },
-        async (payload: any) => {
-          const call = payload.new;
-          if (call.caller_id === currentUserId || call.status !== "ringing") return;
-          if (statusRef.current !== "idle") return;
-
-          const { data: part } = await supabase
-            .from("chat_participants")
-            .select("user_id")
-            .eq("conversation_id", call.conversation_id)
-            .eq("user_id", currentUserId)
-            .maybeSingle();
-
-          if (!part) return;
-
-          const { data: caller } = await supabase
-            .from("users")
-            .select("name")
-            .eq("id", call.caller_id)
-            .single();
-
-          setCallInfo({
-            callId: call.id,
-            conversationId: call.conversation_id,
-            callerId: call.caller_id,
-            callerName: caller?.name || "Unknown",
-          });
-          setStatus("incoming");
-          ringtoneRef.current.play();
-
-          // Setup signaling channel for receiving
-          setupSignaling(call.id, false);
-        }
+        (payload: any) => handleIncomingCallRef.current(payload.new)
       )
       .on(
         "postgres_changes",
@@ -378,14 +381,11 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           if (!ci || call.id !== ci.callId) return;
 
           if (call.status === "active" && st === "calling") {
-            // Other side accepted - start WebRTC as caller
             ringtoneRef.current.stop();
             setStatus("connected");
             setDuration(0);
             timerRef.current = window.setInterval(() => setDuration((d) => d + 1), 1000);
             onCallStateChange?.(true);
-            
-            // Setup peer connection as caller
             await setupPeerConnection(ci.callId, true);
           }
 
@@ -399,7 +399,33 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, setupSignaling, setupPeerConnection]);
+  }, [currentUserId, setupPeerConnection]);
+
+  // Polling fallback: check for ringing calls every 3s (catches missed realtime events on mobile)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      if (statusRef.current !== "idle") return;
+
+      const { data: ringingCalls } = await supabase
+        .from("chat_calls")
+        .select("*")
+        .eq("status", "ringing")
+        .neq("caller_id", currentUserId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (ringingCalls && ringingCalls.length > 0) {
+        const call = ringingCalls[0];
+        // Check if call is still recent (within 30s)
+        const callAge = Date.now() - new Date(call.created_at).getTime();
+        if (callAge < 30000) {
+          handleIncomingCallRef.current(call);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [currentUserId]);
 
   const acceptCall = async () => {
     if (!callInfo) return;
