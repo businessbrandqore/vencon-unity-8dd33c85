@@ -38,6 +38,13 @@ interface OrderRow {
 interface CampaignOption {
   id: string;
   name: string;
+  data_mode: string;
+}
+
+interface WebsiteOption {
+  id: string;
+  site_name: string;
+  campaign_id: string;
 }
 
 interface TLOption {
@@ -86,7 +93,10 @@ export default function CSOLeads() {
   // Campaign filter
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
-  const [leadCampaignMap, setLeadCampaignMap] = useState<Record<string, string>>({});
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [websites, setWebsites] = useState<WebsiteOption[]>([]);
+  const [leadCampaignMap, setLeadCampaignMap] = useState<Record<string, { campaign_id: string; import_source: string | null }>>({});
 
   // Data Request state
   const [showDataRequest, setShowDataRequest] = useState(false);
@@ -169,11 +179,11 @@ export default function CSOLeads() {
     if (leadIds.length > 0) {
       const { data: leadsData } = await supabase
         .from("leads")
-        .select("id, campaign_id")
+        .select("id, campaign_id, import_source")
         .in("id", leadIds);
       if (leadsData) {
-        const lcMap: Record<string, string> = {};
-        leadsData.forEach(l => { if (l.campaign_id) lcMap[l.id] = l.campaign_id; });
+        const lcMap: Record<string, { campaign_id: string; import_source: string | null }> = {};
+        leadsData.forEach(l => { if (l.campaign_id) lcMap[l.id] = { campaign_id: l.campaign_id, import_source: l.import_source }; });
         setLeadCampaignMap(lcMap);
       }
     }
@@ -196,14 +206,25 @@ export default function CSOLeads() {
     setLoading(false);
   }, [user]);
 
-  // Load campaigns
+  // Load campaigns & websites
   const loadCampaigns = useCallback(async () => {
     const { data } = await supabase
       .from("campaigns")
-      .select("id, name")
+      .select("id, name, data_mode")
       .eq("status", "active")
       .order("name");
-    if (data) setCampaigns(data);
+    if (data) {
+      setCampaigns(data);
+      const campIds = data.map(c => c.id);
+      if (campIds.length > 0) {
+        const { data: siteData } = await supabase
+          .from("campaign_websites")
+          .select("id, site_name, campaign_id")
+          .in("campaign_id", campIds)
+          .eq("is_active", true);
+        if (siteData) setWebsites(siteData);
+      }
+    }
   }, []);
 
   // Load TL options for data request
@@ -383,9 +404,14 @@ export default function CSOLeads() {
   };
 
   const campaignFilter = (o: OrderRow) => {
-    if (selectedCampaign === "all") return true;
-    const campId = o.lead_id ? leadCampaignMap[o.lead_id] : null;
-    return campId === selectedCampaign;
+    const info = o.lead_id ? leadCampaignMap[o.lead_id] : null;
+    if (selectedCampaign !== "all" && info?.campaign_id !== selectedCampaign) return false;
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      if (!info?.campaign_id || !ids.includes(info.campaign_id)) return false;
+    }
+    if (filterWebsite !== "all" && info?.import_source !== filterWebsite) return false;
+    return true;
   };
 
   const filteredPending = pendingOrders.filter(o =>
@@ -423,10 +449,10 @@ export default function CSOLeads() {
           CSO — লিড ও অর্ডার যাচাই
         </h1>
         <div className="flex gap-2 flex-wrap">
-          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-            <SelectTrigger className="w-[200px] h-9">
+          <Select value={selectedCampaign} onValueChange={v => { setSelectedCampaign(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="w-[180px] h-9 text-xs">
               <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="ক্যাম্পেইন ফিল্টার" />
+              <SelectValue placeholder="ক্যাম্পেইন" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
@@ -435,6 +461,28 @@ export default function CSOLeads() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-9 w-[140px] text-xs"><SelectValue placeholder="ডাটা মোড" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব মোড</SelectItem>
+              <SelectItem value="lead">লিড</SelectItem>
+              <SelectItem value="processing">প্রসেসিং</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = selectedCampaign !== "all"
+              ? websites.filter(w => w.campaign_id === selectedCampaign)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="ওয়েবসাইট" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব ওয়েবসাইট</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
           <Button variant="outline" size="sm" onClick={() => { setShowDataRequest(true); loadTLs(); }}>
             <Database className="h-4 w-4 mr-1" /> ডাটা রিকোয়েস্ট
           </Button>
