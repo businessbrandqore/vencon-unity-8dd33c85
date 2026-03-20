@@ -51,7 +51,7 @@ export default function SpamLeads() {
     // Load own spam leads
     const { data: ownData, error: ownErr } = await supabase
       .from("leads")
-      .select("id, name, phone, address, status, agent_type, updated_at, assigned_to")
+      .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source")
       .eq("assigned_to", user.id)
       .eq("is_spam", true)
       .order("updated_at", { ascending: false });
