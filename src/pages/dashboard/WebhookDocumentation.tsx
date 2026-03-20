@@ -260,7 +260,7 @@ function ${functionName}($order_id) {
       } else if (res.ok && data.skipped_duplicates > 0) {
         setTestResult({ success: true, message: isBn ? "✓ Connection সফল! (Duplicate skipped)" : "✓ Connected! (Duplicate skipped)" });
       } else {
-        setTestResult({ success: false, message: data.error || "Unknown error" });
+        setTestResult({ success: false, message: data.error || (isBn ? "ডাটা save হয়নি" : "Data was not saved") });
       }
     } catch (err) {
       setTestResult({ success: false, message: String(err) });
