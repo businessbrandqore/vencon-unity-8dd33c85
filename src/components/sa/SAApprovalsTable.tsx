@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 
 const TEAL = "#0D9488";
 
@@ -18,6 +19,7 @@ interface Approval {
 const SAApprovalsTable = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const isBn = t("vencon") === "VENCON"; // crude lang check
 
   const [approvals, setApprovals] = useState<Approval[]>([]);
@@ -88,9 +90,37 @@ const SAApprovalsTable = () => {
     setProcessing(approvalId);
 
     const approval = approvals.find((a) => a.id === approvalId);
+    if (!approval) {
+      setProcessing(null);
+      return;
+    }
+
+    const fail = (message?: string) => {
+      toast({
+        title: isBn ? "অ্যাকশন সম্পন্ন হয়নি" : "Action failed",
+        description: message || (isBn ? "আবার চেষ্টা করুন" : "Please try again."),
+        variant: "destructive",
+      });
+      setProcessing(null);
+    };
+
+    if (action === "approved" && approval.type === "campaign_delete" && approval.details) {
+      const campaignId = approval.details.campaign_id;
+      if (campaignId) {
+        const { error: deleteError } = await supabase
+          .from("campaigns")
+          .delete()
+          .eq("id", campaignId);
+
+        if (deleteError) {
+          fail(deleteError.message);
+          return;
+        }
+      }
+    }
 
     // Update approval status
-    await supabase
+    const { error: approvalError } = await supabase
       .from("sa_approvals")
       .update({
         status: action,
@@ -99,22 +129,24 @@ const SAApprovalsTable = () => {
       })
       .eq("id", approvalId);
 
+    if (approvalError) {
+      fail(approvalError.message);
+      return;
+    }
+
     // If approved new_campaign, activate the campaign
     if (action === "approved" && approval?.type === "new_campaign" && approval.details) {
       const campaignId = approval.details.campaign_id;
       if (campaignId) {
-        await supabase
+        const { error } = await supabase
           .from("campaigns")
           .update({ status: "active", approved_by: user.id })
           .eq("id", campaignId);
-      }
-    }
 
-    // If approved campaign_delete, delete the campaign (cascade will handle related data)
-    if (action === "approved" && approval?.type === "campaign_delete" && approval.details) {
-      const campaignId = approval.details.campaign_id;
-      if (campaignId) {
-        await supabase.from("campaigns").delete().eq("id", campaignId);
+        if (error) {
+          fail(error.message);
+          return;
+        }
       }
     }
 
@@ -138,7 +170,7 @@ const SAApprovalsTable = () => {
 
     // Send notification to requester
     if (approval?.requested_by) {
-      await supabase.from("notifications").insert({
+      const { error } = await supabase.from("notifications").insert({
         user_id: approval.requested_by,
         title: action === "approved"
           ? (isBn ? "অনুমোদিত হয়েছে" : "Approved")
@@ -146,16 +178,32 @@ const SAApprovalsTable = () => {
         message: `${typeLabels[approval.type]?.[isBn ? "bn" : "en"] || approval.type}: ${action === "rejected" && reason ? reason : getSummary(approval)}`,
         type: "approval_result",
       });
+
+      if (error) {
+        fail(error.message);
+        return;
+      }
     }
 
     // Log to audit
-    await supabase.from("audit_logs").insert({
+    const { error: auditError } = await supabase.from("audit_logs").insert({
       actor_id: user.id,
       actor_role: user.role,
       action: `approval_${action}`,
       target_table: "sa_approvals",
       target_id: approvalId,
       details: { type: approval?.type, reason: reason || null },
+    });
+
+    if (auditError) {
+      fail(auditError.message);
+      return;
+    }
+
+    toast({
+      title: action === "approved"
+        ? (isBn ? "অনুমোদন সম্পন্ন হয়েছে" : "Approval completed")
+        : (isBn ? "অনুরোধ প্রত্যাখ্যান করা হয়েছে" : "Request rejected"),
     });
 
     setProcessing(null);
