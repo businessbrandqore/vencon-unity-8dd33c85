@@ -81,7 +81,14 @@ export default function EmployeeMyOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const selectFields = "id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at, district, thana";
+  // Campaign / website filter states
+  const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
+
+  const selectFields = "id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at, district, thana, lead_id";
 
   useEffect(() => {
     if (!user) return;
@@ -91,8 +98,33 @@ export default function EmployeeMyOrders() {
         .select(selectFields)
         .eq("agent_id", user.id)
         .order("created_at", { ascending: false });
-      setOrders((data as OrderRow[]) || []);
+      const rawOrders = (data as OrderRow[]) || [];
+
+      // Enrich orders with campaign & import_source from leads
+      const leadIds = [...new Set(rawOrders.map(o => o.lead_id).filter(Boolean))] as string[];
+      let leadMap: Record<string, { campaign_id: string | null; import_source: string | null }> = {};
+      if (leadIds.length > 0) {
+        const { data: leadData } = await supabase.from("leads").select("id, campaign_id, import_source").in("id", leadIds);
+        (leadData || []).forEach(l => { leadMap[l.id] = { campaign_id: l.campaign_id, import_source: l.import_source }; });
+      }
+      const enriched = rawOrders.map(o => ({
+        ...o,
+        _campaign_id: o.lead_id ? leadMap[o.lead_id]?.campaign_id || null : null,
+        _import_source: o.lead_id ? leadMap[o.lead_id]?.import_source || null : null,
+      }));
+      setOrders(enriched);
       setLoading(false);
+
+      // Load campaigns & websites for filters
+      const campaignIds = [...new Set(enriched.map(o => o._campaign_id).filter(Boolean))] as string[];
+      if (campaignIds.length > 0) {
+        const [{ data: campData }, { data: siteData }] = await Promise.all([
+          supabase.from("campaigns").select("id, name, data_mode").in("id", campaignIds),
+          supabase.from("campaign_websites").select("id, site_name, campaign_id").in("campaign_id", campaignIds).eq("is_active", true),
+        ]);
+        if (campData) setCampaigns(campData);
+        if (siteData) setWebsites(siteData);
+      }
     })();
 
     const channel = supabase
@@ -103,7 +135,16 @@ export default function EmployeeMyOrders() {
           .select(selectFields)
           .eq("agent_id", user.id)
           .order("created_at", { ascending: false })
-          .then(({ data }) => { if (data) setOrders(data as OrderRow[]); });
+          .then(({ data }) => { if (data) setOrders(prev => {
+            // Keep enrichment from initial load
+            const existingMap: Record<string, OrderRow> = {};
+            prev.forEach(o => { existingMap[o.id] = o; });
+            return (data as OrderRow[]).map(o => ({
+              ...o,
+              _campaign_id: existingMap[o.id]?._campaign_id || null,
+              _import_source: existingMap[o.id]?._import_source || null,
+            }));
+          }); });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
