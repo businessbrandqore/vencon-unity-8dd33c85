@@ -16,6 +16,7 @@ import { bn } from "date-fns/locale";
 import { toast } from "sonner";
 import ChatThread from "@/components/chat/ChatThread";
 import ChatCallOverlay from "@/components/chat/ChatCallOverlay";
+import MediaPermissionButtons from "@/components/chat/MediaPermissionButtons";
 
 interface ConvoDisplay {
   id: string;
