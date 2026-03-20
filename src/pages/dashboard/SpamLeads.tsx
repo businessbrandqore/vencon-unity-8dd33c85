@@ -312,7 +312,7 @@ export default function SpamLeads() {
         <CardContent className="p-0">
           {isTLOrATL && (
             <div className="px-4 py-2 border-b bg-muted/30">
-              <h3 className="text-sm font-semibold text-foreground">আমার স্প্যাম ({myLeads.length})</h3>
+              <h3 className="text-sm font-semibold text-foreground">আমার স্প্যাম ({filteredMyLeads.length})</h3>
             </div>
           )}
           {myLeads.length === 0 ? (
