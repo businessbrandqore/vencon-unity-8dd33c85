@@ -15,6 +15,7 @@ interface DashboardLayoutInnerProps {
 
 const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
   const { user } = useAuth();
+  const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
 
   const storageKey = `vencon_sidebar_${panel}`;
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -25,6 +26,16 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
   useEffect(() => {
     localStorage.setItem(storageKey, String(sidebarOpen));
   }, [sidebarOpen, storageKey]);
+
+  // Listen for outgoing call events from ChatPage
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setOutgoingCall(detail);
+    };
+    window.addEventListener("vencon-outgoing-call", handler);
+    return () => window.removeEventListener("vencon-outgoing-call", handler);
+  }, []);
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const closeSidebar = () => setSidebarOpen(false);
@@ -47,8 +58,12 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       </div>
       <AIChatWidget />
       <BirthdayPopup />
-      {/* Global incoming call listener — shows popup on any page */}
-      <ChatCallOverlay currentUserId={user.id} />
+      {/* Global call overlay — incoming calls on any page + outgoing from chat */}
+      <ChatCallOverlay
+        currentUserId={user.id}
+        outgoingCall={outgoingCall}
+        onOutgoingCallHandled={() => setOutgoingCall(null)}
+      />
     </div>
   );
 };
