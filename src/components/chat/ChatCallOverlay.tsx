@@ -213,60 +213,27 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       // Handle remote audio — process to reduce pops & distortion
       pc.ontrack = (event) => {
         const remoteStream = event.streams[0];
-        if (!remoteStream) return;
+        if (!remoteStream || !remoteAudioRef.current) return;
 
-        // First: always set the raw stream directly for guaranteed playback
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remoteStream;
-          remoteAudioRef.current.play().catch((e) => console.warn("Audio play blocked:", e));
-        }
-
-        // Then: try to apply audio processing on top (non-blocking)
-        try {
-          const audioCtx = new AudioContext({ sampleRate: 48000 });
-          // Resume AudioContext (required on mobile/some browsers)
-          if (audioCtx.state === "suspended") {
-            audioCtx.resume();
-          }
-          const source = audioCtx.createMediaStreamSource(remoteStream);
-
-          const highPass = audioCtx.createBiquadFilter();
-          highPass.type = "highpass";
-          highPass.frequency.value = 85;
-          highPass.Q.value = 0.7;
-
-          const lowPass = audioCtx.createBiquadFilter();
-          lowPass.type = "lowpass";
-          lowPass.frequency.value = 7500;
-          lowPass.Q.value = 0.7;
-
-          const compressor = audioCtx.createDynamicsCompressor();
-          compressor.threshold.value = -24;
-          compressor.knee.value = 12;
-          compressor.ratio.value = 4;
-          compressor.attack.value = 0.003;
-          compressor.release.value = 0.15;
-
-          const gain = audioCtx.createGain();
-          gain.gain.value = 1.0;
-
-          source.connect(highPass);
-          highPass.connect(lowPass);
-          lowPass.connect(compressor);
-          compressor.connect(gain);
-
-          const dest = audioCtx.createMediaStreamDestination();
-          gain.connect(dest);
-
-          // Only switch to processed stream if AudioContext is running
-          if (audioCtx.state === "running" && remoteAudioRef.current) {
-            remoteAudioRef.current.srcObject = dest.stream;
-            remoteAudioRef.current.play().catch(() => {});
-          }
-        } catch (e) {
-          // Processing failed — raw stream is already playing, so no action needed
-          console.warn("Audio processing fallback:", e);
-        }
+        // Set stream directly — browser's built-in echoCancellation/noiseSuppression
+        // on the sender's mic handles audio quality. No AudioContext processing needed.
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.volume = 1.0;
+        
+        // Use a user-gesture-safe play approach
+        const playAudio = () => {
+          remoteAudioRef.current?.play().catch((e) => {
+            console.warn("Audio autoplay blocked, retrying on interaction:", e);
+            const resumePlay = () => {
+              remoteAudioRef.current?.play().catch(() => {});
+              document.removeEventListener("click", resumePlay);
+              document.removeEventListener("touchstart", resumePlay);
+            };
+            document.addEventListener("click", resumePlay, { once: true });
+            document.addEventListener("touchstart", resumePlay, { once: true });
+          });
+        };
+        playAudio();
       };
 
       // Send ICE candidates via broadcast
