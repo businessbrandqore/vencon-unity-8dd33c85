@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 import { X, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,12 +34,15 @@ const quickQuestions = [
 
 const AIChatWidget = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const isOnChatPage = location.pathname.endsWith("/chat");
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -138,7 +142,7 @@ const AIChatWidget = () => {
     e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
   };
 
-  if (!user) return null;
+  if (!user || isOnChatPage) return null;
 
   return (
     <>
