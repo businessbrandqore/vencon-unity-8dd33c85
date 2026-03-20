@@ -840,7 +840,7 @@ export default function EmployeeLeads() {
       </div>
 
       {/* Filters */}
-      {campaigns.length > 0 && (
+      {(campaigns.length > 0 || leads.length > 0) && (
         <div className="flex flex-wrap gap-3 items-center">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
