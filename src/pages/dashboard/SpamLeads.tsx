@@ -105,6 +105,44 @@ export default function SpamLeads() {
 
   useEffect(() => { loadSpamLeads(); }, [loadSpamLeads]);
 
+  // Load campaigns & websites for filters
+  useEffect(() => {
+    const allLeads = [...myLeads, ...teamLeads];
+    const campaignIds = [...new Set(allLeads.map(l => l.campaign_id).filter(Boolean))] as string[];
+    if (campaignIds.length === 0) { setCampaigns([]); setWebsites([]); return; }
+    (async () => {
+      const [{ data: campData }, { data: siteData }] = await Promise.all([
+        supabase.from("campaigns").select("id, name, data_mode").in("id", campaignIds),
+        supabase.from("campaign_websites").select("id, site_name, campaign_id").in("campaign_id", campaignIds).eq("is_active", true),
+      ]);
+      if (campData) setCampaigns(campData);
+      if (siteData) setWebsites(siteData);
+    })();
+  }, [myLeads, teamLeads]);
+
+  // Apply campaign filters
+  const filteredMyLeads = useMemo(() => {
+    let result = myLeads;
+    if (filterCampaignId !== "all") result = result.filter(l => l.campaign_id === filterCampaignId);
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(l => l.campaign_id && ids.includes(l.campaign_id));
+    }
+    if (filterWebsite !== "all") result = result.filter(l => l.import_source === filterWebsite);
+    return result;
+  }, [myLeads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
+  const filteredTeamLeads = useMemo(() => {
+    let result = teamLeads;
+    if (filterCampaignId !== "all") result = result.filter(l => l.campaign_id === filterCampaignId);
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(l => l.campaign_id && ids.includes(l.campaign_id));
+    }
+    if (filterWebsite !== "all") result = result.filter(l => l.import_source === filterWebsite);
+    return result;
+  }, [teamLeads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
   const handleRestore = async (leadId: string) => {
     const { error } = await supabase
       .from("leads")
