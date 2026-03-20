@@ -206,14 +206,25 @@ export default function CSOLeads() {
     setLoading(false);
   }, [user]);
 
-  // Load campaigns
+  // Load campaigns & websites
   const loadCampaigns = useCallback(async () => {
     const { data } = await supabase
       .from("campaigns")
-      .select("id, name")
+      .select("id, name, data_mode")
       .eq("status", "active")
       .order("name");
-    if (data) setCampaigns(data);
+    if (data) {
+      setCampaigns(data);
+      const campIds = data.map(c => c.id);
+      if (campIds.length > 0) {
+        const { data: siteData } = await supabase
+          .from("campaign_websites")
+          .select("id, site_name, campaign_id")
+          .in("campaign_id", campIds)
+          .eq("is_active", true);
+        if (siteData) setWebsites(siteData);
+      }
+    }
   }, []);
 
   // Load TL options for data request
