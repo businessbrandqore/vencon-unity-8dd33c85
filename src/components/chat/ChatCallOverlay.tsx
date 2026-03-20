@@ -213,60 +213,27 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       // Handle remote audio — process to reduce pops & distortion
       pc.ontrack = (event) => {
         const remoteStream = event.streams[0];
-        if (!remoteStream) return;
+        if (!remoteStream || !remoteAudioRef.current) return;
 
-        // First: always set the raw stream directly for guaranteed playback
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remoteStream;
-          remoteAudioRef.current.play().catch((e) => console.warn("Audio play blocked:", e));
-        }
-
-        // Then: try to apply audio processing on top (non-blocking)
-        try {
-          const audioCtx = new AudioContext({ sampleRate: 48000 });
-          // Resume AudioContext (required on mobile/some browsers)
-          if (audioCtx.state === "suspended") {
-            audioCtx.resume();
-          }
-          const source = audioCtx.createMediaStreamSource(remoteStream);
-
-          const highPass = audioCtx.createBiquadFilter();
-          highPass.type = "highpass";
-          highPass.frequency.value = 85;
-          highPass.Q.value = 0.7;
-
-          const lowPass = audioCtx.createBiquadFilter();
-          lowPass.type = "lowpass";
-          lowPass.frequency.value = 7500;
-          lowPass.Q.value = 0.7;
-
-          const compressor = audioCtx.createDynamicsCompressor();
-          compressor.threshold.value = -24;
-          compressor.knee.value = 12;
-          compressor.ratio.value = 4;
-          compressor.attack.value = 0.003;
-          compressor.release.value = 0.15;
-
-          const gain = audioCtx.createGain();
-          gain.gain.value = 1.0;
-
-          source.connect(highPass);
-          highPass.connect(lowPass);
-          lowPass.connect(compressor);
-          compressor.connect(gain);
-
-          const dest = audioCtx.createMediaStreamDestination();
-          gain.connect(dest);
-
-          // Only switch to processed stream if AudioContext is running
-          if (audioCtx.state === "running" && remoteAudioRef.current) {
-            remoteAudioRef.current.srcObject = dest.stream;
-            remoteAudioRef.current.play().catch(() => {});
-          }
-        } catch (e) {
-          // Processing failed — raw stream is already playing, so no action needed
-          console.warn("Audio processing fallback:", e);
-        }
+        // Set stream directly — browser's built-in echoCancellation/noiseSuppression
+        // on the sender's mic handles audio quality. No AudioContext processing needed.
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.volume = 1.0;
+        
+        // Use a user-gesture-safe play approach
+        const playAudio = () => {
+          remoteAudioRef.current?.play().catch((e) => {
+            console.warn("Audio autoplay blocked, retrying on interaction:", e);
+            const resumePlay = () => {
+              remoteAudioRef.current?.play().catch(() => {});
+              document.removeEventListener("click", resumePlay);
+              document.removeEventListener("touchstart", resumePlay);
+            };
+            document.addEventListener("click", resumePlay, { once: true });
+            document.addEventListener("touchstart", resumePlay, { once: true });
+          });
+        };
+        playAudio();
       };
 
       // Send ICE candidates via broadcast
@@ -361,45 +328,48 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     })();
   }, [outgoingCall]);
 
-  // Listen for incoming calls & call status updates
+  // Helper to handle an incoming ringing call
+  const handleIncomingCall = useCallback(async (call: any) => {
+    if (call.caller_id === currentUserId || call.status !== "ringing") return;
+    if (statusRef.current !== "idle") return;
+
+    const { data: part } = await supabase
+      .from("chat_participants")
+      .select("user_id")
+      .eq("conversation_id", call.conversation_id)
+      .eq("user_id", currentUserId)
+      .maybeSingle();
+
+    if (!part) return;
+
+    const { data: caller } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", call.caller_id)
+      .single();
+
+    setCallInfo({
+      callId: call.id,
+      conversationId: call.conversation_id,
+      callerId: call.caller_id,
+      callerName: caller?.name || "Unknown",
+    });
+    setStatus("incoming");
+    ringtoneRef.current.play();
+    setupSignaling(call.id, false);
+  }, [currentUserId, setupSignaling]);
+
+  const handleIncomingCallRef = useRef(handleIncomingCall);
+  handleIncomingCallRef.current = handleIncomingCall;
+
+  // Listen for incoming calls & call status updates via realtime
   useEffect(() => {
     const channel = supabase
       .channel(`call-signals-${currentUserId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_calls" },
-        async (payload: any) => {
-          const call = payload.new;
-          if (call.caller_id === currentUserId || call.status !== "ringing") return;
-          if (statusRef.current !== "idle") return;
-
-          const { data: part } = await supabase
-            .from("chat_participants")
-            .select("user_id")
-            .eq("conversation_id", call.conversation_id)
-            .eq("user_id", currentUserId)
-            .maybeSingle();
-
-          if (!part) return;
-
-          const { data: caller } = await supabase
-            .from("users")
-            .select("name")
-            .eq("id", call.caller_id)
-            .single();
-
-          setCallInfo({
-            callId: call.id,
-            conversationId: call.conversation_id,
-            callerId: call.caller_id,
-            callerName: caller?.name || "Unknown",
-          });
-          setStatus("incoming");
-          ringtoneRef.current.play();
-
-          // Setup signaling channel for receiving
-          setupSignaling(call.id, false);
-        }
+        (payload: any) => handleIncomingCallRef.current(payload.new)
       )
       .on(
         "postgres_changes",
@@ -411,14 +381,11 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           if (!ci || call.id !== ci.callId) return;
 
           if (call.status === "active" && st === "calling") {
-            // Other side accepted - start WebRTC as caller
             ringtoneRef.current.stop();
             setStatus("connected");
             setDuration(0);
             timerRef.current = window.setInterval(() => setDuration((d) => d + 1), 1000);
             onCallStateChange?.(true);
-            
-            // Setup peer connection as caller
             await setupPeerConnection(ci.callId, true);
           }
 
@@ -432,7 +399,33 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, setupSignaling, setupPeerConnection]);
+  }, [currentUserId, setupPeerConnection]);
+
+  // Polling fallback: check for ringing calls every 3s (catches missed realtime events on mobile)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      if (statusRef.current !== "idle") return;
+
+      const { data: ringingCalls } = await supabase
+        .from("chat_calls")
+        .select("*")
+        .eq("status", "ringing")
+        .neq("caller_id", currentUserId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (ringingCalls && ringingCalls.length > 0) {
+        const call = ringingCalls[0];
+        // Check if call is still recent (within 30s)
+        const callAge = Date.now() - new Date(call.created_at).getTime();
+        if (callAge < 30000) {
+          handleIncomingCallRef.current(call);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [currentUserId]);
 
   const acceptCall = async () => {
     if (!callInfo) return;
