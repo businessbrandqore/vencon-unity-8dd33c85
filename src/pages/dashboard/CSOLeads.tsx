@@ -93,7 +93,10 @@ export default function CSOLeads() {
   // Campaign filter
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
-  const [leadCampaignMap, setLeadCampaignMap] = useState<Record<string, string>>({});
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [websites, setWebsites] = useState<WebsiteOption[]>([]);
+  const [leadCampaignMap, setLeadCampaignMap] = useState<Record<string, { campaign_id: string; import_source: string | null }>>({});
 
   // Data Request state
   const [showDataRequest, setShowDataRequest] = useState(false);
