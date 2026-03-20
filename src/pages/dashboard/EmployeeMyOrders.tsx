@@ -27,6 +27,9 @@ interface OrderRow {
   created_at: string | null;
   district: string | null;
   thana: string | null;
+  lead_id: string | null;
+  _campaign_id?: string | null;
+  _import_source?: string | null;
 }
 
 // Pipeline steps will be translated dynamically
