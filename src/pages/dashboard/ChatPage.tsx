@@ -65,7 +65,7 @@ const ChatPage = () => {
   const [sidebarTab, setSidebarTab] = useState<"dm" | "group">("dm");
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [threadParent, setThreadParent] = useState<Message | null>(null);
-  const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
+  // outgoingCall is now managed by DashboardLayout via custom event
   const [uploadingImage, setUploadingImage] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const [mobileShowChat, setMobileShowChat] = useState(false);
