@@ -57,25 +57,17 @@ const HRDataMonitor = () => {
     },
   });
 
-  // Fetch websites for the selected campaign
+  // Fetch websites for the selected campaign, filtered by data mode
   const { data: websites } = useQuery({
-    queryKey: ["monitor-websites", selectedCampaign],
+    queryKey: ["monitor-websites", selectedCampaign, dataMode],
     queryFn: async () => {
-      if (selectedCampaign === "all") {
-        const { data, error } = await supabase
-          .from("campaign_websites")
-          .select("id, site_name, campaign_id")
-          .eq("is_active", true)
-          .order("site_name");
-        if (error) throw error;
-        return data;
-      }
-      const { data, error } = await supabase
+      let q = supabase
         .from("campaign_websites")
-        .select("id, site_name, campaign_id")
-        .eq("campaign_id", selectedCampaign)
-        .eq("is_active", true)
-        .order("site_name");
+        .select("id, site_name, campaign_id, data_mode")
+        .eq("is_active", true);
+      if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (dataMode !== "all") q = q.eq("data_mode", dataMode);
+      const { data, error } = await q.order("site_name");
       if (error) throw error;
       return data;
     },
@@ -160,7 +152,7 @@ const HRDataMonitor = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Select value={dataMode} onValueChange={setDataMode}>
+          <Select value={dataMode} onValueChange={(val) => { setDataMode(val); setSelectedWebsite("all"); }}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
             </SelectTrigger>
