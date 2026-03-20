@@ -448,7 +448,7 @@ function ${functionName}($order_id) {
                           if (res.ok && (data.imported > 0 || data.skipped_duplicates > 0)) {
                             setTestResult({ success: true, message: `✓ ${ws.site_name} — OK!` });
                           } else {
-                            setTestResult({ success: false, message: data.error || "Error" });
+                            setTestResult({ success: false, message: data.error || (isBn ? "ডাটা save হয়নি" : "Data was not saved") });
                           }
                         } catch (err) { setTestResult({ success: false, message: String(err) }); }
                         finally { setTesting(false); }
