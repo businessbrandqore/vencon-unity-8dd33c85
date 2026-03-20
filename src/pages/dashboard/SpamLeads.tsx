@@ -330,7 +330,7 @@ export default function SpamLeads() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {myLeads.map(lead => (
+                  {filteredMyLeads.map(lead => (
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell>{lead.phone || "—"}</TableCell>
