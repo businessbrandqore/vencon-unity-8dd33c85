@@ -202,7 +202,7 @@ export default function SpamLeads() {
         <ShieldBan className="h-5 w-5 text-destructive" />
         <h2 className="font-heading text-xl font-bold text-foreground">স্প্যাম</h2>
         <span className="text-sm text-muted-foreground">
-          ({myLeads.length + teamLeads.length})
+          ({filteredMyLeads.length + filteredTeamLeads.length})
         </span>
       </div>
 
@@ -211,8 +211,44 @@ export default function SpamLeads() {
         স্প্যাম ডাটা ২৪ ঘণ্টা পর অটোমেটিক মুছে যায়
       </p>
 
+      {/* Campaign / Website Filters */}
+      {campaigns.length > 0 && (
+        <div className="flex flex-wrap gap-3 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ক্যাম্পেইন" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="ডাটা মোড" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব মোড</SelectItem>
+              <SelectItem value="lead">লিড</SelectItem>
+              <SelectItem value="processing">প্রসেসিং</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = filterCampaignId !== "all"
+              ? websites.filter(w => w.campaign_id === filterCampaignId)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ওয়েবসাইট" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব ওয়েবসাইট</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
+        </div>
+      )}
+
       {/* TL/ATL: Team Agent Spam Leads */}
-      {isTLOrATL && teamLeads.length > 0 && (
+      {isTLOrATL && filteredTeamLeads.length > 0 && (
         <Card>
           <CardContent className="p-0">
             <div className="px-4 py-2.5 border-b bg-muted/30">
