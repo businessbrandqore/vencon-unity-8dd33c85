@@ -135,58 +135,36 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       config: { broadcast: { self: false } },
     });
 
-    // Queue for messages that arrive before peer connection is ready
-    const pendingQueue: any[] = [];
-
-    const processSignal = async (payload: any) => {
-      const { type, data, from } = payload.payload;
-      if (from === currentUserId) return;
-
-      const pc = peerRef.current;
-      if (!pc) {
-        // Queue the message if PC isn't ready yet
-        pendingQueue.push(payload);
-        return;
-      }
-
-      try {
-        if (type === "offer") {
-          await pc.setRemoteDescription(new RTCSessionDescription(data));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          channel.send({
-            type: "broadcast",
-            event: "webrtc-signal",
-            payload: { type: "answer", data: answer, from: currentUserId },
-          });
-        } else if (type === "answer") {
-          await pc.setRemoteDescription(new RTCSessionDescription(data));
-        } else if (type === "ice-candidate") {
-          if (pc.remoteDescription) {
-            await pc.addIceCandidate(new RTCIceCandidate(data));
-          } else {
-            // Queue ICE candidates if remote description not set yet
-            pendingQueue.push(payload);
-          }
-        }
-      } catch (err) {
-        console.error("WebRTC signaling error:", err);
-      }
-    };
-
     channel
-      .on("broadcast", { event: "webrtc-signal" }, processSignal)
+      .on("broadcast", { event: "webrtc-signal" }, async (payload: any) => {
+        const { type, data, from } = payload.payload;
+        if (from === currentUserId) return;
+
+        const pc = peerRef.current;
+        if (!pc) return;
+
+        try {
+          if (type === "offer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            channel.send({
+              type: "broadcast",
+              event: "webrtc-signal",
+              payload: { type: "answer", data: answer, from: currentUserId },
+            });
+          } else if (type === "answer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data));
+          } else if (type === "ice-candidate") {
+            await pc.addIceCandidate(new RTCIceCandidate(data));
+          }
+        } catch (err) {
+          console.error("WebRTC signaling error:", err);
+        }
+      })
       .subscribe();
 
     signalingChannelRef.current = channel;
-    // Expose pending queue processor
-    (channel as any).__processPending = async () => {
-      const items = [...pendingQueue];
-      pendingQueue.length = 0;
-      for (const item of items) {
-        await processSignal(item);
-      }
-    };
     return channel;
   }, [currentUserId]);
 
@@ -199,8 +177,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 48000,
-          channelCount: 1,
-        } as MediaTrackConstraints,
+        },
       });
       localStreamRef.current = stream;
 
@@ -210,30 +187,12 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       // Add local audio tracks
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      // Handle remote audio — process to reduce pops & distortion
+      // Handle remote audio
       pc.ontrack = (event) => {
-        const remoteStream = event.streams[0];
-        if (!remoteStream || !remoteAudioRef.current) return;
-
-        // Set stream directly — browser's built-in echoCancellation/noiseSuppression
-        // on the sender's mic handles audio quality. No AudioContext processing needed.
-        remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.volume = 1.0;
-        
-        // Use a user-gesture-safe play approach
-        const playAudio = () => {
-          remoteAudioRef.current?.play().catch((e) => {
-            console.warn("Audio autoplay blocked, retrying on interaction:", e);
-            const resumePlay = () => {
-              remoteAudioRef.current?.play().catch(() => {});
-              document.removeEventListener("click", resumePlay);
-              document.removeEventListener("touchstart", resumePlay);
-            };
-            document.addEventListener("click", resumePlay, { once: true });
-            document.addEventListener("touchstart", resumePlay, { once: true });
-          });
-        };
-        playAudio();
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(() => {});
+        }
       };
 
       // Send ICE candidates via broadcast
@@ -257,14 +216,8 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
         }
       };
 
-      // Process any queued signaling messages now that PC is ready
-      if (signalingChannelRef.current && (signalingChannelRef.current as any).__processPending) {
-        await (signalingChannelRef.current as any).__processPending();
-      }
-
-      // If caller, wait briefly for receiver's channel to be ready, then send offer
+      // If caller, create and send offer
       if (isCaller) {
-        await new Promise((r) => setTimeout(r, 500));
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         signalingChannelRef.current?.send({
@@ -328,48 +281,45 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     })();
   }, [outgoingCall]);
 
-  // Helper to handle an incoming ringing call
-  const handleIncomingCall = useCallback(async (call: any) => {
-    if (call.caller_id === currentUserId || call.status !== "ringing") return;
-    if (statusRef.current !== "idle") return;
-
-    const { data: part } = await supabase
-      .from("chat_participants")
-      .select("user_id")
-      .eq("conversation_id", call.conversation_id)
-      .eq("user_id", currentUserId)
-      .maybeSingle();
-
-    if (!part) return;
-
-    const { data: caller } = await supabase
-      .from("users")
-      .select("name")
-      .eq("id", call.caller_id)
-      .single();
-
-    setCallInfo({
-      callId: call.id,
-      conversationId: call.conversation_id,
-      callerId: call.caller_id,
-      callerName: caller?.name || "Unknown",
-    });
-    setStatus("incoming");
-    ringtoneRef.current.play();
-    setupSignaling(call.id, false);
-  }, [currentUserId, setupSignaling]);
-
-  const handleIncomingCallRef = useRef(handleIncomingCall);
-  handleIncomingCallRef.current = handleIncomingCall;
-
-  // Listen for incoming calls & call status updates via realtime
+  // Listen for incoming calls & call status updates
   useEffect(() => {
     const channel = supabase
       .channel(`call-signals-${currentUserId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_calls" },
-        (payload: any) => handleIncomingCallRef.current(payload.new)
+        async (payload: any) => {
+          const call = payload.new;
+          if (call.caller_id === currentUserId || call.status !== "ringing") return;
+          if (statusRef.current !== "idle") return;
+
+          const { data: part } = await supabase
+            .from("chat_participants")
+            .select("user_id")
+            .eq("conversation_id", call.conversation_id)
+            .eq("user_id", currentUserId)
+            .maybeSingle();
+
+          if (!part) return;
+
+          const { data: caller } = await supabase
+            .from("users")
+            .select("name")
+            .eq("id", call.caller_id)
+            .single();
+
+          setCallInfo({
+            callId: call.id,
+            conversationId: call.conversation_id,
+            callerId: call.caller_id,
+            callerName: caller?.name || "Unknown",
+          });
+          setStatus("incoming");
+          ringtoneRef.current.play();
+
+          // Setup signaling channel for receiving
+          setupSignaling(call.id, false);
+        }
       )
       .on(
         "postgres_changes",
@@ -381,11 +331,14 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           if (!ci || call.id !== ci.callId) return;
 
           if (call.status === "active" && st === "calling") {
+            // Other side accepted - start WebRTC as caller
             ringtoneRef.current.stop();
             setStatus("connected");
             setDuration(0);
             timerRef.current = window.setInterval(() => setDuration((d) => d + 1), 1000);
             onCallStateChange?.(true);
+            
+            // Setup peer connection as caller
             await setupPeerConnection(ci.callId, true);
           }
 
@@ -399,33 +352,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, setupPeerConnection]);
-
-  // Polling fallback: check for ringing calls every 3s (catches missed realtime events on mobile)
-  useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      if (statusRef.current !== "idle") return;
-
-      const { data: ringingCalls } = await supabase
-        .from("chat_calls")
-        .select("*")
-        .eq("status", "ringing")
-        .neq("caller_id", currentUserId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (ringingCalls && ringingCalls.length > 0) {
-        const call = ringingCalls[0];
-        // Check if call is still recent (within 30s)
-        const callAge = Date.now() - new Date(call.created_at).getTime();
-        if (callAge < 30000) {
-          handleIncomingCallRef.current(call);
-        }
-      }
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [currentUserId]);
+  }, [currentUserId, setupSignaling, setupPeerConnection]);
 
   const acceptCall = async () => {
     if (!callInfo) return;

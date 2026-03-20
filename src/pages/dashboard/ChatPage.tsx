@@ -15,7 +15,7 @@ import { formatDistanceToNow } from "date-fns";
 import { bn } from "date-fns/locale";
 import { toast } from "sonner";
 import ChatThread from "@/components/chat/ChatThread";
-// ChatCallOverlay is now global in DashboardLayout
+import ChatCallOverlay from "@/components/chat/ChatCallOverlay";
 
 interface ConvoDisplay {
   id: string;
@@ -65,7 +65,7 @@ const ChatPage = () => {
   const [sidebarTab, setSidebarTab] = useState<"dm" | "group">("dm");
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [threadParent, setThreadParent] = useState<Message | null>(null);
-  // outgoingCall is now managed by DashboardLayout via custom event
+  const [outgoingCall, setOutgoingCall] = useState<{ conversationId: string; callerName: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const [mobileShowChat, setMobileShowChat] = useState(false);
@@ -509,10 +509,7 @@ const ChatPage = () => {
   const initiateCall = async () => {
     if (!selectedConvo || !user) return;
     const convoName = selectedConvoData?.displayName || "Call";
-    // Dispatch to global ChatCallOverlay in DashboardLayout
-    window.dispatchEvent(new CustomEvent("vencon-outgoing-call", {
-      detail: { conversationId: selectedConvo, callerName: convoName },
-    }));
+    setOutgoingCall({ conversationId: selectedConvo, callerName: convoName });
   };
 
   const uploadImage = async (file: File) => {
@@ -652,7 +649,14 @@ const ChatPage = () => {
 
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
-      {/* Call overlay is now global in DashboardLayout */}
+      {/* Call overlay */}
+      {user && (
+        <ChatCallOverlay
+          currentUserId={user.id}
+          outgoingCall={outgoingCall}
+          onOutgoingCallHandled={() => setOutgoingCall(null)}
+        />
+      )}
 
       {/* Sidebar - hidden on mobile when chat is open */}
       <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full md:w-72 border-r border-border flex-col bg-card/50 md:shrink-0`}>
