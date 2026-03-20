@@ -251,12 +251,13 @@ function ${functionName}($order_id) {
         headers: {
           "Content-Type": "application/json",
           "X-Webhook-Secret": activeSecret,
+          "X-Test-Connection": "true",
         },
         body: JSON.stringify(buildTestPayload(selectedWebsite?.site_name)),
       });
       const data = await res.json();
       if (res.ok && data.imported > 0) {
-        setTestResult({ success: true, message: isBn ? "✓ Connection সফল! Test lead import হয়েছে।" : "✓ Connection successful!" });
+        setTestResult({ success: true, message: isBn ? "✓ Connection সফল! Test data save হবে না।" : "✓ Connection successful! Test data was not saved." });
       } else if (res.ok && data.skipped_duplicates > 0) {
         setTestResult({ success: true, message: isBn ? "✓ Connection সফল! (Duplicate skipped)" : "✓ Connected! (Duplicate skipped)" });
       } else {
@@ -441,12 +442,12 @@ function ${functionName}($order_id) {
                         try {
                           const res = await fetch(webhookUrl, {
                             method: "POST",
-                            headers: { "Content-Type": "application/json", "X-Webhook-Secret": ws.webhook_secret },
+                            headers: { "Content-Type": "application/json", "X-Webhook-Secret": ws.webhook_secret, "X-Test-Connection": "true" },
                             body: JSON.stringify(buildTestPayload(ws.site_name)),
                           });
                           const data = await res.json();
                           if (res.ok && (data.imported > 0 || data.skipped_duplicates > 0)) {
-                            setTestResult({ success: true, message: `✓ ${ws.site_name} — OK!` });
+                            setTestResult({ success: true, message: isBn ? `✓ ${ws.site_name} — OK! Test data save হবে না।` : `✓ ${ws.site_name} — OK! Test data was not saved.` });
                           } else {
                             setTestResult({ success: false, message: data.error || (isBn ? "ডাটা save হয়নি" : "Data was not saved") });
                           }

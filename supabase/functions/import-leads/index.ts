@@ -144,6 +144,10 @@ function extractOrderId(rawLead: Record<string, unknown>): string | null {
   return normalized || null;
 }
 
+function isConnectionTest(req: Request): boolean {
+  return req.headers.get("x-test-connection")?.toLowerCase() === "true";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -157,6 +161,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const testConnection = isConnectionTest(req);
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/");
     const lastPart = pathParts[pathParts.length - 1];
@@ -332,6 +337,11 @@ Deno.serve(async (req) => {
       const phoneClean = phone ? String(phone).trim() : "";
       const orderId = extractOrderId(rawLead as Record<string, unknown>);
 
+      if (testConnection) {
+        imported++;
+        continue;
+      }
+
       // Duplicate check priority:
       // 1) If order_id exists -> dedupe by order_id in recent payloads
       // 2) Else fallback to short-window phone dedupe (15 minutes)
@@ -404,16 +414,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Log the import
-    await supabase.from("lead_import_logs").insert({
-      campaign_id: campaignId,
-      source: `webhook_${dataMode}`,
-      leads_imported: imported,
-      duplicates_skipped: skippedDuplicates,
-      total_received: leads.length,
-      status: imported > 0 ? "success" : skippedDuplicates > 0 && failures.length === 0 ? "all_duplicates" : "failed",
-      error_message: failures.length > 0 ? failures.join(" | ").slice(0, 1000) : null,
-    });
+    if (!testConnection) {
+      await supabase.from("lead_import_logs").insert({
+        campaign_id: campaignId,
+        source: `webhook_${dataMode}`,
+        leads_imported: imported,
+        duplicates_skipped: skippedDuplicates,
+        total_received: leads.length,
+        status: imported > 0 ? "success" : skippedDuplicates > 0 && failures.length === 0 ? "all_duplicates" : "failed",
+        error_message: failures.length > 0 ? failures.join(" | ").slice(0, 1000) : null,
+      });
+    }
 
     return new Response(
       JSON.stringify({
@@ -421,6 +432,7 @@ Deno.serve(async (req) => {
         skipped_duplicates: skippedDuplicates,
         total: leads.length,
         data_mode: dataMode,
+        test_mode: testConnection,
         error: failures[0] || null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
