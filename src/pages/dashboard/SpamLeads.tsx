@@ -253,7 +253,7 @@ export default function SpamLeads() {
           <CardContent className="p-0">
             <div className="px-4 py-2.5 border-b bg-muted/30">
               <h3 className="text-sm font-semibold text-foreground">
-                টিম এজেন্টদের স্প্যাম ({teamLeads.length})
+                টিম এজেন্টদের স্প্যাম ({filteredTeamLeads.length})
               </h3>
               <p className="text-[11px] text-muted-foreground">
                 ফরওয়ার্ড করলে এজেন্টের লিডে ফ্রেশ হিসেবে ফিরে যাবে
