@@ -272,7 +272,7 @@ export default function SpamLeads() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teamLeads.map(lead => (
+                  {filteredTeamLeads.map(lead => (
                     <TableRow key={lead.id}>
                       <TableCell>
                         <Badge variant="secondary" className="text-[11px]">
