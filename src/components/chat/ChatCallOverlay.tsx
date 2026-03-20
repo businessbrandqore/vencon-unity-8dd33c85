@@ -135,36 +135,58 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       config: { broadcast: { self: false } },
     });
 
-    channel
-      .on("broadcast", { event: "webrtc-signal" }, async (payload: any) => {
-        const { type, data, from } = payload.payload;
-        if (from === currentUserId) return;
+    // Queue for messages that arrive before peer connection is ready
+    const pendingQueue: any[] = [];
 
-        const pc = peerRef.current;
-        if (!pc) return;
+    const processSignal = async (payload: any) => {
+      const { type, data, from } = payload.payload;
+      if (from === currentUserId) return;
 
-        try {
-          if (type === "offer") {
-            await pc.setRemoteDescription(new RTCSessionDescription(data));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            channel.send({
-              type: "broadcast",
-              event: "webrtc-signal",
-              payload: { type: "answer", data: answer, from: currentUserId },
-            });
-          } else if (type === "answer") {
-            await pc.setRemoteDescription(new RTCSessionDescription(data));
-          } else if (type === "ice-candidate") {
+      const pc = peerRef.current;
+      if (!pc) {
+        // Queue the message if PC isn't ready yet
+        pendingQueue.push(payload);
+        return;
+      }
+
+      try {
+        if (type === "offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          channel.send({
+            type: "broadcast",
+            event: "webrtc-signal",
+            payload: { type: "answer", data: answer, from: currentUserId },
+          });
+        } else if (type === "answer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+        } else if (type === "ice-candidate") {
+          if (pc.remoteDescription) {
             await pc.addIceCandidate(new RTCIceCandidate(data));
+          } else {
+            // Queue ICE candidates if remote description not set yet
+            pendingQueue.push(payload);
           }
-        } catch (err) {
-          console.error("WebRTC signaling error:", err);
         }
-      })
+      } catch (err) {
+        console.error("WebRTC signaling error:", err);
+      }
+    };
+
+    channel
+      .on("broadcast", { event: "webrtc-signal" }, processSignal)
       .subscribe();
 
     signalingChannelRef.current = channel;
+    // Expose pending queue processor
+    (channel as any).__processPending = async () => {
+      const items = [...pendingQueue];
+      pendingQueue.length = 0;
+      for (const item of items) {
+        await processSignal(item);
+      }
+    };
     return channel;
   }, [currentUserId]);
 
@@ -229,8 +251,9 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
             remoteAudioRef.current.srcObject = dest.stream;
             remoteAudioRef.current.play().catch(() => {});
           } catch {
-            remoteAudioRef.current.srcObject = event.streams[0];
-            remoteAudioRef.current.play().catch(() => {});
+            // Fallback: direct stream
+            remoteAudioRef.current!.srcObject = event.streams[0];
+            remoteAudioRef.current!.play().catch(() => {});
           }
         }
       };
@@ -255,6 +278,11 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           endCallCleanupRef.current();
         }
       };
+
+      // Process any queued signaling messages now that PC is ready
+      if (signalingChannelRef.current && (signalingChannelRef.current as any).__processPending) {
+        await (signalingChannelRef.current as any).__processPending();
+      }
 
       // If caller, create and send offer
       if (isCaller) {

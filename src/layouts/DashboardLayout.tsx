@@ -7,6 +7,7 @@ import PanelSidebar from "@/components/PanelSidebar";
 import AIChatWidget from "@/components/AIChatWidget";
 import ATLApprovalBanner from "@/components/ATLApprovalBanner";
 import BirthdayPopup from "@/components/BirthdayPopup";
+import ChatCallOverlay from "@/components/chat/ChatCallOverlay";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
@@ -46,6 +47,8 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       </div>
       <AIChatWidget />
       <BirthdayPopup />
+      {/* Global incoming call listener — shows popup on any page */}
+      <ChatCallOverlay currentUserId={user.id} />
     </div>
   );
 };
