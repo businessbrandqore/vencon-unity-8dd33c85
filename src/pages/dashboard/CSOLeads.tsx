@@ -179,11 +179,11 @@ export default function CSOLeads() {
     if (leadIds.length > 0) {
       const { data: leadsData } = await supabase
         .from("leads")
-        .select("id, campaign_id")
+        .select("id, campaign_id, import_source")
         .in("id", leadIds);
       if (leadsData) {
-        const lcMap: Record<string, string> = {};
-        leadsData.forEach(l => { if (l.campaign_id) lcMap[l.id] = l.campaign_id; });
+        const lcMap: Record<string, { campaign_id: string; import_source: string | null }> = {};
+        leadsData.forEach(l => { if (l.campaign_id) lcMap[l.id] = { campaign_id: l.campaign_id, import_source: l.import_source }; });
         setLeadCampaignMap(lcMap);
       }
     }
