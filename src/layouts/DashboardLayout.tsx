@@ -47,6 +47,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       </div>
       <AIChatWidget />
       <BirthdayPopup />
+      <GlobalCallListener />
     </div>
   );
 };
