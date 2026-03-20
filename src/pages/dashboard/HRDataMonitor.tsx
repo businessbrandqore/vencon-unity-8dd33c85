@@ -119,7 +119,6 @@ const HRDataMonitor = () => {
         .select("id, customer_name, phone, address, product, price, quantity, status, delivery_status, steadfast_consignment_id, created_at, agent_id, tl_id, lead_id")
         .order("created_at", { ascending: false })
         .limit(500);
-      // Filter by campaign through leads if needed
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -131,7 +130,6 @@ const HRDataMonitor = () => {
   const freshLeads = allLeads.filter((l) => l.status === "fresh");
   const bronzeLeads = allLeads.filter((l) => l.agent_type === "bronze" || (!l.agent_type && l.assigned_to));
   const silverLeads = allLeads.filter((l) => l.agent_type === "silver");
-  const processingLeads = allLeads.filter((l) => l.source === "processing" || l.import_source === "processing");
 
   const allOrders = orders || [];
   const pendingOrders = allOrders.filter((o) => o.status === "pending_cso");
@@ -161,7 +159,7 @@ const HRDataMonitor = () => {
             {isBn ? "সব ক্যাম্পেইনের ডাটা এক জায়গায় দেখুন" : "View all campaign data in one place"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Select value={dataMode} onValueChange={setDataMode}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
@@ -277,6 +275,27 @@ const HRDataMonitor = () => {
   );
 };
 
+// ---- Helper to parse product info from special_note ----
+function parseSpecialNote(note: string | null | undefined): { product?: string; price?: string } {
+  if (!note) return {};
+  try {
+    const parsed = JSON.parse(note);
+    const flat: Record<string, unknown> = {};
+    if (parsed.extra_fields && typeof parsed.extra_fields === "object") {
+      Object.assign(flat, parsed.extra_fields);
+    }
+    Object.assign(flat, parsed);
+    const product = flat.product || flat.product_name || flat.item_name || flat.products || "";
+    const price = flat.price || flat.total || flat.amount || flat.order_total || "";
+    return {
+      product: product ? String(product) : undefined,
+      price: price ? String(price) : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 // ---- Lead Table Component ----
 interface LeadRow {
   id: string;
@@ -287,6 +306,7 @@ interface LeadRow {
   agent_type?: string | null;
   source?: string | null;
   created_at?: string | null;
+  special_note?: string | null;
 }
 
 const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolean; isBn: boolean }) => {
@@ -301,6 +321,11 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
       </Card>
     );
 
+  const hasProductInfo = leads.some(l => {
+    const info = parseSpecialNote(l.special_note);
+    return info.product || info.price;
+  });
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -312,51 +337,66 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                 <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
+                {hasProductInfo && (
+                  <>
+                    <TableHead className="text-xs">{isBn ? "প্রোডাক্ট" : "Product"}</TableHead>
+                    <TableHead className="text-xs">{isBn ? "মূল্য" : "Price"}</TableHead>
+                  </>
+                )}
                 <TableHead className="text-xs">{isBn ? "টাইপ" : "Type"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.map((lead) => (
-                <TableRow key={lead.id}>
-                  <TableCell className="text-sm font-medium">
-                    <div className="flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      {lead.name || "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      {lead.phone || "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
-                    {lead.address || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>
-                      {lead.status || "—"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {lead.agent_type ? (
-                      <Badge variant="outline" className="text-[10px]">
-                        {lead.agent_type === "bronze" ? "🥉 Bronze" : "🥈 Silver"}
+              {leads.map((lead) => {
+                const noteInfo = parseSpecialNote(lead.special_note);
+                return (
+                  <TableRow key={lead.id}>
+                    <TableCell className="text-sm font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        {lead.name || "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        {lead.phone || "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                      {lead.address || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>
+                        {lead.status || "—"}
                       </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                    </TableCell>
+                    {hasProductInfo && (
+                      <>
+                        <TableCell className="text-xs font-medium">{noteInfo.product || "—"}</TableCell>
+                        <TableCell className="text-xs font-medium">{noteInfo.price ? `৳${noteInfo.price}` : "—"}</TableCell>
+                      </>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-muted-foreground">{lead.source || "—"}</span>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    <TableCell>
+                      {lead.agent_type && lead.agent_type !== "processing" ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          {lead.agent_type === "bronze" ? "🥉 Bronze" : "🥈 Silver"}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">{lead.source || "—"}</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
