@@ -177,7 +177,8 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 48000,
-        },
+          channelCount: 1,
+        } as MediaTrackConstraints,
       });
       localStreamRef.current = stream;
 
@@ -187,11 +188,50 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
       // Add local audio tracks
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      // Handle remote audio
+      // Handle remote audio — process to reduce pops & distortion
       pc.ontrack = (event) => {
         if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = event.streams[0];
-          remoteAudioRef.current.play().catch(() => {});
+          try {
+            const audioCtx = new AudioContext({ sampleRate: 48000 });
+            const source = audioCtx.createMediaStreamSource(event.streams[0]);
+
+            // High-pass: cut low rumble & plosive pops
+            const highPass = audioCtx.createBiquadFilter();
+            highPass.type = "highpass";
+            highPass.frequency.value = 85;
+            highPass.Q.value = 0.7;
+
+            // Low-pass: cut harsh high-freq hiss
+            const lowPass = audioCtx.createBiquadFilter();
+            lowPass.type = "lowpass";
+            lowPass.frequency.value = 7500;
+            lowPass.Q.value = 0.7;
+
+            // Compressor: tame sudden loud peaks
+            const compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 12;
+            compressor.ratio.value = 4;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.15;
+
+            const gain = audioCtx.createGain();
+            gain.gain.value = 1.0;
+
+            source.connect(highPass);
+            highPass.connect(lowPass);
+            lowPass.connect(compressor);
+            compressor.connect(gain);
+
+            const dest = audioCtx.createMediaStreamDestination();
+            gain.connect(dest);
+
+            remoteAudioRef.current.srcObject = dest.stream;
+            remoteAudioRef.current.play().catch(() => {});
+          } catch {
+            remoteAudioRef.current.srcObject = event.streams[0];
+            remoteAudioRef.current.play().catch(() => {});
+          }
         }
       };
 
