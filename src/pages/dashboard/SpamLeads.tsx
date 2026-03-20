@@ -315,7 +315,7 @@ export default function SpamLeads() {
               <h3 className="text-sm font-semibold text-foreground">আমার স্প্যাম ({filteredMyLeads.length})</h3>
             </div>
           )}
-          {myLeads.length === 0 ? (
+          {filteredMyLeads.length === 0 ? (
             <EmptyState icon={<ShieldBan className="h-10 w-10" />} message="স্প্যাম হিসেবে চিহ্নিত লিডগুলো এখানে দেখাবে" />
           ) : (
             <div className="overflow-x-auto">
