@@ -152,7 +152,7 @@ const HRDataMonitor = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Select value={dataMode} onValueChange={setDataMode}>
+          <Select value={dataMode} onValueChange={(val) => { setDataMode(val); setSelectedWebsite("all"); }}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
             </SelectTrigger>
