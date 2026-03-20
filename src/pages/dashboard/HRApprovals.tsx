@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<string, { bn: string; en: string }> = {
   non_agent_hire: { bn: "কর্মী নিয়োগ", en: "Employee Hire" },
   hire: { bn: "কর্মী নিয়োগ", en: "Employee Hire" },
   new_campaign: { bn: "নতুন ক্যাম্পেইন", en: "New Campaign" },
+  campaign_delete: { bn: "ক্যাম্পেইন ডিলিট", en: "Campaign Delete" },
   incentive_config: { bn: "ইনসেন্টিভ কনফিগ", en: "Incentive Config" },
   profit_share_config: { bn: "প্রফিট শেয়ার", en: "Profit Share Config" },
 };

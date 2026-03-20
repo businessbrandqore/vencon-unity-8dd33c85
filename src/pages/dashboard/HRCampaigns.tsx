@@ -246,16 +246,25 @@ const HRCampaigns = () => {
   };
 
   const handleDelete = async () => {
-    if (!detailId) return;
-    // Delete related data first
-    await supabase.from("campaign_websites").delete().eq("campaign_id", detailId);
-    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
-    await supabase.from("campaign_agent_roles").delete().eq("campaign_id", detailId);
-    await supabase.from("campaigns").delete().eq("id", detailId);
-    toast({ title: isBn ? "ক্যাম্পেইন ডিলিট করা হয়েছে" : "Campaign deleted" });
+    if (!detailId || !user || !detailCampaign) return;
+    // Submit SA approval request for deletion
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "campaign_delete",
+      requested_by: user.id,
+      status: "pending",
+      details: {
+        campaign_id: detailId,
+        campaign_name: detailCampaign.name,
+        lead_count: detailCampaign.leadCount,
+      },
+    });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: isBn ? "ক্যাম্পেইন ডিলিটের অনুরোধ SA-তে পাঠানো হয়েছে ✓" : "Campaign deletion request sent to SA ✓" });
+    }
     setConfirmDelete(false);
     setDetailId(null);
-    fetchCampaigns();
   };
   return (
     <div className="space-y-6">
@@ -828,10 +837,11 @@ const HRCampaigns = () => {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={isBn ? "ক্যাম্পেইন ডিলিট করুন" : "Delete Campaign"}
-        description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ওয়েবসাইট, TL অ্যাসাইনমেন্ট স্থায়ীভাবে মুছে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না!" : "⚠️ This campaign and all connected websites, TL assignments will be permanently deleted. This cannot be undone!"}
-        confirmLabel={isBn ? "স্থায়ীভাবে ডিলিট" : "Delete Permanently"}
+        title={isBn ? "ক্যাম্পেইন ডিলিটের অনুরোধ" : "Request Campaign Deletion"}
+        description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ডাটা (লিড, ওয়েবসাইট, TL অ্যাসাইনমেন্ট) স্থায়ীভাবে মুছে যাবে। সুপার এডমিনের অনুমোদনের পর এটি কার্যকর হবে।" : "⚠️ All data (leads, websites, TL assignments) will be permanently deleted. This requires Super Admin approval."}
+        confirmLabel={isBn ? "অনুরোধ পাঠান" : "Send Request"}
         onConfirm={handleDelete}
+        destructive={true}
       />
     </div>
   );

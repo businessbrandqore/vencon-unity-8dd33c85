@@ -60,6 +60,7 @@ const SAApprovalsTable = () => {
 
   const typeLabels: Record<string, { bn: string; en: string }> = {
     new_campaign: { bn: "নতুন ক্যাম্পেইন", en: "New Campaign" },
+    campaign_delete: { bn: "ক্যাম্পেইন ডিলিট", en: "Campaign Delete" },
     non_agent_hire: { bn: "নন-এজেন্ট নিয়োগ", en: "Non-Agent Hire" },
     incentive_config: { bn: "ইনসেনটিভ কনফিগ", en: "Incentive Config" },
     profit_share_config: { bn: "প্রফিট শেয়ার কনফিগ", en: "Profit Share Config" },
@@ -69,6 +70,7 @@ const SAApprovalsTable = () => {
     const d = approval.details || {};
     switch (approval.type) {
       case "new_campaign":
+      case "campaign_delete":
         return d.campaign_name || d.name || "—";
       case "non_agent_hire":
         return `${d.employee_name || "—"} / ${d.role || "—"} / ৳${d.basic_salary || "—"}`;
@@ -105,6 +107,14 @@ const SAApprovalsTable = () => {
           .from("campaigns")
           .update({ status: "active", approved_by: user.id })
           .eq("id", campaignId);
+      }
+    }
+
+    // If approved campaign_delete, delete the campaign (cascade will handle related data)
+    if (action === "approved" && approval?.type === "campaign_delete" && approval.details) {
+      const campaignId = approval.details.campaign_id;
+      if (campaignId) {
+        await supabase.from("campaigns").delete().eq("id", campaignId);
       }
     }
 
