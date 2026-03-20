@@ -279,6 +279,7 @@ Deno.serve(async (req) => {
 
     let imported = 0;
     let skippedDuplicates = 0;
+    const failures: string[] = [];
 
     for (const rawLead of leads) {
       // Strategy 1: Check for our PHP snippet format (customer_name, phone, address, extra_fields)
@@ -380,23 +381,26 @@ Deno.serve(async (req) => {
         autoTlId = primaryTl ? primaryTl.tl_id : campaignTlRows[0].tl_id;
       }
 
-      const { error: insertError } = await supabase.from("leads").insert({
+      const leadRow = {
         name: name || null,
         phone: phoneClean || null,
         address: address || null,
         campaign_id: campaignId,
         source: sourceName,
         import_source: dataMode === "processing" ? "processing" : "webhook",
-        agent_type: dataMode === "processing" ? "processing" : null,
+        agent_type: null,
         special_note: specialNote,
         status: "fresh",
         tl_id: autoTlId,
-      });
+      };
+
+      const { error: insertError } = await supabase.from("leads").insert(leadRow);
 
       if (!insertError) {
         imported++;
       } else {
         console.error("Insert error:", insertError);
+        failures.push(insertError.message || "Insert failed");
       }
     }
 
@@ -407,7 +411,8 @@ Deno.serve(async (req) => {
       leads_imported: imported,
       duplicates_skipped: skippedDuplicates,
       total_received: leads.length,
-      status: imported > 0 ? "success" : skippedDuplicates > 0 ? "all_duplicates" : "failed",
+      status: imported > 0 ? "success" : skippedDuplicates > 0 && failures.length === 0 ? "all_duplicates" : "failed",
+      error_message: failures.length > 0 ? failures.join(" | ").slice(0, 1000) : null,
     });
 
     return new Response(
@@ -416,6 +421,7 @@ Deno.serve(async (req) => {
         skipped_duplicates: skippedDuplicates,
         total: leads.length,
         data_mode: dataMode,
+        error: failures[0] || null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
