@@ -15,7 +15,7 @@ import { formatDistanceToNow } from "date-fns";
 import { bn } from "date-fns/locale";
 import { toast } from "sonner";
 import ChatThread from "@/components/chat/ChatThread";
-import ChatCallOverlay from "@/components/chat/ChatCallOverlay";
+// ChatCallOverlay is now global in DashboardLayout
 
 interface ConvoDisplay {
   id: string;
