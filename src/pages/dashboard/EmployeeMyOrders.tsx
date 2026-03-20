@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,9 @@ interface OrderRow {
   created_at: string | null;
   district: string | null;
   thana: string | null;
+  lead_id: string | null;
+  _campaign_id?: string | null;
+  _import_source?: string | null;
 }
 
 // Pipeline steps will be translated dynamically
@@ -78,7 +81,14 @@ export default function EmployeeMyOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const selectFields = "id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at, district, thana";
+  // Campaign / website filter states
+  const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
+
+  const selectFields = "id, customer_name, phone, address, product, quantity, price, status, delivery_status, steadfast_consignment_id, rider_name, rider_phone, created_at, district, thana, lead_id";
 
   useEffect(() => {
     if (!user) return;
@@ -88,8 +98,33 @@ export default function EmployeeMyOrders() {
         .select(selectFields)
         .eq("agent_id", user.id)
         .order("created_at", { ascending: false });
-      setOrders((data as OrderRow[]) || []);
+      const rawOrders = (data as OrderRow[]) || [];
+
+      // Enrich orders with campaign & import_source from leads
+      const leadIds = [...new Set(rawOrders.map(o => o.lead_id).filter(Boolean))] as string[];
+      let leadMap: Record<string, { campaign_id: string | null; import_source: string | null }> = {};
+      if (leadIds.length > 0) {
+        const { data: leadData } = await supabase.from("leads").select("id, campaign_id, import_source").in("id", leadIds);
+        (leadData || []).forEach(l => { leadMap[l.id] = { campaign_id: l.campaign_id, import_source: l.import_source }; });
+      }
+      const enriched = rawOrders.map(o => ({
+        ...o,
+        _campaign_id: o.lead_id ? leadMap[o.lead_id]?.campaign_id || null : null,
+        _import_source: o.lead_id ? leadMap[o.lead_id]?.import_source || null : null,
+      }));
+      setOrders(enriched);
       setLoading(false);
+
+      // Load campaigns & websites for filters
+      const campaignIds = [...new Set(enriched.map(o => o._campaign_id).filter(Boolean))] as string[];
+      if (campaignIds.length > 0) {
+        const [{ data: campData }, { data: siteData }] = await Promise.all([
+          supabase.from("campaigns").select("id, name, data_mode").in("id", campaignIds),
+          supabase.from("campaign_websites").select("id, site_name, campaign_id").in("campaign_id", campaignIds).eq("is_active", true),
+        ]);
+        if (campData) setCampaigns(campData);
+        if (siteData) setWebsites(siteData);
+      }
     })();
 
     const channel = supabase
@@ -100,13 +135,34 @@ export default function EmployeeMyOrders() {
           .select(selectFields)
           .eq("agent_id", user.id)
           .order("created_at", { ascending: false })
-          .then(({ data }) => { if (data) setOrders(data as OrderRow[]); });
+          .then(({ data }) => { if (data) setOrders(prev => {
+            // Keep enrichment from initial load
+            const existingMap: Record<string, OrderRow> = {};
+            prev.forEach(o => { existingMap[o.id] = o; });
+            return (data as OrderRow[]).map(o => ({
+              ...o,
+              _campaign_id: existingMap[o.id]?._campaign_id || null,
+              _import_source: existingMap[o.id]?._import_source || null,
+            }));
+          }); });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const filtered = orders.filter((o) => {
+  // Campaign-level filtering
+  const campaignFiltered = useMemo(() => {
+    let result = orders;
+    if (filterCampaignId !== "all") result = result.filter(o => o._campaign_id === filterCampaignId);
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(o => o._campaign_id && ids.includes(o._campaign_id));
+    }
+    if (filterWebsite !== "all") result = result.filter(o => o._import_source === filterWebsite);
+    return result;
+  }, [orders, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
+  const filtered = campaignFiltered.filter((o) => {
     const matchSearch = !searchQuery ||
       (o.customer_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (o.phone || "").includes(searchQuery) ||
@@ -159,6 +215,42 @@ export default function EmployeeMyOrders() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Campaign / Website Filters */}
+      {campaigns.length > 0 && (
+        <div className="flex flex-wrap gap-3 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
+              {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder={isBn ? "ডাটা মোড" : "Data Mode"} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব মোড" : "All Modes"}</SelectItem>
+              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = filterCampaignId !== "all"
+              ? websites.filter(w => w.campaign_id === filterCampaignId)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ওয়েবসাইট" : "Website"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">

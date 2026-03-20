@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ShieldBan, RotateCcw, Trash2, Forward, Clock } from "lucide-react";
+import { ShieldBan, RotateCcw, Trash2, Forward, Clock, Filter } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { formatDistanceToNow } from "date-fns";
@@ -22,6 +23,8 @@ interface SpamLead {
   updated_at: string | null;
   assigned_to: string | null;
   assigned_agent_name?: string;
+  campaign_id?: string | null;
+  import_source?: string | null;
 }
 
 export default function SpamLeads() {
@@ -30,6 +33,13 @@ export default function SpamLeads() {
   const [teamLeads, setTeamLeads] = useState<SpamLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Campaign / website filter states
+  const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
 
   const isTLOrATL = user?.role === "team_leader" || user?.role === "Team Leader" ||
     user?.role === "Assistant Team Leader" || user?.panel === "tl";
@@ -41,7 +51,7 @@ export default function SpamLeads() {
     // Load own spam leads
     const { data: ownData, error: ownErr } = await supabase
       .from("leads")
-      .select("id, name, phone, address, status, agent_type, updated_at, assigned_to")
+      .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source")
       .eq("assigned_to", user.id)
       .eq("is_spam", true)
       .order("updated_at", { ascending: false });
@@ -64,7 +74,7 @@ export default function SpamLeads() {
       if (teamAgentIds.length > 0) {
         const { data: teamData } = await supabase
           .from("leads")
-          .select("id, name, phone, address, status, agent_type, updated_at, assigned_to")
+          .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source")
           .in("assigned_to", teamAgentIds)
           .eq("is_spam", true)
           .order("updated_at", { ascending: false });
@@ -94,6 +104,44 @@ export default function SpamLeads() {
   }, [user, isTLOrATL]);
 
   useEffect(() => { loadSpamLeads(); }, [loadSpamLeads]);
+
+  // Load campaigns & websites for filters
+  useEffect(() => {
+    const allLeads = [...myLeads, ...teamLeads];
+    const campaignIds = [...new Set(allLeads.map(l => l.campaign_id).filter(Boolean))] as string[];
+    if (campaignIds.length === 0) { setCampaigns([]); setWebsites([]); return; }
+    (async () => {
+      const [{ data: campData }, { data: siteData }] = await Promise.all([
+        supabase.from("campaigns").select("id, name, data_mode").in("id", campaignIds),
+        supabase.from("campaign_websites").select("id, site_name, campaign_id").in("campaign_id", campaignIds).eq("is_active", true),
+      ]);
+      if (campData) setCampaigns(campData);
+      if (siteData) setWebsites(siteData);
+    })();
+  }, [myLeads, teamLeads]);
+
+  // Apply campaign filters
+  const filteredMyLeads = useMemo(() => {
+    let result = myLeads;
+    if (filterCampaignId !== "all") result = result.filter(l => l.campaign_id === filterCampaignId);
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(l => l.campaign_id && ids.includes(l.campaign_id));
+    }
+    if (filterWebsite !== "all") result = result.filter(l => l.import_source === filterWebsite);
+    return result;
+  }, [myLeads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
+  const filteredTeamLeads = useMemo(() => {
+    let result = teamLeads;
+    if (filterCampaignId !== "all") result = result.filter(l => l.campaign_id === filterCampaignId);
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(l => l.campaign_id && ids.includes(l.campaign_id));
+    }
+    if (filterWebsite !== "all") result = result.filter(l => l.import_source === filterWebsite);
+    return result;
+  }, [teamLeads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
 
   const handleRestore = async (leadId: string) => {
     const { error } = await supabase
@@ -154,7 +202,7 @@ export default function SpamLeads() {
         <ShieldBan className="h-5 w-5 text-destructive" />
         <h2 className="font-heading text-xl font-bold text-foreground">স্প্যাম</h2>
         <span className="text-sm text-muted-foreground">
-          ({myLeads.length + teamLeads.length})
+          ({filteredMyLeads.length + filteredTeamLeads.length})
         </span>
       </div>
 
@@ -163,13 +211,49 @@ export default function SpamLeads() {
         স্প্যাম ডাটা ২৪ ঘণ্টা পর অটোমেটিক মুছে যায়
       </p>
 
+      {/* Campaign / Website Filters */}
+      {campaigns.length > 0 && (
+        <div className="flex flex-wrap gap-3 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ক্যাম্পেইন" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+              {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="ডাটা মোড" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব মোড</SelectItem>
+              <SelectItem value="lead">লিড</SelectItem>
+              <SelectItem value="processing">প্রসেসিং</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = filterCampaignId !== "all"
+              ? websites.filter(w => w.campaign_id === filterCampaignId)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ওয়েবসাইট" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব ওয়েবসাইট</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
+        </div>
+      )}
+
       {/* TL/ATL: Team Agent Spam Leads */}
-      {isTLOrATL && teamLeads.length > 0 && (
+      {isTLOrATL && filteredTeamLeads.length > 0 && (
         <Card>
           <CardContent className="p-0">
             <div className="px-4 py-2.5 border-b bg-muted/30">
               <h3 className="text-sm font-semibold text-foreground">
-                টিম এজেন্টদের স্প্যাম ({teamLeads.length})
+                টিম এজেন্টদের স্প্যাম ({filteredTeamLeads.length})
               </h3>
               <p className="text-[11px] text-muted-foreground">
                 ফরওয়ার্ড করলে এজেন্টের লিডে ফ্রেশ হিসেবে ফিরে যাবে
@@ -188,7 +272,7 @@ export default function SpamLeads() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teamLeads.map(lead => (
+                  {filteredTeamLeads.map(lead => (
                     <TableRow key={lead.id}>
                       <TableCell>
                         <Badge variant="secondary" className="text-[11px]">
@@ -228,10 +312,10 @@ export default function SpamLeads() {
         <CardContent className="p-0">
           {isTLOrATL && (
             <div className="px-4 py-2 border-b bg-muted/30">
-              <h3 className="text-sm font-semibold text-foreground">আমার স্প্যাম ({myLeads.length})</h3>
+              <h3 className="text-sm font-semibold text-foreground">আমার স্প্যাম ({filteredMyLeads.length})</h3>
             </div>
           )}
-          {myLeads.length === 0 ? (
+          {filteredMyLeads.length === 0 ? (
             <EmptyState icon={<ShieldBan className="h-10 w-10" />} message="স্প্যাম হিসেবে চিহ্নিত লিডগুলো এখানে দেখাবে" />
           ) : (
             <div className="overflow-x-auto">
@@ -246,7 +330,7 @@ export default function SpamLeads() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {myLeads.map(lead => (
+                  {filteredMyLeads.map(lead => (
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell>{lead.phone || "—"}</TableCell>
