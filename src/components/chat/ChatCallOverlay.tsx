@@ -177,7 +177,8 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 48000,
-        },
+          channelCount: 1,
+        } as MediaTrackConstraints,
       });
       localStreamRef.current = stream;
 
