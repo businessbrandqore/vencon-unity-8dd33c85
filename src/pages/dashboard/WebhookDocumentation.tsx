@@ -442,7 +442,7 @@ function ${functionName}($order_id) {
                           const res = await fetch(webhookUrl, {
                             method: "POST",
                             headers: { "Content-Type": "application/json", "X-Webhook-Secret": ws.webhook_secret },
-                            body: JSON.stringify({ customer_name: "Test", phone: `test-${Date.now()}`, address: "Test Address" }),
+                            body: JSON.stringify(buildTestPayload(ws.site_name)),
                           });
                           const data = await res.json();
                           if (res.ok && (data.imported > 0 || data.skipped_duplicates > 0)) {
