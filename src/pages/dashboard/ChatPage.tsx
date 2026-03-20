@@ -509,7 +509,10 @@ const ChatPage = () => {
   const initiateCall = async () => {
     if (!selectedConvo || !user) return;
     const convoName = selectedConvoData?.displayName || "Call";
-    setOutgoingCall({ conversationId: selectedConvo, callerName: convoName });
+    // Dispatch to global ChatCallOverlay in DashboardLayout
+    window.dispatchEvent(new CustomEvent("vencon-outgoing-call", {
+      detail: { conversationId: selectedConvo, callerName: convoName },
+    }));
   };
 
   const uploadImage = async (file: File) => {
