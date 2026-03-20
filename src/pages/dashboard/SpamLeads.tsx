@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ShieldBan, RotateCcw, Trash2, Forward, Clock } from "lucide-react";
+import { ShieldBan, RotateCcw, Trash2, Forward, Clock, Filter } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { formatDistanceToNow } from "date-fns";
@@ -22,6 +23,8 @@ interface SpamLead {
   updated_at: string | null;
   assigned_to: string | null;
   assigned_agent_name?: string;
+  campaign_id?: string | null;
+  import_source?: string | null;
 }
 
 export default function SpamLeads() {
@@ -30,6 +33,13 @@ export default function SpamLeads() {
   const [teamLeads, setTeamLeads] = useState<SpamLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Campaign / website filter states
+  const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
+  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
 
   const isTLOrATL = user?.role === "team_leader" || user?.role === "Team Leader" ||
     user?.role === "Assistant Team Leader" || user?.panel === "tl";
