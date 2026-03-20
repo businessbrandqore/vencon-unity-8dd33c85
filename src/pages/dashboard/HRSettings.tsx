@@ -414,42 +414,42 @@ const HRSettings = () => {
       </h2>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="w-full grid grid-cols-9 bg-secondary">
-          <TabsTrigger value="general" className="text-xs gap-1.5">
+        <TabsList className="w-full flex overflow-x-auto bg-secondary gap-1 p-1">
+          <TabsTrigger value="general" className="text-xs gap-1 shrink-0 px-2">
             <Settings className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{isBn ? "সাধারণ" : "General"}</span>
+            <span className="text-[10px] sm:text-xs">{isBn ? "সাধারণ" : "General"}</span>
           </TabsTrigger>
-          <TabsTrigger value="products" className="text-xs gap-1.5">
+          <TabsTrigger value="products" className="text-xs gap-1 shrink-0 px-2">
             <ShoppingBag className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{isBn ? "পণ্য/গিফট" : "Products"}</span>
+            <span className="text-[10px] sm:text-xs">{isBn ? "পণ্য" : "Products"}</span>
           </TabsTrigger>
-          <TabsTrigger value="whatsapp" className="text-xs gap-1.5">
+          <TabsTrigger value="whatsapp" className="text-xs gap-1 shrink-0 px-2">
             <MessageCircle className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">WhatsApp</span>
+            <span className="text-[10px] sm:text-xs">WhatsApp</span>
           </TabsTrigger>
-          <TabsTrigger value="invoice" className="text-xs gap-1.5">
+          <TabsTrigger value="invoice" className="text-xs gap-1 shrink-0 px-2">
             <FileText className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{isBn ? "ইনভয়েস" : "Invoice"}</span>
+            <span className="text-[10px] sm:text-xs">{isBn ? "ইনভয়েস" : "Invoice"}</span>
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="text-xs gap-1.5">
+          <TabsTrigger value="attendance" className="text-xs gap-1 shrink-0 px-2">
             <Clock className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{isBn ? "কর্তন" : "Deduction"}</span>
+            <span className="text-[10px] sm:text-xs">{isBn ? "কর্তন" : "Deduct"}</span>
           </TabsTrigger>
-          <TabsTrigger value="gps" className="text-xs gap-1.5">
+          <TabsTrigger value="gps" className="text-xs gap-1 shrink-0 px-2">
             <MapPin className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">GPS</span>
+            <span className="text-[10px] sm:text-xs">GPS</span>
           </TabsTrigger>
-          <TabsTrigger value="birthday" className="text-xs gap-1.5">
+          <TabsTrigger value="birthday" className="text-xs gap-1 shrink-0 px-2">
             <Cake className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{isBn ? "জন্মদিন" : "Birthday"}</span>
+            <span className="text-[10px] sm:text-xs">{isBn ? "জন্মদিন" : "Birthday"}</span>
           </TabsTrigger>
-          <TabsTrigger value="api" className="text-xs gap-1.5">
+          <TabsTrigger value="api" className="text-xs gap-1 shrink-0 px-2">
             <Plug className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">API</span>
+            <span className="text-[10px] sm:text-xs">API</span>
           </TabsTrigger>
-          <TabsTrigger value="notification" className="text-xs gap-1.5">
+          <TabsTrigger value="notification" className="text-xs gap-1 shrink-0 px-2">
             <Bell className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{isBn ? "সাউন্ড" : "Sound"}</span>
+            <span className="text-[10px] sm:text-xs">{isBn ? "সাউন্ড" : "Sound"}</span>
           </TabsTrigger>
         </TabsList>
 
