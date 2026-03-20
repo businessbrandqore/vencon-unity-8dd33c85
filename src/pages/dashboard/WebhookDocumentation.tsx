@@ -23,6 +23,145 @@ const WebhookDocumentation = () => {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
+  const buildTestPayload = (siteName?: string) => ({
+    customer_name: `[TEST] ${siteName ? `${siteName} ` : ""}টেস্ট কাস্টমার`,
+    phone: `017${Math.floor(10000000 + Math.random() * 90000000)}`,
+    address: "টেস্ট ঠিকানা, ঢাকা",
+    extra_fields: {
+      email: "test@example.com",
+      order_id: `TEST-${Date.now()}`,
+      product: "টেস্ট প্রোডাক্ট",
+      quantity: 1,
+      total: "980.00",
+      currency: "BDT",
+      payment: "Cash on Delivery",
+      website: siteName || "Documentation Test",
+    },
+  });
+
+  const normalizeAiPhpCode = (code: string) => {
+    const cleaned = code
+      .replace(/^```php\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    const phpStart = cleaned.indexOf("<?php");
+    if (phpStart >= 0) return cleaned.slice(phpStart).trim();
+
+    const addActionStart = cleaned.indexOf("add_action(");
+    if (addActionStart >= 0) return cleaned.slice(addActionStart).trim();
+
+    const functionStart = cleaned.indexOf("function ");
+    if (functionStart >= 0) return cleaned.slice(functionStart).trim();
+
+    return cleaned;
+  };
+
+  const escapePhpString = (value: string) => value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+  const buildPhpSnippet = ({
+    webhookUrl,
+    secret,
+    siteName,
+    dataMode,
+  }: {
+    webhookUrl: string;
+    secret: string;
+    siteName?: string;
+    dataMode: string;
+  }) => {
+    const functionName = `send_order_to_crm_${dataMode}`;
+    const safeWebhookUrl = escapePhpString(webhookUrl);
+    const safeSecret = escapePhpString(secret);
+    const safeSiteName = escapePhpString(siteName || "Website");
+    const safeDataMode = escapePhpString(dataMode);
+
+    return `// functions.php বা Code Snippets plugin এ যোগ করুন
+// ✅ WooCommerce, CartFlows, FunnelKit সহ checkout submit হলেই দ্রুত webhook যাবে
+add_action('woocommerce_checkout_order_processed', '${functionName}', 10, 1);
+add_action('woocommerce_thankyou', '${functionName}', 10, 1);
+
+function ${functionName}($order_id) {
+    if (!$order_id) return;
+
+    $order = wc_get_order($order_id);
+    if (!$order) return;
+    if ($order->get_meta('_crm_webhook_sent')) return;
+
+    $customer_name = trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name());
+    if (empty($customer_name)) $customer_name = $order->get_formatted_billing_full_name();
+    if (empty($customer_name)) $customer_name = $order->get_billing_company();
+
+    $phone = $order->get_billing_phone();
+    if (empty($phone)) {
+        $phone = $order->get_meta('_billing_phone') ?: $order->get_meta('billing_phone') ?: $order->get_meta('phone') ?: '';
+    }
+
+    $address = implode(', ', array_filter([
+        $order->get_billing_address_1(),
+        $order->get_billing_address_2(),
+        $order->get_billing_city(),
+        $order->get_billing_state(),
+        $order->get_billing_postcode(),
+    ]));
+
+    $products = [];
+    $qty = 0;
+    foreach ($order->get_items() as $item) {
+        $products[] = $item->get_name();
+        $qty += (int) $item->get_quantity();
+    }
+
+    $custom_fields = [];
+    foreach ($order->get_meta_data() as $meta) {
+        if (strpos($meta->key, '_') === 0) continue;
+        $custom_fields[$meta->key] = $meta->value;
+    }
+
+    $body = [
+        'customer_name' => $customer_name,
+        'phone' => $phone,
+        'address' => $address,
+        'extra_fields' => array_merge([
+            'email' => $order->get_billing_email(),
+            'order_id' => $order->get_id(),
+            'product' => implode(', ', $products),
+            'quantity' => $qty,
+            'total' => $order->get_total(),
+            'currency' => $order->get_currency(),
+            'payment' => $order->get_payment_method_title(),
+            'website' => '${safeSiteName}',
+            'data_mode' => '${safeDataMode}',
+        ], $custom_fields),
+    ];
+
+    $response = wp_remote_post('${safeWebhookUrl}', [
+        'method' => 'POST',
+        'timeout' => 20,
+        'headers' => [
+            'Content-Type' => 'application/json',
+            'x-webhook-secret' => '${safeSecret}',
+        ],
+        'body' => wp_json_encode($body),
+    ]);
+
+    if (is_wp_error($response)) {
+        error_log('CRM Webhook Error [${safeSiteName}]: ' . $response->get_error_message());
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    if ($status_code >= 200 && $status_code < 300) {
+        $order->update_meta_data('_crm_webhook_sent', 'yes');
+        $order->save();
+        return;
+    }
+
+    error_log('CRM Webhook Error [${safeSiteName}] status ' . $status_code . ': ' . wp_remote_retrieve_body($response));
+}`;
+  };
+
   const handleAnalyzeCheckout = async (ws: { id: string; site_url: string; site_name: string; data_mode: string; webhook_secret: string }) => {
     setAnalyzingWebsiteId(ws.id);
     try {
@@ -41,7 +180,7 @@ const WebhookDocumentation = () => {
         setAnalyzedResults((prev) => ({
           ...prev,
           [ws.id]: {
-            code: data.generated_code,
+            code: normalizeAiPhpCode(data.generated_code),
             fields: data.detected_fields || [],
             formFound: data.form_found,
           },
@@ -113,20 +252,7 @@ const WebhookDocumentation = () => {
           "Content-Type": "application/json",
           "X-Webhook-Secret": activeSecret,
         },
-        body: JSON.stringify({
-          customer_name: "[TEST] টেস্ট কাস্টমার",
-          phone: `01700000${Math.floor(Math.random() * 900 + 100)}`,
-          address: "টেস্ট ঠিকানা, ঢাকা",
-          extra_fields: {
-            email: "test@example.com",
-            order_id: `TEST-${Date.now()}`,
-            product: "টেস্ট প্রোডাক্ট",
-            quantity: 1,
-            total: "980.00",
-            currency: "BDT",
-            payment: "Cash on Delivery",
-          },
-        }),
+        body: JSON.stringify(buildTestPayload(selectedWebsite?.site_name)),
       });
       const data = await res.json();
       if (res.ok && data.imported > 0) {
@@ -143,185 +269,22 @@ const WebhookDocumentation = () => {
     }
   };
 
-  // Generate universal PHP snippet that works with ANY checkout (WooCommerce, CartFlows, FunnelKit, Custom)
-  const generatePhpSnippet = (url: string, secret: string, websiteName?: string) => {
-    return `// functions.php বা custom plugin এ যোগ করুন
-// ✅ যেকোনো Checkout এ কাজ করবে: WooCommerce, CartFlows, FunnelKit, Custom Form
-add_action('woocommerce_thankyou', 'send_order_to_crm', 10, 1);
+  const generatePhpSnippet = (url: string, secret: string, websiteName?: string) =>
+    buildPhpSnippet({
+      webhookUrl: url,
+      secret,
+      siteName: websiteName || selectedCampaign?.name,
+      dataMode: "lead",
+    });
 
-function send_order_to_crm(\$order_id) {
-    \$order = wc_get_order(\$order_id);
-    if (!\$order) return;
-
-    // একবারই পাঠানো নিশ্চিত করুন
-    if (\$order->get_meta('_crm_webhook_sent')) return;
-
-    // === সব ধরনের Billing ফিল্ড ডাইনামিক্যালি নেওয়া ===
-    \$billing_data = \$order->get_data()['billing'] ?? array();
-    
-    // নাম তৈরি করুন (যেভাবেই সেভ হোক)
-    \$name_parts = array_filter(array(
-        \$billing_data['first_name'] ?? '',
-        \$billing_data['last_name'] ?? '',
-    ));
-    \$customer_name = !empty(\$name_parts) ? implode(' ', \$name_parts) : (\$order->get_formatted_billing_full_name() ?: 'Unknown');
-
-    // ফোন নম্বর (billing_phone বা custom meta থেকে)
-    \$phone = \$billing_data['phone'] ?? '';
-    if (empty(\$phone)) {
-        \$phone = \$order->get_meta('_billing_phone') ?: \$order->get_meta('billing_phone') ?: '';
-    }
-
-    // ঠিকানা তৈরি করুন
-    \$address_parts = array_filter(array(
-        \$billing_data['address_1'] ?? '',
-        \$billing_data['address_2'] ?? '',
-        \$billing_data['city'] ?? '',
-        \$billing_data['state'] ?? '',
-        \$billing_data['postcode'] ?? '',
-    ));
-    \$address = !empty(\$address_parts) ? implode(', ', \$address_parts) : '';
-
-    // === প্রোডাক্ট তথ্য ===
-    \$items = \$order->get_items();
-    \$product_names = array();
-    \$total_qty = 0;
-    foreach (\$items as \$item) {
-        \$product_names[] = \$item->get_name();
-        \$total_qty += \$item->get_quantity();
-    }
-
-    // === সব কাস্টম মেটা ফিল্ড সংগ্রহ (CartFlows / কাস্টম ফর্মের extra fields) ===
-    \$custom_fields = array();
-    \$meta_data = \$order->get_meta_data();
-    foreach (\$meta_data as \$meta) {
-        \$key = \$meta->key;
-        // Internal WooCommerce meta বাদ দিন
-        if (strpos(\$key, '_') === 0 && strpos(\$key, '_billing') !== 0 && strpos(\$key, '_shipping') !== 0) continue;
-        \$custom_fields[\$key] = \$meta->value;
-    }
-
-    \$body = array(
-        'customer_name' => \$customer_name,
-        'phone'         => \$phone,
-        'address'       => \$address,
-        'extra_fields'  => array_merge(array(
-            'email'    => \$billing_data['email'] ?? '',
-            'order_id' => \$order_id,
-            'product'  => implode(', ', \$product_names),
-            'quantity' => \$total_qty,
-            'total'    => \$order->get_total(),
-            'currency' => \$order->get_currency(),
-            'payment'  => \$order->get_payment_method_title(),${websiteName ? `\n            'website'  => '${websiteName}',` : ''}
-        ), \$custom_fields),
-    );
-
-    \$response = wp_remote_post('${url}', array(
-        'method'  => 'POST',
-        'timeout' => 30,
-        'headers' => array(
-            'Content-Type'     => 'application/json',
-            'x-webhook-secret' => '${secret}',
-        ),
-        'body' => wp_json_encode(\$body),
-    ));
-
-    if (!is_wp_error(\$response) && wp_remote_retrieve_response_code(\$response) === 200) {
-        \$order->update_meta_data('_crm_webhook_sent', 'yes');
-        \$order->save();
-    } else {
-        error_log('CRM Webhook Error: ' . print_r(\$response, true));
-    }
-}`;
-  };
-
-  // Generate per-website PHP snippet (universal)
   const generatePerWebsitePhpSnippet = (websiteSecret: string, websiteUrl: string, siteName: string, dataMode: string) => {
     const perSiteUrl = `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}`;
-    return `// === ${siteName} (${dataMode === 'lead' ? 'Lead' : 'Processing'} ডাটা) ===
-// ✅ যেকোনো Checkout এ কাজ করবে: WooCommerce, CartFlows, FunnelKit, Custom
-// functions.php বা custom plugin এ যোগ করুন
-
-add_action('woocommerce_thankyou', 'send_order_to_crm_${dataMode}', 10, 1);
-
-function send_order_to_crm_${dataMode}(\$order_id) {
-    \$order = wc_get_order(\$order_id);
-    if (!\$order) return;
-    if (\$order->get_meta('_crm_webhook_sent')) return;
-
-    // === ডাইনামিক Billing ডাটা ===
-    \$billing_data = \$order->get_data()['billing'] ?? array();
-    
-    \$name_parts = array_filter(array(
-        \$billing_data['first_name'] ?? '',
-        \$billing_data['last_name'] ?? '',
-    ));
-    \$customer_name = !empty(\$name_parts) ? implode(' ', \$name_parts) : (\$order->get_formatted_billing_full_name() ?: 'Unknown');
-
-    \$phone = \$billing_data['phone'] ?? '';
-    if (empty(\$phone)) {
-        \$phone = \$order->get_meta('_billing_phone') ?: \$order->get_meta('billing_phone') ?: '';
-    }
-
-    \$address_parts = array_filter(array(
-        \$billing_data['address_1'] ?? '',
-        \$billing_data['address_2'] ?? '',
-        \$billing_data['city'] ?? '',
-        \$billing_data['state'] ?? '',
-        \$billing_data['postcode'] ?? '',
-    ));
-    \$address = !empty(\$address_parts) ? implode(', ', \$address_parts) : '';
-
-    // === প্রোডাক্ট ===
-    \$items = \$order->get_items();
-    \$product_names = array();
-    \$total_qty = 0;
-    foreach (\$items as \$item) {
-        \$product_names[] = \$item->get_name();
-        \$total_qty += \$item->get_quantity();
-    }
-
-    // === কাস্টম মেটা ফিল্ড (CartFlows, FunnelKit, Custom Fields) ===
-    \$custom_fields = array();
-    foreach (\$order->get_meta_data() as \$meta) {
-        \$key = \$meta->key;
-        if (strpos(\$key, '_') === 0 && strpos(\$key, '_billing') !== 0 && strpos(\$key, '_shipping') !== 0) continue;
-        \$custom_fields[\$key] = \$meta->value;
-    }
-
-    \$body = array(
-        'customer_name' => \$customer_name,
-        'phone'         => \$phone,
-        'address'       => \$address,
-        'extra_fields'  => array_merge(array(
-            'email'    => \$billing_data['email'] ?? '',
-            'order_id' => \$order_id,
-            'product'  => implode(', ', \$product_names),
-            'quantity' => \$total_qty,
-            'total'    => \$order->get_total(),
-            'currency' => \$order->get_currency(),
-            'payment'  => \$order->get_payment_method_title(),
-            'website'  => '${siteName}',
-        ), \$custom_fields),
-    );
-
-    \$response = wp_remote_post('${perSiteUrl}', array(
-        'method'  => 'POST',
-        'timeout' => 30,
-        'headers' => array(
-            'Content-Type'     => 'application/json',
-            'x-webhook-secret' => '${websiteSecret}',
-        ),
-        'body' => wp_json_encode(\$body),
-    ));
-
-    if (!is_wp_error(\$response) && wp_remote_retrieve_response_code(\$response) === 200) {
-        \$order->update_meta_data('_crm_webhook_sent', 'yes');
-        \$order->save();
-    } else {
-        error_log('CRM Webhook Error [${siteName}]: ' . print_r(\$response, true));
-    }
-}`;
+    return buildPhpSnippet({
+      webhookUrl: perSiteUrl,
+      secret: websiteSecret,
+      siteName,
+      dataMode,
+    });
   };
 
   return (
@@ -479,7 +442,7 @@ function send_order_to_crm_${dataMode}(\$order_id) {
                           const res = await fetch(webhookUrl, {
                             method: "POST",
                             headers: { "Content-Type": "application/json", "X-Webhook-Secret": ws.webhook_secret },
-                            body: JSON.stringify({ customer_name: "Test", phone: `test-${Date.now()}`, address: "Test Address" }),
+                            body: JSON.stringify(buildTestPayload(ws.site_name)),
                           });
                           const data = await res.json();
                           if (res.ok && (data.imported > 0 || data.skipped_duplicates > 0)) {
