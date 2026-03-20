@@ -246,16 +246,25 @@ const HRCampaigns = () => {
   };
 
   const handleDelete = async () => {
-    if (!detailId) return;
-    // Delete related data first
-    await supabase.from("campaign_websites").delete().eq("campaign_id", detailId);
-    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
-    await supabase.from("campaign_agent_roles").delete().eq("campaign_id", detailId);
-    await supabase.from("campaigns").delete().eq("id", detailId);
-    toast({ title: isBn ? "ক্যাম্পেইন ডিলিট করা হয়েছে" : "Campaign deleted" });
+    if (!detailId || !user || !detailCampaign) return;
+    // Submit SA approval request for deletion
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "campaign_delete",
+      requested_by: user.id,
+      status: "pending",
+      details: {
+        campaign_id: detailId,
+        campaign_name: detailCampaign.name,
+        lead_count: detailCampaign.leadCount,
+      },
+    });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: isBn ? "ক্যাম্পেইন ডিলিটের অনুরোধ SA-তে পাঠানো হয়েছে ✓" : "Campaign deletion request sent to SA ✓" });
+    }
     setConfirmDelete(false);
     setDetailId(null);
-    fetchCampaigns();
   };
   return (
     <div className="space-y-6">
