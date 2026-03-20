@@ -70,6 +70,7 @@ const SAApprovalsTable = () => {
     const d = approval.details || {};
     switch (approval.type) {
       case "new_campaign":
+      case "campaign_delete":
         return d.campaign_name || d.name || "—";
       case "non_agent_hire":
         return `${d.employee_name || "—"} / ${d.role || "—"} / ৳${d.basic_salary || "—"}`;
