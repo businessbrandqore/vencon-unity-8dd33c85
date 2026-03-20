@@ -652,14 +652,7 @@ const ChatPage = () => {
 
   return (
     <div className="-m-4 sm:-m-6 h-[calc(100vh-3.5rem)] flex overflow-hidden bg-background">
-      {/* Call overlay */}
-      {user && (
-        <ChatCallOverlay
-          currentUserId={user.id}
-          outgoingCall={outgoingCall}
-          onOutgoingCallHandled={() => setOutgoingCall(null)}
-        />
-      )}
+      {/* Call overlay is now global in DashboardLayout */}
 
       {/* Sidebar - hidden on mobile when chat is open */}
       <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full md:w-72 border-r border-border flex-col bg-card/50 md:shrink-0`}>
