@@ -150,7 +150,19 @@ export default function EmployeeMyOrders() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const filtered = orders.filter((o) => {
+  // Campaign-level filtering
+  const campaignFiltered = useMemo(() => {
+    let result = orders;
+    if (filterCampaignId !== "all") result = result.filter(o => o._campaign_id === filterCampaignId);
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      result = result.filter(o => o._campaign_id && ids.includes(o._campaign_id));
+    }
+    if (filterWebsite !== "all") result = result.filter(o => o._import_source === filterWebsite);
+    return result;
+  }, [orders, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+
+  const filtered = campaignFiltered.filter((o) => {
     const matchSearch = !searchQuery ||
       (o.customer_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (o.phone || "").includes(searchQuery) ||
