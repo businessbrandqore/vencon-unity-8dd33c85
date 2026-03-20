@@ -38,6 +38,13 @@ interface OrderRow {
 interface CampaignOption {
   id: string;
   name: string;
+  data_mode: string;
+}
+
+interface WebsiteOption {
+  id: string;
+  site_name: string;
+  campaign_id: string;
 }
 
 interface TLOption {
