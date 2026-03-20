@@ -60,6 +60,7 @@ const SAApprovalsTable = () => {
 
   const typeLabels: Record<string, { bn: string; en: string }> = {
     new_campaign: { bn: "নতুন ক্যাম্পেইন", en: "New Campaign" },
+    campaign_delete: { bn: "ক্যাম্পেইন ডিলিট", en: "Campaign Delete" },
     non_agent_hire: { bn: "নন-এজেন্ট নিয়োগ", en: "Non-Agent Hire" },
     incentive_config: { bn: "ইনসেনটিভ কনফিগ", en: "Incentive Config" },
     profit_share_config: { bn: "প্রফিট শেয়ার কনফিগ", en: "Profit Share Config" },
