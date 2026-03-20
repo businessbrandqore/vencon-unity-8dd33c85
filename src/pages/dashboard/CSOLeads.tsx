@@ -449,10 +449,10 @@ export default function CSOLeads() {
           CSO — লিড ও অর্ডার যাচাই
         </h1>
         <div className="flex gap-2 flex-wrap">
-          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-            <SelectTrigger className="w-[200px] h-9">
+          <Select value={selectedCampaign} onValueChange={v => { setSelectedCampaign(v); setFilterWebsite("all"); }}>
+            <SelectTrigger className="w-[180px] h-9 text-xs">
               <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="ক্যাম্পেইন ফিল্টার" />
+              <SelectValue placeholder="ক্যাম্পেইন" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
@@ -461,6 +461,28 @@ export default function CSOLeads() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
+            <SelectTrigger className="h-9 w-[140px] text-xs"><SelectValue placeholder="ডাটা মোড" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সব মোড</SelectItem>
+              <SelectItem value="lead">লিড</SelectItem>
+              <SelectItem value="processing">প্রসেসিং</SelectItem>
+            </SelectContent>
+          </Select>
+          {(() => {
+            const filteredSites = selectedCampaign !== "all"
+              ? websites.filter(w => w.campaign_id === selectedCampaign)
+              : websites;
+            return filteredSites.length > 0 ? (
+              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="ওয়েবসাইট" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব ওয়েবসাইট</SelectItem>
+                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null;
+          })()}
           <Button variant="outline" size="sm" onClick={() => { setShowDataRequest(true); loadTLs(); }}>
             <Database className="h-4 w-4 mr-1" /> ডাটা রিকোয়েস্ট
           </Button>
