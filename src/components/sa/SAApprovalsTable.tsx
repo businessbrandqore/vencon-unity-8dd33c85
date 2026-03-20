@@ -110,6 +110,14 @@ const SAApprovalsTable = () => {
       }
     }
 
+    // If approved campaign_delete, delete the campaign (cascade will handle related data)
+    if (action === "approved" && approval?.type === "campaign_delete" && approval.details) {
+      const campaignId = approval.details.campaign_id;
+      if (campaignId) {
+        await supabase.from("campaigns").delete().eq("id", campaignId);
+      }
+    }
+
     // If approved non_agent_hire, create auth account
     if (action === "approved" && approval?.type === "non_agent_hire" && approval.details) {
       const d = approval.details;
