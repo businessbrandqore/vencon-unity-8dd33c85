@@ -205,9 +205,15 @@ export default function EmployeeLeads() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: carData } = await supabase.from("campaign_agent_roles")
-        .select("campaign_id").eq("agent_id", user.id);
-      const campaignIds = [...new Set((carData || []).map(c => c.campaign_id))];
+      // Get campaign IDs from agent roles AND from leads themselves
+      const [{ data: carData }, { data: leadCampData }] = await Promise.all([
+        supabase.from("campaign_agent_roles").select("campaign_id").eq("agent_id", user.id),
+        supabase.from("leads").select("campaign_id").eq("assigned_to", user.id).not("campaign_id", "is", null),
+      ]);
+      const campaignIds = [...new Set([
+        ...(carData || []).map(c => c.campaign_id),
+        ...(leadCampData || []).map(l => l.campaign_id).filter(Boolean) as string[],
+      ])];
       if (campaignIds.length === 0) return;
 
       const [{ data: campData }, { data: siteData }] = await Promise.all([
