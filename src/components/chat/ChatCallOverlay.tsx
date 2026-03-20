@@ -295,8 +295,9 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
         await (signalingChannelRef.current as any).__processPending();
       }
 
-      // If caller, create and send offer
+      // If caller, wait briefly for receiver's channel to be ready, then send offer
       if (isCaller) {
+        await new Promise((r) => setTimeout(r, 500));
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         signalingChannelRef.current?.send({
