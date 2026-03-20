@@ -114,9 +114,18 @@ const WebhookDocumentation = () => {
           "X-Webhook-Secret": activeSecret,
         },
         body: JSON.stringify({
-          customer_name: "Test Customer",
-          phone: `test-${Date.now()}`,
-          address: "Test Address, Dhaka",
+          customer_name: "[TEST] টেস্ট কাস্টমার",
+          phone: `01700000${Math.floor(Math.random() * 900 + 100)}`,
+          address: "টেস্ট ঠিকানা, ঢাকা",
+          extra_fields: {
+            email: "test@example.com",
+            order_id: `TEST-${Date.now()}`,
+            product: "টেস্ট প্রোডাক্ট",
+            quantity: 1,
+            total: "980.00",
+            currency: "BDT",
+            payment: "Cash on Delivery",
+          },
         }),
       });
       const data = await res.json();
