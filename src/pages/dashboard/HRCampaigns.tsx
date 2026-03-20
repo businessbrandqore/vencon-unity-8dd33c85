@@ -837,10 +837,11 @@ const HRCampaigns = () => {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={isBn ? "ক্যাম্পেইন ডিলিট করুন" : "Delete Campaign"}
-        description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ওয়েবসাইট, TL অ্যাসাইনমেন্ট স্থায়ীভাবে মুছে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না!" : "⚠️ This campaign and all connected websites, TL assignments will be permanently deleted. This cannot be undone!"}
-        confirmLabel={isBn ? "স্থায়ীভাবে ডিলিট" : "Delete Permanently"}
+        title={isBn ? "ক্যাম্পেইন ডিলিটের অনুরোধ" : "Request Campaign Deletion"}
+        description={isBn ? "⚠️ এই ক্যাম্পেইন এবং এর সাথে সংযুক্ত সকল ডাটা (লিড, ওয়েবসাইট, TL অ্যাসাইনমেন্ট) স্থায়ীভাবে মুছে যাবে। সুপার এডমিনের অনুমোদনের পর এটি কার্যকর হবে।" : "⚠️ All data (leads, websites, TL assignments) will be permanently deleted. This requires Super Admin approval."}
+        confirmLabel={isBn ? "অনুরোধ পাঠান" : "Send Request"}
         onConfirm={handleDelete}
+        destructive={true}
       />
     </div>
   );
