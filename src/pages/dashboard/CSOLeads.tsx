@@ -404,9 +404,14 @@ export default function CSOLeads() {
   };
 
   const campaignFilter = (o: OrderRow) => {
-    if (selectedCampaign === "all") return true;
-    const campId = o.lead_id ? leadCampaignMap[o.lead_id] : null;
-    return campId === selectedCampaign;
+    const info = o.lead_id ? leadCampaignMap[o.lead_id] : null;
+    if (selectedCampaign !== "all" && info?.campaign_id !== selectedCampaign) return false;
+    if (filterDataMode !== "all") {
+      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
+      if (!info?.campaign_id || !ids.includes(info.campaign_id)) return false;
+    }
+    if (filterWebsite !== "all" && info?.import_source !== filterWebsite) return false;
+    return true;
   };
 
   const filteredPending = pendingOrders.filter(o =>
