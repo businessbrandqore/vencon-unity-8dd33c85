@@ -93,7 +93,7 @@ const HRDataMonitor = () => {
     queryFn: async () => {
       let q = supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note")
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
@@ -104,8 +104,8 @@ const HRDataMonitor = () => {
       const { data, error } = await q;
       if (error) throw error;
       let result = data || [];
-      if (dataMode === "lead") result = result.filter(l => l.source !== "processing" && l.import_source !== "processing");
-      if (dataMode === "processing") result = result.filter(l => l.source === "processing" || l.import_source === "processing");
+      if (dataMode === "lead") result = result.filter(l => l.import_source !== "processing");
+      if (dataMode === "processing") result = result.filter(l => l.import_source === "processing");
       return result;
     },
   });
