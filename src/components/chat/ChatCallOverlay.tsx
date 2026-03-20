@@ -212,49 +212,60 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
 
       // Handle remote audio — process to reduce pops & distortion
       pc.ontrack = (event) => {
+        const remoteStream = event.streams[0];
+        if (!remoteStream) return;
+
+        // First: always set the raw stream directly for guaranteed playback
         if (remoteAudioRef.current) {
-          try {
-            const audioCtx = new AudioContext({ sampleRate: 48000 });
-            const source = audioCtx.createMediaStreamSource(event.streams[0]);
+          remoteAudioRef.current.srcObject = remoteStream;
+          remoteAudioRef.current.play().catch((e) => console.warn("Audio play blocked:", e));
+        }
 
-            // High-pass: cut low rumble & plosive pops
-            const highPass = audioCtx.createBiquadFilter();
-            highPass.type = "highpass";
-            highPass.frequency.value = 85;
-            highPass.Q.value = 0.7;
+        // Then: try to apply audio processing on top (non-blocking)
+        try {
+          const audioCtx = new AudioContext({ sampleRate: 48000 });
+          // Resume AudioContext (required on mobile/some browsers)
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+          }
+          const source = audioCtx.createMediaStreamSource(remoteStream);
 
-            // Low-pass: cut harsh high-freq hiss
-            const lowPass = audioCtx.createBiquadFilter();
-            lowPass.type = "lowpass";
-            lowPass.frequency.value = 7500;
-            lowPass.Q.value = 0.7;
+          const highPass = audioCtx.createBiquadFilter();
+          highPass.type = "highpass";
+          highPass.frequency.value = 85;
+          highPass.Q.value = 0.7;
 
-            // Compressor: tame sudden loud peaks
-            const compressor = audioCtx.createDynamicsCompressor();
-            compressor.threshold.value = -24;
-            compressor.knee.value = 12;
-            compressor.ratio.value = 4;
-            compressor.attack.value = 0.003;
-            compressor.release.value = 0.15;
+          const lowPass = audioCtx.createBiquadFilter();
+          lowPass.type = "lowpass";
+          lowPass.frequency.value = 7500;
+          lowPass.Q.value = 0.7;
 
-            const gain = audioCtx.createGain();
-            gain.gain.value = 1.0;
+          const compressor = audioCtx.createDynamicsCompressor();
+          compressor.threshold.value = -24;
+          compressor.knee.value = 12;
+          compressor.ratio.value = 4;
+          compressor.attack.value = 0.003;
+          compressor.release.value = 0.15;
 
-            source.connect(highPass);
-            highPass.connect(lowPass);
-            lowPass.connect(compressor);
-            compressor.connect(gain);
+          const gain = audioCtx.createGain();
+          gain.gain.value = 1.0;
 
-            const dest = audioCtx.createMediaStreamDestination();
-            gain.connect(dest);
+          source.connect(highPass);
+          highPass.connect(lowPass);
+          lowPass.connect(compressor);
+          compressor.connect(gain);
 
+          const dest = audioCtx.createMediaStreamDestination();
+          gain.connect(dest);
+
+          // Only switch to processed stream if AudioContext is running
+          if (audioCtx.state === "running" && remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = dest.stream;
             remoteAudioRef.current.play().catch(() => {});
-          } catch {
-            // Fallback: direct stream
-            remoteAudioRef.current!.srcObject = event.streams[0];
-            remoteAudioRef.current!.play().catch(() => {});
           }
+        } catch (e) {
+          // Processing failed — raw stream is already playing, so no action needed
+          console.warn("Audio processing fallback:", e);
         }
       };
 
@@ -284,8 +295,9 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
         await (signalingChannelRef.current as any).__processPending();
       }
 
-      // If caller, create and send offer
+      // If caller, wait briefly for receiver's channel to be ready, then send offer
       if (isCaller) {
+        await new Promise((r) => setTimeout(r, 500));
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         signalingChannelRef.current?.send({
