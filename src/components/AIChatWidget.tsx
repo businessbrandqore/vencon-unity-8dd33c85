@@ -142,7 +142,7 @@ const AIChatWidget = () => {
     e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
   };
 
-  if (!user) return null;
+  if (!user || isOnChatPage) return null;
 
   return (
     <>
