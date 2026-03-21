@@ -229,6 +229,9 @@ function ${functionName}($order_id) {
   const webhookUrl = selectedCampaignId
     ? `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}`
     : "";
+  const selectedWebsiteWebhookUrl = selectedCampaignId && selectedWebsiteId
+    ? `${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}/${selectedWebsiteId}`
+    : webhookUrl;
 
   // Use website-specific secret if selected, otherwise campaign secret
   const activeSecret = selectedWebsite?.webhook_secret || selectedCampaign?.webhook_secret || "";
@@ -246,7 +249,7 @@ function ${functionName}($order_id) {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(webhookUrl, {
+        const res = await fetch(selectedWebsiteWebhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -440,7 +443,7 @@ function ${functionName}($order_id) {
                         setTesting(true);
                         setTestResult(null);
                         try {
-                          const res = await fetch(webhookUrl, {
+                          const res = await fetch(`${supabaseUrl}/functions/v1/import-leads/${selectedCampaignId}/${ws.id}`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json", "X-Webhook-Secret": ws.webhook_secret, "X-Test-Connection": "true" },
                             body: JSON.stringify(buildTestPayload(ws.site_name)),
