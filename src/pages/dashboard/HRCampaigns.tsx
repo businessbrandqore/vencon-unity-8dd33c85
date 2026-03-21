@@ -201,34 +201,94 @@ const HRCampaigns = () => {
     if (!detailId || !editName.trim()) return;
     setSaving(true);
 
-    // Update campaign name
-    await supabase.from("campaigns").update({ name: editName.trim() }).eq("id", detailId);
+    try {
+      const cleanedName = editName.trim();
+      const normalizedWebsites = editWebsites
+        .map((w) => ({
+          ...w,
+          site_name: w.site_name.trim(),
+          site_url: w.site_url.trim(),
+        }))
+        .filter((w) => w.site_name && w.site_url);
 
-    // Update TL assignments: delete old, insert new
-    await supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
-    if (editTLs.length > 0) {
-      await supabase.from("campaign_tls").insert(editTLs.map((tlId) => ({ campaign_id: detailId, tl_id: tlId })));
-    }
-
-    // Update websites: delete removed, upsert existing/new
-    const existingIds = editWebsites.filter((w) => w.id).map((w) => w.id!);
-    const toDelete = detailWebsites.filter((w) => !existingIds.includes(w.id));
-    for (const d of toDelete) {
-      await supabase.from("campaign_websites").delete().eq("id", d.id);
-    }
-    for (const w of editWebsites) {
-      if (w.id) {
-        await supabase.from("campaign_websites").update({ site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode } as any).eq("id", w.id);
-      } else if (w.site_name.trim() && w.site_url.trim()) {
-        await supabase.from("campaign_websites").insert({ campaign_id: detailId, site_name: w.site_name, site_url: w.site_url, is_active: w.is_active, data_mode: w.data_mode } as any);
+      if (normalizedWebsites.length === 0) {
+        toast({
+          title: isBn ? "কমপক্ষে একটি ওয়েবসাইট লাগবে" : "At least one website is required",
+          variant: "destructive",
+        });
+        return;
       }
-    }
 
-    toast({ title: isBn ? "ক্যাম্পেইন আপডেট হয়েছে ✓" : "Campaign updated ✓" });
-    setSaving(false);
-    setEditing(false);
-    fetchCampaigns();
-    openDetail(detailId);
+      const existingIds = normalizedWebsites.filter((w) => w.id).map((w) => w.id!);
+      const toDelete = detailWebsites.filter((w) => !existingIds.includes(w.id));
+
+      const campaignUpdate = supabase.from("campaigns").update({ name: cleanedName }).eq("id", detailId);
+      const tlsDelete = supabase.from("campaign_tls").delete().eq("campaign_id", detailId);
+      const websiteDeletes = Promise.all(
+        toDelete.map((w) => supabase.from("campaign_websites").delete().eq("id", w.id))
+      );
+
+      const [campaignUpdateResult, tlsDeleteResult, websiteDeleteResults] = await Promise.all([
+        campaignUpdate,
+        tlsDelete,
+        websiteDeletes,
+      ]);
+
+      const firstDeleteError = websiteDeleteResults.find((result) => result.error)?.error;
+      const earlyError = campaignUpdateResult.error || tlsDeleteResult.error || firstDeleteError;
+      if (earlyError) {
+        throw earlyError;
+      }
+
+      if (editTLs.length > 0) {
+        const { error: tlInsertError } = await supabase
+          .from("campaign_tls")
+          .insert(editTLs.map((tlId) => ({ campaign_id: detailId, tl_id: tlId })));
+
+        if (tlInsertError) throw tlInsertError;
+      }
+
+      const websiteMutations = await Promise.all(
+        normalizedWebsites.map((w) =>
+          w.id
+            ? supabase
+                .from("campaign_websites")
+                .update({
+                  site_name: w.site_name,
+                  site_url: w.site_url,
+                  is_active: w.is_active,
+                  data_mode: w.data_mode,
+                } as any)
+                .eq("id", w.id)
+            : supabase.from("campaign_websites").insert({
+                campaign_id: detailId,
+                site_name: w.site_name,
+                site_url: w.site_url,
+                is_active: w.is_active,
+                data_mode: w.data_mode,
+              } as any)
+        )
+      );
+
+      const websiteMutationError = websiteMutations.find((result) => result.error)?.error;
+      if (websiteMutationError) {
+        throw websiteMutationError;
+      }
+
+      toast({ title: isBn ? "ক্যাম্পেইন আপডেট হয়েছে ✓" : "Campaign updated ✓" });
+      setEditing(false);
+      await fetchCampaigns();
+      await openDetail(detailId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({
+        title: isBn ? "ক্যাম্পেইন আপডেট ব্যর্থ" : "Campaign update failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copyText = (text: string) => {
