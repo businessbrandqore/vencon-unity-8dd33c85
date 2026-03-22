@@ -38,6 +38,7 @@ const PanelSidebar = ({ open, onClose }: PanelSidebarProps) => {
         .single();
       if (data?.value) {
         const val = data.value as Record<string, string>;
+        localStorage.setItem("vencon_ui_branding", JSON.stringify(val));
         if (val.company_logo) setCompanyLogo(val.company_logo);
         if (val.company_name) setCompanyName(val.company_name);
       }
