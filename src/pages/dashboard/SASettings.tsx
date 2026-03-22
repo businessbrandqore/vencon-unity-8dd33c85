@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -148,7 +149,7 @@ const SASettings = () => {
     ? ["SA/HR অ্যাকাউন্ট ও পাসওয়ার্ড", "API ক্রেডেনশিয়ালস", "UI ব্র্যান্ডিং সেটিংস", "অডিট লগ (স্থায়ীভাবে সংরক্ষিত)"]
     : ["SA/HR Account & Password", "API Credentials", "UI Branding settings", "Audit Logs (permanently retained)"];
 
-  if (loading) return <div className="h-64 animate-pulse bg-card rounded-xl" />;
+  if (loading) return <LoadingSpinner text="Loading..." />;
 
   const inputClass = "w-full bg-transparent border border-border rounded-lg px-3 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
   const labelClass = "font-body text-xs text-muted-foreground mb-1 block";

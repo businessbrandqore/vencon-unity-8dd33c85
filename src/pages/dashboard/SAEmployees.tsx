@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,7 +125,7 @@ const SAEmployees = () => {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>
+        <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />
       ) : (
         <div className="border border-border overflow-auto">
           <table className="w-full text-sm">

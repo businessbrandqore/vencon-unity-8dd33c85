@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -139,7 +140,7 @@ const SAEmployeeProfile = () => {
     fetchAll();
   }, [id]);
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>;
+  if (loading) return <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />;
   if (!emp) return <div className="p-8 text-center text-muted-foreground">{isBn ? "কর্মচারী পাওয়া যায়নি" : "Employee not found"}</div>;
 
   const InfoItem = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (

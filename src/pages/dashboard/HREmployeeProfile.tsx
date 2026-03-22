@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import WarningLights from "@/components/profile/WarningLights";
@@ -262,7 +263,7 @@ const HREmployeeProfile = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>;
+    return <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />;
   }
 
   if (!emp) {

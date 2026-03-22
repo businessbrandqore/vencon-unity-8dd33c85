@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -249,7 +250,7 @@ export default function EmployeeAttendance() {
     return "text-yellow-400 border-yellow-500/50";
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   const hasCheckedIn = !!todayRecord?.clock_in;
   const hasCheckedOut = !!todayRecord?.clock_out;

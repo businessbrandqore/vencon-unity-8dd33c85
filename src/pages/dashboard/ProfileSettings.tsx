@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,7 +113,7 @@ export default function ProfileSettings() {
     toast.success("প্রোফাইল ছবি আপডেট হয়েছে ✓");
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
   if (!profile) return null;
 
   const initials = profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();

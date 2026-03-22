@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -211,7 +212,7 @@ export default function CancellationExecutiveDashboard() {
           </div>
 
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">লোড হচ্ছে...</div>
+            <LoadingSpinner text="লোড হচ্ছে..." />
           ) : filtered.length === 0 ? (
             <EmptyState message="রিটার্ন বা ক্যান্সেল অর্ডার পাওয়া যায়নি" />
           ) : (

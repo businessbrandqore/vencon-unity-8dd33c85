@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -991,10 +992,7 @@ const TLTeam = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-3 text-sm text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</span>
-            </div>
+            <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />
           ) : (
             <>
               {viewLevel === "tl_list" && renderDataTable(tlList, navigateToTL, "TL")}

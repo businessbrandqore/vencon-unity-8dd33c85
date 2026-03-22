@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +58,7 @@ export default function DeliveryCoordinatorDashboard() {
     return () => clearInterval(iv);
   }, [profile]);
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   const summaryCards = [
     { label: "মোট অর্ডার", value: stats.total, icon: Package, color: "text-foreground" },

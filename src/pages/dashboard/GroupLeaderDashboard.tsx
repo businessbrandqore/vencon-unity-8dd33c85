@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -346,9 +347,7 @@ export default function GroupLeaderDashboard() {
 
   if (loading) {
     return (
-      <div className="p-6 text-muted-foreground flex items-center gap-2">
-        <RefreshCw className="h-4 w-4 animate-spin" /> লোড হচ্ছে...
-      </div>
+      <LoadingSpinner text="লোড হচ্ছে..." />
     );
   }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -109,7 +110,7 @@ export default function EmployeeSalary() {
     if (filter === "yearly") fetchYearlyData(selectedYear);
   }, [filter, user, selectedYear]);
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
   if (!salary) return <div className="p-6 text-muted-foreground">বেতন তথ্য পাওয়া যায়নি</div>;
 
   const normalizedRole = (salary.role || "").toLowerCase().replace(/\s+/g, "_");

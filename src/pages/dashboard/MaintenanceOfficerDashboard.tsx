@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback } from "react";
 import SalaryCard from "@/components/SalaryCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -314,7 +315,7 @@ export default function MaintenanceOfficerDashboard() {
   const logisticsInCount = logistics.filter(l => l.type === "in").length;
   const logisticsOutCount = logistics.filter(l => l.type === "out").length;
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   return (
     <div className="space-y-6">

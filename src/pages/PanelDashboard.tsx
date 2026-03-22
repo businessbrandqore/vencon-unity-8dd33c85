@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getPanelByType, PanelType } from "@/lib/panelConfig";
 import { supabase } from "@/integrations/supabase/client";
 import LanguageToggle from "@/components/LanguageToggle";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 const PanelDashboard = () => {
   const { panel } = useParams<{ panel: string }>();
@@ -74,9 +75,7 @@ const PanelDashboard = () => {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="font-body text-sm text-muted-foreground">{t("checking_access")}</p>
-      </div>
+      <LoadingSpinner text={t("checking_access")} fullPage size="lg" />
     );
   }
 
