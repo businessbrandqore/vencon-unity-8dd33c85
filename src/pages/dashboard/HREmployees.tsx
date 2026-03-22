@@ -79,6 +79,28 @@ const HREmployees = () => {
     fetchEmployees();
   };
 
+  const handleDeleteRequest = async () => {
+    if (!deleteTarget || !user) return;
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "employee_delete",
+      requested_by: user.id,
+      details: {
+        user_id: deleteTarget.id,
+        employee_name: deleteTarget.name,
+        role: deleteTarget.role,
+        panel: deleteTarget.panel,
+        email: deleteTarget.email,
+      },
+      status: "pending",
+    });
+    if (error) {
+      toast({ title: isBn ? "ত্রুটি হয়েছে" : "Error", variant: "destructive" });
+    } else {
+      toast({ title: isBn ? "ডিলিট রিকোয়েস্ট পাঠানো হয়েছে — SA অনুমোদন দিলে মুছে যাবে" : "Delete request sent — awaiting SA approval" });
+    }
+    setDeleteTarget(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
