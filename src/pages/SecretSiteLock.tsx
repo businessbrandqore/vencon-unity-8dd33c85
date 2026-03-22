@@ -41,6 +41,9 @@ const SecretSiteLock = () => {
   // Warning broadcast state
   const [warningMessage, setWarningMessage] = useState("");
   const [warningDuration, setWarningDuration] = useState("30"); // minutes
+  const [customDuration, setCustomDuration] = useState(false);
+  const [customHours, setCustomHours] = useState("");
+  const [customMinutes, setCustomMinutes] = useState("");
   const [sendingWarning, setSendingWarning] = useState(false);
   const [activeWarning, setActiveWarning] = useState<{ message: string; expires_at: string } | null>(null);
 
@@ -130,7 +133,11 @@ const SecretSiteLock = () => {
       });
       if (!verifyData?.success) { toast.error("পাসওয়ার্ড ভুল"); setSendingWarning(false); return; }
 
-      const expiresAt = new Date(Date.now() + parseInt(warningDuration) * 60000).toISOString();
+      const finalMinutes = customDuration
+        ? (parseInt(customHours || "0") * 60 + parseInt(customMinutes || "0"))
+        : parseInt(warningDuration);
+      if (finalMinutes <= 0) { toast.error("সময়কাল নির্ধারণ করুন"); setSendingWarning(false); return; }
+      const expiresAt = new Date(Date.now() + finalMinutes * 60000).toISOString();
       const warningVal = { message: warningMessage, expires_at: expiresAt };
 
       const { data: existing } = await supabase
@@ -425,21 +432,59 @@ const SecretSiteLock = () => {
                   style={{ background: "rgba(234,179,8,0.04)" }}
                 />
 
-                <div className="flex items-center gap-2">
-                  <p className="text-white/40 text-xs whitespace-nowrap">কাউন্টডাউন:</p>
-                  <select
-                    value={warningDuration}
-                    onChange={(e) => setWarningDuration(e.target.value)}
-                    className="flex-1 h-9 rounded-lg border border-purple-500/20 text-white text-xs px-2"
-                    style={{ background: "rgba(124,58,237,0.06)" }}>
-                    <option value="15" className="bg-gray-900">১৫ মিনিট</option>
-                    <option value="30" className="bg-gray-900">৩০ মিনিট</option>
-                    <option value="60" className="bg-gray-900">১ ঘণ্টা</option>
-                    <option value="120" className="bg-gray-900">২ ঘণ্টা</option>
-                    <option value="360" className="bg-gray-900">৬ ঘণ্টা</option>
-                    <option value="720" className="bg-gray-900">১২ ঘণ্টা</option>
-                    <option value="1440" className="bg-gray-900">২৪ ঘণ্টা</option>
-                  </select>
+                <div className="space-y-2">
+                  <p className="text-white/40 text-xs">কাউন্টডাউন:</p>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={customDuration ? "custom" : warningDuration}
+                      onChange={(e) => {
+                        if (e.target.value === "custom") {
+                          setCustomDuration(true);
+                        } else {
+                          setCustomDuration(false);
+                          setWarningDuration(e.target.value);
+                        }
+                      }}
+                      className="flex-1 h-9 rounded-lg border border-purple-500/20 text-white text-xs px-2"
+                      style={{ background: "rgba(124,58,237,0.06)" }}>
+                      <option value="15" className="bg-gray-900">১৫ মিনিট</option>
+                      <option value="30" className="bg-gray-900">৩০ মিনিট</option>
+                      <option value="60" className="bg-gray-900">১ ঘণ্টা</option>
+                      <option value="120" className="bg-gray-900">২ ঘণ্টা</option>
+                      <option value="360" className="bg-gray-900">৬ ঘণ্টা</option>
+                      <option value="720" className="bg-gray-900">১২ ঘণ্টা</option>
+                      <option value="1440" className="bg-gray-900">২৪ ঘণ্টা</option>
+                      <option value="2880" className="bg-gray-900">২ দিন</option>
+                      <option value="4320" className="bg-gray-900">৩ দিন</option>
+                      <option value="10080" className="bg-gray-900">৭ দিন</option>
+                      <option value="custom" className="bg-gray-900">কাস্টম...</option>
+                    </select>
+                  </div>
+                  {customDuration && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="ঘণ্টা"
+                        value={customHours}
+                        onChange={(e) => setCustomHours(e.target.value)}
+                        className="flex-1 h-9 rounded-lg border border-purple-500/20 text-white text-xs"
+                        style={{ background: "rgba(124,58,237,0.06)" }}
+                      />
+                      <span className="text-white/40 text-xs">ঘণ্টা</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="59"
+                        placeholder="মিনিট"
+                        value={customMinutes}
+                        onChange={(e) => setCustomMinutes(e.target.value)}
+                        className="flex-1 h-9 rounded-lg border border-purple-500/20 text-white text-xs"
+                        style={{ background: "rgba(124,58,237,0.06)" }}
+                      />
+                      <span className="text-white/40 text-xs">মিনিট</span>
+                    </div>
+                  )}
                 </div>
 
                 <Button onClick={handleSendWarning}
