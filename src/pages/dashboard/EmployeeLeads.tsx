@@ -91,10 +91,10 @@ const FALLBACK_STATUSES = [
   { value: "already_ordered", label: "Already Ordered", label_bn: "আগেই অর্ডার করেছে" },
 ];
 
-// Statuses that trigger requeue
-const REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_reschedule", "do_not_pick", "no_response", "busy_now", "number_busy"];
+// Statuses that trigger requeue (fallback defaults)
+const DEFAULT_REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_reschedule", "do_not_pick", "no_response", "busy_now", "number_busy"];
 const REQUEUE_MINUTES = 40;
-const DELETE_SHEET_THRESHOLD = 5;
+const DEFAULT_DELETE_SHEET_THRESHOLD = 5;
 
 // Statuses that trigger special modals
 const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
