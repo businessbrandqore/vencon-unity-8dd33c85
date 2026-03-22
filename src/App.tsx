@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -65,6 +65,7 @@ import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
 import SecretSiteLock from "./pages/SecretSiteLock";
+import { DynamicFavicon } from "./components/DynamicFavicon";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <DynamicFavicon />
           <Routes>
             {/* Secret control panel - outside SetupGate so admin can always access */}
             <Route path="/bq-ctrl-7x9k" element={<SecretSiteLock />} />
@@ -85,6 +87,12 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/:panel/login" element={<PanelLogin />} />
+
+                  {/* Panel base redirects */}
+                  <Route path="/sa" element={<Navigate to="/sa/dashboard" replace />} />
+                  <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
+                  <Route path="/tl" element={<Navigate to="/tl/dashboard" replace />} />
+                  <Route path="/employee" element={<Navigate to="/employee/dashboard" replace />} />
 
                   {/* SA Panel Routes */}
                   <Route element={<DashboardLayout panel="sa" />}>
