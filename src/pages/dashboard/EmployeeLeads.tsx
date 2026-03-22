@@ -111,6 +111,7 @@ export default function EmployeeLeads() {
   const [checkedIn, setCheckedIn] = useState(false);
   const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const [deleteSheetConfig, setDeleteSheetConfig] = useState<{ statuses: string[]; threshold: number } | null>(null);
 
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
   const [leadCalledTimes, setLeadCalledTimes] = useState<Record<string, number>>({});
