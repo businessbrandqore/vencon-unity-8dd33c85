@@ -805,8 +805,8 @@ const DataTracker = () => {
                       <TableRow key={lead.id}>
                         <TableCell className="text-xs text-muted-foreground">{(goldenPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                         <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
-                        <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{lead.address || "—"}</TableCell>
+                        <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px]"><AddressTooltip address={lead.address} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || "—"}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}</TableCell>
                       </TableRow>
