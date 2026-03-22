@@ -18,7 +18,7 @@ import { Send, RefreshCw } from "lucide-react";
 import FraudChecker from "@/components/FraudChecker";
 
 interface Agent { id: string; name: string; }
-interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; }
+interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; campaign_id?: string | null; source?: string | null; import_source?: string | null; }
 interface Order { id: string; customer_name: string | null; phone: string | null; product: string | null; agent_id: string | null; created_at: string | null; status: string | null; cs_note: string | null; cs_rating: string | null; agent?: { name: string }; }
 interface PreOrder { id: string; lead_id: string | null; scheduled_date: string | null; agent_id: string | null; note: string | null; status: string | null; lead?: { name: string | null; phone: string | null; }; agent?: { name: string; }; }
 interface SilverGoldenLead { id: string; name: string | null; phone: string | null; address: string | null; source: string | null; created_at: string | null; product?: string | null; price?: number | null; }
@@ -56,6 +56,7 @@ const TLLeads = () => {
   const [callDoneOrders, setCallDoneOrders] = useState<Order[]>([]);
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
   const [deleteSheetLeads, setDeleteSheetLeads] = useState<Lead[]>([]);
+  const [deleteSheetThreshold, setDeleteSheetThreshold] = useState(5);
   const [processingLeads, setProcessingLeads] = useState<Lead[]>([]);
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
@@ -131,6 +132,17 @@ const TLLeads = () => {
     if (selectedCampaign && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
     return user?.id || "";
   }, [isATL, isGL, user, atlTlMap, selectedCampaign]);
+
+  // Load delete sheet config
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "delete_sheet_config").maybeSingle();
+      if (data?.value) {
+        const val = data.value as any;
+        if (val.threshold) setDeleteSheetThreshold(val.threshold);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -358,7 +370,7 @@ const TLLeads = () => {
 
     let delQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
-      .gte("requeue_count", 5).order("updated_at", { ascending: false });
+      .gte("requeue_count", deleteSheetThreshold).order("updated_at", { ascending: false });
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
@@ -628,32 +640,36 @@ const TLLeads = () => {
   };
 
   const confirmDeleteLead = async () => {
-    if (deleteTarget) {
-      await executeOrRequestApproval(
-        "lead_delete",
-        { leadId: deleteTarget },
-        isBn ? "লিড ডিলিট" : "Delete lead",
-        async () => {
-          await supabase.from("leads").delete().eq("id", deleteTarget);
-          toast.success(isBn ? "Lead delete হয়েছে" : "Lead deleted");
-        }
-      );
+    if (!deleteTarget || !user) { setDeleteTarget(null); setDeleteConfirmOpen(false); return; }
+    const lead = deleteSheetLeads.find(l => l.id === deleteTarget);
+    const { error } = await supabase.from("delete_requests").insert({
+      lead_id: deleteTarget,
+      requested_by: user.id,
+      campaign_id: lead?.campaign_id || selectedCampaign || null,
+    } as any);
+    if (error) {
+      toast.error(isBn ? "ডিলিট রিকোয়েস্ট পাঠানো যায়নি" : "Failed to send delete request");
+    } else {
+      toast.success(isBn ? "ডিলিট রিকোয়েস্ট SA-তে পাঠানো হয়েছে" : "Delete request sent to SA");
     }
-    setDeleteTarget(null); setDeleteConfirmOpen(false); loadData();
+    setDeleteTarget(null); setDeleteConfirmOpen(false);
   };
 
   const bulkDeleteLeads = async () => {
+    if (!user) return;
     const ids = Array.from(selectedDeleteLeads);
-    await executeOrRequestApproval(
-      "lead_delete",
-      { leadIds: ids },
-      isBn ? `${ids.length}টি লিড বাল্ক ডিলিট` : `Bulk delete ${ids.length} leads`,
-      async () => {
-        for (const id of ids) { await supabase.from("leads").delete().eq("id", id); }
-        toast.success(isBn ? `${ids.length}টি lead delete হয়েছে` : `${ids.length} leads deleted`);
-      }
-    );
-    setSelectedDeleteLeads(new Set()); loadData();
+    let successCount = 0;
+    for (const id of ids) {
+      const lead = deleteSheetLeads.find(l => l.id === id);
+      const { error } = await supabase.from("delete_requests").insert({
+        lead_id: id,
+        requested_by: user.id,
+        campaign_id: lead?.campaign_id || selectedCampaign || null,
+      } as any);
+      if (!error) successCount++;
+    }
+    toast.success(isBn ? `${successCount}টি ডিলিট রিকোয়েস্ট SA-তে পাঠানো হয়েছে` : `${successCount} delete requests sent to SA`);
+    setSelectedDeleteLeads(new Set());
   };
 
   const reassignLead = async (leadId: string, agentId: string) => {
@@ -1227,10 +1243,18 @@ const TLLeads = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">TL Delete Sheet</CardTitle>
+              <CardTitle className="text-lg font-heading">
+                {isBn ? "ডিলিট শিট" : "Delete Sheet"}
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({isBn ? `${deleteSheetThreshold}+ বার requeue হলে এখানে আসে` : `${deleteSheetThreshold}+ requeues`})
+                </span>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "ডিলিট রিকোয়েস্ট SA এপ্রুভ করলে মুছে যাবে" : "Delete requests need SA approval"}
+              </p>
               {selectedDeleteLeads.size > 0 && (
                 <Button size="sm" variant="destructive" onClick={bulkDeleteLeads} className="mt-2 w-fit">
-                  {isBn ? `Delete (${selectedDeleteLeads.size})` : `Delete all (${selectedDeleteLeads.size})`}
+                  {isBn ? `ডিলিট রিকোয়েস্ট (${selectedDeleteLeads.size})` : `Request Delete (${selectedDeleteLeads.size})`}
                 </Button>
               )}
             </CardHeader>
@@ -1246,13 +1270,14 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Requeue</TableHead>
+                    <TableHead>{isBn ? "ওয়েবসাইট" : "Website"}</TableHead>
                     <TableHead>{isBn ? "শেষ Activity" : "Last Activity"}</TableHead>
                     <TableHead>{isBn ? "অ্যাকশন" : "Actions"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {deleteSheetLeads.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</TableCell></TableRow>
                   ) : deleteSheetLeads.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell>
@@ -1263,13 +1288,16 @@ const TLLeads = () => {
                       <TableCell>{lead.phone || "—"}</TableCell>
                       <TableCell><Badge variant="outline">{getStatusLabel(lead.status)}</Badge></TableCell>
                       <TableCell className="text-center">{lead.requeue_count}</TableCell>
+                      <TableCell className="text-xs">{lead.source || "—"}</TableCell>
                       <TableCell>{lead.updated_at ? new Date(lead.updated_at).toLocaleDateString() : "—"}</TableCell>
                       <TableCell className="space-x-2">
                         <Select onValueChange={(agentId) => reassignLead(lead.id, agentId)}>
                           <SelectTrigger className="w-36 inline-flex"><SelectValue placeholder="Reassign" /></SelectTrigger>
                           <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>Delete</Button>
+                        <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>
+                          {isBn ? "ডিলিট রিকোয়েস্ট" : "Request Delete"}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

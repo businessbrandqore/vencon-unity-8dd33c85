@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2, Cake, MapPin } from "lucide-react";
+import { Plus, X, Settings, FileText, Plug, Bell, Clock, ShoppingBag, MessageCircle, Trash2, Cake, MapPin, ListChecks } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -105,6 +105,11 @@ const HRSettings = () => {
   const [leaveReasons, setLeaveReasons] = useState<string[]>([]);
   const [newLeaveReason, setNewLeaveReason] = useState("");
 
+  // Delete sheet config
+  const [deleteSheetStatuses, setDeleteSheetStatuses] = useState<string[]>(["phone_off", "no_response", "busy_now", "number_busy", "do_not_pick"]);
+  const [deleteSheetThreshold, setDeleteSheetThreshold] = useState<number>(5);
+  const [newDeleteStatus, setNewDeleteStatus] = useState("");
+
   // WhatsApp template states
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
   const [showWaModal, setShowWaModal] = useState(false);
@@ -128,7 +133,7 @@ const HRSettings = () => {
     const { data } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config", "appeal_reason_options", "birthday_config", "gps_config"]);
+      .in("key", ["ui_config", "invoice_config", "api_config", "notification_config", "attendance_deduction_config", "cloudinary_config", "gift_names", "product_names", "card_names", "fraud_checker_config", "appeal_reason_options", "birthday_config", "gps_config", "delete_sheet_config"]);
 
     const merged: Settings = {};
     (data || []).forEach((row) => {
@@ -146,6 +151,10 @@ const HRSettings = () => {
         const val = row.value as any;
         if (val?.message) setBirthdayMessage(val.message);
         if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
+      } else if (row.key === "delete_sheet_config") {
+        const val = row.value as any;
+        if (val?.statuses) setDeleteSheetStatuses(val.statuses);
+        if (val?.threshold) setDeleteSheetThreshold(val.threshold);
       } else if (row.key === "gps_config") {
         const val = row.value as any;
         if (val?.latitude) setGpsLat(String(val.latitude));
@@ -443,6 +452,10 @@ const HRSettings = () => {
           <TabsTrigger value="birthday" className="text-xs gap-1 shrink-0 px-2">
             <Cake className="h-3.5 w-3.5" />
             <span className="text-[10px] sm:text-xs">{isBn ? "জন্মদিন" : "Birthday"}</span>
+          </TabsTrigger>
+          <TabsTrigger value="deletesheet" className="text-xs gap-1 shrink-0 px-2">
+            <ListChecks className="h-3.5 w-3.5" />
+            <span className="text-[10px] sm:text-xs">{isBn ? "ডিলিট শিট" : "Delete Sheet"}</span>
           </TabsTrigger>
           <TabsTrigger value="api" className="text-xs gap-1 shrink-0 px-2">
             <Plug className="h-3.5 w-3.5" />
@@ -1185,6 +1198,82 @@ const HRSettings = () => {
                 className="text-xs"
               >
                 {isBn ? "সংরক্ষণ করুন" : "Save Birthday Config"}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Delete Sheet Config Tab */}
+        <TabsContent value="deletesheet" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-primary" />
+              {isBn ? "ডিলিট শিট কনফিগারেশন" : "Delete Sheet Configuration"}
+            </h3>
+            <p className="text-xs text-muted-foreground font-body">
+              {isBn ? "কোন কোন স্ট্যাটাস কতবার আসলে ডাটা ডিলিট শিটে যাবে তা নির্ধারণ করুন।" : "Configure which statuses and how many times trigger the delete sheet."}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "Requeue থ্রেশহোল্ড (কতবার পর ডিলিট শিটে যাবে)" : "Requeue Threshold"}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={deleteSheetThreshold}
+                  onChange={(e) => setDeleteSheetThreshold(Number(e.target.value) || 5)}
+                  className="bg-background border-border text-foreground w-24"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "ডিলিট শিটে পাঠানোর জন্য স্ট্যাটাস সমূহ" : "Statuses that trigger delete sheet"}
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {deleteSheetStatuses.map((s) => (
+                    <span key={s} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-foreground text-xs rounded">
+                      {s}
+                      <button onClick={() => setDeleteSheetStatuses(prev => prev.filter(x => x !== s))} className="text-destructive hover:text-destructive/80">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newDeleteStatus}
+                    onChange={(e) => setNewDeleteStatus(e.target.value)}
+                    placeholder={isBn ? "নতুন স্ট্যাটাস যোগ করুন" : "Add status"}
+                    className="bg-background border-border text-foreground w-48 text-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newDeleteStatus.trim()) {
+                        setDeleteSheetStatuses(prev => [...prev, newDeleteStatus.trim()]);
+                        setNewDeleteStatus("");
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      if (newDeleteStatus.trim()) {
+                        setDeleteSheetStatuses(prev => [...prev, newDeleteStatus.trim()]);
+                        setNewDeleteStatus("");
+                      }
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> {isBn ? "যোগ" : "Add"}
+                  </Button>
+                </div>
+              </div>
+              <Button
+                onClick={() => saveGroup("delete_sheet_config", { statuses: deleteSheetStatuses, threshold: deleteSheetThreshold })}
+                disabled={saving}
+                className="text-xs"
+              >
+                {isBn ? "সংরক্ষণ করুন" : "Save Delete Sheet Config"}
               </Button>
             </div>
           </div>

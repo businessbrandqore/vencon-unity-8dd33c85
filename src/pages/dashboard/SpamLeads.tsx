@@ -7,12 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ShieldBan, RotateCcw, Trash2, Forward, Clock, Filter } from "lucide-react";
+import { ShieldBan, RotateCcw, Trash2, Forward, Clock, Filter, Calendar } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { formatDistanceToNow } from "date-fns";
-import { bn } from "date-fns/locale";
 
 interface SpamLead {
   id: string;
@@ -26,19 +25,30 @@ interface SpamLead {
   assigned_agent_name?: string;
   campaign_id?: string | null;
   import_source?: string | null;
+  source?: string | null;
+  spam_transferred_at?: string | null;
+  spam_original_agent?: string | null;
+  original_agent_name?: string;
 }
+
+// Helper to determine lead mode from import_source
+const getLeadMode = (importSource: string | null | undefined): "lead" | "processing" => {
+  if (!importSource) return "lead";
+  return importSource.toLowerCase().includes("processing") ? "processing" : "lead";
+};
 
 export default function SpamLeads() {
   const { user } = useAuth();
   const [myLeads, setMyLeads] = useState<SpamLead[]>([]);
-  const [teamLeads, setTeamLeads] = useState<SpamLead[]>([]);
+  const [transferredLeads, setTransferredLeads] = useState<SpamLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Campaign / website filter states
+  // Filter states
   const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
   const [filterDataMode, setFilterDataMode] = useState<string>("all");
   const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [filterDate, setFilterDate] = useState<string>("");
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
 
@@ -49,56 +59,50 @@ export default function SpamLeads() {
     if (!user) return;
     setLoading(true);
 
-    // Load own spam leads
-    const { data: ownData, error: ownErr } = await supabase
-      .from("leads")
-      .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source")
-      .eq("assigned_to", user.id)
-      .eq("is_spam", true)
-      .order("updated_at", { ascending: false });
+    if (!isTLOrATL) {
+      // Agent: load own spam leads (not yet transferred)
+      const { data: ownData } = await supabase
+        .from("leads")
+        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at")
+        .eq("assigned_to", user.id)
+        .eq("is_spam", true)
+        .is("spam_transferred_at", null)
+        .order("updated_at", { ascending: false });
+      setMyLeads((ownData as SpamLead[]) || []);
+      setTransferredLeads([]);
+    } else {
+      // TL/ATL: load transferred spam leads (spam_transferred_at IS NOT NULL, tl_id = me)
+      const { data: transferred } = await supabase
+        .from("leads")
+        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at, spam_original_agent")
+        .eq("is_spam", true)
+        .not("spam_transferred_at", "is", null)
+        .order("spam_transferred_at", { ascending: false });
 
-    if (ownErr) console.error(ownErr);
-    setMyLeads((ownData as SpamLead[]) || []);
+      if (transferred && transferred.length > 0) {
+        // Get original agent names
+        const agentIds = [...new Set(transferred.map(l => l.spam_original_agent).filter(Boolean))] as string[];
+        const { data: agents } = await supabase.from("users").select("id, name").in("id", agentIds);
+        const nameMap: Record<string, string> = {};
+        (agents || []).forEach(a => { nameMap[a.id] = a.name; });
 
-    // For TL/ATL: load team agent spam leads
-    if (isTLOrATL) {
-      // Get agents under this TL
-      const { data: agentRoles } = await supabase
-        .from("campaign_agent_roles")
-        .select("agent_id")
-        .eq("tl_id", user.id);
-
-      const agentIds = [...new Set((agentRoles || []).map(a => a.agent_id))];
-      // Exclude self
-      const teamAgentIds = agentIds.filter(id => id !== user.id);
-
-      if (teamAgentIds.length > 0) {
-        const { data: teamData } = await supabase
-          .from("leads")
-          .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source")
-          .in("assigned_to", teamAgentIds)
-          .eq("is_spam", true)
-          .order("updated_at", { ascending: false });
-
-        // Get agent names
-        if (teamData && teamData.length > 0) {
-          const uniqueAgentIds = [...new Set(teamData.map(l => l.assigned_to).filter(Boolean))];
-          const { data: agents } = await supabase
-            .from("users")
-            .select("id, name")
-            .in("id", uniqueAgentIds as string[]);
-
-          const nameMap: Record<string, string> = {};
-          (agents || []).forEach(a => { nameMap[a.id] = a.name; });
-
-          setTeamLeads(teamData.map(l => ({
-            ...l,
-            assigned_agent_name: l.assigned_to ? nameMap[l.assigned_to] || "—" : "—",
-          })) as SpamLead[]);
-        } else {
-          setTeamLeads([]);
-        }
+        setTransferredLeads(transferred.map(l => ({
+          ...l,
+          original_agent_name: l.spam_original_agent ? nameMap[l.spam_original_agent] || "—" : "—",
+        })) as SpamLead[]);
+      } else {
+        setTransferredLeads([]);
       }
+
+      // Also load own spam (if TL/ATL has own spam leads)
+      const { data: ownData } = await supabase
+        .from("leads")
+        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at")
+        .eq("assigned_to", user.id)
+        .eq("is_spam", true)
+        .is("spam_transferred_at", null)
+        .order("updated_at", { ascending: false });
+      setMyLeads((ownData as SpamLead[]) || []);
     }
 
     setLoading(false);
@@ -108,7 +112,7 @@ export default function SpamLeads() {
 
   // Load campaigns & websites for filters
   useEffect(() => {
-    const allLeads = [...myLeads, ...teamLeads];
+    const allLeads = [...myLeads, ...transferredLeads];
     const campaignIds = [...new Set(allLeads.map(l => l.campaign_id).filter(Boolean))] as string[];
     if (campaignIds.length === 0) { setCampaigns([]); setWebsites([]); return; }
     (async () => {
@@ -119,68 +123,66 @@ export default function SpamLeads() {
       if (campData) setCampaigns(campData);
       if (siteData) setWebsites(siteData);
     })();
-  }, [myLeads, teamLeads]);
+  }, [myLeads, transferredLeads]);
 
-  // Apply campaign filters
-  const filteredMyLeads = useMemo(() => {
-    let result = myLeads;
+  // Filter function
+  const applyFilters = (leads: SpamLead[]) => {
+    let result = leads;
     if (filterCampaignId !== "all") result = result.filter(l => l.campaign_id === filterCampaignId);
     if (filterDataMode !== "all") {
-      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
-      result = result.filter(l => l.campaign_id && ids.includes(l.campaign_id));
+      result = result.filter(l => getLeadMode(l.import_source) === filterDataMode);
     }
-    if (filterWebsite !== "all") result = result.filter(l => l.import_source === filterWebsite);
+    if (filterWebsite !== "all") result = result.filter(l => l.source === filterWebsite);
+    if (filterDate) {
+      result = result.filter(l => {
+        const dateStr = l.spam_transferred_at || l.updated_at;
+        return dateStr && dateStr.startsWith(filterDate);
+      });
+    }
     return result;
-  }, [myLeads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+  };
 
-  const filteredTeamLeads = useMemo(() => {
-    let result = teamLeads;
-    if (filterCampaignId !== "all") result = result.filter(l => l.campaign_id === filterCampaignId);
-    if (filterDataMode !== "all") {
-      const ids = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
-      result = result.filter(l => l.campaign_id && ids.includes(l.campaign_id));
-    }
-    if (filterWebsite !== "all") result = result.filter(l => l.import_source === filterWebsite);
-    return result;
-  }, [teamLeads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+  const filteredMyLeads = useMemo(() => applyFilters(myLeads), [myLeads, filterCampaignId, filterDataMode, filterWebsite, filterDate]);
+  const filteredTransferredLeads = useMemo(() => applyFilters(transferredLeads), [transferredLeads, filterCampaignId, filterDataMode, filterWebsite, filterDate]);
 
   const handleRestore = async (leadId: string) => {
     const { error } = await supabase
       .from("leads")
-      .update({ is_spam: false, status: "fresh" } as any)
+      .update({ is_spam: false, status: "fresh", spam_transferred_at: null, spam_original_agent: null } as any)
       .eq("id", leadId);
-    if (error) {
-      toast.error("রিস্টোর করা যায়নি");
-      return;
-    }
+    if (error) { toast.error("রিস্টোর করা যায়নি"); return; }
     toast.success("লিড রিস্টোর হয়েছে ✓");
     setMyLeads(prev => prev.filter(l => l.id !== leadId));
-    setTeamLeads(prev => prev.filter(l => l.id !== leadId));
+    setTransferredLeads(prev => prev.filter(l => l.id !== leadId));
   };
 
-  const handleForward = async (lead: SpamLead) => {
-    // Un-spam and send back to the assigned agent as fresh
-    const { error } = await supabase
-      .from("leads")
-      .update({ is_spam: false, status: "fresh" } as any)
-      .eq("id", lead.id);
-    if (error) {
-      toast.error("ফরওয়ার্ড করা যায়নি");
+  const handleForwardToOriginalAgent = async (lead: SpamLead) => {
+    if (!lead.spam_original_agent) {
+      toast.error("মূল এজেন্ট পাওয়া যায়নি");
       return;
     }
-    toast.success(`${lead.assigned_agent_name || "এজেন্ট"}-এর কাছে ফেরত পাঠানো হয়েছে ✓`);
-    setTeamLeads(prev => prev.filter(l => l.id !== lead.id));
+    const { error } = await supabase
+      .from("leads")
+      .update({
+        is_spam: false,
+        status: "fresh",
+        assigned_to: lead.spam_original_agent,
+        spam_transferred_at: null,
+        spam_original_agent: null,
+      } as any)
+      .eq("id", lead.id);
+    if (error) { toast.error("ফরওয়ার্ড করা যায়নি"); return; }
+    toast.success(`${lead.original_agent_name || "এজেন্ট"}-এর কাছে ফেরত পাঠানো হয়েছে ✓`);
+    setTransferredLeads(prev => prev.filter(l => l.id !== lead.id));
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     const { error } = await supabase.from("leads").delete().eq("id", deleteId);
-    if (error) {
-      toast.error("ডিলিট করা যায়নি");
-    } else {
+    if (error) { toast.error("ডিলিট করা যায়নি"); } else {
       toast.success("লিড ডিলিট হয়েছে");
       setMyLeads(prev => prev.filter(l => l.id !== deleteId));
-      setTeamLeads(prev => prev.filter(l => l.id !== deleteId));
+      setTransferredLeads(prev => prev.filter(l => l.id !== deleteId));
     }
     setDeleteId(null);
   };
@@ -190,12 +192,16 @@ export default function SpamLeads() {
     const spamTime = new Date(updatedAt).getTime();
     const deleteTime = spamTime + 24 * 60 * 60 * 1000;
     const now = Date.now();
-    if (now >= deleteTime) return "শীঘ্রই মুছে যাবে";
+    if (now >= deleteTime) return "TL-এ ট্রান্সফার হবে";
     const hoursLeft = Math.ceil((deleteTime - now) / (60 * 60 * 1000));
     return `${hoursLeft} ঘণ্টা বাকি`;
   };
 
   if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
+
+  const filteredSites = filterCampaignId !== "all"
+    ? websites.filter(w => w.campaign_id === filterCampaignId)
+    : websites;
 
   return (
     <div className="space-y-4">
@@ -203,26 +209,31 @@ export default function SpamLeads() {
         <ShieldBan className="h-5 w-5 text-destructive" />
         <h2 className="font-heading text-xl font-bold text-foreground">স্প্যাম</h2>
         <span className="text-sm text-muted-foreground">
-          ({filteredMyLeads.length + filteredTeamLeads.length})
+          ({filteredMyLeads.length + filteredTransferredLeads.length})
         </span>
       </div>
 
       <p className="text-xs text-muted-foreground flex items-center gap-1.5">
         <Clock className="h-3.5 w-3.5" />
-        স্প্যাম ডাটা ২৪ ঘণ্টা পর অটোমেটিক মুছে যায়
+        {isTLOrATL
+          ? "এজেন্টদের স্প্যাম ডাটা ২৪ ঘণ্টা পর এখানে ট্রান্সফার হয়"
+          : "স্প্যাম ডাটা ২৪ ঘণ্টা পর TL-এ ট্রান্সফার হবে"
+        }
       </p>
 
-      {/* Campaign / Website Filters */}
-      {campaigns.length > 0 && (
+      {/* Filters */}
+      {(campaigns.length > 0 || isTLOrATL) && (
         <div className="flex flex-wrap gap-3 items-center">
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
-            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ক্যাম্পেইন" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
-              {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {campaigns.length > 0 && (
+            <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
+              <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ক্যাম্পেইন" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সব ক্যাম্পেইন</SelectItem>
+                {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={filterDataMode} onValueChange={setFilterDataMode}>
             <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="ডাটা মোড" /></SelectTrigger>
             <SelectContent>
@@ -231,84 +242,103 @@ export default function SpamLeads() {
               <SelectItem value="processing">প্রসেসিং</SelectItem>
             </SelectContent>
           </Select>
-          {(() => {
-            const filteredSites = filterCampaignId !== "all"
-              ? websites.filter(w => w.campaign_id === filterCampaignId)
-              : websites;
-            return filteredSites.length > 0 ? (
-              <Select value={filterWebsite} onValueChange={setFilterWebsite}>
-                <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ওয়েবসাইট" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">সব ওয়েবসাইট</SelectItem>
-                  {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : null;
-          })()}
+          {filteredSites.length > 0 && (
+            <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+              <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="ওয়েবসাইট" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সব ওয়েবসাইট</SelectItem>
+                {filteredSites.map(w => <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {isTLOrATL && (
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                className="h-8 w-[160px] text-xs"
+                placeholder="তারিখ"
+              />
+              {filterDate && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setFilterDate("")}>✕</Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* TL/ATL: Team Agent Spam Leads */}
-      {isTLOrATL && filteredTeamLeads.length > 0 && (
+      {/* TL/ATL: Transferred Spam Leads from agents */}
+      {isTLOrATL && (
         <Card>
           <CardContent className="p-0">
             <div className="px-4 py-2.5 border-b bg-muted/30">
               <h3 className="text-sm font-semibold text-foreground">
-                টিম এজেন্টদের স্প্যাম ({filteredTeamLeads.length})
+                এজেন্টদের থেকে আসা স্প্যাম ({filteredTransferredLeads.length})
               </h3>
               <p className="text-[11px] text-muted-foreground">
-                ফরওয়ার্ড করলে এজেন্টের লিডে ফ্রেশ হিসেবে ফিরে যাবে
+                ফরওয়ার্ড করলে মূল এজেন্টের কাছে ফ্রেশ হিসেবে ফিরে যাবে
               </p>
             </div>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>এজেন্ট</TableHead>
-                    <TableHead>নাম</TableHead>
-                    <TableHead>ফোন</TableHead>
-                    <TableHead>ঠিকানা</TableHead>
-                    <TableHead>সময় বাকি</TableHead>
-                    <TableHead className="text-right">অ্যাকশন</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTeamLeads.map(lead => (
-                    <TableRow key={lead.id}>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-[11px]">
-                          {lead.assigned_agent_name || "—"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                      <TableCell>{lead.phone || "—"}</TableCell>
-                      <TableCell className="max-w-[180px] truncate">{lead.address || "—"}</TableCell>
-                      <TableCell>
-                        <span className="text-xs text-destructive flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {getTimeRemaining(lead.updated_at)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={() => handleForward(lead)}
-                        >
-                          <Forward className="h-3 w-3 mr-1" /> ফরওয়ার্ড
-                        </Button>
-                      </TableCell>
+            {filteredTransferredLeads.length === 0 ? (
+              <EmptyState icon={<ShieldBan className="h-10 w-10" />} message="ট্রান্সফারড স্প্যাম নেই" />
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>মূল এজেন্ট</TableHead>
+                      <TableHead>নাম</TableHead>
+                      <TableHead>ফোন</TableHead>
+                      <TableHead>ঠিকানা</TableHead>
+                      <TableHead>ওয়েবসাইট</TableHead>
+                      <TableHead>মোড</TableHead>
+                      <TableHead>ট্রান্সফার তারিখ</TableHead>
+                      <TableHead className="text-right">অ্যাকশন</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransferredLeads.map(lead => (
+                      <TableRow key={lead.id}>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-[11px]">
+                            {lead.original_agent_name || "—"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                        <TableCell>{lead.phone || "—"}</TableCell>
+                        <TableCell className="max-w-[180px] truncate">{lead.address || "—"}</TableCell>
+                        <TableCell className="text-xs">{lead.source || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">
+                            {getLeadMode(lead.import_source) === "processing" ? "প্রসেসিং" : "লিড"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {lead.spam_transferred_at ? new Date(lead.spam_transferred_at).toLocaleDateString("bn-BD") : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => handleForwardToOriginalAgent(lead)}
+                          >
+                            <Forward className="h-3 w-3 mr-1" /> ফরওয়ার্ড
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Own Spam Leads */}
+      {/* Own Spam Leads (agent or TL/ATL's own) */}
       <Card>
         <CardContent className="p-0">
           {isTLOrATL && (
@@ -326,7 +356,7 @@ export default function SpamLeads() {
                     <TableHead>নাম</TableHead>
                     <TableHead>ফোন</TableHead>
                     <TableHead>ঠিকানা</TableHead>
-                    <TableHead>সময় বাকি</TableHead>
+                    {!isTLOrATL && <TableHead>সময় বাকি</TableHead>}
                     <TableHead className="text-right">অ্যাকশন</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -336,12 +366,14 @@ export default function SpamLeads() {
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell>{lead.phone || "—"}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{lead.address || "—"}</TableCell>
-                      <TableCell>
-                        <span className="text-xs text-destructive flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {getTimeRemaining(lead.updated_at)}
-                        </span>
-                      </TableCell>
+                      {!isTLOrATL && (
+                        <TableCell>
+                          <span className="text-xs text-destructive flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {getTimeRemaining(lead.updated_at)}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleRestore(lead.id)}>

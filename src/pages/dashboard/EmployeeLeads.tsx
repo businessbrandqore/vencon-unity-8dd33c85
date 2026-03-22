@@ -91,10 +91,10 @@ const FALLBACK_STATUSES = [
   { value: "already_ordered", label: "Already Ordered", label_bn: "আগেই অর্ডার করেছে" },
 ];
 
-// Statuses that trigger requeue
-const REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_reschedule", "do_not_pick", "no_response", "busy_now", "number_busy"];
+// Statuses that trigger requeue (fallback defaults)
+const DEFAULT_REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_reschedule", "do_not_pick", "no_response", "busy_now", "number_busy"];
 const REQUEUE_MINUTES = 40;
-const DELETE_SHEET_THRESHOLD = 5;
+const DEFAULT_DELETE_SHEET_THRESHOLD = 5;
 
 // Statuses that trigger special modals
 const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
@@ -111,6 +111,7 @@ export default function EmployeeLeads() {
   const [checkedIn, setCheckedIn] = useState(false);
   const [dynamicColumns, setDynamicColumns] = useState<StatusColumn[]>([]);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const [deleteSheetConfig, setDeleteSheetConfig] = useState<{ statuses: string[]; threshold: number } | null>(null);
 
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
   const [leadCalledTimes, setLeadCalledTimes] = useState<Record<string, number>>({});
@@ -200,6 +201,19 @@ export default function EmployeeLeads() {
       setConfigLoaded(true);
     })();
   }, [user]);
+
+  // Load delete sheet config from app_settings
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "delete_sheet_config").maybeSingle();
+      if (data?.value) {
+        const val = data.value as any;
+        if (val.statuses?.length && val.threshold) {
+          setDeleteSheetConfig({ statuses: val.statuses, threshold: val.threshold });
+        }
+      }
+    })();
+  }, []);
 
   // Load campaigns & websites for filters
   useEffect(() => {
@@ -505,11 +519,13 @@ export default function EmployeeLeads() {
     if (hasNonEmployeeRoute) {
       updatePayload.assigned_to = null;
     }
-    if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
+    const requeueStatuses = deleteSheetConfig?.statuses || DEFAULT_REQUEUE_STATUS_VALUES;
+    const deleteThreshold = deleteSheetConfig?.threshold || DEFAULT_DELETE_SHEET_THRESHOLD;
+    if (requeueStatuses.includes(normalizedStatus)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
-      if (cnt >= DELETE_SHEET_THRESHOLD) updatePayload.status = "tl_delete_sheet";
+      if (cnt >= deleteThreshold) updatePayload.status = "tl_delete_sheet";
     }
     const { error } = await supabase.from("leads").update(updatePayload).eq("id", lead.id);
     if (error) {
