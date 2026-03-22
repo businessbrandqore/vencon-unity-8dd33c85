@@ -1298,41 +1298,46 @@ const TLLeads = () => {
           <h2 className="font-heading text-2xl font-bold text-foreground">
             {isBn ? "Lead Management" : "Lead Management"}
           </h2>
-          {isProcessing && (
-            <Badge variant="outline" className="mt-1 border-primary/30 text-primary">
-              ⚙️ {isBn ? "প্রসেসিং মোড" : "Processing Mode"}
-            </Badge>
-          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-            <SelectTrigger className="w-52 border-primary/30">
-              <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
+      </div>
+
+      {/* Top-level Lead / Processing tabs */}
+      <Tabs value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
+        <TabsList>
+          <TabsTrigger value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</TabsTrigger>
+          <TabsTrigger value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Campaign & Website selectors */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+          <SelectTrigger className="w-52 border-primary/30">
+            <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredCampaignsByMode.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {campaignWebsites.length > 0 && (
+          <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+            <SelectTrigger className="w-48 border-primary/30">
+              <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
             </SelectTrigger>
             <SelectContent>
-              {campaigns.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name} {c.data_mode === "processing" ? "⚙️" : "🎯"}
+              <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+              {campaignWebsites.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.site_name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {campaignWebsites.length > 0 && (
-            <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
-              <SelectTrigger className="w-48 border-primary/30">
-                <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
-                {campaignWebsites.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.site_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        )}
       </div>
 
       {renderContent()}
