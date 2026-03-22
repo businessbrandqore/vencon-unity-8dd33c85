@@ -29,6 +29,8 @@ interface Employee {
 
 const HREmployees = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isBn = t("vencon") === "VENCON";
@@ -39,6 +41,7 @@ const HREmployees = () => {
   const [filterRole, setFilterRole] = useState("all");
   const [filterPanel, setFilterPanel] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
 
   useEffect(() => {
     if (searchParams.get("new") === "true") {
