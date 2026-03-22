@@ -151,6 +151,23 @@ const SAApprovalsTable = () => {
       }
     }
 
+    // Handle employee delete approval
+    if (action === "approved" && approval.type === "employee_delete" && approval.details) {
+      const userId = approval.details.user_id;
+      if (userId) {
+        // Deactivate user first, then delete
+        const { error: delError } = await supabase
+          .from("users")
+          .delete()
+          .eq("id", userId);
+
+        if (delError) {
+          fail(delError.message);
+          return;
+        }
+      }
+    }
+
     // Update approval status
     const { error: approvalError } = await supabase
       .from("sa_approvals")
