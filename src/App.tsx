@@ -74,105 +74,112 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <SetupGate>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/:panel/login" element={<PanelLogin />} />
-
-            {/* SA Panel Routes */}
-            <Route element={<DashboardLayout panel="sa" />}>
-              <Route path="/sa/dashboard" element={<SADashboard />} />
-              <Route path="/sa/approvals" element={<SAApprovalsPage />} />
-              <Route path="/sa/analytics" element={<SAAnalytics />} />
-              <Route path="/sa/warehouse" element={<SAWarehouse />} />
-              <Route path="/sa/budget" element={<SABudget />} />
-              <Route path="/sa/payroll" element={<SAPayroll />} />
-              <Route path="/sa/audit-logs" element={<SAAuditLogs />} />
-              <Route path="/sa/all-data" element={<SAAllData />} />
-              <Route path="/sa/employees" element={<SAEmployees />} />
-              <Route path="/sa/employees/:id" element={<SAEmployeeProfile />} />
-              <Route path="/sa/data-tracker" element={<DataTracker />} />
-              <Route path="/sa/attendance" element={<ManagerAttendance />} />
-              <Route path="/sa/settings" element={<SASettings />} />
-              <Route path="/sa/notifications" element={<NotificationsPage />} />
-              <Route path="/sa/chat" element={<ChatPage />} />
-              <Route path="/sa/profile" element={<ProfileSettings />} />
-            </Route>
-
-            {/* HR Panel Routes */}
-            <Route element={<DashboardLayout panel="hr" />}>
-              <Route path="/hr/dashboard" element={<HRDashboard />} />
-              <Route path="/hr/approvals" element={<HRApprovals />} />
-              <Route path="/hr/campaigns" element={<HRCampaigns />} />
-              <Route path="/hr/employees" element={<HREmployees />} />
-              <Route path="/hr/employees/new" element={<HREmployeeNew />} />
-              <Route path="/hr/employees/:id" element={<SAEmployeeProfile />} />
-              <Route path="/hr/payroll" element={<HRPayroll />} />
-              <Route path="/hr/attendance" element={<HRAttendance />} />
-              <Route path="/hr/leaves" element={<HRLeaves />} />
-              <Route path="/hr/chat" element={<ChatPage />} />
-              <Route path="/hr/chat-admin" element={<HRChatAdmin />} />
-              <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
-              <Route path="/hr/leads/import" element={<HRLeadImport />} />
-              <Route path="/hr/warehouse" element={<HRWarehouse />} />
-              <Route path="/hr/data-monitor" element={<HRDataMonitor />} />
-              <Route path="/hr/data-tracker" element={<DataTracker />} />
-              <Route path="/hr/data-operations" element={<HRDataOperations />} />
-              <Route path="/hr/my-attendance" element={<ManagerAttendance />} />
-              <Route path="/hr/feedback" element={<HRFeedback />} />
-              <Route path="/hr/documentation" element={<WebhookDocumentation />} />
-              <Route path="/hr/complaints" element={<HRComplaints />} />
-              <Route path="/hr/settings" element={<HRSettings />} />
-              <Route path="/hr/notifications" element={<NotificationsPage />} />
-              <Route path="/hr/profile" element={<ProfileSettings />} />
-            </Route>
-
-            {/* TL Panel Routes */}
-            <Route element={<DashboardLayout panel="tl" />}>
-              <Route path="/tl/dashboard" element={<TLDashboard />} />
-              <Route path="/tl/leads" element={<TLLeads />} />
-              <Route path="/tl/leads/:section" element={<TLLeads />} />
-              <Route path="/tl/my-leads" element={<EmployeeLeads />} />
-              <Route path="/tl/my-orders" element={<EmployeeMyOrders />} />
-              <Route path="/tl/data-tracker" element={<DataTracker />} />
-              <Route path="/tl/attendance" element={<ManagerAttendance />} />
-              <Route path="/tl/salary" element={<EmployeeSalary />} />
-              <Route path="/tl/my-team" element={<TLTeam />} />
-              <Route path="/tl/data-requests" element={<TLDataRequests />} />
-              <Route path="/tl/analytics" element={<TLAnalytics />} />
-              <Route path="/tl/agent-assignment" element={<BDOAgentAssignment />} />
-              <Route path="/tl/atl-approvals" element={<TLATLApprovals />} />
-              <Route path="/tl/spam" element={<SpamLeads />} />
-              <Route path="/tl/chat" element={<ChatPage />} />
-              <Route path="/tl/notifications" element={<NotificationsPage />} />
-              <Route path="/tl/settings" element={<ProfileSettings />} />
-              <Route path="/tl/profile" element={<ProfileSettings />} />
-            </Route>
-
-            {/* Employee Panel Routes */}
-            <Route element={<DashboardLayout panel="employee" />}>
-              <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
-              <Route path="/employee/leads" element={<AttendanceGatedRoute><EmployeeLeadsRouter /></AttendanceGatedRoute>} />
-              <Route path="/employee/my-orders" element={<AttendanceGatedRoute><EmployeeMyOrders /></AttendanceGatedRoute>} />
-              <Route path="/employee/steadfast" element={<AttendanceGatedRoute><SteadfastMonitoring /></AttendanceGatedRoute>} />
-              <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
-              <Route path="/employee/cs-leads" element={<AttendanceGatedRoute><CSExecutiveDashboard /></AttendanceGatedRoute>} />
-              <Route path="/employee/spam" element={<AttendanceGatedRoute><SpamLeads /></AttendanceGatedRoute>} />
-              <Route path="/employee/cancellation" element={<AttendanceGatedRoute><CancellationExecutiveDashboard /></AttendanceGatedRoute>} />
-              <Route path="/employee/attendance" element={<EmployeeAttendance />} />
-              <Route path="/employee/salary" element={<EmployeeSalary />} />
-              <Route path="/employee/chat" element={<ChatPage />} />
-              <Route path="/employee/notifications" element={<NotificationsPage />} />
-              <Route path="/employee/settings" element={<ProfileSettings />} />
-              <Route path="/employee/profile" element={<ProfileSettings />} />
-            </Route>
-
+            {/* Secret control panel - outside SetupGate so admin can always access */}
             <Route path="/bq-ctrl-7x9k" element={<SecretSiteLock />} />
-            <Route path="*" element={<NotFound />} />
+            
+            {/* All other routes wrapped in SetupGate */}
+            <Route path="*" element={
+              <SetupGate>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/:panel/login" element={<PanelLogin />} />
+
+                  {/* SA Panel Routes */}
+                  <Route element={<DashboardLayout panel="sa" />}>
+                    <Route path="/sa/dashboard" element={<SADashboard />} />
+                    <Route path="/sa/approvals" element={<SAApprovalsPage />} />
+                    <Route path="/sa/analytics" element={<SAAnalytics />} />
+                    <Route path="/sa/warehouse" element={<SAWarehouse />} />
+                    <Route path="/sa/budget" element={<SABudget />} />
+                    <Route path="/sa/payroll" element={<SAPayroll />} />
+                    <Route path="/sa/audit-logs" element={<SAAuditLogs />} />
+                    <Route path="/sa/all-data" element={<SAAllData />} />
+                    <Route path="/sa/employees" element={<SAEmployees />} />
+                    <Route path="/sa/employees/:id" element={<SAEmployeeProfile />} />
+                    <Route path="/sa/data-tracker" element={<DataTracker />} />
+                    <Route path="/sa/attendance" element={<ManagerAttendance />} />
+                    <Route path="/sa/settings" element={<SASettings />} />
+                    <Route path="/sa/notifications" element={<NotificationsPage />} />
+                    <Route path="/sa/chat" element={<ChatPage />} />
+                    <Route path="/sa/profile" element={<ProfileSettings />} />
+                  </Route>
+
+                  {/* HR Panel Routes */}
+                  <Route element={<DashboardLayout panel="hr" />}>
+                    <Route path="/hr/dashboard" element={<HRDashboard />} />
+                    <Route path="/hr/approvals" element={<HRApprovals />} />
+                    <Route path="/hr/campaigns" element={<HRCampaigns />} />
+                    <Route path="/hr/employees" element={<HREmployees />} />
+                    <Route path="/hr/employees/new" element={<HREmployeeNew />} />
+                    <Route path="/hr/employees/:id" element={<SAEmployeeProfile />} />
+                    <Route path="/hr/payroll" element={<HRPayroll />} />
+                    <Route path="/hr/attendance" element={<HRAttendance />} />
+                    <Route path="/hr/leaves" element={<HRLeaves />} />
+                    <Route path="/hr/chat" element={<ChatPage />} />
+                    <Route path="/hr/chat-admin" element={<HRChatAdmin />} />
+                    <Route path="/hr/campaigns/:id/integration" element={<HRCampaignIntegration />} />
+                    <Route path="/hr/leads/import" element={<HRLeadImport />} />
+                    <Route path="/hr/warehouse" element={<HRWarehouse />} />
+                    <Route path="/hr/data-monitor" element={<HRDataMonitor />} />
+                    <Route path="/hr/data-tracker" element={<DataTracker />} />
+                    <Route path="/hr/data-operations" element={<HRDataOperations />} />
+                    <Route path="/hr/my-attendance" element={<ManagerAttendance />} />
+                    <Route path="/hr/feedback" element={<HRFeedback />} />
+                    <Route path="/hr/documentation" element={<WebhookDocumentation />} />
+                    <Route path="/hr/complaints" element={<HRComplaints />} />
+                    <Route path="/hr/settings" element={<HRSettings />} />
+                    <Route path="/hr/notifications" element={<NotificationsPage />} />
+                    <Route path="/hr/profile" element={<ProfileSettings />} />
+                  </Route>
+
+                  {/* TL Panel Routes */}
+                  <Route element={<DashboardLayout panel="tl" />}>
+                    <Route path="/tl/dashboard" element={<TLDashboard />} />
+                    <Route path="/tl/leads" element={<TLLeads />} />
+                    <Route path="/tl/leads/:section" element={<TLLeads />} />
+                    <Route path="/tl/my-leads" element={<EmployeeLeads />} />
+                    <Route path="/tl/my-orders" element={<EmployeeMyOrders />} />
+                    <Route path="/tl/data-tracker" element={<DataTracker />} />
+                    <Route path="/tl/attendance" element={<ManagerAttendance />} />
+                    <Route path="/tl/salary" element={<EmployeeSalary />} />
+                    <Route path="/tl/my-team" element={<TLTeam />} />
+                    <Route path="/tl/data-requests" element={<TLDataRequests />} />
+                    <Route path="/tl/analytics" element={<TLAnalytics />} />
+                    <Route path="/tl/agent-assignment" element={<BDOAgentAssignment />} />
+                    <Route path="/tl/atl-approvals" element={<TLATLApprovals />} />
+                    <Route path="/tl/spam" element={<SpamLeads />} />
+                    <Route path="/tl/chat" element={<ChatPage />} />
+                    <Route path="/tl/notifications" element={<NotificationsPage />} />
+                    <Route path="/tl/settings" element={<ProfileSettings />} />
+                    <Route path="/tl/profile" element={<ProfileSettings />} />
+                  </Route>
+
+                  {/* Employee Panel Routes */}
+                  <Route element={<DashboardLayout panel="employee" />}>
+                    <Route path="/employee/dashboard" element={<EmployeeDashboardRouter />} />
+                    <Route path="/employee/leads" element={<AttendanceGatedRoute><EmployeeLeadsRouter /></AttendanceGatedRoute>} />
+                    <Route path="/employee/my-orders" element={<AttendanceGatedRoute><EmployeeMyOrders /></AttendanceGatedRoute>} />
+                    <Route path="/employee/steadfast" element={<AttendanceGatedRoute><SteadfastMonitoring /></AttendanceGatedRoute>} />
+                    <Route path="/employee/dispatch" element={<WarehouseDispatchPage />} />
+                    <Route path="/employee/cs-leads" element={<AttendanceGatedRoute><CSExecutiveDashboard /></AttendanceGatedRoute>} />
+                    <Route path="/employee/spam" element={<AttendanceGatedRoute><SpamLeads /></AttendanceGatedRoute>} />
+                    <Route path="/employee/cancellation" element={<AttendanceGatedRoute><CancellationExecutiveDashboard /></AttendanceGatedRoute>} />
+                    <Route path="/employee/attendance" element={<EmployeeAttendance />} />
+                    <Route path="/employee/salary" element={<EmployeeSalary />} />
+                    <Route path="/employee/chat" element={<ChatPage />} />
+                    <Route path="/employee/notifications" element={<NotificationsPage />} />
+                    <Route path="/employee/settings" element={<ProfileSettings />} />
+                    <Route path="/employee/profile" element={<ProfileSettings />} />
+                  </Route>
+
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </SetupGate>
+            } />
           </Routes>
         </BrowserRouter>
-        </SetupGate>
       </TooltipProvider>
     </LanguageProvider>
   </QueryClientProvider>
