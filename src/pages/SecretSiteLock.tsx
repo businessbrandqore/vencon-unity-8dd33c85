@@ -140,9 +140,9 @@ const SecretSiteLock = () => {
         .maybeSingle();
 
       if (existing) {
-        await supabase.from("app_settings").update({ value: warningVal as unknown as Record<string, unknown> }).eq("key", "broadcast_warning");
+        await supabase.from("app_settings").update({ value: warningVal as any }).eq("key", "broadcast_warning");
       } else {
-        await supabase.from("app_settings").insert({ key: "broadcast_warning", value: warningVal as unknown as Record<string, unknown> });
+        await supabase.from("app_settings").insert({ key: "broadcast_warning", value: warningVal as any });
       }
 
       setActiveWarning(warningVal);
