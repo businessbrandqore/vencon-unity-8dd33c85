@@ -349,6 +349,44 @@ const SAApprovalsTable = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Requests Section */}
+      {deleteRequests.length > 0 && (
+        <div className="mt-6">
+          <h3 className="font-heading text-lg font-bold text-foreground mb-3">
+            {isBn ? "ডিলিট রিকোয়েস্ট" : "Delete Requests"} ({deleteRequests.length})
+          </h3>
+          <div className="border border-border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-secondary text-muted-foreground text-xs">
+                  <th className="text-left p-3">{isBn ? "অনুরোধকারী" : "Requested By"}</th>
+                  <th className="text-left p-3">{isBn ? "তারিখ" : "Date"}</th>
+                  <th className="text-right p-3">{isBn ? "অ্যাকশন" : "Action"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {deleteRequests.map((req) => (
+                  <tr key={req.id}>
+                    <td className="p-3 text-foreground">{req.requester_name}</td>
+                    <td className="p-3 text-muted-foreground text-xs">{new Date(req.created_at).toLocaleDateString()}</td>
+                    <td className="p-3 text-right space-x-2">
+                      <button onClick={() => handleDeleteRequestAction(req.id, "approved")} disabled={processing === req.id}
+                        className="px-3 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded">
+                        {isBn ? "এপ্রুভ" : "Approve"}
+                      </button>
+                      <button onClick={() => handleDeleteRequestAction(req.id, "rejected")} disabled={processing === req.id}
+                        className="px-3 py-1.5 text-xs border border-border text-foreground hover:bg-secondary rounded">
+                        {isBn ? "রিজেক্ট" : "Reject"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
