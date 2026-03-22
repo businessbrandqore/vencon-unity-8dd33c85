@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import CopyButton from "@/components/ui/CopyButton";
+import AddressTooltip from "@/components/ui/AddressTooltip";
 
 const PAGE_SIZE = 50;
 
