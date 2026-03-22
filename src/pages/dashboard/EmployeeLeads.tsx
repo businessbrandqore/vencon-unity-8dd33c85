@@ -162,7 +162,7 @@ export default function EmployeeLeads() {
 
   // Filter states
   const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
-  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  
   const [filterWebsite, setFilterWebsite] = useState<string>("all");
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
@@ -423,24 +423,31 @@ export default function EmployeeLeads() {
     })();
   }, [user, tick]);
 
+  // Active data mode tab
+  const [activeDataTab, setActiveDataTab] = useState<"lead" | "processing">("lead");
+
   // Apply filters
   const filteredLeads = useMemo(() => {
     let result = leads;
     if (filterCampaignId !== "all") {
       result = result.filter(l => l.campaign_id === filterCampaignId);
     }
-    if (filterDataMode !== "all") {
-      const campaignIdsForMode = campaigns.filter(c => c.data_mode === filterDataMode).map(c => c.id);
-      result = result.filter(l => l.campaign_id && campaignIdsForMode.includes(l.campaign_id));
-    }
     if (filterWebsite !== "all") {
       result = result.filter(l => l.import_source === filterWebsite);
     }
     return result;
-  }, [leads, filterCampaignId, filterDataMode, filterWebsite, campaigns]);
+  }, [leads, filterCampaignId, filterWebsite]);
 
-  const bronzeLeads = useMemo(() => filteredLeads.filter(l => l.agent_type === "bronze" || !l.agent_type), [filteredLeads]);
-  const silverLeads = useMemo(() => filteredLeads.filter(l => l.agent_type === "silver"), [filteredLeads]);
+  // Split by data mode using campaign's data_mode
+  const leadModeLeads = useMemo(() => {
+    const leadCampaignIds = campaigns.filter(c => c.data_mode === "lead").map(c => c.id);
+    return filteredLeads.filter(l => !l.campaign_id || leadCampaignIds.includes(l.campaign_id));
+  }, [filteredLeads, campaigns]);
+
+  const processingModeLeads = useMemo(() => {
+    const procCampaignIds = campaigns.filter(c => c.data_mode === "processing").map(c => c.id);
+    return filteredLeads.filter(l => l.campaign_id && procCampaignIds.includes(l.campaign_id));
+  }, [filteredLeads, campaigns]);
 
   const getRequeueRemaining = (lead: LeadRow) => {
     if (!lead.requeue_at) return null;
@@ -850,14 +857,6 @@ export default function EmployeeLeads() {
               {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
-            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder={isBn ? "ডাটা মোড" : "Data Mode"} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{isBn ? "সব মোড" : "All Modes"}</SelectItem>
-              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
-              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
-            </SelectContent>
-          </Select>
           {(() => {
             const filteredSites = filterCampaignId !== "all"
               ? websites.filter(w => w.campaign_id === filterCampaignId)
@@ -905,11 +904,11 @@ export default function EmployeeLeads() {
       )}
 
       <div className="flex items-center justify-between">
-        <Tabs defaultValue="bronze" className="flex-1">
+        <Tabs value={activeDataTab} onValueChange={(v) => setActiveDataTab(v as "lead" | "processing")} className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <TabsList>
-              <TabsTrigger value="bronze">{t("bronze_leads_tab")} ({bronzeLeads.length})</TabsTrigger>
-              <TabsTrigger value="silver">{t("silver_leads_tab")} ({silverLeads.length})</TabsTrigger>
+              <TabsTrigger value="lead">🎯 {isBn ? "লিড" : "Lead"} ({leadModeLeads.length})</TabsTrigger>
+              <TabsTrigger value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({processingModeLeads.length})</TabsTrigger>
             </TabsList>
             {leads.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
@@ -917,11 +916,11 @@ export default function EmployeeLeads() {
               </Button>
             )}
           </div>
-          <TabsContent value="bronze">
-            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
+          <TabsContent value="lead">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(leadModeLeads)}</CardContent></Card>
           </TabsContent>
-          <TabsContent value="silver">
-            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(silverLeads)}</CardContent></Card>
+          <TabsContent value="processing">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(processingModeLeads)}</CardContent></Card>
           </TabsContent>
         </Tabs>
       </div>
