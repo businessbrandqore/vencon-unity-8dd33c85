@@ -151,6 +151,10 @@ const HRSettings = () => {
         const val = row.value as any;
         if (val?.message) setBirthdayMessage(val.message);
         if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
+      } else if (row.key === "delete_sheet_config") {
+        const val = row.value as any;
+        if (val?.statuses) setDeleteSheetStatuses(val.statuses);
+        if (val?.threshold) setDeleteSheetThreshold(val.threshold);
       } else if (row.key === "gps_config") {
         const val = row.value as any;
         if (val?.latitude) setGpsLat(String(val.latitude));
