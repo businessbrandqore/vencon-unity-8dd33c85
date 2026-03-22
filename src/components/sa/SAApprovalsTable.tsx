@@ -95,6 +95,7 @@ const SAApprovalsTable = () => {
     non_agent_hire: { bn: "নন-এজেন্ট নিয়োগ", en: "Non-Agent Hire" },
     incentive_config: { bn: "ইনসেনটিভ কনফিগ", en: "Incentive Config" },
     profit_share_config: { bn: "প্রফিট শেয়ার কনফিগ", en: "Profit Share Config" },
+    employee_delete: { bn: "কর্মচারী ডিলিট", en: "Employee Delete" },
   };
 
   const getSummary = (approval: Approval): string => {
