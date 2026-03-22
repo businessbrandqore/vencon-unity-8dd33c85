@@ -8,6 +8,7 @@ import AIChatWidget from "@/components/AIChatWidget";
 import ATLApprovalBanner from "@/components/ATLApprovalBanner";
 import BirthdayPopup from "@/components/BirthdayPopup";
 import GlobalCallListener from "@/components/GlobalCallListener";
+import WarningPopup from "@/components/WarningPopup";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
@@ -48,6 +49,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       <AIChatWidget />
       <BirthdayPopup />
       <GlobalCallListener />
+      <WarningPopup panel={panel} />
     </div>
   );
 };

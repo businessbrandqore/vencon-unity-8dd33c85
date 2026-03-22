@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle } from "lucide-react";
+import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -37,6 +37,12 @@ const SecretSiteLock = () => {
   const [customMessage, setCustomMessage] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
   const [savingMessage, setSavingMessage] = useState(false);
+
+  // Warning broadcast state
+  const [warningMessage, setWarningMessage] = useState("");
+  const [warningDuration, setWarningDuration] = useState("30"); // minutes
+  const [sendingWarning, setSendingWarning] = useState(false);
+  const [activeWarning, setActiveWarning] = useState<{ message: string; expires_at: string } | null>(null);
 
   useEffect(() => {
     // Check if this client is already blocked
@@ -93,6 +99,71 @@ const SecretSiteLock = () => {
     } finally {
       setCheckingStatus(false);
     }
+    // Also fetch active warning
+    try {
+      const { data: wData } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "broadcast_warning")
+        .maybeSingle();
+      if (wData?.value) {
+        const val = wData.value as unknown as { message: string; expires_at: string };
+        if (val.message && val.expires_at && new Date(val.expires_at).getTime() > Date.now()) {
+          setActiveWarning(val);
+        } else {
+          setActiveWarning(null);
+        }
+      } else {
+        setActiveWarning(null);
+      }
+    } catch { /* silent */ }
+  };
+
+  const handleSendWarning = async () => {
+    if (!lockPassword.trim()) { toast.error("পাসওয়ার্ড দিন"); return; }
+    if (!warningMessage.trim()) { toast.error("ওয়ার্নিং মেসেজ লিখুন"); return; }
+    setSendingWarning(true);
+    try {
+      // Verify password first
+      const { data: verifyData } = await supabase.functions.invoke("setup-verification", {
+        body: { action: "verify", password: lockPassword, clientId: getClientId() }
+      });
+      if (!verifyData?.success) { toast.error("পাসওয়ার্ড ভুল"); setSendingWarning(false); return; }
+
+      const expiresAt = new Date(Date.now() + parseInt(warningDuration) * 60000).toISOString();
+      const warningVal = { message: warningMessage, expires_at: expiresAt };
+
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("key", "broadcast_warning")
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("app_settings").update({ value: warningVal as any }).eq("key", "broadcast_warning");
+      } else {
+        await supabase.from("app_settings").insert({ key: "broadcast_warning", value: warningVal as any });
+      }
+
+      setActiveWarning(warningVal);
+      setWarningMessage("");
+      toast.success("⚠️ ওয়ার্নিং পাঠানো হয়েছে!");
+    } catch {
+      toast.error("ওয়ার্নিং পাঠানো ব্যর্থ");
+    } finally {
+      setSendingWarning(false);
+    }
+  };
+
+  const handleClearWarning = async () => {
+    if (!lockPassword.trim()) { toast.error("পাসওয়ার্ড দিন"); return; }
+    try {
+      await supabase.from("app_settings").update({ value: null }).eq("key", "broadcast_warning");
+      setActiveWarning(null);
+      toast.success("ওয়ার্নিং সরানো হয়েছে");
+    } catch {
+      toast.error("ব্যর্থ");
+    }
   };
 
   const handleLockAction = async (action: "lock" | "unlock") => {
@@ -145,7 +216,7 @@ const SecretSiteLock = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-auto py-8"
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto py-8"
       style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #0f0f3d 40%, #1a0a3e 70%, ${NAVY} 100%)` }}>
       
       <div className="absolute inset-0 overflow-hidden">
@@ -318,6 +389,66 @@ const SecretSiteLock = () => {
                     আনলক করুন
                   </Button>
                 </div>
+              </div>
+
+              {/* ── WARNING BROADCAST ── */}
+              <div className="space-y-3 pt-2" style={{ borderTop: "1px solid rgba(234,179,8,0.15)" }}>
+                <div className="flex items-center gap-2">
+                  <Megaphone className="w-4 h-4 text-yellow-400" />
+                  <p className="text-white text-sm font-medium">ওয়ার্নিং ব্রডকাস্ট</p>
+                  <span className="text-white/30 text-[10px]">(HR ও SA প্যানেলে দেখাবে)</span>
+                </div>
+
+                {activeWarning && (
+                  <div className="rounded-xl p-3 flex items-start justify-between gap-2"
+                    style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
+                    <div className="flex-1">
+                      <p className="text-yellow-300/60 text-[10px] mb-1">সক্রিয় ওয়ার্নিং:</p>
+                      <p className="text-yellow-200 text-xs">{activeWarning.message}</p>
+                      <p className="text-yellow-400/40 text-[10px] mt-1">
+                        মেয়াদ: {new Date(activeWarning.expires_at).toLocaleString("bn-BD")}
+                      </p>
+                    </div>
+                    <button onClick={handleClearWarning}
+                      className="text-red-400 hover:text-red-300 text-[10px] underline whitespace-nowrap">
+                      সরান
+                    </button>
+                  </div>
+                )}
+
+                <textarea
+                  value={warningMessage}
+                  onChange={(e) => setWarningMessage(e.target.value)}
+                  placeholder="ওয়ার্নিং মেসেজ লিখুন..."
+                  rows={2}
+                  className="w-full rounded-xl border border-yellow-500/20 text-white text-sm p-3 resize-none placeholder:text-white/20"
+                  style={{ background: "rgba(234,179,8,0.04)" }}
+                />
+
+                <div className="flex items-center gap-2">
+                  <p className="text-white/40 text-xs whitespace-nowrap">কাউন্টডাউন:</p>
+                  <select
+                    value={warningDuration}
+                    onChange={(e) => setWarningDuration(e.target.value)}
+                    className="flex-1 h-9 rounded-lg border border-purple-500/20 text-white text-xs px-2"
+                    style={{ background: "rgba(124,58,237,0.06)" }}>
+                    <option value="15" className="bg-gray-900">১৫ মিনিট</option>
+                    <option value="30" className="bg-gray-900">৩০ মিনিট</option>
+                    <option value="60" className="bg-gray-900">১ ঘণ্টা</option>
+                    <option value="120" className="bg-gray-900">২ ঘণ্টা</option>
+                    <option value="360" className="bg-gray-900">৬ ঘণ্টা</option>
+                    <option value="720" className="bg-gray-900">১২ ঘণ্টা</option>
+                    <option value="1440" className="bg-gray-900">২৪ ঘণ্টা</option>
+                  </select>
+                </div>
+
+                <Button onClick={handleSendWarning}
+                  disabled={sendingWarning || !lockPassword.trim() || !warningMessage.trim()}
+                  className="w-full h-9 rounded-lg font-medium text-white text-xs border-0 gap-2"
+                  style={{ background: "linear-gradient(135deg, #ca8a04, #a16207)" }}>
+                  {sendingWarning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-3.5 h-3.5" />}
+                  ওয়ার্নিং পাঠান
+                </Button>
               </div>
 
               <div className="rounded-lg p-3 space-y-1.5" style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}>
