@@ -202,6 +202,19 @@ export default function EmployeeLeads() {
     })();
   }, [user]);
 
+  // Load delete sheet config from app_settings
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "delete_sheet_config").maybeSingle();
+      if (data?.value) {
+        const val = data.value as any;
+        if (val.statuses?.length && val.threshold) {
+          setDeleteSheetConfig({ statuses: val.statuses, threshold: val.threshold });
+        }
+      }
+    })();
+  }, []);
+
   // Load campaigns & websites for filters
   useEffect(() => {
     if (!user) return;
