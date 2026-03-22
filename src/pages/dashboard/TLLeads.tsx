@@ -133,6 +133,17 @@ const TLLeads = () => {
     return user?.id || "";
   }, [isATL, isGL, user, atlTlMap, selectedCampaign]);
 
+  // Load delete sheet config
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "delete_sheet_config").maybeSingle();
+      if (data?.value) {
+        const val = data.value as any;
+        if (val.threshold) setDeleteSheetThreshold(val.threshold);
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     if (!user) return;
 
