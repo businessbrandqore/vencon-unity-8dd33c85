@@ -636,6 +636,9 @@ export default function EmployeeLeads() {
   };
 
   // Extract dynamic raw-data column keys from special_note JSON across all leads
+  // Keys to hide from raw data columns (already shown as fixed columns or internal)
+  const HIDDEN_RAW_KEYS = new Set(["customer_name", "phone", "address", "name", "extra_fields"]);
+
   const rawDataKeys = useMemo(() => {
     const keySet = new Set<string>();
     leads.forEach(lead => {
@@ -643,7 +646,9 @@ export default function EmployeeLeads() {
       try {
         const parsed = JSON.parse(lead.special_note);
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          Object.keys(parsed).forEach(k => keySet.add(k));
+          Object.keys(parsed).forEach(k => {
+            if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
+          });
         }
       } catch { /* not JSON */ }
     });
