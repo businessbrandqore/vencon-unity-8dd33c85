@@ -107,6 +107,11 @@ const TLLeads = () => {
     return map;
   }, [dynamicColumns]);
 
+  // Sync distDataMode with active data mode tab
+  useEffect(() => {
+    setDistDataMode(activeDataModeTab);
+  }, [activeDataModeTab]);
+
   const getStatusLabel = useCallback((status: string | null) => {
     if (!status) return "—";
     const mapped = statusLabelMap[status];
