@@ -60,6 +60,35 @@ const SAApprovalsTable = () => {
     fetchApprovals();
   }, []);
 
+  // Delete requests
+  const [deleteRequests, setDeleteRequests] = useState<any[]>([]);
+
+  const fetchDeleteRequests = async () => {
+    const { data } = await supabase.from("delete_requests").select("*").eq("status", "pending").order("created_at", { ascending: false });
+    if (data && data.length > 0) {
+      const reqIds = [...new Set(data.map(d => d.requested_by).filter(Boolean))];
+      const { data: users } = await supabase.from("users").select("id, name").in("id", reqIds as string[]);
+      const nameMap = new Map(users?.map(u => [u.id, u.name]) || []);
+      setDeleteRequests(data.map(d => ({ ...d, requester_name: nameMap.get(d.requested_by) || "—" })));
+    } else { setDeleteRequests([]); }
+  };
+
+  const handleDeleteRequestAction = async (reqId: string, action: "approved" | "rejected") => {
+    if (!user) return;
+    const req = deleteRequests.find(r => r.id === reqId);
+    if (!req) return;
+    setProcessing(reqId);
+    if (action === "approved") {
+      await supabase.from("leads").delete().eq("id", req.lead_id);
+    }
+    await supabase.from("delete_requests").update({ status: action, decided_by: user.id, decided_at: new Date().toISOString() } as any).eq("id", reqId);
+    toast({ title: action === "approved" ? (isBn ? "ডিলিট এপ্রুভড ✓" : "Delete approved ✓") : (isBn ? "ডিলিট রিজেক্ট ✓" : "Delete rejected ✓") });
+    setProcessing(null);
+    fetchDeleteRequests();
+  };
+
+  useEffect(() => { fetchDeleteRequests(); }, []);
+
   const typeLabels: Record<string, { bn: string; en: string }> = {
     new_campaign: { bn: "নতুন ক্যাম্পেইন", en: "New Campaign" },
     campaign_delete: { bn: "ক্যাম্পেইন ডিলিট", en: "Campaign Delete" },
