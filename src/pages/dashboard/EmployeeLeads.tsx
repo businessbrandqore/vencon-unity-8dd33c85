@@ -705,7 +705,7 @@ export default function EmployeeLeads() {
     leads.forEach((lead) => {
       const parsed = extractLeadRawData(lead.special_note);
       Object.keys(parsed).forEach((k) => {
-        if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
+        if (ALLOWED_RAW_KEYS.has(k)) keySet.add(k);
       });
     });
     return Array.from(keySet);
