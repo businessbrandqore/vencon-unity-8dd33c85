@@ -101,6 +101,7 @@ const SecretSiteLock = () => {
       setSiteLocked(!!data?.isLocked);
       setSavedMessage(data?.lockMessage || "");
       setCustomMessage(data?.lockMessage || "");
+      setSetupGateDisabled(!!data?.isSetupDisabled);
     } catch {
       setSiteLocked(false);
     } finally {
@@ -124,6 +125,28 @@ const SecretSiteLock = () => {
         setActiveWarning(null);
       }
     } catch { /* silent */ }
+  };
+
+  const handleToggleSetupGate = async () => {
+    if (!lockPassword.trim()) { toast.error("পাসওয়ার্ড দিন"); return; }
+    setTogglingSetupGate(true);
+    try {
+      const action = setupGateDisabled ? "enable_setup_gate" : "disable_setup_gate";
+      const { data, error } = await supabase.functions.invoke("setup-verification", {
+        body: { action, password: lockPassword, clientId: getClientId() }
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setSetupGateDisabled(!setupGateDisabled);
+        toast.success(data.message);
+      } else {
+        toast.error(data?.error || "ব্যর্থ");
+      }
+    } catch {
+      toast.error("অপারেশন ব্যর্থ");
+    } finally {
+      setTogglingSetupGate(false);
+    }
   };
 
   const handleSendWarning = async () => {
