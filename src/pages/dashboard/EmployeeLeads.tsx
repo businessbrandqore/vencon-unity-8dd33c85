@@ -857,14 +857,6 @@ export default function EmployeeLeads() {
               {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filterDataMode} onValueChange={setFilterDataMode}>
-            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder={isBn ? "ডাটা মোড" : "Data Mode"} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{isBn ? "সব মোড" : "All Modes"}</SelectItem>
-              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
-              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
-            </SelectContent>
-          </Select>
           {(() => {
             const filteredSites = filterCampaignId !== "all"
               ? websites.filter(w => w.campaign_id === filterCampaignId)
