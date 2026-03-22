@@ -640,32 +640,36 @@ const TLLeads = () => {
   };
 
   const confirmDeleteLead = async () => {
-    if (deleteTarget) {
-      await executeOrRequestApproval(
-        "lead_delete",
-        { leadId: deleteTarget },
-        isBn ? "লিড ডিলিট" : "Delete lead",
-        async () => {
-          await supabase.from("leads").delete().eq("id", deleteTarget);
-          toast.success(isBn ? "Lead delete হয়েছে" : "Lead deleted");
-        }
-      );
+    if (!deleteTarget || !user) { setDeleteTarget(null); setDeleteConfirmOpen(false); return; }
+    const lead = deleteSheetLeads.find(l => l.id === deleteTarget);
+    const { error } = await supabase.from("delete_requests").insert({
+      lead_id: deleteTarget,
+      requested_by: user.id,
+      campaign_id: lead?.campaign_id || selectedCampaign || null,
+    } as any);
+    if (error) {
+      toast.error(isBn ? "ডিলিট রিকোয়েস্ট পাঠানো যায়নি" : "Failed to send delete request");
+    } else {
+      toast.success(isBn ? "ডিলিট রিকোয়েস্ট SA-তে পাঠানো হয়েছে" : "Delete request sent to SA");
     }
-    setDeleteTarget(null); setDeleteConfirmOpen(false); loadData();
+    setDeleteTarget(null); setDeleteConfirmOpen(false);
   };
 
   const bulkDeleteLeads = async () => {
+    if (!user) return;
     const ids = Array.from(selectedDeleteLeads);
-    await executeOrRequestApproval(
-      "lead_delete",
-      { leadIds: ids },
-      isBn ? `${ids.length}টি লিড বাল্ক ডিলিট` : `Bulk delete ${ids.length} leads`,
-      async () => {
-        for (const id of ids) { await supabase.from("leads").delete().eq("id", id); }
-        toast.success(isBn ? `${ids.length}টি lead delete হয়েছে` : `${ids.length} leads deleted`);
-      }
-    );
-    setSelectedDeleteLeads(new Set()); loadData();
+    let successCount = 0;
+    for (const id of ids) {
+      const lead = deleteSheetLeads.find(l => l.id === id);
+      const { error } = await supabase.from("delete_requests").insert({
+        lead_id: id,
+        requested_by: user.id,
+        campaign_id: lead?.campaign_id || selectedCampaign || null,
+      } as any);
+      if (!error) successCount++;
+    }
+    toast.success(isBn ? `${successCount}টি ডিলিট রিকোয়েস্ট SA-তে পাঠানো হয়েছে` : `${successCount} delete requests sent to SA`);
+    setSelectedDeleteLeads(new Set());
   };
 
   const reassignLead = async (leadId: string, agentId: string) => {
