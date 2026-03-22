@@ -658,7 +658,7 @@ export default function EmployeeLeads() {
 
   // Extract dynamic raw-data column keys from special_note JSON across all leads
   // Keys to hide from raw data columns (already shown as fixed columns or internal)
-  const HIDDEN_RAW_KEYS = new Set(["customer_name", "phone", "address", "name", "extra_fields", "product", "price"]);
+  const HIDDEN_RAW_KEYS = new Set(["customer_name", "phone", "address", "name", "extra_fields", "price"]);
 
   const rawDataKeys = useMemo(() => {
     const keySet = new Set<string>();
