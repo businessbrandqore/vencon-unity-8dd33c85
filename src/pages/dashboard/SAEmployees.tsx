@@ -125,7 +125,7 @@ const SAEmployees = () => {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>
+        <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />
       ) : (
         <div className="border border-border overflow-auto">
           <table className="w-full text-sm">

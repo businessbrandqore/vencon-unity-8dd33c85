@@ -76,7 +76,7 @@ export default function HRComplaints() {
   // Get unique target ids with approved complaints for warning lights
   const targetIds = [...new Set(complaints.filter(c => c.status === "approved").map(c => c.target_id))];
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   return (
     <div className="space-y-6">
