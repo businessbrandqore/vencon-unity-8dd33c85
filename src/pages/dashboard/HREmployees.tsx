@@ -232,6 +232,20 @@ const HREmployees = () => {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={isBn ? "কর্মচারী ডিলিট রিকোয়েস্ট" : "Employee Delete Request"}
+        description={
+          isBn
+            ? `"${deleteTarget?.name}" কে ডিলিট করার জন্য SA-তে অনুমোদন রিকোয়েস্ট পাঠানো হবে। নিশ্চিত?`
+            : `A delete request for "${deleteTarget?.name}" will be sent to SA for approval. Confirm?`
+        }
+        confirmLabel={isBn ? "রিকোয়েস্ট পাঠান" : "Send Request"}
+        onConfirm={handleDeleteRequest}
+        destructive
+      />
     </div>
   );
 };

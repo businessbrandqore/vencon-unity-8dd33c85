@@ -110,6 +110,8 @@ const SAApprovalsTable = () => {
         return `${d.role || "—"} / ${d.min_ratio || "—"}–${d.max_ratio || "—"}`;
       case "profit_share_config":
         return `${d.role || "—"} / ${d.percentage || "—"}%`;
+      case "employee_delete":
+        return `${d.employee_name || "—"} / ${d.role || "—"} / ${d.email || "—"}`;
       default:
         return JSON.stringify(d).slice(0, 60);
     }
