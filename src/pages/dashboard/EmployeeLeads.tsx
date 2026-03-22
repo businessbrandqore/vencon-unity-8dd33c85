@@ -904,11 +904,11 @@ export default function EmployeeLeads() {
       )}
 
       <div className="flex items-center justify-between">
-        <Tabs defaultValue="bronze" className="flex-1">
+        <Tabs value={activeDataTab} onValueChange={(v) => setActiveDataTab(v as "lead" | "processing")} className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <TabsList>
-              <TabsTrigger value="bronze">{t("bronze_leads_tab")} ({bronzeLeads.length})</TabsTrigger>
-              <TabsTrigger value="silver">{t("silver_leads_tab")} ({silverLeads.length})</TabsTrigger>
+              <TabsTrigger value="lead">🎯 {isBn ? "লিড" : "Lead"} ({leadModeLeads.length})</TabsTrigger>
+              <TabsTrigger value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({processingModeLeads.length})</TabsTrigger>
             </TabsList>
             {leads.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
@@ -916,11 +916,11 @@ export default function EmployeeLeads() {
               </Button>
             )}
           </div>
-          <TabsContent value="bronze">
-            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(bronzeLeads)}</CardContent></Card>
+          <TabsContent value="lead">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(leadModeLeads)}</CardContent></Card>
           </TabsContent>
-          <TabsContent value="silver">
-            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(silverLeads)}</CardContent></Card>
+          <TabsContent value="processing">
+            <Card><CardContent className="p-0 sm:p-2">{renderLeadTable(processingModeLeads)}</CardContent></Card>
           </TabsContent>
         </Tabs>
       </div>
