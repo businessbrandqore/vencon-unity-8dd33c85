@@ -105,10 +105,15 @@ const HRSettings = () => {
   const [leaveReasons, setLeaveReasons] = useState<string[]>([]);
   const [newLeaveReason, setNewLeaveReason] = useState("");
 
-  // Delete sheet config
-  const [deleteSheetStatuses, setDeleteSheetStatuses] = useState<string[]>(["phone_off", "no_response", "busy_now", "number_busy", "do_not_pick"]);
-  const [deleteSheetThreshold, setDeleteSheetThreshold] = useState<number>(5);
-  const [newDeleteStatus, setNewDeleteStatus] = useState("");
+  // Delete sheet config - per-role rules
+  interface DeleteSheetRule {
+    role: string;
+    statuses: string[];
+    threshold: number;
+  }
+  const [deleteSheetRules, setDeleteSheetRules] = useState<DeleteSheetRule[]>([]);
+  const [allRoleStatuses, setAllRoleStatuses] = useState<Record<string, string[]>>({});
+  const [dsSelectedRole, setDsSelectedRole] = useState("");
 
   // WhatsApp template states
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
