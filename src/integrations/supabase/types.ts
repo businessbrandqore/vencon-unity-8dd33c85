@@ -715,6 +715,71 @@ export type Database = {
           },
         ]
       }
+      delete_requests: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          lead_id: string
+          reason: string | null
+          requested_by: string
+          status: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          lead_id: string
+          reason?: string | null
+          requested_by: string
+          status?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          lead_id?: string
+          reason?: string | null
+          requested_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delete_requests_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delete_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delete_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delete_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_complaints: {
         Row: {
           complainant_id: string
@@ -1055,6 +1120,8 @@ export type Database = {
           requeue_count: number | null
           sms_status: string | null
           source: string | null
+          spam_original_agent: string | null
+          spam_transferred_at: string | null
           special_note: string | null
           status: string | null
           tl_id: string | null
@@ -1077,6 +1144,8 @@ export type Database = {
           requeue_count?: number | null
           sms_status?: string | null
           source?: string | null
+          spam_original_agent?: string | null
+          spam_transferred_at?: string | null
           special_note?: string | null
           status?: string | null
           tl_id?: string | null
@@ -1099,6 +1168,8 @@ export type Database = {
           requeue_count?: number | null
           sms_status?: string | null
           source?: string | null
+          spam_original_agent?: string | null
+          spam_transferred_at?: string | null
           special_note?: string | null
           status?: string | null
           tl_id?: string | null
@@ -1117,6 +1188,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_spam_original_agent_fkey"
+            columns: ["spam_original_agent"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
