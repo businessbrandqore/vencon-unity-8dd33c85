@@ -672,34 +672,42 @@ export default function EmployeeLeads() {
   // Keys to hide from raw data columns (already shown as fixed columns or internal)
   const HIDDEN_RAW_KEYS = new Set(["customer_name", "phone", "address", "name", "extra_fields", "price"]);
 
-  const rawDataKeys = useMemo(() => {
-    const keySet = new Set<string>();
-    leads.forEach(lead => {
-      if (!lead.special_note) return;
-      try {
-        const parsed = JSON.parse(lead.special_note);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          Object.keys(parsed).forEach(k => {
-            if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
-          });
-        }
-      } catch { /* not JSON */ }
-    });
-    return Array.from(keySet);
-  }, [leads]);
-
-  const parseSpecialNote = (note: string | null): Record<string, string> => {
+  const extractLeadRawData = (note: string | null): Record<string, string> => {
     if (!note) return {};
     try {
       const parsed = JSON.parse(note);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         const result: Record<string, string> = {};
-        Object.entries(parsed).forEach(([k, v]) => { result[k] = v != null ? String(v) : ""; });
+
+        Object.entries(parsed).forEach(([k, v]) => {
+          if (k === "extra_fields" && v && typeof v === "object" && !Array.isArray(v)) {
+            const extraFields = v as Record<string, unknown>;
+            if (extraFields.product != null) result.product = String(extraFields.product);
+            return;
+          }
+          result[k] = v != null ? String(v) : "";
+        });
+
         return result;
       }
-    } catch { /* not JSON */ }
+    } catch {
+      /* not JSON */
+    }
     return {};
   };
+
+  const rawDataKeys = useMemo(() => {
+    const keySet = new Set<string>();
+    leads.forEach((lead) => {
+      const parsed = extractLeadRawData(lead.special_note);
+      Object.keys(parsed).forEach((k) => {
+        if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
+      });
+    });
+    return Array.from(keySet);
+  }, [leads]);
+
+  const parseSpecialNote = (note: string | null): Record<string, string> => extractLeadRawData(note);
 
   if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
