@@ -45,6 +45,10 @@ const SecretSiteLock = () => {
   const [customHours, setCustomHours] = useState("");
   const [customMinutes, setCustomMinutes] = useState("");
   const [sendingWarning, setSendingWarning] = useState(false);
+
+  // Setup gate state
+  const [setupGateDisabled, setSetupGateDisabled] = useState<boolean | null>(null);
+  const [togglingSetupGate, setTogglingSetupGate] = useState(false);
   const [activeWarning, setActiveWarning] = useState<{ message: string; expires_at: string } | null>(null);
 
   useEffect(() => {
