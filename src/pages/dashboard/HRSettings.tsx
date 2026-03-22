@@ -132,7 +132,34 @@ const HRSettings = () => {
   useEffect(() => {
     fetchSettings();
     fetchWaTemplates();
+    fetchRoleStatuses();
   }, []);
+
+  // Fetch all statuses per role from campaign_data_operations
+  const fetchRoleStatuses = async () => {
+    const { data } = await supabase.from("campaign_data_operations").select("fields_config");
+    if (!data) return;
+    const roleMap: Record<string, Set<string>> = {};
+    data.forEach((row: any) => {
+      const configs = Array.isArray(row.fields_config) ? row.fields_config : [];
+      configs.forEach((cfg: any) => {
+        const role = cfg.role || "";
+        if (!role) return;
+        if (!roleMap[role]) roleMap[role] = new Set();
+        const columns = Array.isArray(cfg.columns) ? cfg.columns : [];
+        columns.forEach((col: any) => {
+          if (col.type === "note") return;
+          const opts = Array.isArray(col.options) ? col.options : [];
+          opts.forEach((opt: any) => {
+            if (opt.value) roleMap[role].add(opt.value);
+          });
+        });
+      });
+    });
+    const result: Record<string, string[]> = {};
+    Object.entries(roleMap).forEach(([role, set]) => { result[role] = Array.from(set); });
+    setAllRoleStatuses(result);
+  };
 
   const fetchSettings = async () => {
     const { data } = await supabase
