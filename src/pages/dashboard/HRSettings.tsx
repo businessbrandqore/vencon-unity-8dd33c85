@@ -158,8 +158,12 @@ const HRSettings = () => {
         if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
       } else if (row.key === "delete_sheet_config") {
         const val = row.value as any;
-        if (val?.statuses) setDeleteSheetStatuses(val.statuses);
-        if (val?.threshold) setDeleteSheetThreshold(val.threshold);
+        if (val?.rules && Array.isArray(val.rules)) {
+          setDeleteSheetRules(val.rules);
+        } else if (val?.statuses) {
+          // backward compat: convert flat config to single rule
+          setDeleteSheetRules([{ role: "__all__", statuses: val.statuses, threshold: val.threshold || 5 }]);
+        }
       } else if (row.key === "gps_config") {
         const val = row.value as any;
         if (val?.latitude) setGpsLat(String(val.latitude));
