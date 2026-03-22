@@ -380,18 +380,7 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-[150px]">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="block truncate cursor-default">{lead.address || "—"}</span>
-                          </TooltipTrigger>
-                          {lead.address && (
-                            <TooltipContent side="top" className="max-w-[300px] whitespace-normal">
-                              <p>{lead.address}</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+                      <AddressTooltip address={lead.address} />
                     </TableCell>
                     <TableCell>
                       <Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>
