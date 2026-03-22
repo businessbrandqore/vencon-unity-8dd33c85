@@ -105,6 +105,11 @@ const HRSettings = () => {
   const [leaveReasons, setLeaveReasons] = useState<string[]>([]);
   const [newLeaveReason, setNewLeaveReason] = useState("");
 
+  // Delete sheet config
+  const [deleteSheetStatuses, setDeleteSheetStatuses] = useState<string[]>(["phone_off", "no_response", "busy_now", "number_busy", "do_not_pick"]);
+  const [deleteSheetThreshold, setDeleteSheetThreshold] = useState<number>(5);
+  const [newDeleteStatus, setNewDeleteStatus] = useState("");
+
   // WhatsApp template states
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
   const [showWaModal, setShowWaModal] = useState(false);
