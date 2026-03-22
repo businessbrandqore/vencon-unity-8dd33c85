@@ -1,0 +1,1 @@
+UPDATE leads SET source = TRIM(source) WHERE source != TRIM(source)
