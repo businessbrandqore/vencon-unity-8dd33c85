@@ -359,7 +359,7 @@ const TLLeads = () => {
 
     let delQ = supabase.from("leads").select("*")
       .eq("campaign_id", selectedCampaign)
-      .gte("requeue_count", 5).order("updated_at", { ascending: false });
+      .gte("requeue_count", deleteSheetThreshold).order("updated_at", { ascending: false });
     const { data: del } = await delQ;
     setDeleteSheetLeads(del || []);
 
