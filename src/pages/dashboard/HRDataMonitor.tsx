@@ -478,7 +478,12 @@ const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: bo
               {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="text-sm font-medium">{order.customer_name || "—"}</TableCell>
-                  <TableCell className="text-sm">{order.phone || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    <div className="flex items-center gap-1">
+                      <span>{order.phone || "—"}</span>
+                      {order.phone && <CopyButton text={order.phone} />}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm">{order.product || "—"}</TableCell>
                   <TableCell className="text-sm font-medium">৳{(order.price || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">{order.quantity || 1}</TableCell>
