@@ -1203,6 +1203,82 @@ const HRSettings = () => {
           </div>
         </TabsContent>
 
+        {/* Delete Sheet Config Tab */}
+        <TabsContent value="deletesheet" className="mt-4">
+          <div className="border border-border p-4 space-y-4">
+            <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-primary" />
+              {isBn ? "ডিলিট শিট কনফিগারেশন" : "Delete Sheet Configuration"}
+            </h3>
+            <p className="text-xs text-muted-foreground font-body">
+              {isBn ? "কোন কোন স্ট্যাটাস কতবার আসলে ডাটা ডিলিট শিটে যাবে তা নির্ধারণ করুন।" : "Configure which statuses and how many times trigger the delete sheet."}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "Requeue থ্রেশহোল্ড (কতবার পর ডিলিট শিটে যাবে)" : "Requeue Threshold"}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={deleteSheetThreshold}
+                  onChange={(e) => setDeleteSheetThreshold(Number(e.target.value) || 5)}
+                  className="bg-background border-border text-foreground w-24"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "ডিলিট শিটে পাঠানোর জন্য স্ট্যাটাস সমূহ" : "Statuses that trigger delete sheet"}
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {deleteSheetStatuses.map((s) => (
+                    <span key={s} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-foreground text-xs rounded">
+                      {s}
+                      <button onClick={() => setDeleteSheetStatuses(prev => prev.filter(x => x !== s))} className="text-destructive hover:text-destructive/80">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newDeleteStatus}
+                    onChange={(e) => setNewDeleteStatus(e.target.value)}
+                    placeholder={isBn ? "নতুন স্ট্যাটাস যোগ করুন" : "Add status"}
+                    className="bg-background border-border text-foreground w-48 text-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newDeleteStatus.trim()) {
+                        setDeleteSheetStatuses(prev => [...prev, newDeleteStatus.trim()]);
+                        setNewDeleteStatus("");
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      if (newDeleteStatus.trim()) {
+                        setDeleteSheetStatuses(prev => [...prev, newDeleteStatus.trim()]);
+                        setNewDeleteStatus("");
+                      }
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> {isBn ? "যোগ" : "Add"}
+                  </Button>
+                </div>
+              </div>
+              <Button
+                onClick={() => saveGroup("delete_sheet_config", { statuses: deleteSheetStatuses, threshold: deleteSheetThreshold })}
+                disabled={saving}
+                className="text-xs"
+              >
+                {isBn ? "সংরক্ষণ করুন" : "Save Delete Sheet Config"}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* Notification Tab */}
         <TabsContent value="notification" className="mt-4">
           <div className="border border-border p-4 space-y-3">
