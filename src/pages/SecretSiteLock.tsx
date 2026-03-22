@@ -391,6 +391,66 @@ const SecretSiteLock = () => {
                 </div>
               </div>
 
+              {/* ── WARNING BROADCAST ── */}
+              <div className="space-y-3 pt-2" style={{ borderTop: "1px solid rgba(234,179,8,0.15)" }}>
+                <div className="flex items-center gap-2">
+                  <Megaphone className="w-4 h-4 text-yellow-400" />
+                  <p className="text-white text-sm font-medium">ওয়ার্নিং ব্রডকাস্ট</p>
+                  <span className="text-white/30 text-[10px]">(HR ও SA প্যানেলে দেখাবে)</span>
+                </div>
+
+                {activeWarning && (
+                  <div className="rounded-xl p-3 flex items-start justify-between gap-2"
+                    style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
+                    <div className="flex-1">
+                      <p className="text-yellow-300/60 text-[10px] mb-1">সক্রিয় ওয়ার্নিং:</p>
+                      <p className="text-yellow-200 text-xs">{activeWarning.message}</p>
+                      <p className="text-yellow-400/40 text-[10px] mt-1">
+                        মেয়াদ: {new Date(activeWarning.expires_at).toLocaleString("bn-BD")}
+                      </p>
+                    </div>
+                    <button onClick={handleClearWarning}
+                      className="text-red-400 hover:text-red-300 text-[10px] underline whitespace-nowrap">
+                      সরান
+                    </button>
+                  </div>
+                )}
+
+                <textarea
+                  value={warningMessage}
+                  onChange={(e) => setWarningMessage(e.target.value)}
+                  placeholder="ওয়ার্নিং মেসেজ লিখুন..."
+                  rows={2}
+                  className="w-full rounded-xl border border-yellow-500/20 text-white text-sm p-3 resize-none placeholder:text-white/20"
+                  style={{ background: "rgba(234,179,8,0.04)" }}
+                />
+
+                <div className="flex items-center gap-2">
+                  <p className="text-white/40 text-xs whitespace-nowrap">কাউন্টডাউন:</p>
+                  <select
+                    value={warningDuration}
+                    onChange={(e) => setWarningDuration(e.target.value)}
+                    className="flex-1 h-9 rounded-lg border border-purple-500/20 text-white text-xs px-2"
+                    style={{ background: "rgba(124,58,237,0.06)" }}>
+                    <option value="15" className="bg-gray-900">১৫ মিনিট</option>
+                    <option value="30" className="bg-gray-900">৩০ মিনিট</option>
+                    <option value="60" className="bg-gray-900">১ ঘণ্টা</option>
+                    <option value="120" className="bg-gray-900">২ ঘণ্টা</option>
+                    <option value="360" className="bg-gray-900">৬ ঘণ্টা</option>
+                    <option value="720" className="bg-gray-900">১২ ঘণ্টা</option>
+                    <option value="1440" className="bg-gray-900">২৪ ঘণ্টা</option>
+                  </select>
+                </div>
+
+                <Button onClick={handleSendWarning}
+                  disabled={sendingWarning || !lockPassword.trim() || !warningMessage.trim()}
+                  className="w-full h-9 rounded-lg font-medium text-white text-xs border-0 gap-2"
+                  style={{ background: "linear-gradient(135deg, #ca8a04, #a16207)" }}>
+                  {sendingWarning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-3.5 h-3.5" />}
+                  ওয়ার্নিং পাঠান
+                </Button>
+              </div>
+
               <div className="rounded-lg p-3 space-y-1.5" style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}>
                 <p className="text-white/50 text-[10px] leading-relaxed">
                   ⚠️ লক করলে সম্পূর্ণ ওয়েবসাইট বন্ধ হয়ে যাবে। কেউ লগইন বা কিছু অ্যাক্সেস করতে পারবে না। শুধুমাত্র এই প্যানেল থেকে আনলক করা যাবে।
