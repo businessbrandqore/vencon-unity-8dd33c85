@@ -38,6 +38,12 @@ const SecretSiteLock = () => {
   const [savedMessage, setSavedMessage] = useState("");
   const [savingMessage, setSavingMessage] = useState(false);
 
+  // Warning broadcast state
+  const [warningMessage, setWarningMessage] = useState("");
+  const [warningDuration, setWarningDuration] = useState("30"); // minutes
+  const [sendingWarning, setSendingWarning] = useState(false);
+  const [activeWarning, setActiveWarning] = useState<{ message: string; expires_at: string } | null>(null);
+
   useEffect(() => {
     // Check if this client is already blocked
     const checkBlock = async () => {
