@@ -133,16 +133,24 @@ const TLLeads = () => {
     return user?.id || "";
   }, [isATL, isGL, user, atlTlMap, selectedCampaign]);
 
-  // Load delete sheet config
+  // Load delete sheet config (per-role, fallback to flat)
   useEffect(() => {
+    if (!user) return;
     (async () => {
       const { data } = await supabase.from("app_settings").select("value").eq("key", "delete_sheet_config").maybeSingle();
       if (data?.value) {
         const val = data.value as any;
-        if (val.threshold) setDeleteSheetThreshold(val.threshold);
+        if (val.rules && Array.isArray(val.rules)) {
+          // For TL, use the highest threshold from all rules or a default
+          const myRule = val.rules.find((r: any) => r.role === user.role);
+          if (myRule?.threshold) setDeleteSheetThreshold(myRule.threshold);
+          else if (val.rules.length > 0) setDeleteSheetThreshold(val.rules[0].threshold || 5);
+        } else if (val.threshold) {
+          setDeleteSheetThreshold(val.threshold);
+        }
       }
     })();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;

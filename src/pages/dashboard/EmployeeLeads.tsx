@@ -202,18 +202,24 @@ export default function EmployeeLeads() {
     })();
   }, [user]);
 
-  // Load delete sheet config from app_settings
+  // Load delete sheet config from app_settings (per-role)
   useEffect(() => {
+    if (!user) return;
     (async () => {
       const { data } = await supabase.from("app_settings").select("value").eq("key", "delete_sheet_config").maybeSingle();
       if (data?.value) {
         const val = data.value as any;
-        if (val.statuses?.length && val.threshold) {
+        if (val.rules && Array.isArray(val.rules)) {
+          const myRule = val.rules.find((r: any) => r.role === user.role);
+          if (myRule?.statuses?.length && myRule.threshold) {
+            setDeleteSheetConfig({ statuses: myRule.statuses, threshold: myRule.threshold });
+          }
+        } else if (val.statuses?.length && val.threshold) {
           setDeleteSheetConfig({ statuses: val.statuses, threshold: val.threshold });
         }
       }
     })();
-  }, []);
+  }, [user]);
 
   // Load campaigns & websites for filters
   useEffect(() => {

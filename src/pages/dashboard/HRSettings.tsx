@@ -105,10 +105,15 @@ const HRSettings = () => {
   const [leaveReasons, setLeaveReasons] = useState<string[]>([]);
   const [newLeaveReason, setNewLeaveReason] = useState("");
 
-  // Delete sheet config
-  const [deleteSheetStatuses, setDeleteSheetStatuses] = useState<string[]>(["phone_off", "no_response", "busy_now", "number_busy", "do_not_pick"]);
-  const [deleteSheetThreshold, setDeleteSheetThreshold] = useState<number>(5);
-  const [newDeleteStatus, setNewDeleteStatus] = useState("");
+  // Delete sheet config - per-role rules
+  interface DeleteSheetRule {
+    role: string;
+    statuses: string[];
+    threshold: number;
+  }
+  const [deleteSheetRules, setDeleteSheetRules] = useState<DeleteSheetRule[]>([]);
+  const [allRoleStatuses, setAllRoleStatuses] = useState<Record<string, string[]>>({});
+  const [dsSelectedRole, setDsSelectedRole] = useState("");
 
   // WhatsApp template states
   const [waTemplates, setWaTemplates] = useState<any[]>([]);
@@ -127,7 +132,34 @@ const HRSettings = () => {
   useEffect(() => {
     fetchSettings();
     fetchWaTemplates();
+    fetchRoleStatuses();
   }, []);
+
+  // Fetch all statuses per role from campaign_data_operations
+  const fetchRoleStatuses = async () => {
+    const { data } = await supabase.from("campaign_data_operations").select("fields_config");
+    if (!data) return;
+    const roleMap: Record<string, Set<string>> = {};
+    data.forEach((row: any) => {
+      const configs = Array.isArray(row.fields_config) ? row.fields_config : [];
+      configs.forEach((cfg: any) => {
+        const role = cfg.role || "";
+        if (!role) return;
+        if (!roleMap[role]) roleMap[role] = new Set();
+        const columns = Array.isArray(cfg.columns) ? cfg.columns : [];
+        columns.forEach((col: any) => {
+          if (col.type === "note") return;
+          const opts = Array.isArray(col.options) ? col.options : [];
+          opts.forEach((opt: any) => {
+            if (opt.value) roleMap[role].add(opt.value);
+          });
+        });
+      });
+    });
+    const result: Record<string, string[]> = {};
+    Object.entries(roleMap).forEach(([role, set]) => { result[role] = Array.from(set); });
+    setAllRoleStatuses(result);
+  };
 
   const fetchSettings = async () => {
     const { data } = await supabase
@@ -153,8 +185,12 @@ const HRSettings = () => {
         if (val?.message_bn) setBirthdayMessageBn(val.message_bn);
       } else if (row.key === "delete_sheet_config") {
         const val = row.value as any;
-        if (val?.statuses) setDeleteSheetStatuses(val.statuses);
-        if (val?.threshold) setDeleteSheetThreshold(val.threshold);
+        if (val?.rules && Array.isArray(val.rules)) {
+          setDeleteSheetRules(val.rules);
+        } else if (val?.statuses) {
+          // backward compat: convert flat config to single rule
+          setDeleteSheetRules([{ role: "__all__", statuses: val.statuses, threshold: val.threshold || 5 }]);
+        }
       } else if (row.key === "gps_config") {
         const val = row.value as any;
         if (val?.latitude) setGpsLat(String(val.latitude));
@@ -1211,71 +1247,124 @@ const HRSettings = () => {
               {isBn ? "ডিলিট শিট কনফিগারেশন" : "Delete Sheet Configuration"}
             </h3>
             <p className="text-xs text-muted-foreground font-body">
-              {isBn ? "কোন কোন স্ট্যাটাস কতবার আসলে ডাটা ডিলিট শিটে যাবে তা নির্ধারণ করুন।" : "Configure which statuses and how many times trigger the delete sheet."}
+              {isBn ? "কোন পদের জন্য কোন স্ট্যাটাস কতবার আসলে ডাটা ডিলিট শিটে যাবে তা নির্ধারণ করুন। স্ট্যাটাসগুলো ডাটা অপারেশন থেকে আসবে।" : "Configure per-role which statuses and threshold trigger the delete sheet. Statuses come from Data Operations."}
             </p>
-            <div className="space-y-3">
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">
-                  {isBn ? "Requeue থ্রেশহোল্ড (কতবার পর ডিলিট শিটে যাবে)" : "Requeue Threshold"}
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={deleteSheetThreshold}
-                  onChange={(e) => setDeleteSheetThreshold(Number(e.target.value) || 5)}
-                  className="bg-background border-border text-foreground w-24"
-                />
-              </div>
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">
-                  {isBn ? "ডিলিট শিটে পাঠানোর জন্য স্ট্যাটাস সমূহ" : "Statuses that trigger delete sheet"}
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {deleteSheetStatuses.map((s) => (
-                    <span key={s} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-foreground text-xs rounded">
-                      {s}
-                      <button onClick={() => setDeleteSheetStatuses(prev => prev.filter(x => x !== s))} className="text-destructive hover:text-destructive/80">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={newDeleteStatus}
-                    onChange={(e) => setNewDeleteStatus(e.target.value)}
-                    placeholder={isBn ? "নতুন স্ট্যাটাস যোগ করুন" : "Add status"}
-                    className="bg-background border-border text-foreground w-48 text-xs"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newDeleteStatus.trim()) {
-                        setDeleteSheetStatuses(prev => [...prev, newDeleteStatus.trim()]);
-                        setNewDeleteStatus("");
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => {
-                      if (newDeleteStatus.trim()) {
-                        setDeleteSheetStatuses(prev => [...prev, newDeleteStatus.trim()]);
-                        setNewDeleteStatus("");
-                      }
-                    }}
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> {isBn ? "যোগ" : "Add"}
-                  </Button>
-                </div>
-              </div>
+
+            {/* Add new role rule */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={dsSelectedRole} onValueChange={setDsSelectedRole}>
+                <SelectTrigger className="w-56 bg-background border-border text-foreground text-xs">
+                  <SelectValue placeholder={isBn ? "পদ সিলেক্ট করুন" : "Select role"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(allRoleStatuses)
+                    .filter(r => !deleteSheetRules.some(rule => rule.role === r))
+                    .map(r => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               <Button
-                onClick={() => saveGroup("delete_sheet_config", { statuses: deleteSheetStatuses, threshold: deleteSheetThreshold })}
-                disabled={saving}
+                variant="outline"
+                size="sm"
                 className="text-xs"
+                disabled={!dsSelectedRole}
+                onClick={() => {
+                  if (dsSelectedRole) {
+                    setDeleteSheetRules(prev => [...prev, { role: dsSelectedRole, statuses: [], threshold: 5 }]);
+                    setDsSelectedRole("");
+                  }
+                }}
               >
-                {isBn ? "সংরক্ষণ করুন" : "Save Delete Sheet Config"}
+                <Plus className="h-3 w-3 mr-1" /> {isBn ? "পদ যোগ করুন" : "Add Role"}
               </Button>
             </div>
+
+            {/* Per-role rules */}
+            {deleteSheetRules.map((rule, idx) => {
+              const availStatuses = allRoleStatuses[rule.role] || [];
+              return (
+                <div key={rule.role} className="border border-border rounded p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-heading text-xs font-bold text-foreground">{rule.role}</h4>
+                    <button
+                      onClick={() => setDeleteSheetRules(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div>
+                    <label className="font-body text-xs text-muted-foreground block mb-1">
+                      {isBn ? "থ্রেশহোল্ড (কতবার পর ডিলিট শিটে যাবে)" : "Threshold"}
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={rule.threshold}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 5;
+                        setDeleteSheetRules(prev => prev.map((r, i) => i === idx ? { ...r, threshold: val } : r));
+                      }}
+                      className="bg-background border-border text-foreground w-24 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-body text-xs text-muted-foreground block mb-1">
+                      {isBn ? "স্ট্যাটাস সিলেক্ট করুন (ডাটা অপারেশন থেকে)" : "Select statuses (from Data Operations)"}
+                    </label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {rule.statuses.map((s) => (
+                        <span key={s} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-foreground text-xs rounded">
+                          {s}
+                          <button
+                            onClick={() => setDeleteSheetRules(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, statuses: r.statuses.filter(x => x !== s) } : r
+                            ))}
+                            className="text-destructive hover:text-destructive/80"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    {availStatuses.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {availStatuses.filter(s => !rule.statuses.includes(s)).map(s => (
+                          <button
+                            key={s}
+                            onClick={() => setDeleteSheetRules(prev => prev.map((r, i) =>
+                              i === idx ? { ...r, statuses: [...r.statuses, s] } : r
+                            ))}
+                            className="px-2 py-1 text-xs border border-border rounded hover:bg-secondary text-muted-foreground"
+                          >
+                            + {s}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        {isBn ? "এই পদের জন্য ডাটা অপারেশনে কোনো স্ট্যাটাস কনফিগার করা হয়নি।" : "No statuses configured in Data Operations for this role."}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {deleteSheetRules.length === 0 && (
+              <p className="text-xs text-muted-foreground italic py-4 text-center">
+                {isBn ? "কোনো পদ যোগ করা হয়নি। উপরে থেকে পদ সিলেক্ট করে যোগ করুন।" : "No roles added yet."}
+              </p>
+            )}
+
+            <Button
+              onClick={() => saveGroup("delete_sheet_config", { rules: deleteSheetRules })}
+              disabled={saving}
+              className="text-xs"
+            >
+              {isBn ? "সংরক্ষণ করুন" : "Save Delete Sheet Config"}
+            </Button>
           </div>
         </TabsContent>
 
