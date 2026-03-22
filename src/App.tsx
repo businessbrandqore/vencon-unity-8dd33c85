@@ -76,6 +76,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <DynamicFavicon />
           <Routes>
             {/* Secret control panel - outside SetupGate so admin can always access */}
             <Route path="/bq-ctrl-7x9k" element={<SecretSiteLock />} />
@@ -86,6 +87,12 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/:panel/login" element={<PanelLogin />} />
+
+                  {/* Panel base redirects */}
+                  <Route path="/sa" element={<Navigate to="/sa/dashboard" replace />} />
+                  <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
+                  <Route path="/tl" element={<Navigate to="/tl/dashboard" replace />} />
+                  <Route path="/employee" element={<Navigate to="/employee/dashboard" replace />} />
 
                   {/* SA Panel Routes */}
                   <Route element={<DashboardLayout panel="sa" />}>
