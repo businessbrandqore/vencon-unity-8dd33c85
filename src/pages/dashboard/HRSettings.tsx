@@ -21,6 +21,29 @@ import { Label } from "@/components/ui/label";
 
 const BLUE = "#1D4ED8";
 
+const ALL_ROLES: { value: string; label: string }[] = [
+  { value: "telesales_executive", label: "টেলিসেলস এক্সিকিউটিভ (Bronze)" },
+  { value: "silver_agent", label: "সিলভার এজেন্ট" },
+  { value: "golden_agent", label: "গোল্ডেন এজেন্ট" },
+  { value: "cso", label: "CSO (Customer Security Officer)" },
+  { value: "cs_executive", label: "CS Executive" },
+  { value: "warehouse_assistant", label: "Warehouse Assistant" },
+  { value: "warehouse_supervisor", label: "Warehouse Supervisor" },
+  { value: "inventory_manager", label: "Inventory Manager" },
+  { value: "delivery_coordinator", label: "Delivery Coordinator" },
+  { value: "maintenance_officer", label: "Maintenance Officer" },
+  { value: "office_assistant", label: "Office Assistant" },
+  { value: "cancellation_executive", label: "Cancellation Executive" },
+  { value: "editor", label: "Editor" },
+  { value: "group_leader", label: "Group Leader" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "assistant_team_leader", label: "Assistant Team Leader (ATL)" },
+  { value: "Business Development And Marketing Manager", label: "BDO (বিডিও)" },
+  { value: "hr_manager", label: "HR Manager" },
+  { value: "hr_executive", label: "HR Executive" },
+  { value: "super_admin", label: "Super Admin" },
+];
+
 interface Settings {
   company_logo?: string;
   favicon?: string;
@@ -1257,10 +1280,10 @@ const HRSettings = () => {
                   <SelectValue placeholder={isBn ? "পদ সিলেক্ট করুন" : "Select role"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(allRoleStatuses)
-                    .filter(r => !deleteSheetRules.some(rule => rule.role === r))
+                  {ALL_ROLES
+                    .filter(r => !deleteSheetRules.some(rule => rule.role === r.value))
                     .map(r => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                     ))}
                 </SelectContent>
               </Select>
@@ -1286,7 +1309,7 @@ const HRSettings = () => {
               return (
                 <div key={rule.role} className="border border-border rounded p-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-heading text-xs font-bold text-foreground">{rule.role}</h4>
+                    <h4 className="font-heading text-xs font-bold text-foreground">{ALL_ROLES.find(r => r.value === rule.role)?.label || rule.role}</h4>
                     <button
                       onClick={() => setDeleteSheetRules(prev => prev.filter((_, i) => i !== idx))}
                       className="text-destructive hover:text-destructive/80"
