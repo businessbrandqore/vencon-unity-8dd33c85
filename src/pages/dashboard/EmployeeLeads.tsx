@@ -20,6 +20,8 @@ import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCir
 import EmptyState from "@/components/ui/EmptyState";
 import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 import FraudChecker from "@/components/FraudChecker";
+import CopyButton from "@/components/ui/CopyButton";
+import AddressTooltip from "@/components/ui/AddressTooltip";
 
 interface LeadRow {
   id: string;
