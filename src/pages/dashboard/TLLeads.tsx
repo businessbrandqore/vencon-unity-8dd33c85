@@ -42,6 +42,7 @@ const TLLeads = () => {
   const { isATL, executeOrRequestApproval } = useATLApproval();
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
+  const [activeDataModeTab, setActiveDataModeTab] = useState<"lead" | "processing">("lead");
   const [selectedCampaign, setSelectedCampaign] = useState("");
   const [selectedWebsite, setSelectedWebsite] = useState("all");
   const [campaignWebsites, setCampaignWebsites] = useState<{ id: string; site_name: string }[]>([]);
