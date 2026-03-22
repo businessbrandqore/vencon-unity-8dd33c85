@@ -12,10 +12,30 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Activity, Target, ShoppingCart, Search, Phone, User, MapPin,
-  Megaphone, TrendingUp, Package, Truck,
+  Megaphone, TrendingUp, Package, Truck, Copy, Check,
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
+
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("কপি হয়েছে!");
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button onClick={handleCopy} className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors">
+      {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+    </button>
+  );
+};
 
 const statusColorMap: Record<string, string> = {
   fresh: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
