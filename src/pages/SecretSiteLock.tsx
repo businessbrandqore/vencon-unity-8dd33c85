@@ -41,6 +41,9 @@ const SecretSiteLock = () => {
   // Warning broadcast state
   const [warningMessage, setWarningMessage] = useState("");
   const [warningDuration, setWarningDuration] = useState("30"); // minutes
+  const [customDuration, setCustomDuration] = useState(false);
+  const [customHours, setCustomHours] = useState("");
+  const [customMinutes, setCustomMinutes] = useState("");
   const [sendingWarning, setSendingWarning] = useState(false);
   const [activeWarning, setActiveWarning] = useState<{ message: string; expires_at: string } | null>(null);
 
