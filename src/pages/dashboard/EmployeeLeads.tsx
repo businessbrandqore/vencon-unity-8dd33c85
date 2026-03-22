@@ -681,8 +681,13 @@ export default function EmployeeLeads() {
 
         Object.entries(parsed).forEach(([k, v]) => {
           if (k === "extra_fields" && v && typeof v === "object" && !Array.isArray(v)) {
+            // Flatten ALL extra_fields keys into the result dynamically
             const extraFields = v as Record<string, unknown>;
-            if (extraFields.product != null) result.product = String(extraFields.product);
+            Object.entries(extraFields).forEach(([ek, ev]) => {
+              if (ev != null && String(ev).trim() !== "") {
+                result[ek] = String(ev);
+              }
+            });
             return;
           }
           result[k] = v != null ? String(v) : "";
