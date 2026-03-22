@@ -65,6 +65,7 @@ import NotificationsPage from "./pages/dashboard/NotificationsPage";
 import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
 import SecretSiteLock from "./pages/SecretSiteLock";
+import { DynamicFavicon } from "./components/DynamicFavicon";
 
 const queryClient = new QueryClient();
 
