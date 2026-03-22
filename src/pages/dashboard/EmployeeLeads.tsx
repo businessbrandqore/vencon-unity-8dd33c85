@@ -181,18 +181,39 @@ export default function EmployeeLeads() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      // Get agent's campaign
+      // Try agent's campaign first
       const { data: carData } = await supabase.from("campaign_agent_roles")
         .select("campaign_id, is_bronze, is_silver").eq("agent_id", user.id).limit(1).maybeSingle();
-      if (!carData?.campaign_id) { setConfigLoaded(true); return; }
 
-      // Load config
+      let campaignId = carData?.campaign_id;
+      let isSilver = carData?.is_silver;
+
+      // If no campaign_agent_roles, try from agent's leads
+      if (!campaignId) {
+        const { data: leadCamp } = await supabase.from("leads")
+          .select("campaign_id").eq("assigned_to", user.id).not("campaign_id", "is", null).limit(1).maybeSingle();
+        if (leadCamp?.campaign_id) campaignId = leadCamp.campaign_id;
+      }
+
+      // If still no campaign, try loading any available config
+      if (!campaignId) {
+        const { data: anyConfig } = await supabase.from("campaign_data_operations")
+          .select("fields_config").limit(1).maybeSingle();
+        if (anyConfig?.fields_config) {
+          const configs = anyConfig.fields_config as unknown as RoleColumnConfig[];
+          const roleConfig = configs.find(c => c.role === user.role) || configs.find(c => c.role === "telesales_executive") || configs[0];
+          if (roleConfig?.columns?.length) setDynamicColumns(roleConfig.columns);
+        }
+        setConfigLoaded(true);
+        return;
+      }
+
+      // Load config for the found campaign
       const { data: configData } = await supabase.from("campaign_data_operations")
-        .select("fields_config").eq("campaign_id", carData.campaign_id).maybeSingle();
+        .select("fields_config").eq("campaign_id", campaignId).maybeSingle();
       if (!configData?.fields_config) { setConfigLoaded(true); return; }
 
-      // Determine role key
-      const roleKey = carData.is_silver ? "silver_agent" : "telesales_executive";
+      const roleKey = isSilver ? "silver_agent" : (user.role || "telesales_executive");
       const configs = configData.fields_config as unknown as RoleColumnConfig[];
       const roleConfig = configs.find(c => c.role === roleKey) || configs[0];
       if (roleConfig?.columns?.length) {
