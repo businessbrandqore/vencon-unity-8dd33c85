@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle } from "lucide-react";
+import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
