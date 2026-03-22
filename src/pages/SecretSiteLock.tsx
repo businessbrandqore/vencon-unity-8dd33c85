@@ -216,7 +216,7 @@ const SecretSiteLock = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-auto py-8"
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto py-8"
       style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #0f0f3d 40%, #1a0a3e 70%, ${NAVY} 100%)` }}>
       
       <div className="absolute inset-0 overflow-hidden">
