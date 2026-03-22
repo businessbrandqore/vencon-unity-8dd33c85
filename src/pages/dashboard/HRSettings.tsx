@@ -1309,7 +1309,7 @@ const HRSettings = () => {
               return (
                 <div key={rule.role} className="border border-border rounded p-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-heading text-xs font-bold text-foreground">{rule.role}</h4>
+                    <h4 className="font-heading text-xs font-bold text-foreground">{ALL_ROLES.find(r => r.value === rule.role)?.label || rule.role}</h4>
                     <button
                       onClick={() => setDeleteSheetRules(prev => prev.filter((_, i) => i !== idx))}
                       className="text-destructive hover:text-destructive/80"
