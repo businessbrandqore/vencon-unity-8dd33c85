@@ -666,6 +666,21 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
+  // Filter campaigns by the active data mode tab
+  const filteredCampaignsByMode = useMemo(() => {
+    return campaigns.filter(c => c.data_mode === activeDataModeTab);
+  }, [campaigns, activeDataModeTab]);
+
+  // Auto-select first campaign when mode tab changes
+  useEffect(() => {
+    const filtered = campaigns.filter(c => c.data_mode === activeDataModeTab);
+    if (filtered.length > 0 && !filtered.some(c => c.id === selectedCampaign)) {
+      setSelectedCampaign(filtered[0].id);
+    } else if (filtered.length === 0) {
+      setSelectedCampaign("");
+    }
+  }, [activeDataModeTab, campaigns]);
+
   // Parse dynamic columns from special_note JSON for fresh leads table
   const specialNoteKeys = useMemo(() => {
     const keys = new Set<string>();
