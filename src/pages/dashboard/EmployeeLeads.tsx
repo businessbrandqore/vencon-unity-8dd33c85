@@ -519,11 +519,13 @@ export default function EmployeeLeads() {
     if (hasNonEmployeeRoute) {
       updatePayload.assigned_to = null;
     }
-    if (REQUEUE_STATUS_VALUES.includes(normalizedStatus)) {
+    const requeueStatuses = deleteSheetConfig?.statuses || DEFAULT_REQUEUE_STATUS_VALUES;
+    const deleteThreshold = deleteSheetConfig?.threshold || DEFAULT_DELETE_SHEET_THRESHOLD;
+    if (requeueStatuses.includes(normalizedStatus)) {
       const cnt = (lead.requeue_count || 0) + 1;
       updatePayload.requeue_count = cnt;
       updatePayload.requeue_at = addMinutes(new Date(), REQUEUE_MINUTES).toISOString();
-      if (cnt >= DELETE_SHEET_THRESHOLD) updatePayload.status = "tl_delete_sheet";
+      if (cnt >= deleteThreshold) updatePayload.status = "tl_delete_sheet";
     }
     const { error } = await supabase.from("leads").update(updatePayload).eq("id", lead.id);
     if (error) {
