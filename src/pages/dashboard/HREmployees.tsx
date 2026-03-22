@@ -212,6 +212,12 @@ const HREmployees = () => {
                     >
                       {emp.is_active ? (isBn ? "নিষ্ক্রিয়" : "Deactivate") : (isBn ? "সক্রিয়" : "Activate")}
                     </button>
+                    <button
+                      onClick={() => setDeleteTarget(emp)}
+                      className="text-xs px-2 py-1 border border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      {isBn ? "ডিলিট" : "Delete"}
+                    </button>
                   </td>
                 </tr>
               ))}
