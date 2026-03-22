@@ -668,9 +668,8 @@ export default function EmployeeLeads() {
     loadLeads();
   };
 
-  // Extract dynamic raw-data column keys from special_note JSON across all leads
-  // Keys to hide from raw data columns (already shown as fixed columns or internal)
-  const HIDDEN_RAW_KEYS = new Set(["customer_name", "phone", "address", "name", "extra_fields", "price"]);
+  // Only these keys from special_note JSON are visible to agents
+  const ALLOWED_RAW_KEYS = new Set(["order_id", "product"]);
 
   const extractLeadRawData = (note: string | null): Record<string, string> => {
     if (!note) return {};
@@ -706,7 +705,7 @@ export default function EmployeeLeads() {
     leads.forEach((lead) => {
       const parsed = extractLeadRawData(lead.special_note);
       Object.keys(parsed).forEach((k) => {
-        if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
+        if (ALLOWED_RAW_KEYS.has(k)) keySet.add(k);
       });
     });
     return Array.from(keySet);
