@@ -56,6 +56,7 @@ const TLLeads = () => {
   const [callDoneOrders, setCallDoneOrders] = useState<Order[]>([]);
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
   const [deleteSheetLeads, setDeleteSheetLeads] = useState<Lead[]>([]);
+  const [deleteSheetThreshold, setDeleteSheetThreshold] = useState(5);
   const [processingLeads, setProcessingLeads] = useState<Lead[]>([]);
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
