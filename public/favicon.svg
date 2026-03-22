@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vencon favicon">
+  <defs>
+    <linearGradient id="venconGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#f8fafc"/>
+  <path d="M14 16h11l7 24 7-24h11L37 48h-9L14 16Z" fill="url(#venconGradient)"/>
+</svg>
