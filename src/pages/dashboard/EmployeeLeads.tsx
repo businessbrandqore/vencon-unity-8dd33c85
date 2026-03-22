@@ -162,7 +162,7 @@ export default function EmployeeLeads() {
 
   // Filter states
   const [filterCampaignId, setFilterCampaignId] = useState<string>("all");
-  const [filterDataMode, setFilterDataMode] = useState<string>("all");
+  
   const [filterWebsite, setFilterWebsite] = useState<string>("all");
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
   const [websites, setWebsites] = useState<{ id: string; site_name: string; campaign_id: string }[]>([]);
