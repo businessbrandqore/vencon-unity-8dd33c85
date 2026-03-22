@@ -37,7 +37,7 @@ const ALL_ROLES: { value: string; label: string }[] = [
   { value: "editor", label: "Editor" },
   { value: "group_leader", label: "Group Leader" },
   { value: "team_leader", label: "Team Leader" },
-  { value: "assistant all_team_leader", label: "Assistant Team Leader (ATL)" },
+  { value: "assistant_team_leader", label: "Assistant Team Leader (ATL)" },
   { value: "Business Development And Marketing Manager", label: "BDO (বিডিও)" },
   { value: "hr_manager", label: "HR Manager" },
   { value: "hr_executive", label: "HR Executive" },
