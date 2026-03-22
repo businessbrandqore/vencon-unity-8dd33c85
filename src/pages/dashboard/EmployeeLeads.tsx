@@ -96,6 +96,18 @@ const DEFAULT_REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_resche
 const REQUEUE_MINUTES = 40;
 const DEFAULT_DELETE_SHEET_THRESHOLD = 5;
 
+const STATUS_COLOR_CLASSES: Record<string, string> = {
+  red: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+  green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  yellow: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+  purple: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  orange: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  gray: "bg-muted text-muted-foreground",
+};
+
+const getStatusColorClasses = (color?: string) => STATUS_COLOR_CLASSES[color || "gray"] || STATUS_COLOR_CLASSES.gray;
+
 // Statuses that trigger special modals
 const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
 
