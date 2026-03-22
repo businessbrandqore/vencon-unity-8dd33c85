@@ -453,6 +453,10 @@ const HRSettings = () => {
             <Cake className="h-3.5 w-3.5" />
             <span className="text-[10px] sm:text-xs">{isBn ? "জন্মদিন" : "Birthday"}</span>
           </TabsTrigger>
+          <TabsTrigger value="deletesheet" className="text-xs gap-1 shrink-0 px-2">
+            <ListChecks className="h-3.5 w-3.5" />
+            <span className="text-[10px] sm:text-xs">{isBn ? "ডিলিট শিট" : "Delete Sheet"}</span>
+          </TabsTrigger>
           <TabsTrigger value="api" className="text-xs gap-1 shrink-0 px-2">
             <Plug className="h-3.5 w-3.5" />
             <span className="text-[10px] sm:text-xs">API</span>
