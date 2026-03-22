@@ -5,13 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, ShoppingCart, Phone, Trash2, CheckCircle, TrendingUp } from "lucide-react";
+import { Target, ShoppingCart, Phone, Trash2, CheckCircle, TrendingUp, Database } from "lucide-react";
 import GroupLeaderDashboard from "./GroupLeaderDashboard";
 
 interface CampaignOption {
   id: string;
   name: string;
-  data_mode: string;
 }
 
 interface WebsiteOption {
@@ -34,6 +33,7 @@ const TLDashboard = () => {
   const [activeDataMode, setActiveDataMode] = useState<string>("lead");
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({
+    totalLeads: 0,
     newLeads: 0,
     confirmedOrders: 0,
     callDoneQueue: 0,
@@ -51,11 +51,13 @@ const TLDashboard = () => {
     return user?.id || "";
   }, [isATL, user, atlTlMap, selectedCampaign]);
 
-  // Filter campaigns by active data mode
-  const filteredCampaigns = useMemo(() =>
-    campaigns.filter(c => c.data_mode === activeDataMode),
-    [campaigns, activeDataMode]
-  );
+  // Filter campaigns that have websites matching active data mode
+  const filteredCampaigns = useMemo(() => {
+    const campaignIdsWithMode = new Set(
+      websites.filter(w => w.data_mode === activeDataMode).map(w => w.campaign_id)
+    );
+    return campaigns.filter(c => campaignIdsWithMode.has(c.id));
+  }, [campaigns, websites, activeDataMode]);
 
   // Filter websites by selected campaign and data mode
   const filteredWebsites = useMemo(() =>
@@ -80,14 +82,12 @@ const TLDashboard = () => {
     if (!user) return;
     const fetchCampaigns = async () => {
       if (isBDO) {
-        const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
-        if (data) {
-          setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" })));
-        }
+        const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
+        if (data) setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name })));
       } else if (isATL) {
         const { data } = await supabase
           .from("campaign_agent_roles")
-          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
+          .select("campaign_id, tl_id, campaigns(id, name)")
           .eq("agent_id", user.id);
         if (data) {
           const seen = new Set<string>();
@@ -97,7 +97,7 @@ const TLDashboard = () => {
             .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
             .map((d: any) => {
               tlMap[d.campaigns.id] = d.tl_id;
-              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
+              return { id: d.campaigns.id, name: d.campaigns.name };
             });
           setAtlTlMap(tlMap);
           setCampaigns(list);
@@ -105,12 +105,12 @@ const TLDashboard = () => {
       } else {
         const { data } = await supabase
           .from("campaign_tls")
-          .select("campaign_id, campaigns(id, name, data_mode)")
+          .select("campaign_id, campaigns(id, name)")
           .eq("tl_id", user.id);
         if (data) {
           setCampaigns(
             data.map((d: any) => d.campaigns).filter(Boolean)
-              .map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }))
+              .map((c: any) => ({ id: c.id, name: c.name }))
           );
         }
       }
@@ -121,9 +121,9 @@ const TLDashboard = () => {
   // Fetch websites
   useEffect(() => {
     if (!user) return;
+    const campaignIds = campaigns.map(c => c.id);
+    if (campaignIds.length === 0) { setWebsites([]); return; }
     const fetchWebsites = async () => {
-      const campaignIds = campaigns.map(c => c.id);
-      if (campaignIds.length === 0) { setWebsites([]); return; }
       const { data } = await supabase
         .from("campaign_websites")
         .select("id, site_name, campaign_id, data_mode")
@@ -137,12 +137,12 @@ const TLDashboard = () => {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     if (!user || !selectedCampaign) {
-      setStats({ newLeads: 0, confirmedOrders: 0, callDoneQueue: 0, preOrders: 0, deleteSheet: 0, receiveRatio: 0 });
+      setStats({ totalLeads: 0, newLeads: 0, confirmedOrders: 0, callDoneQueue: 0, preOrders: 0, deleteSheet: 0, receiveRatio: 0 });
       return;
     }
     const effectiveTlId = getEffectiveTlId();
 
-    // Get website names for source filtering
+    // Get website names for source filtering based on active mode
     let sourceFilter: string[] | null = null;
     if (selectedWebsite !== "all") {
       const ws = websites.find(w => w.id === selectedWebsite);
@@ -151,18 +151,31 @@ const TLDashboard = () => {
       sourceFilter = filteredWebsites.map(w => w.site_name);
     }
 
-    // New leads
+    // If no websites match this mode for this campaign, show zeros
+    if (!sourceFilter || sourceFilter.length === 0) {
+      setStats({ totalLeads: 0, newLeads: 0, confirmedOrders: 0, callDoneQueue: 0, preOrders: 0, deleteSheet: 0, receiveRatio: 0 });
+      return;
+    }
+
+    // Total leads (all statuses)
+    let totalQ = supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("campaign_id", selectedCampaign)
+      .in("source", sourceFilter);
+    if (!isBDO) totalQ = totalQ.eq("tl_id", effectiveTlId);
+    const { count: totalLeads } = await totalQ;
+
+    // New leads (fresh, unassigned)
     let leadsQ = supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
-      .eq("campaign_id", selectedCampaign);
+      .eq("campaign_id", selectedCampaign)
+      .in("source", sourceFilter);
     if (!isBDO) {
       leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh").eq("tl_id", effectiveTlId);
     } else {
       leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh");
-    }
-    if (sourceFilter && sourceFilter.length > 0) {
-      leadsQ = leadsQ.in("source", sourceFilter);
     }
     const { count: newLeads } = await leadsQ;
 
@@ -171,11 +184,9 @@ const TLDashboard = () => {
       .from("orders")
       .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
       .eq("status", "pending_cso")
-      .eq("leads.campaign_id", selectedCampaign);
+      .eq("leads.campaign_id", selectedCampaign)
+      .in("leads.source", sourceFilter);
     if (!isBDO) ordersQ = ordersQ.eq("tl_id", effectiveTlId);
-    if (sourceFilter && sourceFilter.length > 0) {
-      ordersQ = ordersQ.in("leads.source", sourceFilter);
-    }
     const { count: confirmedOrders } = await ordersQ;
 
     // Call done queue
@@ -183,11 +194,9 @@ const TLDashboard = () => {
       .from("orders")
       .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
       .eq("status", "call_done")
-      .eq("leads.campaign_id", selectedCampaign);
+      .eq("leads.campaign_id", selectedCampaign)
+      .in("leads.source", sourceFilter);
     if (!isBDO) callQ = callQ.eq("tl_id", effectiveTlId);
-    if (sourceFilter && sourceFilter.length > 0) {
-      callQ = callQ.in("leads.source", sourceFilter);
-    }
     const { count: callDoneQueue } = await callQ;
 
     // Pre-orders
@@ -195,11 +204,9 @@ const TLDashboard = () => {
       .from("pre_orders")
       .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
       .eq("status", "pending")
-      .eq("leads.campaign_id", selectedCampaign);
+      .eq("leads.campaign_id", selectedCampaign)
+      .in("leads.source", sourceFilter);
     if (!isBDO) preQ = preQ.eq("tl_id", effectiveTlId);
-    if (sourceFilter && sourceFilter.length > 0) {
-      preQ = preQ.in("leads.source", sourceFilter);
-    }
     const { count: preOrders } = await preQ;
 
     // Delete sheet
@@ -207,11 +214,9 @@ const TLDashboard = () => {
       .from("leads")
       .select("*", { count: "exact", head: true })
       .eq("campaign_id", selectedCampaign)
+      .in("source", sourceFilter)
       .gte("requeue_count", 5);
     if (!isBDO) delQ = delQ.eq("tl_id", effectiveTlId);
-    if (sourceFilter && sourceFilter.length > 0) {
-      delQ = delQ.in("source", sourceFilter);
-    }
     const { count: deleteSheet } = await delQ;
 
     // Receive ratio this month
@@ -219,27 +224,23 @@ const TLDashboard = () => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    let totalQ = supabase
+    let totalOrdQ = supabase
       .from("orders")
       .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
       .eq("leads.campaign_id", selectedCampaign)
+      .in("leads.source", sourceFilter)
       .gte("created_at", startOfMonth.toISOString());
-    if (!isBDO) totalQ = totalQ.eq("tl_id", effectiveTlId);
-    if (sourceFilter && sourceFilter.length > 0) {
-      totalQ = totalQ.in("leads.source", sourceFilter);
-    }
-    const { count: totalOrders } = await totalQ;
+    if (!isBDO) totalOrdQ = totalOrdQ.eq("tl_id", effectiveTlId);
+    const { count: totalOrders } = await totalOrdQ;
 
     let delivQ = supabase
       .from("orders")
       .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
       .eq("delivery_status", "delivered")
       .eq("leads.campaign_id", selectedCampaign)
+      .in("leads.source", sourceFilter)
       .gte("created_at", startOfMonth.toISOString());
     if (!isBDO) delivQ = delivQ.eq("tl_id", effectiveTlId);
-    if (sourceFilter && sourceFilter.length > 0) {
-      delivQ = delivQ.in("leads.source", sourceFilter);
-    }
     const { count: deliveredOrders } = await delivQ;
 
     const ratio = totalOrders && totalOrders > 0
@@ -247,6 +248,7 @@ const TLDashboard = () => {
       : 0;
 
     setStats({
+      totalLeads: totalLeads || 0,
       newLeads: newLeads || 0,
       confirmedOrders: confirmedOrders || 0,
       callDoneQueue: callDoneQueue || 0,
@@ -268,17 +270,23 @@ const TLDashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchStats())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchStats())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pre_orders' }, () => fetchStats())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => {})
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_tls' }, () => {})
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => fetchStats())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_websites' }, () => {
+        // Refetch websites
+        const cIds = campaigns.map(c => c.id);
+        if (cIds.length > 0) {
+          supabase.from("campaign_websites").select("id, site_name, campaign_id, data_mode").in("campaign_id", cIds).eq("is_active", true)
+            .then(({ data }) => { if (data) setWebsites(data); });
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchStats]);
+  }, [user, fetchStats, campaigns]);
 
   if (!user) return null;
   if (isGL) return <GroupLeaderDashboard />;
 
   const statCards = [
+    { label: isBn ? "মোট লিড" : "Total Leads", value: stats.totalLeads, icon: Database, color: "text-cyan-400" },
     { label: isBn ? "নতুন Leads" : "New Leads", value: stats.newLeads, icon: Target, color: "text-green-400" },
     { label: isBn ? "Confirmed Orders" : "Confirmed Orders", value: stats.confirmedOrders, icon: CheckCircle, color: "text-yellow-400" },
     { label: isBn ? "Call Done Queue" : "Call Done Queue", value: stats.callDoneQueue, icon: Phone, color: "text-blue-400" },
@@ -289,7 +297,6 @@ const TLDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="font-heading text-2xl font-bold text-foreground">
@@ -301,9 +308,9 @@ const TLDashboard = () => {
         </div>
       </div>
 
-      {/* Filters row: Data Mode Tabs + Campaign + Website */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <Tabs value={activeDataMode} onValueChange={(v) => setActiveDataMode(v)}>
+        <Tabs value={activeDataMode} onValueChange={setActiveDataMode}>
           <TabsList className="bg-secondary">
             <TabsTrigger value="lead" className="text-xs">🎯 {isBn ? "লিড" : "Lead"}</TabsTrigger>
             <TabsTrigger value="processing" className="text-xs">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</TabsTrigger>
@@ -338,7 +345,7 @@ const TLDashboard = () => {
 
       {/* Stat Cards */}
       {selectedCampaign ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {statCards.map((s) => (
             <Card key={s.label} className="bg-card border-border">
               <CardContent className="p-5 flex items-center gap-4">
