@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect, useCallback } from "react";
 import SalaryCard from "@/components/SalaryCard";
 import { useAuth } from "@/contexts/AuthContext";

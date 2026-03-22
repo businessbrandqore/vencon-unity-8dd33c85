@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useState, useEffect } from "react";
 import SalaryCard from "@/components/SalaryCard";
 import { supabase } from "@/integrations/supabase/client";
