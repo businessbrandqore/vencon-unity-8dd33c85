@@ -99,6 +99,71 @@ const SecretSiteLock = () => {
     } finally {
       setCheckingStatus(false);
     }
+    // Also fetch active warning
+    try {
+      const { data: wData } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "broadcast_warning")
+        .maybeSingle();
+      if (wData?.value) {
+        const val = wData.value as unknown as { message: string; expires_at: string };
+        if (val.message && val.expires_at && new Date(val.expires_at).getTime() > Date.now()) {
+          setActiveWarning(val);
+        } else {
+          setActiveWarning(null);
+        }
+      } else {
+        setActiveWarning(null);
+      }
+    } catch { /* silent */ }
+  };
+
+  const handleSendWarning = async () => {
+    if (!lockPassword.trim()) { toast.error("পাসওয়ার্ড দিন"); return; }
+    if (!warningMessage.trim()) { toast.error("ওয়ার্নিং মেসেজ লিখুন"); return; }
+    setSendingWarning(true);
+    try {
+      // Verify password first
+      const { data: verifyData } = await supabase.functions.invoke("setup-verification", {
+        body: { action: "verify", password: lockPassword, clientId: getClientId() }
+      });
+      if (!verifyData?.success) { toast.error("পাসওয়ার্ড ভুল"); setSendingWarning(false); return; }
+
+      const expiresAt = new Date(Date.now() + parseInt(warningDuration) * 60000).toISOString();
+      const warningVal = { message: warningMessage, expires_at: expiresAt };
+
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("key", "broadcast_warning")
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("app_settings").update({ value: warningVal as unknown as Record<string, unknown> }).eq("key", "broadcast_warning");
+      } else {
+        await supabase.from("app_settings").insert({ key: "broadcast_warning", value: warningVal as unknown as Record<string, unknown> });
+      }
+
+      setActiveWarning(warningVal);
+      setWarningMessage("");
+      toast.success("⚠️ ওয়ার্নিং পাঠানো হয়েছে!");
+    } catch {
+      toast.error("ওয়ার্নিং পাঠানো ব্যর্থ");
+    } finally {
+      setSendingWarning(false);
+    }
+  };
+
+  const handleClearWarning = async () => {
+    if (!lockPassword.trim()) { toast.error("পাসওয়ার্ড দিন"); return; }
+    try {
+      await supabase.from("app_settings").update({ value: null }).eq("key", "broadcast_warning");
+      setActiveWarning(null);
+      toast.success("ওয়ার্নিং সরানো হয়েছে");
+    } catch {
+      toast.error("ব্যর্থ");
+    }
   };
 
   const handleLockAction = async (action: "lock" | "unlock") => {
