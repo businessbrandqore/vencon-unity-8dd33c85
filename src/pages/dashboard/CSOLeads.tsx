@@ -438,7 +438,7 @@ export default function CSOLeads() {
   // Check if dynamic config is available
   const hasDynamicConfig = configLoaded && dropdownCols.length > 0;
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   return (
     <div className="space-y-6">

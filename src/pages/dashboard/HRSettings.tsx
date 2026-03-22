@@ -357,7 +357,7 @@ const HRSettings = () => {
   const saveDeduction = () => saveGroup("attendance_deduction_config", deduction);
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>;
+    return <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />;
   }
 
   const fieldClass = "bg-background border-border text-foreground";

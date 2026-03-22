@@ -348,7 +348,7 @@ export default function ManagerAttendance() {
     }
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   const hasCheckedIn = !!todayRecord?.clock_in;
   const hasCheckedOut = !!todayRecord?.clock_out;

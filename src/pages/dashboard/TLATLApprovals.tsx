@@ -192,7 +192,7 @@ const TLATLApprovals = () => {
           <Card>
             <CardContent className="p-0">
               {loading ? (
-                <div className="p-8 text-center text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>
+                <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} size="sm" />
               ) : filteredApprovals.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   {tab === "pending" ? (isBn ? "কোনো অপেক্ষমাণ রিকোয়েস্ট নেই" : "No pending requests") : (isBn ? "কোনো রেকর্ড নেই" : "No records")}

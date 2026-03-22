@@ -795,7 +795,7 @@ export default function HRDataOperations() {
               </Select>
             </div>
           </div>
-          {configLoading && <p className="text-xs text-muted-foreground mt-2">লোড হচ্ছে...</p>}
+          {configLoading && <LoadingSpinner text="লোড হচ্ছে..." size="sm" />}
         </CardContent>
       </Card>
 

@@ -107,7 +107,7 @@ const NotificationsPage = () => {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <p className="p-8 text-center text-muted-foreground text-sm">Loading...</p>
+            <LoadingSpinner text="Loading..." size="sm" />
           ) : !data?.items.length ? (
             <p className="p-8 text-center text-muted-foreground text-sm">কোনো notification নেই</p>
           ) : (

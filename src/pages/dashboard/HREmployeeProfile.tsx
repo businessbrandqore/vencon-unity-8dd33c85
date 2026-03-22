@@ -262,7 +262,7 @@ const HREmployeeProfile = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">{isBn ? "লোড হচ্ছে..." : "Loading..."}</div>;
+    return <LoadingSpinner text={isBn ? "লোড হচ্ছে..." : "Loading..."} />;
   }
 
   if (!emp) {

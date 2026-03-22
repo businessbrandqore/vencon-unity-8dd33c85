@@ -57,7 +57,7 @@ export default function DeliveryCoordinatorDashboard() {
     return () => clearInterval(iv);
   }, [profile]);
 
-  if (loading) return <div className="p-6 text-muted-foreground">লোড হচ্ছে...</div>;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
 
   const summaryCards = [
     { label: "মোট অর্ডার", value: stats.total, icon: Package, color: "text-foreground" },

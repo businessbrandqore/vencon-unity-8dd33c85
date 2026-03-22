@@ -302,7 +302,7 @@ interface LeadRow {
 }
 
 const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolean; isBn: boolean }) => {
-  if (loading) return <div className="h-40 animate-pulse bg-muted rounded-lg" />;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." size="sm" />;
   if (leads.length === 0)
     return (
       <Card>
@@ -413,7 +413,7 @@ interface OrderRow {
 }
 
 const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: boolean; isBn: boolean }) => {
-  if (loading) return <div className="h-40 animate-pulse bg-muted rounded-lg" />;
+  if (loading) return <LoadingSpinner text="লোড হচ্ছে..." size="sm" />;
   if (orders.length === 0)
     return (
       <Card>
