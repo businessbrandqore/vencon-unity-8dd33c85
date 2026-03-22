@@ -731,22 +731,12 @@ const TLLeads = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">{isBn ? "ক্যাম্পেইন" : "Campaign"}</label>
             <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setDistAgent(""); setSendCount(""); }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} /></SelectTrigger>
-              <SelectContent>{campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">{isBn ? "ডাটা মোড" : "Data Mode"}</label>
-            <Select value={distDataMode} onValueChange={(v) => { setDistDataMode(v as "lead" | "processing"); setDistAgent(""); }}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"}</SelectItem>
-                <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
-              </SelectContent>
+              <SelectContent>{filteredCampaignsByMode.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
