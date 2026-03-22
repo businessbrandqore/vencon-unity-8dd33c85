@@ -20,6 +20,8 @@ import { CalendarIcon, Target, AlertTriangle, Database, Send, Search, MessageCir
 import EmptyState from "@/components/ui/EmptyState";
 import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 import FraudChecker from "@/components/FraudChecker";
+import CopyButton from "@/components/ui/CopyButton";
+import AddressTooltip from "@/components/ui/AddressTooltip";
 
 interface LeadRow {
   id: string;
@@ -774,8 +776,15 @@ export default function EmployeeLeads() {
                 <tr key={lead.id} className={cn("border-b border-border", isRequeued && "opacity-50 pointer-events-none bg-muted/30")}>
                   <td className="py-2 px-2">{idx + 1}</td>
                   <td className="py-2 px-2 whitespace-nowrap">{lead.name || "—"}</td>
-                  <td className="py-2 px-2 whitespace-nowrap">{lead.phone || "—"}</td>
-                  <td className="py-2 px-2 max-w-[150px] truncate">{lead.address || "—"}</td>
+                  <td className="py-2 px-2 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <span>{lead.phone || "—"}</span>
+                      {lead.phone && <CopyButton text={lead.phone} />}
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 max-w-[150px]">
+                    <AddressTooltip address={lead.address} />
+                  </td>
                   {rawDataKeys.map(key => (
                     <td key={key} className="py-2 px-2 max-w-[150px] truncate">{rawData[key] || "—"}</td>
                   ))}

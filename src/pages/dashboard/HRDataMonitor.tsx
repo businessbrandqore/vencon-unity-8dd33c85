@@ -16,6 +16,8 @@ import {
   Megaphone, TrendingUp, Package, Truck,
 } from "lucide-react";
 import { format } from "date-fns";
+import CopyButton from "@/components/ui/CopyButton";
+import AddressTooltip from "@/components/ui/AddressTooltip";
 
 const statusColorMap: Record<string, string> = {
   fresh: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -353,13 +355,14 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        {lead.phone || "—"}
+                        <span>{lead.phone || "—"}</span>
+                        {lead.phone && <CopyButton text={lead.phone} />}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
-                      {lead.address || "—"}
+                    <TableCell className="text-xs text-muted-foreground max-w-[150px]">
+                      <AddressTooltip address={lead.address} />
                     </TableCell>
                     <TableCell>
                       <Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>
@@ -446,7 +449,12 @@ const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: bo
               {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="text-sm font-medium">{order.customer_name || "—"}</TableCell>
-                  <TableCell className="text-sm">{order.phone || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    <div className="flex items-center gap-1">
+                      <span>{order.phone || "—"}</span>
+                      {order.phone && <CopyButton text={order.phone} />}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm">{order.product || "—"}</TableCell>
                   <TableCell className="text-sm font-medium">৳{(order.price || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">{order.quantity || 1}</TableCell>
