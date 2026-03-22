@@ -1280,10 +1280,10 @@ const HRSettings = () => {
                   <SelectValue placeholder={isBn ? "পদ সিলেক্ট করুন" : "Select role"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(allRoleStatuses)
-                    .filter(r => !deleteSheetRules.some(rule => rule.role === r))
+                  {ALL_ROLES
+                    .filter(r => !deleteSheetRules.some(rule => rule.role === r.value))
                     .map(r => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                     ))}
                 </SelectContent>
               </Select>
