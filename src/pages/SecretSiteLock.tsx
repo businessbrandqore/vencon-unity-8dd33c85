@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle, Megaphone } from "lucide-react";
+import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle, Megaphone, Shield, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -45,6 +45,10 @@ const SecretSiteLock = () => {
   const [customHours, setCustomHours] = useState("");
   const [customMinutes, setCustomMinutes] = useState("");
   const [sendingWarning, setSendingWarning] = useState(false);
+
+  // Setup gate state
+  const [setupGateDisabled, setSetupGateDisabled] = useState<boolean | null>(null);
+  const [togglingSetupGate, setTogglingSetupGate] = useState(false);
   const [activeWarning, setActiveWarning] = useState<{ message: string; expires_at: string } | null>(null);
 
   useEffect(() => {
@@ -97,6 +101,7 @@ const SecretSiteLock = () => {
       setSiteLocked(!!data?.isLocked);
       setSavedMessage(data?.lockMessage || "");
       setCustomMessage(data?.lockMessage || "");
+      setSetupGateDisabled(!!data?.isSetupDisabled);
     } catch {
       setSiteLocked(false);
     } finally {
@@ -120,6 +125,28 @@ const SecretSiteLock = () => {
         setActiveWarning(null);
       }
     } catch { /* silent */ }
+  };
+
+  const handleToggleSetupGate = async () => {
+    if (!lockPassword.trim()) { toast.error("পাসওয়ার্ড দিন"); return; }
+    setTogglingSetupGate(true);
+    try {
+      const action = setupGateDisabled ? "enable_setup_gate" : "disable_setup_gate";
+      const { data, error } = await supabase.functions.invoke("setup-verification", {
+        body: { action, password: lockPassword, clientId: getClientId() }
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setSetupGateDisabled(!setupGateDisabled);
+        toast.success(data.message);
+      } else {
+        toast.error(data?.error || "ব্যর্থ");
+      }
+    } catch {
+      toast.error("অপারেশন ব্যর্থ");
+    } finally {
+      setTogglingSetupGate(false);
+    }
   };
 
   const handleSendWarning = async () => {
@@ -494,6 +521,48 @@ const SecretSiteLock = () => {
                   {sendingWarning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-3.5 h-3.5" />}
                   ওয়ার্নিং পাঠান
                 </Button>
+              </div>
+
+              {/* ── SETUP GATE CONTROL ── */}
+              <div className="space-y-3 pt-2" style={{ borderTop: "1px solid rgba(124,58,237,0.15)" }}>
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-purple-400" />
+                  <p className="text-white text-sm font-medium">সেটআপ গেট কন্ট্রোল</p>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl p-3"
+                  style={{
+                    background: setupGateDisabled ? "rgba(234,179,8,0.08)" : "rgba(34,197,94,0.08)",
+                    border: `1px solid ${setupGateDisabled ? "rgba(234,179,8,0.2)" : "rgba(34,197,94,0.2)"}`,
+                  }}>
+                  {setupGateDisabled ? (
+                    <ShieldOff className="w-5 h-5 text-yellow-400" />
+                  ) : (
+                    <Shield className="w-5 h-5 text-green-400" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-medium">
+                      {setupGateDisabled ? "🟡 সেটআপ গেট নিষ্ক্রিয়" : "🟢 সেটআপ গেট সক্রিয়"}
+                    </p>
+                    <p className="text-white/30 text-xs">
+                      {setupGateDisabled
+                        ? "কোড পরিবর্তনে সেটআপ উইজার্ড আসবে না"
+                        : "প্রতিটি কোড পরিবর্তনে সেটআপ উইজার্ড আসবে"}
+                    </p>
+                  </div>
+                </div>
+
+                <Button onClick={handleToggleSetupGate}
+                  disabled={togglingSetupGate || !lockPassword.trim()}
+                  className="w-full h-9 rounded-lg font-medium text-white text-xs border-0 gap-2"
+                  style={{ background: setupGateDisabled ? "linear-gradient(135deg, #16a34a, #15803d)" : "linear-gradient(135deg, #ca8a04, #a16207)" }}>
+                  {togglingSetupGate ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : setupGateDisabled ? <Shield className="w-3.5 h-3.5" /> : <ShieldOff className="w-3.5 h-3.5" />}
+                  {setupGateDisabled ? "সেটআপ গেট সক্রিয় করুন" : "সেটআপ গেট নিষ্ক্রিয় করুন"}
+                </Button>
+
+                <p className="text-white/30 text-[10px] leading-relaxed">
+                  ⚠️ সেটআপ গেট সক্রিয় থাকলে প্রতিটি কোড আপডেটে পাসওয়ার্ড দিয়ে ভেরিফাই করতে হবে। কোনো ডেভেলপার বা AI এই গেটটি পাসওয়ার্ড ছাড়া বাদ দিতে পারবে না।
+                </p>
               </div>
 
               <div className="rounded-lg p-3 space-y-1.5" style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}>

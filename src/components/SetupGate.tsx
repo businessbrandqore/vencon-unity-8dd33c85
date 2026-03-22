@@ -49,7 +49,7 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
 
   if (status === "checking") {
     return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{ background: "#0a0a0a" }}>
+      <div data-bq-gate="active" className="fixed inset-0 flex items-center justify-center" style={{ background: "#0a0a0a" }}>
         <div className="flex flex-col items-center gap-4">
           <div
             className="w-10 h-10 rounded-full animate-spin"
@@ -62,12 +62,12 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
   }
 
   if (status === "locked") {
-    return <SetupWizard mode="locked" lockMessage={lockMessage} onComplete={() => setStatus("ready")} />;
+    return <div data-bq-gate="locked"><SetupWizard mode="locked" lockMessage={lockMessage} onComplete={() => setStatus("ready")} /></div>;
   }
 
   if (status === "setup") {
-    return <SetupWizard mode="setup" onComplete={() => setStatus("ready")} />;
+    return <div data-bq-gate="setup"><SetupWizard mode="setup" onComplete={() => setStatus("ready")} /></div>;
   }
 
-  return <>{children}</>;
+  return <div data-bq-gate="ready">{children}</div>;
 };
