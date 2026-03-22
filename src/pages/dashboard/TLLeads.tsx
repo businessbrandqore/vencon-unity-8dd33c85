@@ -1243,10 +1243,18 @@ const TLLeads = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">TL Delete Sheet</CardTitle>
+              <CardTitle className="text-lg font-heading">
+                {isBn ? "ডিলিট শিট" : "Delete Sheet"}
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({isBn ? `${deleteSheetThreshold}+ বার requeue হলে এখানে আসে` : `${deleteSheetThreshold}+ requeues`})
+                </span>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isBn ? "ডিলিট রিকোয়েস্ট SA এপ্রুভ করলে মুছে যাবে" : "Delete requests need SA approval"}
+              </p>
               {selectedDeleteLeads.size > 0 && (
                 <Button size="sm" variant="destructive" onClick={bulkDeleteLeads} className="mt-2 w-fit">
-                  {isBn ? `Delete (${selectedDeleteLeads.size})` : `Delete all (${selectedDeleteLeads.size})`}
+                  {isBn ? `ডিলিট রিকোয়েস্ট (${selectedDeleteLeads.size})` : `Request Delete (${selectedDeleteLeads.size})`}
                 </Button>
               )}
             </CardHeader>
@@ -1262,13 +1270,14 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Requeue</TableHead>
+                    <TableHead>{isBn ? "ওয়েবসাইট" : "Website"}</TableHead>
                     <TableHead>{isBn ? "শেষ Activity" : "Last Activity"}</TableHead>
                     <TableHead>{isBn ? "অ্যাকশন" : "Actions"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {deleteSheetLeads.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</TableCell></TableRow>
                   ) : deleteSheetLeads.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell>
@@ -1279,13 +1288,16 @@ const TLLeads = () => {
                       <TableCell>{lead.phone || "—"}</TableCell>
                       <TableCell><Badge variant="outline">{getStatusLabel(lead.status)}</Badge></TableCell>
                       <TableCell className="text-center">{lead.requeue_count}</TableCell>
+                      <TableCell className="text-xs">{lead.source || "—"}</TableCell>
                       <TableCell>{lead.updated_at ? new Date(lead.updated_at).toLocaleDateString() : "—"}</TableCell>
                       <TableCell className="space-x-2">
                         <Select onValueChange={(agentId) => reassignLead(lead.id, agentId)}>
                           <SelectTrigger className="w-36 inline-flex"><SelectValue placeholder="Reassign" /></SelectTrigger>
                           <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>Delete</Button>
+                        <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }}>
+                          {isBn ? "ডিলিট রিকোয়েস্ট" : "Request Delete"}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
