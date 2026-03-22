@@ -523,6 +523,48 @@ const SecretSiteLock = () => {
                 </Button>
               </div>
 
+              {/* ── SETUP GATE CONTROL ── */}
+              <div className="space-y-3 pt-2" style={{ borderTop: "1px solid rgba(124,58,237,0.15)" }}>
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-purple-400" />
+                  <p className="text-white text-sm font-medium">সেটআপ গেট কন্ট্রোল</p>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl p-3"
+                  style={{
+                    background: setupGateDisabled ? "rgba(234,179,8,0.08)" : "rgba(34,197,94,0.08)",
+                    border: `1px solid ${setupGateDisabled ? "rgba(234,179,8,0.2)" : "rgba(34,197,94,0.2)"}`,
+                  }}>
+                  {setupGateDisabled ? (
+                    <ShieldOff className="w-5 h-5 text-yellow-400" />
+                  ) : (
+                    <Shield className="w-5 h-5 text-green-400" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-medium">
+                      {setupGateDisabled ? "🟡 সেটআপ গেট নিষ্ক্রিয়" : "🟢 সেটআপ গেট সক্রিয়"}
+                    </p>
+                    <p className="text-white/30 text-xs">
+                      {setupGateDisabled
+                        ? "কোড পরিবর্তনে সেটআপ উইজার্ড আসবে না"
+                        : "প্রতিটি কোড পরিবর্তনে সেটআপ উইজার্ড আসবে"}
+                    </p>
+                  </div>
+                </div>
+
+                <Button onClick={handleToggleSetupGate}
+                  disabled={togglingSetupGate || !lockPassword.trim()}
+                  className="w-full h-9 rounded-lg font-medium text-white text-xs border-0 gap-2"
+                  style={{ background: setupGateDisabled ? "linear-gradient(135deg, #16a34a, #15803d)" : "linear-gradient(135deg, #ca8a04, #a16207)" }}>
+                  {togglingSetupGate ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : setupGateDisabled ? <Shield className="w-3.5 h-3.5" /> : <ShieldOff className="w-3.5 h-3.5" />}
+                  {setupGateDisabled ? "সেটআপ গেট সক্রিয় করুন" : "সেটআপ গেট নিষ্ক্রিয় করুন"}
+                </Button>
+
+                <p className="text-white/30 text-[10px] leading-relaxed">
+                  ⚠️ সেটআপ গেট সক্রিয় থাকলে প্রতিটি কোড আপডেটে পাসওয়ার্ড দিয়ে ভেরিফাই করতে হবে। কোনো ডেভেলপার বা AI এই গেটটি পাসওয়ার্ড ছাড়া বাদ দিতে পারবে না।
+                </p>
+              </div>
+
               <div className="rounded-lg p-3 space-y-1.5" style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)" }}>
                 <p className="text-white/50 text-[10px] leading-relaxed">
                   ⚠️ লক করলে সম্পূর্ণ ওয়েবসাইট বন্ধ হয়ে যাবে। কেউ লগইন বা কিছু অ্যাক্সেস করতে পারবে না। শুধুমাত্র এই প্যানেল থেকে আনলক করা যাবে।
