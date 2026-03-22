@@ -1,27 +1,37 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Target, ShoppingCart, Phone, Trash2, CheckCircle, TrendingUp } from "lucide-react";
 import GroupLeaderDashboard from "./GroupLeaderDashboard";
 
 interface CampaignOption {
   id: string;
   name: string;
+  data_mode: string;
+}
+
+interface WebsiteOption {
+  id: string;
+  site_name: string;
+  campaign_id: string;
+  data_mode: string;
 }
 
 const TLDashboard = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const isBn = t("vencon") === "VENCON";
-
-  // GL users on TL panel should see GroupLeaderDashboard
   const isGL = user?.role === "Group Leader";
 
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
+  const [websites, setWebsites] = useState<WebsiteOption[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
+  const [activeDataMode, setActiveDataMode] = useState<string>("lead");
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({
     newLeads: 0,
@@ -41,25 +51,43 @@ const TLDashboard = () => {
     return user?.id || "";
   }, [isATL, user, atlTlMap, selectedCampaign]);
 
+  // Filter campaigns by active data mode
+  const filteredCampaigns = useMemo(() =>
+    campaigns.filter(c => c.data_mode === activeDataMode),
+    [campaigns, activeDataMode]
+  );
+
+  // Filter websites by selected campaign and data mode
+  const filteredWebsites = useMemo(() =>
+    websites.filter(w => w.campaign_id === selectedCampaign && w.data_mode === activeDataMode),
+    [websites, selectedCampaign, activeDataMode]
+  );
+
+  // Auto-select first campaign when mode changes
+  useEffect(() => {
+    if (filteredCampaigns.length > 0) {
+      if (!filteredCampaigns.find(c => c.id === selectedCampaign)) {
+        setSelectedCampaign(filteredCampaigns[0].id);
+      }
+    } else {
+      setSelectedCampaign("");
+    }
+    setSelectedWebsite("all");
+  }, [activeDataMode, filteredCampaigns]);
+
+  // Fetch campaigns
   useEffect(() => {
     if (!user) return;
     const fetchCampaigns = async () => {
       if (isBDO) {
-        // BDO sees all campaigns
-        const { data } = await supabase
-          .from("campaigns")
-          .select("id, name")
-          .order("created_at", { ascending: false });
+        const { data } = await supabase.from("campaigns").select("id, name, data_mode").order("created_at", { ascending: false });
         if (data) {
-          const list = data.map((c: any) => ({ id: c.id, name: c.name }));
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+          setCampaigns(data.map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" })));
         }
       } else if (isATL) {
-        // ATL sees campaigns they're assigned to as agent
         const { data } = await supabase
           .from("campaign_agent_roles")
-          .select("campaign_id, tl_id, campaigns(id, name)")
+          .select("campaign_id, tl_id, campaigns(id, name, data_mode)")
           .eq("agent_id", user.id);
         if (data) {
           const seen = new Set<string>();
@@ -69,33 +97,60 @@ const TLDashboard = () => {
             .filter((d: any) => { if (seen.has(d.campaigns.id)) return false; seen.add(d.campaigns.id); return true; })
             .map((d: any) => {
               tlMap[d.campaigns.id] = d.tl_id;
-              return { id: d.campaigns.id, name: d.campaigns.name };
+              return { id: d.campaigns.id, name: d.campaigns.name, data_mode: d.campaigns.data_mode || "lead" };
             });
           setAtlTlMap(tlMap);
           setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
         }
       } else {
         const { data } = await supabase
           .from("campaign_tls")
-          .select("campaign_id, campaigns(id, name)")
+          .select("campaign_id, campaigns(id, name, data_mode)")
           .eq("tl_id", user.id);
         if (data) {
-          const list = data
-            .map((d: any) => d.campaigns)
-            .filter(Boolean)
-            .map((c: any) => ({ id: c.id, name: c.name }));
-          setCampaigns(list);
-          if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
+          setCampaigns(
+            data.map((d: any) => d.campaigns).filter(Boolean)
+              .map((c: any) => ({ id: c.id, name: c.name, data_mode: c.data_mode || "lead" }))
+          );
         }
       }
     };
     fetchCampaigns();
   }, [user]);
 
+  // Fetch websites
+  useEffect(() => {
+    if (!user) return;
+    const fetchWebsites = async () => {
+      const campaignIds = campaigns.map(c => c.id);
+      if (campaignIds.length === 0) { setWebsites([]); return; }
+      const { data } = await supabase
+        .from("campaign_websites")
+        .select("id, site_name, campaign_id, data_mode")
+        .in("campaign_id", campaignIds)
+        .eq("is_active", true);
+      if (data) setWebsites(data);
+    };
+    fetchWebsites();
+  }, [campaigns, user]);
+
+  // Fetch stats
   const fetchStats = useCallback(async () => {
-    if (!user || !selectedCampaign) return;
+    if (!user || !selectedCampaign) {
+      setStats({ newLeads: 0, confirmedOrders: 0, callDoneQueue: 0, preOrders: 0, deleteSheet: 0, receiveRatio: 0 });
+      return;
+    }
     const effectiveTlId = getEffectiveTlId();
+
+    // Get website names for source filtering
+    let sourceFilter: string[] | null = null;
+    if (selectedWebsite !== "all") {
+      const ws = websites.find(w => w.id === selectedWebsite);
+      if (ws) sourceFilter = [ws.site_name];
+    } else if (filteredWebsites.length > 0) {
+      sourceFilter = filteredWebsites.map(w => w.site_name);
+    }
+
     // New leads
     let leadsQ = supabase
       .from("leads")
@@ -106,34 +161,45 @@ const TLDashboard = () => {
     } else {
       leadsQ = leadsQ.is("assigned_to", null).eq("status", "fresh");
     }
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      leadsQ = leadsQ.in("source", sourceFilter);
+    }
     const { count: newLeads } = await leadsQ;
 
-    // Confirmed orders (pending CSO)
+    // Confirmed orders
     let ordersQ = supabase
       .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending_cso");
+      .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
+      .eq("status", "pending_cso")
+      .eq("leads.campaign_id", selectedCampaign);
     if (!isBDO) ordersQ = ordersQ.eq("tl_id", effectiveTlId);
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      ordersQ = ordersQ.in("leads.source", sourceFilter);
+    }
     const { count: confirmedOrders } = await ordersQ;
 
     // Call done queue
     let callQ = supabase
       .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "call_done");
+      .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
+      .eq("status", "call_done")
+      .eq("leads.campaign_id", selectedCampaign);
     if (!isBDO) callQ = callQ.eq("tl_id", effectiveTlId);
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      callQ = callQ.in("leads.source", sourceFilter);
+    }
     const { count: callDoneQueue } = await callQ;
 
     // Pre-orders
     let preQ = supabase
       .from("pre_orders")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
+      .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
+      .eq("status", "pending")
+      .eq("leads.campaign_id", selectedCampaign);
     if (!isBDO) preQ = preQ.eq("tl_id", effectiveTlId);
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      preQ = preQ.in("leads.source", sourceFilter);
+    }
     const { count: preOrders } = await preQ;
 
     // Delete sheet
@@ -143,7 +209,9 @@ const TLDashboard = () => {
       .eq("campaign_id", selectedCampaign)
       .gte("requeue_count", 5);
     if (!isBDO) delQ = delQ.eq("tl_id", effectiveTlId);
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      delQ = delQ.in("source", sourceFilter);
+    }
     const { count: deleteSheet } = await delQ;
 
     // Receive ratio this month
@@ -153,19 +221,25 @@ const TLDashboard = () => {
 
     let totalQ = supabase
       .from("orders")
-      .select("*", { count: "exact", head: true })
+      .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
+      .eq("leads.campaign_id", selectedCampaign)
       .gte("created_at", startOfMonth.toISOString());
     if (!isBDO) totalQ = totalQ.eq("tl_id", effectiveTlId);
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      totalQ = totalQ.in("leads.source", sourceFilter);
+    }
     const { count: totalOrders } = await totalQ;
 
     let delivQ = supabase
       .from("orders")
-      .select("*", { count: "exact", head: true })
+      .select("lead_id, leads!inner(campaign_id, source)", { count: "exact", head: true })
       .eq("delivery_status", "delivered")
+      .eq("leads.campaign_id", selectedCampaign)
       .gte("created_at", startOfMonth.toISOString());
     if (!isBDO) delivQ = delivQ.eq("tl_id", effectiveTlId);
-
+    if (sourceFilter && sourceFilter.length > 0) {
+      delivQ = delivQ.in("leads.source", sourceFilter);
+    }
     const { count: deliveredOrders } = await delivQ;
 
     const ratio = totalOrders && totalOrders > 0
@@ -180,41 +254,13 @@ const TLDashboard = () => {
       deleteSheet: deleteSheet || 0,
       receiveRatio: ratio,
     });
-  }, [user, selectedCampaign, isBDO, isATL, getEffectiveTlId]);
+  }, [user, selectedCampaign, selectedWebsite, isBDO, isATL, getEffectiveTlId, websites, filteredWebsites]);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
 
-  // Refetch campaigns list helper
-  const refetchCampaigns = useCallback(async () => {
-    if (!user) return;
-    if (isBDO) {
-      const { data } = await supabase.from("campaigns").select("id, name").order("created_at", { ascending: false });
-      if (data) {
-        const list = data.map((c: any) => ({ id: c.id, name: c.name }));
-        setCampaigns(list);
-        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
-      }
-    } else if (isATL) {
-      const { data } = await supabase.from("campaign_agent_roles").select("campaign_id, campaigns(id, name)").eq("agent_id", user.id);
-      if (data) {
-        const seen = new Set<string>();
-        const list = data.map((d: any) => d.campaigns).filter(Boolean).filter((c: any) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; }).map((c: any) => ({ id: c.id, name: c.name }));
-        setCampaigns(list);
-        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
-      }
-    } else {
-      const { data } = await supabase.from("campaign_tls").select("campaign_id, campaigns(id, name)").eq("tl_id", user.id);
-      if (data) {
-        const list = data.map((d: any) => d.campaigns).filter(Boolean).map((c: any) => ({ id: c.id, name: c.name }));
-        setCampaigns(list);
-        if (list.length > 0 && !selectedCampaign) setSelectedCampaign(list[0].id);
-      }
-    }
-  }, [user, isBDO, isATL, selectedCampaign]);
-
-  // Realtime: auto-refresh stats + campaigns when related tables change
+  // Realtime
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -222,15 +268,15 @@ const TLDashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchStats())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchStats())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pre_orders' }, () => fetchStats())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => refetchCampaigns())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_tls' }, () => refetchCampaigns())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => {})
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_tls' }, () => {})
       .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_agent_roles' }, () => fetchStats())
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, [user, isBDO, fetchStats, refetchCampaigns]);
+  }, [user, fetchStats]);
 
   if (!user) return null;
+  if (isGL) return <GroupLeaderDashboard />;
 
   const statCards = [
     { label: isBn ? "নতুন Leads" : "New Leads", value: stats.newLeads, icon: Target, color: "text-green-400" },
@@ -241,10 +287,9 @@ const TLDashboard = () => {
     { label: isBn ? "Receive Ratio %" : "Receive Ratio %", value: `${stats.receiveRatio}%`, icon: TrendingUp, color: "text-emerald-400" },
   ];
 
-  if (isGL) return <GroupLeaderDashboard />;
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="font-heading text-2xl font-bold text-foreground">
@@ -254,33 +299,65 @@ const TLDashboard = () => {
             {isBn ? "স্বাগতম" : "Welcome"}, {user.name}
           </p>
         </div>
-        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-64 border-[hsl(var(--panel-tl))] bg-secondary">
-            <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
+      </div>
+
+      {/* Filters row: Data Mode Tabs + Campaign + Website */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs value={activeDataMode} onValueChange={(v) => setActiveDataMode(v)}>
+          <TabsList className="bg-secondary">
+            <TabsTrigger value="lead" className="text-xs">🎯 {isBn ? "লিড" : "Lead"}</TabsTrigger>
+            <TabsTrigger value="processing" className="text-xs">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setSelectedWebsite("all"); }}>
+          <SelectTrigger className="w-52 border-[hsl(var(--panel-tl))] bg-secondary text-sm">
+            <SelectValue placeholder={isBn ? "Campaign নির্বাচন" : "Select Campaign"} />
           </SelectTrigger>
           <SelectContent>
-            {campaigns.map((c) => (
+            {filteredCampaigns.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        {filteredWebsites.length > 0 && (
+          <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+            <SelectTrigger className="w-48 border-border bg-secondary text-sm">
+              <SelectValue placeholder={isBn ? "ওয়েবসাইট" : "Website"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+              {filteredWebsites.map((w) => (
+                <SelectItem key={w.id} value={w.id}>{w.site_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {statCards.map((s) => (
-          <Card key={s.label} className="bg-card border-border">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className={`p-3 rounded-lg bg-secondary ${s.color}`}>
-                <s.icon className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground font-body">{s.label}</p>
-                <p className="text-2xl font-bold font-heading text-foreground">{s.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Stat Cards */}
+      {selectedCampaign ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {statCards.map((s) => (
+            <Card key={s.label} className="bg-card border-border">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className={`p-3 rounded-lg bg-secondary ${s.color}`}>
+                  <s.icon className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-body">{s.label}</p>
+                  <p className="text-2xl font-bold font-heading text-foreground">{s.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          {isBn ? "এই মোডে কোনো ক্যাম্পেইন নেই" : "No campaigns in this mode"}
+        </div>
+      )}
     </div>
   );
 };
