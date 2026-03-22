@@ -95,6 +95,7 @@ const SAApprovalsTable = () => {
     non_agent_hire: { bn: "নন-এজেন্ট নিয়োগ", en: "Non-Agent Hire" },
     incentive_config: { bn: "ইনসেনটিভ কনফিগ", en: "Incentive Config" },
     profit_share_config: { bn: "প্রফিট শেয়ার কনফিগ", en: "Profit Share Config" },
+    employee_delete: { bn: "কর্মচারী ডিলিট", en: "Employee Delete" },
   };
 
   const getSummary = (approval: Approval): string => {
@@ -109,6 +110,8 @@ const SAApprovalsTable = () => {
         return `${d.role || "—"} / ${d.min_ratio || "—"}–${d.max_ratio || "—"}`;
       case "profit_share_config":
         return `${d.role || "—"} / ${d.percentage || "—"}%`;
+      case "employee_delete":
+        return `${d.employee_name || "—"} / ${d.role || "—"} / ${d.email || "—"}`;
       default:
         return JSON.stringify(d).slice(0, 60);
     }
@@ -143,6 +146,23 @@ const SAApprovalsTable = () => {
 
         if (deleteError) {
           fail(deleteError.message);
+          return;
+        }
+      }
+    }
+
+    // Handle employee delete approval
+    if (action === "approved" && approval.type === "employee_delete" && approval.details) {
+      const userId = approval.details.user_id;
+      if (userId) {
+        // Deactivate user first, then delete
+        const { error: delError } = await supabase
+          .from("users")
+          .delete()
+          .eq("id", userId);
+
+        if (delError) {
+          fail(delError.message);
           return;
         }
       }

@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   Select,
   SelectContent,
@@ -26,6 +29,8 @@ interface Employee {
 
 const HREmployees = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isBn = t("vencon") === "VENCON";
@@ -36,6 +41,7 @@ const HREmployees = () => {
   const [filterRole, setFilterRole] = useState("all");
   const [filterPanel, setFilterPanel] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
 
   useEffect(() => {
     if (searchParams.get("new") === "true") {
@@ -71,6 +77,28 @@ const HREmployees = () => {
   const handleDeactivate = async (emp: Employee) => {
     await supabase.from("users").update({ is_active: !emp.is_active }).eq("id", emp.id);
     fetchEmployees();
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!deleteTarget || !user) return;
+    const { error } = await supabase.from("sa_approvals").insert({
+      type: "employee_delete",
+      requested_by: user.id,
+      details: {
+        user_id: deleteTarget.id,
+        employee_name: deleteTarget.name,
+        role: deleteTarget.role,
+        panel: deleteTarget.panel,
+        email: deleteTarget.email,
+      },
+      status: "pending",
+    });
+    if (error) {
+      toast({ title: isBn ? "ত্রুটি হয়েছে" : "Error", variant: "destructive" });
+    } else {
+      toast({ title: isBn ? "ডিলিট রিকোয়েস্ট পাঠানো হয়েছে — SA অনুমোদন দিলে মুছে যাবে" : "Delete request sent — awaiting SA approval" });
+    }
+    setDeleteTarget(null);
   };
 
   return (
@@ -184,6 +212,12 @@ const HREmployees = () => {
                     >
                       {emp.is_active ? (isBn ? "নিষ্ক্রিয়" : "Deactivate") : (isBn ? "সক্রিয়" : "Activate")}
                     </button>
+                    <button
+                      onClick={() => setDeleteTarget(emp)}
+                      className="text-xs px-2 py-1 border border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      {isBn ? "ডিলিট" : "Delete"}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -198,6 +232,20 @@ const HREmployees = () => {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={isBn ? "কর্মচারী ডিলিট রিকোয়েস্ট" : "Employee Delete Request"}
+        description={
+          isBn
+            ? `"${deleteTarget?.name}" কে ডিলিট করার জন্য SA-তে অনুমোদন রিকোয়েস্ট পাঠানো হবে। নিশ্চিত?`
+            : `A delete request for "${deleteTarget?.name}" will be sent to SA for approval. Confirm?`
+        }
+        confirmLabel={isBn ? "রিকোয়েস্ট পাঠান" : "Send Request"}
+        onConfirm={handleDeleteRequest}
+        destructive
+      />
     </div>
   );
 };

@@ -1,0 +1,1 @@
+CREATE POLICY "sa_delete_users" ON public.users FOR DELETE TO authenticated USING (is_sa(auth.uid()));
