@@ -133,7 +133,11 @@ const SecretSiteLock = () => {
       });
       if (!verifyData?.success) { toast.error("পাসওয়ার্ড ভুল"); setSendingWarning(false); return; }
 
-      const expiresAt = new Date(Date.now() + parseInt(warningDuration) * 60000).toISOString();
+      const finalMinutes = customDuration
+        ? (parseInt(customHours || "0") * 60 + parseInt(customMinutes || "0"))
+        : parseInt(warningDuration);
+      if (finalMinutes <= 0) { toast.error("সময়কাল নির্ধারণ করুন"); setSendingWarning(false); return; }
+      const expiresAt = new Date(Date.now() + finalMinutes * 60000).toISOString();
       const warningVal = { message: warningMessage, expires_at: expiresAt };
 
       const { data: existing } = await supabase
