@@ -96,6 +96,18 @@ const DEFAULT_REQUEUE_STATUS_VALUES = ["phone_off", "positive", "customer_resche
 const REQUEUE_MINUTES = 40;
 const DEFAULT_DELETE_SHEET_THRESHOLD = 5;
 
+const STATUS_COLOR_CLASSES: Record<string, string> = {
+  red: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+  green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  yellow: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+  purple: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  orange: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  gray: "bg-muted text-muted-foreground",
+};
+
+const getStatusColorClasses = (color?: string) => STATUS_COLOR_CLASSES[color || "gray"] || STATUS_COLOR_CLASSES.gray;
+
 // Statuses that trigger special modals
 const MODAL_STATUSES = ["order_confirm", "pre_order", "pre_order_confirm"];
 
@@ -271,10 +283,10 @@ export default function EmployeeLeads() {
     if (dynamicColumns.length > 0) {
       const dropdownCol = dynamicColumns.find(c => c.type === "dropdown");
       if (dropdownCol?.options?.length) {
-        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, next_panel: o.next_panel, next_location: o.next_location, routes: o.routes, is_spam: o.is_spam }));
+        return dropdownCol.options.map(o => ({ value: o.value, label: o.label || o.value, label_bn: o.label_bn, color: o.color, next_panel: o.next_panel, next_location: o.next_location, routes: o.routes, is_spam: o.is_spam }));
       }
     }
-    return FALLBACK_STATUSES.map(s => ({ ...s, next_panel: undefined, next_location: undefined, routes: undefined, is_spam: undefined }));
+    return FALLBACK_STATUSES.map(s => ({ ...s, color: "gray", next_panel: undefined, next_location: undefined, routes: undefined, is_spam: undefined }));
   }, [dynamicColumns]);
 
   // Note columns from dynamic config
@@ -660,34 +672,42 @@ export default function EmployeeLeads() {
   // Keys to hide from raw data columns (already shown as fixed columns or internal)
   const HIDDEN_RAW_KEYS = new Set(["customer_name", "phone", "address", "name", "extra_fields", "price"]);
 
-  const rawDataKeys = useMemo(() => {
-    const keySet = new Set<string>();
-    leads.forEach(lead => {
-      if (!lead.special_note) return;
-      try {
-        const parsed = JSON.parse(lead.special_note);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          Object.keys(parsed).forEach(k => {
-            if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
-          });
-        }
-      } catch { /* not JSON */ }
-    });
-    return Array.from(keySet);
-  }, [leads]);
-
-  const parseSpecialNote = (note: string | null): Record<string, string> => {
+  const extractLeadRawData = (note: string | null): Record<string, string> => {
     if (!note) return {};
     try {
       const parsed = JSON.parse(note);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         const result: Record<string, string> = {};
-        Object.entries(parsed).forEach(([k, v]) => { result[k] = v != null ? String(v) : ""; });
+
+        Object.entries(parsed).forEach(([k, v]) => {
+          if (k === "extra_fields" && v && typeof v === "object" && !Array.isArray(v)) {
+            const extraFields = v as Record<string, unknown>;
+            if (extraFields.product != null) result.product = String(extraFields.product);
+            return;
+          }
+          result[k] = v != null ? String(v) : "";
+        });
+
         return result;
       }
-    } catch { /* not JSON */ }
+    } catch {
+      /* not JSON */
+    }
     return {};
   };
+
+  const rawDataKeys = useMemo(() => {
+    const keySet = new Set<string>();
+    leads.forEach((lead) => {
+      const parsed = extractLeadRawData(lead.special_note);
+      Object.keys(parsed).forEach((k) => {
+        if (!HIDDEN_RAW_KEYS.has(k)) keySet.add(k);
+      });
+    });
+    return Array.from(keySet);
+  }, [leads]);
+
+  const parseSpecialNote = (note: string | null): Record<string, string> => extractLeadRawData(note);
 
   if (loading) return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
 
@@ -755,93 +775,122 @@ export default function EmployeeLeads() {
                   {rawDataKeys.map(key => (
                     <td key={key} className="py-2 px-2 max-w-[150px] truncate">{rawData[key] || "—"}</td>
                   ))}
-                  {dropdownCols.map(col => (
-                    <td key={col.id} className="py-2 px-2 min-w-[180px]">
-                      {isRequeued ? (
-                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
-                      ) : (
-                        <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
-                          setLeadStatuses(p => ({ ...p, [lead.id]: v }));
-                          const ns = v.toLowerCase().replace(/\s+/g, "_");
-                          if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
-                            setCurrentOrderLead(lead);
-                            setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-                            setOrderGiftName(""); setOrderAdvancePayment(0);
-                            setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
-                            setOrderUpsell(""); setOrderSuccessRatio("");
-                            const detected = detectLocation(lead.address || "");
-                            setOrderDistrict(detected.district); setOrderThana(detected.thana);
-                            setLocationAutoDetected(!!(detected.district));
-                            setDistrictSearch(""); setThanaSearch("");
-                            setTimeout(() => setShowOrderModal(true), 100);
-                          } else if (ns === "pre_order") {
-                            setCurrentPreOrderLead(lead);
-                            setPreOrderDate(undefined); setPreOrderNote("");
-                            setTimeout(() => setShowPreOrderModal(true), 100);
-                          } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
-                            setCurrentPreOrderConfirmLead(lead);
-                            const detected = detectLocation(lead.address || "");
-                            setPocDistrict(detected.district); setPocThana(detected.thana);
-                            setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
-                            setTimeout(() => setShowPreOrderConfirmModal(true), 100);
-                          } else {
-                            setTimeout(() => {
-                              handleLeadSave({ ...lead, __overrideStatus: v } as any);
-                            }, 50);
-                          }
-                        }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={isBn ? (col.name_bn || "স্ট্যাটাস") : col.name} /></SelectTrigger>
-                          <SelectContent>
-                            {col.options.map(o => <SelectItem key={o.value} value={o.value}>{isBn ? (o.label_bn || o.label) : o.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </td>
-                  ))}
-                  {/* Fallback: if no dynamic dropdown columns, show fallback statuses */}
-                  {dropdownCols.length === 0 && (
-                    <td className="py-2 px-2 min-w-[180px]">
-                      {isRequeued ? (
-                        <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
-                      ) : (
-                        <Select value={leadStatuses[lead.id] || ""} onValueChange={v => {
-                          setLeadStatuses(p => ({ ...p, [lead.id]: v }));
-                          const ns = v.toLowerCase().replace(/\s+/g, "_");
-                          if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
-                            setCurrentOrderLead(lead);
-                            setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
-                            setOrderGiftName(""); setOrderAdvancePayment(0);
-                            setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
-                            setOrderUpsell(""); setOrderSuccessRatio("");
-                            const detected = detectLocation(lead.address || "");
-                            setOrderDistrict(detected.district); setOrderThana(detected.thana);
-                            setLocationAutoDetected(!!(detected.district));
-                            setDistrictSearch(""); setThanaSearch("");
-                            setTimeout(() => setShowOrderModal(true), 100);
-                          } else if (ns === "pre_order") {
-                            setCurrentPreOrderLead(lead);
-                            setPreOrderDate(undefined); setPreOrderNote("");
-                            setTimeout(() => setShowPreOrderModal(true), 100);
-                          } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
-                            setCurrentPreOrderConfirmLead(lead);
-                            const detected = detectLocation(lead.address || "");
-                            setPocDistrict(detected.district); setPocThana(detected.thana);
-                            setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
-                            setTimeout(() => setShowPreOrderConfirmModal(true), 100);
-                          } else {
-                            setTimeout(() => {
-                              handleLeadSave({ ...lead, __overrideStatus: v } as any);
-                            }, 50);
-                          }
-                        }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("status")} /></SelectTrigger>
-                          <SelectContent>
-                            {availableStatuses.map(s => <SelectItem key={s.value} value={s.value}>{isBn ? (s.label_bn || s.label) : s.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </td>
-                  )}
+                  {dropdownCols.map(col => {
+                    const selectedValue = leadStatuses[lead.id] || (col.options.some(o => o.value === (lead.status || "")) ? (lead.status || "") : "");
+                    const selectedOption = col.options.find(o => o.value === selectedValue);
+
+                    return (
+                      <td key={col.id} className="py-2 px-2 min-w-[180px]">
+                        {isRequeued ? (
+                          <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
+                        ) : (
+                          <Select value={selectedValue} onValueChange={v => {
+                            setLeadStatuses(p => ({ ...p, [lead.id]: v }));
+                            const ns = v.toLowerCase().replace(/\s+/g, "_");
+                            if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
+                              setCurrentOrderLead(lead);
+                              setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+                              setOrderGiftName(""); setOrderAdvancePayment(0);
+                              setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+                              setOrderUpsell(""); setOrderSuccessRatio("");
+                              const detected = detectLocation(lead.address || "");
+                              setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                              setLocationAutoDetected(!!(detected.district));
+                              setDistrictSearch(""); setThanaSearch("");
+                              setTimeout(() => setShowOrderModal(true), 100);
+                            } else if (ns === "pre_order") {
+                              setCurrentPreOrderLead(lead);
+                              setPreOrderDate(undefined); setPreOrderNote("");
+                              setTimeout(() => setShowPreOrderModal(true), 100);
+                            } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
+                              setCurrentPreOrderConfirmLead(lead);
+                              const detected = detectLocation(lead.address || "");
+                              setPocDistrict(detected.district); setPocThana(detected.thana);
+                              setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                              setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                            } else {
+                              setTimeout(() => {
+                                handleLeadSave({ ...lead, __overrideStatus: v } as any);
+                              }, 50);
+                            }
+                          }}>
+                            <SelectTrigger className={cn("h-8 text-xs", selectedOption && getStatusColorClasses(selectedOption.color))}>
+                              {selectedOption ? (
+                                <span className="truncate">{isBn ? (selectedOption.label_bn || selectedOption.label) : selectedOption.label}</span>
+                              ) : (
+                                <SelectValue placeholder={isBn ? (col.name_bn || "স্ট্যাটাস") : col.name} />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {col.options.map(o => (
+                                <SelectItem key={o.value} value={o.value} className={cn("font-medium", getStatusColorClasses(o.color))}>
+                                  {isBn ? (o.label_bn || o.label) : o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </td>
+                    );
+                  })}
+                  {dropdownCols.length === 0 && (() => {
+                    const selectedValue = leadStatuses[lead.id] || (availableStatuses.some(s => s.value === (lead.status || "")) ? (lead.status || "") : "");
+                    const selectedOption = availableStatuses.find(s => s.value === selectedValue);
+
+                    return (
+                      <td className="py-2 px-2 min-w-[180px]">
+                        {isRequeued ? (
+                          <Badge variant="outline" className="text-orange-400 border-orange-400/50">⏳ {requeueRemaining} {t("minutes_wait")}</Badge>
+                        ) : (
+                          <Select value={selectedValue} onValueChange={v => {
+                            setLeadStatuses(p => ({ ...p, [lead.id]: v }));
+                            const ns = v.toLowerCase().replace(/\s+/g, "_");
+                            if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
+                              setCurrentOrderLead(lead);
+                              setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+                              setOrderGiftName(""); setOrderAdvancePayment(0);
+                              setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+                              setOrderUpsell(""); setOrderSuccessRatio("");
+                              const detected = detectLocation(lead.address || "");
+                              setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                              setLocationAutoDetected(!!(detected.district));
+                              setDistrictSearch(""); setThanaSearch("");
+                              setTimeout(() => setShowOrderModal(true), 100);
+                            } else if (ns === "pre_order") {
+                              setCurrentPreOrderLead(lead);
+                              setPreOrderDate(undefined); setPreOrderNote("");
+                              setTimeout(() => setShowPreOrderModal(true), 100);
+                            } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
+                              setCurrentPreOrderConfirmLead(lead);
+                              const detected = detectLocation(lead.address || "");
+                              setPocDistrict(detected.district); setPocThana(detected.thana);
+                              setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                              setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                            } else {
+                              setTimeout(() => {
+                                handleLeadSave({ ...lead, __overrideStatus: v } as any);
+                              }, 50);
+                            }
+                          }}>
+                            <SelectTrigger className={cn("h-8 text-xs", selectedOption && getStatusColorClasses(selectedOption.color))}>
+                              {selectedOption ? (
+                                <span className="truncate">{isBn ? (selectedOption.label_bn || selectedOption.label) : selectedOption.label}</span>
+                              ) : (
+                                <SelectValue placeholder={t("status")} />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableStatuses.map(s => (
+                                <SelectItem key={s.value} value={s.value} className={cn("font-medium", getStatusColorClasses(s.color))}>
+                                  {isBn ? (s.label_bn || s.label) : s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </td>
+                    );
+                  })()}
                   {noteCols.map(col => (
                     <td key={col.id} className="py-2 px-2 min-w-[120px]">
                       <Input
