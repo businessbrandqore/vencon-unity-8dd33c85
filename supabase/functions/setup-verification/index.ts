@@ -24,7 +24,6 @@ serve(async (req) => {
     const body = await req.json();
     const { action, password, version, clientId, customMessage } = body;
 
-    // Helper: get or create lockout record for a clientId
     const checkLockout = async (cid: string) => {
       const { data } = await supabase
         .from('app_settings')
@@ -48,7 +47,6 @@ serve(async (req) => {
             remainText: remainHrs > 0 ? `${remainHrs} ঘন্টা ${remainMins} মিনিট` : `${remainMins} মিনিট`,
           };
         }
-        // Lockout expired, reset
         return { locked: false, attempts: 0 };
       }
       return { locked: false, attempts: val.attempts || 0 };
@@ -82,7 +80,7 @@ serve(async (req) => {
       await supabase.from('app_settings').delete().eq('key', `lockout_${cid}`);
     };
 
-    // ── CHECK: version + lock status + custom message ──
+    // ── CHECK ──
     if (action === 'check') {
       const { data: lockData } = await supabase
         .from('app_settings').select('value').eq('key', 'site_locked').single();
@@ -96,7 +94,13 @@ serve(async (req) => {
       const storedVersion = versionData?.value && typeof versionData.value === 'object' && 'version' in (versionData.value as object)
         ? (versionData.value as { version: string }).version : null;
 
-      // Get custom message
+      // Check if setup gate is disabled
+      const { data: disabledData } = await supabase
+        .from('app_settings').select('value').eq('key', 'setup_gate_disabled').single();
+
+      const isDisabled = disabledData?.value && typeof disabledData.value === 'object' && 'disabled' in (disabledData.value as object)
+        ? (disabledData.value as { disabled: boolean }).disabled : false;
+
       const { data: msgData } = await supabase
         .from('app_settings').select('value').eq('key', 'site_lock_message').single();
 
@@ -104,13 +108,14 @@ serve(async (req) => {
         ? (msgData.value as { message: string }).message : '';
 
       return new Response(JSON.stringify({
-        isComplete: storedVersion === version,
+        isComplete: isDisabled ? true : (storedVersion === version),
         isLocked,
         lockMessage,
+        isSetupDisabled: isDisabled,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // ── CHECK LOCKOUT STATUS ──
+    // ── CHECK LOCKOUT ──
     if (action === 'check_lockout') {
       const cid = clientId || 'unknown';
       const lockout = await checkLockout(cid);
@@ -151,7 +156,6 @@ serve(async (req) => {
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Success - clear lockout
       await clearLockout(cid);
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -176,6 +180,55 @@ serve(async (req) => {
       });
     }
 
+    // ── DISABLE SETUP GATE (password required) ──
+    if (action === 'disable_setup_gate') {
+      if (password !== SETUP_PASSWORD) {
+        return new Response(JSON.stringify({ success: false, error: 'পাসওয়ার্ড ভুল' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const val = { disabled: true, disabled_at: new Date().toISOString() };
+      const { data: existing } = await supabase
+        .from('app_settings').select('id').eq('key', 'setup_gate_disabled').single();
+
+      if (existing) {
+        await supabase.from('app_settings').update({ value: val, updated_at: new Date().toISOString() }).eq('key', 'setup_gate_disabled');
+      } else {
+        await supabase.from('app_settings').insert({ key: 'setup_gate_disabled', value: val, updated_at: new Date().toISOString() });
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'সেটআপ গেট নিষ্ক্রিয় করা হয়েছে' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ── ENABLE SETUP GATE (password required) ──
+    if (action === 'enable_setup_gate') {
+      if (password !== SETUP_PASSWORD) {
+        return new Response(JSON.stringify({ success: false, error: 'পাসওয়ার্ড ভুল' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const val = { disabled: false, enabled_at: new Date().toISOString() };
+      const { data: existing } = await supabase
+        .from('app_settings').select('id').eq('key', 'setup_gate_disabled').single();
+
+      if (existing) {
+        await supabase.from('app_settings').update({ value: val, updated_at: new Date().toISOString() }).eq('key', 'setup_gate_disabled');
+      } else {
+        await supabase.from('app_settings').insert({ key: 'setup_gate_disabled', value: val, updated_at: new Date().toISOString() });
+      }
+
+      // Also reset the completed version so next enable triggers wizard
+      await supabase.from('app_settings').update({ value: { version: '__reset__' }, updated_at: new Date().toISOString() }).eq('key', 'setup_completed_version');
+
+      return new Response(JSON.stringify({ success: true, message: 'সেটআপ গেট সক্রিয় করা হয়েছে' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // ── SET CUSTOM MESSAGE ──
     if (action === 'set_message') {
       if (password !== SETUP_PASSWORD) {
@@ -185,7 +238,6 @@ serve(async (req) => {
       }
 
       const msgVal = { message: customMessage || '', updated_at: new Date().toISOString() };
-
       const { data: existing } = await supabase
         .from('app_settings').select('id').eq('key', 'site_lock_message').single();
 
@@ -210,7 +262,6 @@ serve(async (req) => {
 
       const { data: existing } = await supabase
         .from('app_settings').select('id').eq('key', 'site_locked').single();
-
       const lockData = { locked: true, locked_at: new Date().toISOString(), locked_by: 'BrandQore' };
 
       if (existing) {
@@ -234,7 +285,6 @@ serve(async (req) => {
 
       const { data: existing } = await supabase
         .from('app_settings').select('id').eq('key', 'site_locked').single();
-
       const unlockData = { locked: false, unlocked_at: new Date().toISOString() };
 
       if (existing) {
