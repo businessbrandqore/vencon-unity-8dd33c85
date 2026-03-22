@@ -2,6 +2,22 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+const SPA_REDIRECT_KEY = "vencon_spa_redirect";
+
+const restoreRedirectedPath = () => {
+  const pendingPath = sessionStorage.getItem(SPA_REDIRECT_KEY);
+  if (!pendingPath) return;
+
+  sessionStorage.removeItem(SPA_REDIRECT_KEY);
+
+  if (window.location.pathname !== "/") return;
+  if (!pendingPath.startsWith("/") || pendingPath.startsWith("//")) return;
+
+  window.history.replaceState(null, "", pendingPath);
+};
+
+restoreRedirectedPath();
+
 // Apply saved theme (default: light)
 const saved = localStorage.getItem("vencon_theme");
 if (saved === "dark") {
