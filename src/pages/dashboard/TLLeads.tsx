@@ -46,14 +46,9 @@ const TLLeads = () => {
   const { isATL, executeOrRequestApproval } = useATLApproval();
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
-  const [activeDataModeTab, setActiveDataModeTab] = useState<"lead" | "processing">("lead");
   const [selectedCampaign, setSelectedCampaign] = useState("");
-  const [selectedWebsite, setSelectedWebsite] = useState("all");
-  const [campaignWebsites, setCampaignWebsites] = useState<{ id: string; site_name: string }[]>([]);
   const [campaignMode, setCampaignMode] = useState<string>("lead");
   const [dataLoading, setDataLoading] = useState(false);
-  const [leadCount, setLeadCount] = useState(0);
-  const [processingCount, setProcessingCount] = useState(0);
   const [bronzeAgents, setBronzeAgents] = useState<Agent[]>([]);
   const [silverAgents, setSilverAgents] = useState<Agent[]>([]);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
@@ -71,6 +66,7 @@ const TLLeads = () => {
   // tierFilter removed — TL sees all fresh data without sub-filter
   // Derive active section from URL param, default to "assign"
   const activeSection = urlSection || "assign";
+  const selectedDataMode = activeSection === "processing" ? "processing" : "lead";
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
@@ -115,10 +111,10 @@ const TLLeads = () => {
     return map;
   }, [dynamicColumns]);
 
-  // Sync distDataMode with active data mode tab
+  // Sync data send mode with the active lead section
   useEffect(() => {
-    setDistDataMode(activeDataModeTab);
-  }, [activeDataModeTab]);
+    setDistDataMode(selectedDataMode);
+  }, [selectedDataMode]);
 
   const getStatusLabel = useCallback((status: string | null) => {
     if (!status) return "—";
@@ -275,21 +271,6 @@ const TLLeads = () => {
   useEffect(() => {
     const c = campaigns.find((x) => x.id === selectedCampaign);
     if (c) setCampaignMode(c.data_mode);
-    // Load websites for this campaign
-    if (selectedCampaign) {
-      setSelectedWebsite("all");
-      (async () => {
-        const { data } = await supabase
-          .from("campaign_websites")
-          .select("id, site_name")
-          .eq("campaign_id", selectedCampaign)
-          .eq("is_active", true)
-          .order("site_name");
-        setCampaignWebsites(data || []);
-      })();
-    } else {
-      setCampaignWebsites([]);
-    }
   }, [selectedCampaign, campaigns]);
 
   // Load dynamic columns from campaign_data_operations (filtered by data_mode)
@@ -338,119 +319,123 @@ const TLLeads = () => {
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
     setDataLoading(true);
-
-    // Fresh leads: show campaign fresh data from HR + TL-owned fresh leads for assignment
-    let freshQ = supabase
-      .from("leads")
-      .select("*")
-      .eq("campaign_id", selectedCampaign)
-      .is("assigned_to", null)
-      .eq("status", "fresh")
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-
-    if (isBDO) {
-      freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
-    } else {
-      // RLS handles campaign-level access; filter by agent_type only
-      freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
-    }
-
-    const { data: fresh } = await freshQ;
-    setFreshLeads(fresh || []);
-
-    let csoQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
-      .eq("status", "pending_tl").order("created_at", { ascending: false });
-    if (!isBDO && selectedCampaign) {
-      // Filter by lead's campaign via lead_id join - RLS handles access
-      csoQ = csoQ;
-    }
-    const { data: cso } = await csoQ;
-    setCsoOrders(cso || []);
-
-    let callDoneQ = supabase.from("orders").select("*, agent:users!orders_agent_id_fkey(name)")
-      .eq("status", "call_done").order("created_at", { ascending: false });
-    const { data: callDone } = await callDoneQ;
-    setCallDoneOrders(callDone || []);
-
-    let preQ = supabase.from("pre_orders").select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
-      .eq("status", "pending").order("created_at", { ascending: false });
-    const { data: pre } = await preQ;
-    setPreOrders(pre || []);
-
-    let delQ = supabase.from("leads").select("*")
-      .eq("campaign_id", selectedCampaign)
-      .gte("requeue_count", deleteSheetThreshold).order("updated_at", { ascending: false });
-    const { data: del } = await delQ;
-    setDeleteSheetLeads(del || []);
-
-    if (campaignMode === "processing") {
-      let procQ = supabase.from("leads").select("*")
+    try {
+      let freshQ = supabase
+        .from("leads")
+        .select("*")
         .eq("campaign_id", selectedCampaign)
-        .is("assigned_to", null).order("created_at", { ascending: false });
-      const { data: proc } = await procQ;
-      setProcessingLeads(proc || []);
+        .is("assigned_to", null)
+        .eq("status", "fresh")
+        .order("created_at", { ascending: false })
+        .limit(500)
+        .or("agent_type.is.null,agent_type.eq.bronze");
+
+      let csoQ = supabase
+        .from("orders")
+        .select("*, agent:users!orders_agent_id_fkey(name)")
+        .eq("status", "pending_tl")
+        .order("created_at", { ascending: false });
+
+      let callDoneQ = supabase
+        .from("orders")
+        .select("*, agent:users!orders_agent_id_fkey(name)")
+        .eq("status", "call_done")
+        .order("created_at", { ascending: false });
+
+      let preQ = supabase
+        .from("pre_orders")
+        .select("*, lead:leads(name, phone), agent:users!pre_orders_agent_id_fkey(name)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      let delQ = supabase
+        .from("leads")
+        .select("*")
+        .eq("campaign_id", selectedCampaign)
+        .gte("requeue_count", deleteSheetThreshold)
+        .order("updated_at", { ascending: false });
+
+      const procQ = activeSection === "processing"
+        ? supabase
+            .from("leads")
+            .select("*")
+            .eq("campaign_id", selectedCampaign)
+            .is("assigned_to", null)
+            .eq("status", "fresh")
+            .eq("agent_type", "silver")
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as any[] });
+
+      let silverQ = supabase
+        .from("leads")
+        .select("id, name, phone, address, source, created_at, agent_type")
+        .eq("agent_type", "silver")
+        .eq("status", "fresh")
+        .is("assigned_to", null)
+        .order("created_at", { ascending: false });
+      if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
+
+      let goldenQ = supabase
+        .from("leads")
+        .select("id, name, phone, address, source, created_at, agent_type")
+        .eq("agent_type", "golden")
+        .eq("status", "fresh")
+        .is("assigned_to", null)
+        .order("created_at", { ascending: false });
+      if (selectedCampaign) goldenQ = goldenQ.eq("campaign_id", selectedCampaign);
+
+      let agentQ = supabase
+        .from("leads")
+        .select("*, users!leads_assigned_to_fkey(name)")
+        .eq("campaign_id", selectedCampaign)
+        .not("assigned_to", "is", null)
+        .not("status", "in", "(fresh)")
+        .order("updated_at", { ascending: false })
+        .limit(200);
+      if (!isBDO) agentQ = agentQ.eq("tl_id", getEffectiveTlId());
+
+      const [freshRes, csoRes, callDoneRes, preRes, delRes, procRes, silverRes, goldenRes, agentRes] = await Promise.all([
+        freshQ,
+        csoQ,
+        callDoneQ,
+        preQ,
+        delQ,
+        procQ,
+        silverQ,
+        goldenQ,
+        agentQ,
+      ]);
+
+      setFreshLeads(freshRes.data || []);
+      setCsoOrders(csoRes.data || []);
+      setCallDoneOrders(callDoneRes.data || []);
+      setPreOrders(preRes.data || []);
+      setDeleteSheetLeads(delRes.data || []);
+      setProcessingLeads(procRes.data || []);
+      setSilverData((silverRes.data || []).map((l) => ({
+        id: l.id,
+        name: l.name,
+        phone: l.phone,
+        address: l.address,
+        source: l.source,
+        created_at: l.created_at,
+      })));
+      setGoldenData((goldenRes.data || []).map((l) => ({
+        id: l.id,
+        name: l.name,
+        phone: l.phone,
+        address: l.address,
+        source: l.source,
+        created_at: l.created_at,
+      })));
+      setAgentLeads((agentRes.data || []).map((l: any) => ({
+        ...l,
+        agent_name: l.users?.name || "—",
+      })));
+    } finally {
+      setDataLoading(false);
     }
-
-    // Silver data: leads that have been progressed to silver (agent_type='silver')
-    // These are fresh silver leads waiting for TL to assign to silver agents
-    let silverQ = supabase
-      .from("leads")
-      .select("id, name, phone, address, source, created_at, agent_type")
-      .eq("agent_type", "silver")
-      .eq("status", "fresh")
-      .is("assigned_to", null)
-      .order("created_at", { ascending: false });
-    if (selectedCampaign) silverQ = silverQ.eq("campaign_id", selectedCampaign);
-    // RLS handles campaign-level access for silver leads
-    const { data: silverLeadsData } = await silverQ;
-    setSilverData((silverLeadsData || []).map(l => ({
-      id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
-    })));
-
-    // Golden data: leads that have been progressed to golden (agent_type='golden')
-    let goldenQ = supabase
-      .from("leads")
-      .select("id, name, phone, address, source, created_at, agent_type")
-      .eq("agent_type", "golden")
-      .eq("status", "fresh")
-      .is("assigned_to", null)
-      .order("created_at", { ascending: false });
-    if (selectedCampaign) goldenQ = goldenQ.eq("campaign_id", selectedCampaign);
-    const { data: goldenLeadsData } = await goldenQ;
-    setGoldenData((goldenLeadsData || []).map(l => ({
-      id: l.id, name: l.name, phone: l.phone, address: l.address, source: l.source, created_at: l.created_at,
-    })));
-
-    // Agent leads: all assigned leads for this campaign (for TL monitoring)
-    let agentQ = supabase.from("leads").select("*, users!leads_assigned_to_fkey(name)")
-      .eq("campaign_id", selectedCampaign)
-      .not("assigned_to", "is", null)
-      .not("status", "in", "(fresh)")
-      .order("updated_at", { ascending: false })
-      .limit(200);
-    if (!isBDO) agentQ = agentQ.eq("tl_id", getEffectiveTlId());
-    const { data: agentLeadsData } = await agentQ;
-    setAgentLeads((agentLeadsData || []).map((l: any) => ({
-      ...l,
-      agent_name: l.users?.name || "—",
-    })));
-
-    // Count lead vs processing data for this campaign
-    const [{ count: lc }, { count: pc }] = await Promise.all([
-      supabase.from("leads").select("id", { count: "exact", head: true })
-        .eq("campaign_id", selectedCampaign).is("assigned_to", null).eq("status", "fresh")
-        .or("agent_type.is.null,agent_type.eq.bronze"),
-      supabase.from("leads").select("id", { count: "exact", head: true })
-        .eq("campaign_id", selectedCampaign).is("assigned_to", null)
-        .eq("agent_type", "silver"),
-    ]);
-    setLeadCount(lc || 0);
-    setProcessingCount(pc || 0);
-
-    setDataLoading(false);
-  }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
+  }, [user, selectedCampaign, activeSection, getEffectiveTlId, isBDO, deleteSheetThreshold]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
@@ -709,8 +694,6 @@ const TLLeads = () => {
     );
     loadData();
   };
-
-  const isProcessing = campaignMode === "processing";
 
   // Show all campaigns (not filtered by mode)
   const allCampaignOptions = campaigns;
@@ -1579,7 +1562,7 @@ const TLLeads = () => {
         </h2>
       </div>
 
-      {/* Campaign selector + Lead/Processing count badges */}
+      {/* Campaign + lead mode filters */}
       <div className="flex flex-row items-center gap-2 flex-wrap">
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
           <SelectTrigger className="w-40 sm:w-52 border-primary/30">
@@ -1591,15 +1574,19 @@ const TLLeads = () => {
             ))}
           </SelectContent>
         </Select>
-        {selectedCampaign && (
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="text-xs border-blue-400 text-blue-500">
-              🎯 {isBn ? "লিড" : "Lead"}: {leadCount}
-            </Badge>
-            <Badge variant="outline" className="text-xs border-purple-400 text-purple-500">
-              ⚙️ {isBn ? "প্রসেসিং" : "Processing"}: {processingCount}
-            </Badge>
-          </div>
+        {(activeSection === "assign" || activeSection === "processing") && (
+          <Select
+            value={selectedDataMode}
+            onValueChange={(value) => navigate(value === "processing" ? "/tl/leads/processing" : "/tl/leads")}
+          >
+            <SelectTrigger className="w-40 sm:w-52 border-primary/30">
+              <SelectValue placeholder={isBn ? "ডাটা টাইপ" : "Data Type"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+            </SelectContent>
+          </Select>
         )}
       </div>
 
