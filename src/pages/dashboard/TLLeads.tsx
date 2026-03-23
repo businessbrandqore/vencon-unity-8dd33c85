@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useATLApproval } from "@/hooks/useATLApproval";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Send, RefreshCw } from "lucide-react";
 import FraudChecker from "@/components/FraudChecker";
+import CopyButton from "@/components/ui/CopyButton";
 
 interface Agent { id: string; name: string; }
 interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; campaign_id?: string | null; source?: string | null; import_source?: string | null; }
@@ -39,6 +41,7 @@ const TLLeads = () => {
   const { section: urlSection } = useParams<{ section?: string }>();
   const navigate = useNavigate();
   const isBn = t("vencon") === "VENCON";
+  const isMobile = useIsMobile();
   const { isATL, executeOrRequestApproval } = useATLApproval();
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
@@ -749,8 +752,8 @@ const TLLeads = () => {
   const renderDataSendSection = () => (
     <Card className="border-primary/30 bg-primary/5">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-heading flex items-center gap-2">
-          <Send className="h-5 w-5 text-primary" />
+        <CardTitle className="text-base sm:text-lg font-heading flex items-center gap-2">
+          <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           {isBn ? "ডাটা পাঠান" : "Send Data"}
         </CardTitle>
       </CardHeader>
@@ -788,6 +791,37 @@ const TLLeads = () => {
     </Card>
   );
 
+  // Mobile card renderer for leads
+  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean; showSpecialNote?: boolean }) => (
+    <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {options?.showCheckbox && (
+            <Checkbox checked={selectedLeads.has(lead.id)}
+              onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
+          )}
+          <span className="text-xs text-muted-foreground">#{i + 1}</span>
+          {options?.showType && (
+            <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
+              {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
+            </Badge>
+          )}
+        </div>
+      </div>
+      <div className="font-medium text-sm">{lead.name || "—"}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>{lead.phone || "—"}</span>
+        {lead.phone && <CopyButton text={lead.phone} />}
+      </div>
+      {lead.address && <div className="text-xs text-muted-foreground truncate">{lead.address}</div>}
+      {options?.showSpecialNote && specialNoteKeys.map(key => {
+        const val = getSpecialNoteValue(lead, key);
+        return val !== "—" ? <div key={key} className="text-xs"><span className="text-muted-foreground">{key}:</span> {val}</div> : null;
+      })}
+      <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
+    </div>
+  );
+
   // Render content based on active section
   const renderContent = () => {
     switch (activeSection) {
@@ -798,15 +832,16 @@ const TLLeads = () => {
             {renderDataSendSection()}
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => { loadAgents(); loadData(); }} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> {isBn ? "রিফ্রেশ" : "Refresh"}
-              </Button>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                {/* Tier filter */}
+            <CardHeader className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => { loadAgents(); loadData(); }} className="gap-2 w-fit">
+                  <RefreshCw className="h-4 w-4" /> {isBn ? "রিফ্রেশ" : "Refresh"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger className="w-44 border-primary/30">
+                  <SelectTrigger className="w-full sm:w-44 border-primary/30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -817,14 +852,14 @@ const TLLeads = () => {
                 </Select>
 
                 {selectedLeads.size > 0 && (
-                  <>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
                     <Select value={bulkAgent} onValueChange={setBulkAgent}>
-                      <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
+                      <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
                       <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
                     </Select>
                     <Button onClick={bulkAssign} disabled={!bulkAgent} className="bg-primary text-primary-foreground">Apply</Button>
-                  </>
+                  </div>
                 )}
               </div>
               {/* Show HR configured dynamic columns */}
@@ -841,6 +876,13 @@ const TLLeads = () => {
               )}
             </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {filteredFresh.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</p>
+                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true, showSpecialNote: true }))}
+                </div>
+              ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -887,6 +929,7 @@ const TLLeads = () => {
                   </TableBody>
                 </Table>
               </div>
+              )}
             </CardContent>
            </Card>
           </div>
@@ -897,11 +940,18 @@ const TLLeads = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">
+              <CardTitle className="text-base sm:text-lg font-heading">
                 {isBn ? "প্রসেসিং ডাটা — যেকোনো Agent-কে assign করুন" : "Processing Data — Assign to any Agent"}
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {processingLeads.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো প্রসেসিং ডাটা নেই" : "No processing data"}</p>
+                  ) : processingLeads.map((lead, i) => renderLeadCard(lead, i))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -924,6 +974,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         );
@@ -932,19 +983,19 @@ const TLLeads = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">
+              <CardTitle className="text-base sm:text-lg font-heading">
                 {isBn ? "এজেন্ট কার্যক্রম — HR কনফিগ সহ" : "Agent Activity — With HR Config"}
               </CardTitle>
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <Select value={agentFilter} onValueChange={setAgentFilter}>
-                  <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "এজেন্ট ফিল্টার" : "Filter Agent"} /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={isBn ? "এজেন্ট ফিল্টার" : "Filter Agent"} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{isBn ? "সব এজেন্ট" : "All Agents"}</SelectItem>
                     {allAgents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "স্ট্যাটাস ফিল্টার" : "Filter Status"} /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={isBn ? "স্ট্যাটাস ফিল্টার" : "Filter Status"} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{isBn ? "সব স্ট্যাটাস" : "All Statuses"}</SelectItem>
                     {Object.entries(statusLabelMap).map(([val, info]) => (
@@ -966,51 +1017,81 @@ const TLLeads = () => {
                   ))}
                 </div>
               )}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>{isBn ? "এজেন্ট" : "Agent"}</TableHead>
-                    <TableHead>{isBn ? "কাস্টমার" : "Customer"}</TableHead>
-                    <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
-                    <TableHead>{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
-                    <TableHead>{isBn ? "কল" : "Calls"}</TableHead>
-                    <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
-                    <TableHead>{isBn ? "আপডেট" : "Updated"}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(() => {
-                    let filtered = agentLeads;
-                    if (agentFilter !== "all") filtered = filtered.filter((l: any) => l.assigned_to === agentFilter);
-                    if (statusFilter !== "all") filtered = filtered.filter(l => l.status === statusFilter);
-                    if (filtered.length === 0) return (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        {isBn ? "কোনো এজেন্ট লিড নেই" : "No agent leads found"}
-                      </TableCell></TableRow>
-                    );
-                    return filtered.map((lead: any, i: number) => {
-                      const color = getStatusColor(lead.status);
-                      return (
-                        <TableRow key={lead.id}>
-                          <TableCell>{i + 1}</TableCell>
-                          <TableCell className="font-medium">{lead.agent_name || "—"}</TableCell>
-                          <TableCell>{lead.name || "—"}</TableCell>
-                          <TableCell>{lead.phone || "—"}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" style={color ? { borderColor: color, color: color } : {}}>
-                              {getStatusLabel(lead.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">{lead.called_time || 0}</TableCell>
-                          <TableCell className="max-w-[150px] truncate text-xs">{lead.special_note || "—"}</TableCell>
-                          <TableCell className="text-xs">{lead.updated_at ? new Date(lead.updated_at).toLocaleString() : "—"}</TableCell>
-                        </TableRow>
-                      );
-                    });
-                  })()}
-                </TableBody>
-              </Table>
+              {(() => {
+                let filtered = agentLeads;
+                if (agentFilter !== "all") filtered = filtered.filter((l: any) => l.assigned_to === agentFilter);
+                if (statusFilter !== "all") filtered = filtered.filter(l => l.status === statusFilter);
+                if (filtered.length === 0) return <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো এজেন্ট লিড নেই" : "No agent leads found"}</p>;
+
+                if (isMobile) {
+                  return (
+                    <div className="space-y-3">
+                      {filtered.map((lead: any, i: number) => {
+                        const color = getStatusColor(lead.status);
+                        return (
+                          <div key={lead.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">#{i + 1}</span>
+                              <Badge variant="outline" style={color ? { borderColor: color, color } : {}}>
+                                {getStatusLabel(lead.status)}
+                              </Badge>
+                            </div>
+                            <div className="text-sm font-medium">{lead.agent_name || "—"}</div>
+                            <div className="text-sm">{lead.name || "—"}</div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{lead.phone || "—"}</span>
+                              {lead.phone && <CopyButton text={lead.phone} />}
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>{isBn ? "কল" : "Calls"}: {lead.called_time || 0}</span>
+                              <span>{lead.updated_at ? new Date(lead.updated_at).toLocaleString() : "—"}</span>
+                            </div>
+                            {lead.special_note && <div className="text-xs text-muted-foreground truncate">{lead.special_note}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>#</TableHead>
+                        <TableHead>{isBn ? "এজেন্ট" : "Agent"}</TableHead>
+                        <TableHead>{isBn ? "কাস্টমার" : "Customer"}</TableHead>
+                        <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
+                        <TableHead>{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
+                        <TableHead>{isBn ? "কল" : "Calls"}</TableHead>
+                        <TableHead>{isBn ? "নোট" : "Note"}</TableHead>
+                        <TableHead>{isBn ? "আপডেট" : "Updated"}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((lead: any, i: number) => {
+                        const color = getStatusColor(lead.status);
+                        return (
+                          <TableRow key={lead.id}>
+                            <TableCell>{i + 1}</TableCell>
+                            <TableCell className="font-medium">{lead.agent_name || "—"}</TableCell>
+                            <TableCell>{lead.name || "—"}</TableCell>
+                            <TableCell>{lead.phone || "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" style={color ? { borderColor: color, color } : {}}>
+                                {getStatusLabel(lead.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">{lead.called_time || 0}</TableCell>
+                            <TableCell className="max-w-[150px] truncate text-xs">{lead.special_note || "—"}</TableCell>
+                            <TableCell className="text-xs">{lead.updated_at ? new Date(lead.updated_at).toLocaleString() : "—"}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </CardContent>
           </Card>
         );
@@ -1035,9 +1116,34 @@ const TLLeads = () => {
             {renderDataSendSection()}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-heading">{isBn ? "পেন্ডিং অর্ডার (TL রিভিউ)" : "Pending Orders (TL Review)"}</CardTitle>
+                <CardTitle className="text-base sm:text-lg font-heading">{isBn ? "পেন্ডিং অর্ডার (TL রিভিউ)" : "Pending Orders (TL Review)"}</CardTitle>
               </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {csoOrders.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো pending order নেই" : "No pending orders"}</p>
+                  ) : csoOrders.map((o) => (
+                    <div key={o.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-muted-foreground">{o.id.slice(0, 8)}</span>
+                        <span className="text-xs font-medium">৳{(o as any).price || 0}</span>
+                      </div>
+                      <div className="font-medium text-sm">{o.customer_name || "—"}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{o.phone || "—"}</span>
+                        {o.phone && <CopyButton text={o.phone} />}
+                      </div>
+                      <div className="text-xs">{o.product || "—"} × {(o as any).quantity || 1}</div>
+                      <div className="text-xs text-muted-foreground truncate">{(o as any).address || "—"}</div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{(o as any).district || "—"}</span>
+                        <span>{(o as any).agent?.name || "—"}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1051,7 +1157,6 @@ const TLLeads = () => {
                     <TableHead>{isBn ? "জেলা" : "District"}</TableHead>
                     <TableHead>Agent</TableHead>
                     <TableHead>{isBn ? "সময়" : "Time"}</TableHead>
-                    
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1073,6 +1178,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
            </Card>
           </div>
@@ -1081,8 +1187,27 @@ const TLLeads = () => {
       case "calldone":
         return (
           <Card>
-            <CardHeader><CardTitle className="text-lg font-heading">Call Done Queue</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base sm:text-lg font-heading">Call Done Queue</CardTitle></CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {callDoneOrders.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো call done order নেই" : "No call done orders"}</p>
+                  ) : callDoneOrders.map((o) => (
+                    <div key={o.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                      <div className="font-mono text-xs text-muted-foreground">{o.id.slice(0, 8)}</div>
+                      <div className="font-medium text-sm">{o.customer_name || "—"}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{o.phone || "—"}</span>
+                        {o.phone && <CopyButton text={o.phone} />}
+                      </div>
+                      <div className="text-xs">{o.product || "—"}</div>
+                      {o.cs_note && <div className="text-xs"><span className="text-muted-foreground">CS:</span> {o.cs_note}</div>}
+                      {o.cs_rating && <Badge variant="outline" className="text-xs">{o.cs_rating}</Badge>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1109,6 +1234,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
               <p className="text-xs text-muted-foreground mt-3">
                 {isBn ? "💡 Call Done হওয়ার পর ডাটা স্বয়ংক্রিয়ভাবে Silver/Golden ট্যাবে চলে যায়" : "💡 After Call Done, data auto-progresses to Silver/Golden tabs"}
               </p>
@@ -1119,8 +1245,32 @@ const TLLeads = () => {
       case "preorders":
         return (
           <Card>
-            <CardHeader><CardTitle className="text-lg font-heading">Pre-Orders</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base sm:text-lg font-heading">Pre-Orders</CardTitle></CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {preOrders.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো pre-order নেই" : "No pre-orders"}</p>
+                  ) : preOrders.map((po) => (
+                    <div key={po.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                      <div className="font-medium text-sm">{(po as any).lead?.name || "—"}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{(po as any).lead?.phone || "—"}</span>
+                        {(po as any).lead?.phone && <CopyButton text={(po as any).lead.phone} />}
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{po.scheduled_date || "—"}</span>
+                        <span>{(po as any).agent?.name || "—"}</span>
+                      </div>
+                      {po.note && <div className="text-xs text-muted-foreground truncate">{po.note}</div>}
+                      <div className="flex gap-2 pt-1">
+                        <Button size="sm" variant="outline" onClick={() => convertPreOrder(po)} className="flex-1 border-primary text-primary hover:bg-primary/10 text-xs">Convert</Button>
+                        <Button size="sm" variant="outline" onClick={() => deletePreOrder(po.id)} className="flex-1 border-destructive text-destructive hover:bg-destructive/10 text-xs">Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1150,6 +1300,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         );
@@ -1160,7 +1311,7 @@ const TLLeads = () => {
             {renderDataSendSection()}
             <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">
+              <CardTitle className="text-base sm:text-lg font-heading">
                 🥈 {isBn ? "সিলভার ডাটা — সিলভার এজেন্টে অ্যাসাইন করুন" : "Silver Data — Assign to Silver Agents"}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
@@ -1168,6 +1319,26 @@ const TLLeads = () => {
               </p>
             </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {silverData.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"}</p>
+                  ) : silverData.map((item, i) => (
+                    <div key={item.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">#{i + 1}</span>
+                      </div>
+                      <div className="font-medium text-sm">{item.name || "—"}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{item.phone || "—"}</span>
+                        {item.phone && <CopyButton text={item.phone} />}
+                      </div>
+                      {item.address && <div className="text-xs text-muted-foreground truncate">{item.address}</div>}
+                      <div className="text-xs text-muted-foreground">{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1194,6 +1365,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
           </div>
@@ -1205,7 +1377,7 @@ const TLLeads = () => {
             {renderDataSendSection()}
             <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">
+              <CardTitle className="text-base sm:text-lg font-heading">
                 🥇 {isBn ? "গোল্ডেন ডাটা" : "Golden Data"}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
@@ -1213,6 +1385,27 @@ const TLLeads = () => {
               </p>
             </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {goldenData.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data yet"}</p>
+                  ) : goldenData.map((item, i) => (
+                    <div key={item.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">#{i + 1}</span>
+                        {item.source && <Badge variant="outline" className="text-[10px]">{item.source}</Badge>}
+                      </div>
+                      <div className="font-medium text-sm">{item.name || "—"}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{item.phone || "—"}</span>
+                        {item.phone && <CopyButton text={item.phone} />}
+                      </div>
+                      {item.address && <div className="text-xs text-muted-foreground truncate">{item.address}</div>}
+                      <div className="text-xs text-muted-foreground">{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1241,17 +1434,17 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
           </div>
         );
 
-
       case "deletesheet":
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">
+              <CardTitle className="text-base sm:text-lg font-heading">
                 {isBn ? "ডিলিট শিট" : "Delete Sheet"}
                 <span className="text-xs text-muted-foreground ml-2">
                   ({isBn ? `${deleteSheetThreshold}+ বার requeue হলে এখানে আসে` : `${deleteSheetThreshold}+ requeues`})
@@ -1267,6 +1460,39 @@ const TLLeads = () => {
               )}
             </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {deleteSheetLeads.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো delete sheet lead নেই" : "No delete sheet leads"}</p>
+                  ) : deleteSheetLeads.map((lead) => (
+                    <div key={lead.id} className="border border-border rounded-lg p-3 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={selectedDeleteLeads.has(lead.id)}
+                          onCheckedChange={(v) => { const next = new Set(selectedDeleteLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedDeleteLeads(next); }} />
+                        <span className="font-medium text-sm">{lead.name || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{lead.phone || "—"}</span>
+                        {lead.phone && <CopyButton text={lead.phone} />}
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <Badge variant="outline">{getStatusLabel(lead.status)}</Badge>
+                        <span className="text-xs text-muted-foreground">Requeue: {lead.requeue_count}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{lead.source || "—"} • {lead.updated_at ? new Date(lead.updated_at).toLocaleDateString() : "—"}</div>
+                      <div className="flex gap-2 pt-1">
+                        <Select onValueChange={(agentId) => reassignLead(lead.id, agentId)}>
+                          <SelectTrigger className="flex-1 h-8 text-xs"><SelectValue placeholder="Reassign" /></SelectTrigger>
+                          <SelectContent>{allAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(lead.id); setDeleteConfirmOpen(true); }} className="text-xs h-8">
+                          {isBn ? "ডিলিট" : "Delete"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1311,6 +1537,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         );
@@ -1324,26 +1551,24 @@ const TLLeads = () => {
     <div className="space-y-4">
       <FraudChecker />
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="font-heading text-2xl font-bold text-foreground">
-            {isBn ? "Lead Management" : "Lead Management"}
-          </h2>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="font-heading text-xl sm:text-2xl font-bold text-foreground">
+          {isBn ? "Lead Management" : "Lead Management"}
+        </h2>
       </div>
 
       {/* Top-level Lead / Processing tabs */}
       <Tabs value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
-        <TabsList>
-          <TabsTrigger value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</TabsTrigger>
-          <TabsTrigger value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="lead" className="flex-1 sm:flex-none text-xs sm:text-sm">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</TabsTrigger>
+          <TabsTrigger value="processing" className="flex-1 sm:flex-none text-xs sm:text-sm">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {/* Campaign & Website selectors */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-52 border-primary/30">
+          <SelectTrigger className="w-full sm:w-52 border-primary/30">
             <SelectValue placeholder={isBn ? "Campaign নির্বাচন করুন" : "Select Campaign"} />
           </SelectTrigger>
           <SelectContent>
@@ -1356,7 +1581,7 @@ const TLLeads = () => {
         </Select>
         {campaignWebsites.length > 0 && (
           <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
-            <SelectTrigger className="w-48 border-primary/30">
+            <SelectTrigger className="w-full sm:w-48 border-primary/30">
               <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
             </SelectTrigger>
             <SelectContent>
