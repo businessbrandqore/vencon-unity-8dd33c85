@@ -714,6 +714,13 @@ const TLLeads = () => {
   }, [activeDataModeTab, campaigns]);
 
 
+  const filteredFresh = useMemo(() => {
+    if (tierFilter === "lead") return freshLeads.filter(l => !l.agent_type || l.agent_type === "");
+    if (tierFilter === "bronze") return freshLeads.filter(l => l.agent_type === "bronze");
+    return freshLeads;
+  }, [freshLeads, tierFilter]);
+
+
 
 
   if (!user) return null;
