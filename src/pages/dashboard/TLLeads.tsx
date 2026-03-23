@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Send, RefreshCw } from "lucide-react";
 import FraudChecker from "@/components/FraudChecker";
 import CopyButton from "@/components/ui/CopyButton";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface Agent { id: string; name: string; }
 interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; campaign_id?: string | null; source?: string | null; import_source?: string | null; }
@@ -50,6 +51,9 @@ const TLLeads = () => {
   const [selectedWebsite, setSelectedWebsite] = useState("all");
   const [campaignWebsites, setCampaignWebsites] = useState<{ id: string; site_name: string }[]>([]);
   const [campaignMode, setCampaignMode] = useState<string>("lead");
+  const [dataLoading, setDataLoading] = useState(false);
+  const [leadCount, setLeadCount] = useState(0);
+  const [processingCount, setProcessingCount] = useState(0);
   const [bronzeAgents, setBronzeAgents] = useState<Agent[]>([]);
   const [silverAgents, setSilverAgents] = useState<Agent[]>([]);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
@@ -64,7 +68,7 @@ const TLLeads = () => {
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [tierFilter, setTierFilter] = useState<string>("all"); // "all" | "lead" | "bronze"
+  // tierFilter removed — TL sees all fresh data without sub-filter
   // Derive active section from URL param, default to "assign"
   const activeSection = urlSection || "assign";
   // Silver & Golden data
@@ -333,6 +337,7 @@ const TLLeads = () => {
 
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
+    setDataLoading(true);
 
     // Fresh leads: show campaign fresh data from HR + TL-owned fresh leads for assignment
     let freshQ = supabase
@@ -431,6 +436,20 @@ const TLLeads = () => {
       ...l,
       agent_name: l.users?.name || "—",
     })));
+
+    // Count lead vs processing data for this campaign
+    const [{ count: lc }, { count: pc }] = await Promise.all([
+      supabase.from("leads").select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign).is("assigned_to", null).eq("status", "fresh")
+        .or("agent_type.is.null,agent_type.eq.bronze"),
+      supabase.from("leads").select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign).is("assigned_to", null)
+        .eq("agent_type", "silver"),
+    ]);
+    setLeadCount(lc || 0);
+    setProcessingCount(pc || 0);
+
+    setDataLoading(false);
   }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
@@ -693,27 +712,18 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
-  // Filter campaigns by the active data mode tab
-  const filteredCampaignsByMode = useMemo(() => {
-    return campaigns.filter(c => c.data_mode === activeDataModeTab);
-  }, [campaigns, activeDataModeTab]);
+  // Show all campaigns (not filtered by mode)
+  const allCampaignOptions = campaigns;
 
-  // Auto-select first campaign when mode tab changes
+  // Auto-select first campaign when campaigns load
   useEffect(() => {
-    const filtered = campaigns.filter(c => c.data_mode === activeDataModeTab);
-    if (filtered.length > 0 && !filtered.some(c => c.id === selectedCampaign)) {
-      setSelectedCampaign(filtered[0].id);
-    } else if (filtered.length === 0) {
-      setSelectedCampaign("");
+    if (campaigns.length > 0 && !campaigns.some(c => c.id === selectedCampaign)) {
+      setSelectedCampaign(campaigns[0].id);
     }
-  }, [activeDataModeTab, campaigns]);
+  }, [campaigns]);
 
-
-  const filteredFresh = useMemo(() => {
-    if (tierFilter === "lead") return freshLeads.filter(l => !l.agent_type || l.agent_type === "");
-    if (tierFilter === "bronze") return freshLeads.filter(l => l.agent_type === "bronze");
-    return freshLeads;
-  }, [freshLeads, tierFilter]);
+  // No tier filter needed — show all fresh leads
+  const filteredFresh = freshLeads;
 
   // Parse product/price from special_note JSON
   const parseProductPrice = useCallback((note: string | null | undefined): { product?: string; price?: string } => {
@@ -759,7 +769,7 @@ const TLLeads = () => {
             <label className="text-xs font-medium text-muted-foreground">{isBn ? "ক্যাম্পেইন" : "Campaign"}</label>
             <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setDistAgent(""); setSendCount(""); }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} /></SelectTrigger>
-              <SelectContent>{filteredCampaignsByMode.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <SelectContent>{allCampaignOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
@@ -849,17 +859,9 @@ const TLLeads = () => {
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger className="w-full sm:w-44 border-primary/30">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"} ({freshLeads.length})</SelectItem>
-                    <SelectItem value="lead">{isBn ? "লিড (নতুন)" : "Lead (New)"} ({freshLeads.filter(l => !l.agent_type || l.agent_type === "").length})</SelectItem>
-                    <SelectItem value="bronze">{isBn ? "ব্রোঞ্জ" : "Bronze"} ({freshLeads.filter(l => l.agent_type === "bronze").length})</SelectItem>
-                  </SelectContent>
-                </Select>
-
+                {selectedLeads.size === 0 && (
+                  <span className="text-xs text-muted-foreground">{isBn ? `মোট ${freshLeads.length} টি ডাটা` : `Total ${freshLeads.length} data`}</span>
+                )}
                 {selectedLeads.size > 0 && (
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
@@ -885,7 +887,9 @@ const TLLeads = () => {
               )}
             </CardHeader>
             <CardContent>
-              {isMobile ? (
+              {dataLoading ? (
+                <LoadingSpinner text={isBn ? "ডাটা লোড হচ্ছে..." : "Loading data..."} size="sm" />
+              ) : isMobile ? (
                 <div className="space-y-3">
                   {filteredFresh.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</p>
@@ -1575,27 +1579,28 @@ const TLLeads = () => {
         </h2>
       </div>
 
-      {/* Campaign → Lead/Processing selectors side by side */}
+      {/* Campaign selector + Lead/Processing count badges */}
       <div className="flex flex-row items-center gap-2 flex-wrap">
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
           <SelectTrigger className="w-40 sm:w-52 border-primary/30">
             <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} />
           </SelectTrigger>
           <SelectContent>
-            {filteredCampaignsByMode.map((c) => (
+            {allCampaignOptions.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
-          <SelectTrigger className="w-40 sm:w-48 border-primary/30">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</SelectItem>
-            <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</SelectItem>
-          </SelectContent>
-        </Select>
+        {selectedCampaign && (
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-xs border-blue-400 text-blue-500">
+              🎯 {isBn ? "লিড" : "Lead"}: {leadCount}
+            </Badge>
+            <Badge variant="outline" className="text-xs border-purple-400 text-purple-500">
+              ⚙️ {isBn ? "প্রসেসিং" : "Processing"}: {processingCount}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {renderContent()}
