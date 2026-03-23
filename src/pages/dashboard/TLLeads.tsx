@@ -852,14 +852,14 @@ const TLLeads = () => {
                 </Select>
 
                 {selectedLeads.size > 0 && (
-                  <>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
                     <Select value={bulkAgent} onValueChange={setBulkAgent}>
-                      <SelectTrigger className="w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
+                      <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={isBn ? "Agent নির্বাচন" : "Select Agent"} /></SelectTrigger>
                       <SelectContent>{bronzeAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
                     </Select>
                     <Button onClick={bulkAssign} disabled={!bulkAgent} className="bg-primary text-primary-foreground">Apply</Button>
-                  </>
+                  </div>
                 )}
               </div>
               {/* Show HR configured dynamic columns */}
