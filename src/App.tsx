@@ -66,10 +66,12 @@ import ChatPage from "./pages/dashboard/ChatPage";
 import NotFound from "./pages/NotFound";
 import SecretSiteLock from "./pages/SecretSiteLock";
 import { DynamicFavicon } from "./components/DynamicFavicon";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
