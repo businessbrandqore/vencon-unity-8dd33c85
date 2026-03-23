@@ -1140,11 +1140,11 @@ export default function EmployeeLeads() {
   return (
     <div className="space-y-4 pb-20">
       <FraudChecker />
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h1 className="font-heading text-lg sm:text-xl flex items-center gap-2">
           <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> {t("lead_sheet_title")}
         </h1>
-        <div className="flex gap-3 text-xs text-muted-foreground">
+        <div className="flex gap-3 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
           <span>{t("sales_ratio")}: <strong className="text-foreground">{salesRatio}%</strong></span>
           <span>{t("receive_ratio")}: <strong className="text-foreground">{receiveRatio}%</strong></span>
           <span>{t("orders_count")}: <strong className="text-foreground">{metrics.orders}</strong></span>
