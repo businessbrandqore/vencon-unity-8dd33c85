@@ -1575,8 +1575,18 @@ const TLLeads = () => {
         </h2>
       </div>
 
-      {/* Lead/Processing + Campaign selectors side by side */}
+      {/* Campaign → Lead/Processing selectors side by side */}
       <div className="flex flex-row items-center gap-2 flex-wrap">
+        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+          <SelectTrigger className="w-40 sm:w-52 border-primary/30">
+            <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredCampaignsByMode.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
           <SelectTrigger className="w-40 sm:w-48 border-primary/30">
             <SelectValue />
@@ -1584,16 +1594,6 @@ const TLLeads = () => {
           <SelectContent>
             <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</SelectItem>
             <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-40 sm:w-52 border-primary/30">
-            <SelectValue placeholder={isBn ? "Campaign নির্বাচন" : "Select Campaign"} />
-          </SelectTrigger>
-          <SelectContent>
-            {filteredCampaignsByMode.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
           </SelectContent>
         </Select>
       </div>
