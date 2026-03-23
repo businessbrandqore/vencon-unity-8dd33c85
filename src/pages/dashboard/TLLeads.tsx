@@ -336,6 +336,7 @@ const TLLeads = () => {
 
   const loadData = useCallback(async () => {
     if (!user || !selectedCampaign) return;
+    setDataLoading(true);
 
     // Fresh leads: show campaign fresh data from HR + TL-owned fresh leads for assignment
     let freshQ = supabase
