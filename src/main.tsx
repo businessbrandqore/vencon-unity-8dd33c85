@@ -5,9 +5,12 @@ import "./index.css";
 const SPA_REDIRECT_KEY = "vencon_spa_redirect";
 
 const restoreRedirectedPath = () => {
-  const pendingPath = sessionStorage.getItem(SPA_REDIRECT_KEY);
+  // Check both localStorage (new) and sessionStorage (legacy fallback)
+  const pendingPath = localStorage.getItem(SPA_REDIRECT_KEY) || sessionStorage.getItem(SPA_REDIRECT_KEY);
   if (!pendingPath) return;
 
+  // Clean up both storages
+  localStorage.removeItem(SPA_REDIRECT_KEY);
   sessionStorage.removeItem(SPA_REDIRECT_KEY);
 
   if (window.location.pathname !== "/") return;
