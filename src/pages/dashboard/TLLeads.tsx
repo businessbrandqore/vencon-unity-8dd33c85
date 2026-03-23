@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useATLApproval } from "@/hooks/useATLApproval";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Send, RefreshCw } from "lucide-react";
 import FraudChecker from "@/components/FraudChecker";
+import CopyButton from "@/components/ui/CopyButton";
 
 interface Agent { id: string; name: string; }
 interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; campaign_id?: string | null; source?: string | null; import_source?: string | null; }
