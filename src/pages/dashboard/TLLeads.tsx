@@ -67,7 +67,7 @@ const TLLeads = () => {
   const [agentLeads, setAgentLeads] = useState<Lead[]>([]);
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [tierFilter, setTierFilter] = useState<string>("all"); // "all" | "lead" | "bronze"
+  // tierFilter removed — TL sees all fresh data without sub-filter
   // Derive active section from URL param, default to "assign"
   const activeSection = urlSection || "assign";
   // Silver & Golden data
