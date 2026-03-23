@@ -1241,7 +1241,7 @@ export default function EmployeeLeads() {
           <DialogHeader><DialogTitle>{t("order_confirmation")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             {/* Name & Phone */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("name")} *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
               <div><Label>{t("phone")} *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
