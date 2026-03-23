@@ -20,12 +20,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Persist cached user in sessionStorage so it survives page refresh within the same tab
+// Persist cached user in localStorage so it survives app restarts (WebView + browser)
 const SESSION_CACHE_KEY = "vencon_auth_cache";
 
 const loadCachedUser = (panel: PanelType): UserData | null => {
   try {
-    const raw = sessionStorage.getItem(SESSION_CACHE_KEY);
+    const raw = localStorage.getItem(SESSION_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as UserData;
     return parsed.panel === panel ? parsed : null;
@@ -36,9 +36,9 @@ const loadCachedUser = (panel: PanelType): UserData | null => {
 
 const saveCachedUser = (u: UserData | null) => {
   if (u) {
-    sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(u));
+    localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(u));
   } else {
-    sessionStorage.removeItem(SESSION_CACHE_KEY);
+    localStorage.removeItem(SESSION_CACHE_KEY);
   }
 };
 
