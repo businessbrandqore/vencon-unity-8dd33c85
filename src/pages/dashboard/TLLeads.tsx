@@ -752,8 +752,8 @@ const TLLeads = () => {
   const renderDataSendSection = () => (
     <Card className="border-primary/30 bg-primary/5">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-heading flex items-center gap-2">
-          <Send className="h-5 w-5 text-primary" />
+        <CardTitle className="text-base sm:text-lg font-heading flex items-center gap-2">
+          <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           {isBn ? "ডাটা পাঠান" : "Send Data"}
         </CardTitle>
       </CardHeader>
@@ -789,6 +789,37 @@ const TLLeads = () => {
         </div>
       </CardContent>
     </Card>
+  );
+
+  // Mobile card renderer for leads
+  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean; showSpecialNote?: boolean }) => (
+    <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {options?.showCheckbox && (
+            <Checkbox checked={selectedLeads.has(lead.id)}
+              onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
+          )}
+          <span className="text-xs text-muted-foreground">#{i + 1}</span>
+          {options?.showType && (
+            <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
+              {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
+            </Badge>
+          )}
+        </div>
+      </div>
+      <div className="font-medium text-sm">{lead.name || "—"}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>{lead.phone || "—"}</span>
+        {lead.phone && <CopyButton text={lead.phone} />}
+      </div>
+      {lead.address && <div className="text-xs text-muted-foreground truncate">{lead.address}</div>}
+      {options?.showSpecialNote && specialNoteKeys.map(key => {
+        const val = getSpecialNoteValue(lead, key);
+        return val !== "—" ? <div key={key} className="text-xs"><span className="text-muted-foreground">{key}:</span> {val}</div> : null;
+      })}
+      <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
+    </div>
   );
 
   // Render content based on active section
