@@ -60,43 +60,56 @@ export const AuthProvider = ({
   const [loading, setLoading] = useState(!hasValidCache);
   const resolvedRef = useRef(false);
   const requestIdRef = useRef(0);
+  // Track if we received a definitive auth event (not just initial null)
+  const gotAuthEventRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
     resolvedRef.current = false;
+    gotAuthEventRef.current = false;
 
     const resolveWithUser = async (
       session: { user: { id: string } } | null,
-      showLoading = false
+      isDefinitive: boolean
     ) => {
       const currentRequest = ++requestIdRef.current;
 
       if (!session) {
-        // Don't redirect if we haven't definitively resolved yet —
-        // onAuthStateChange INITIAL_SESSION is the definitive source
-        if (!resolvedRef.current) {
+        // Only redirect to login if this is a DEFINITIVE "no session" signal
+        // AND we don't have a valid cache (prevents premature logout)
+        if (isDefinitive) {
           resolvedRef.current = true;
+          
+          // If we have a cached user, try to refresh the session first
+          const cached = loadCachedUser(requiredPanel);
+          if (cached) {
+            // Try refreshing the session before giving up
+            const { data: refreshData } = await supabase.auth.refreshSession();
+            if (refreshData?.session && mounted) {
+              // Session refreshed successfully, resolve with it
+              void resolveWithUser({ user: { id: refreshData.session.user.id } }, true);
+              return;
+            }
+          }
+          
+          // Truly no session — clear and redirect
+          saveCachedUser(null);
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          navigate(loginPath, { replace: true });
         }
-        saveCachedUser(null);
-        if (mounted) {
-          setUser(null);
-          setLoading(false);
-        }
-        navigate(loginPath, { replace: true });
         return;
       }
 
-      // Check sessionStorage cache first for instant render
+      // Check localStorage cache first for instant render
       const cached = loadCachedUser(requiredPanel);
       if (cached && cached.authId === session.user.id && mounted) {
         setUser(cached);
         setLoading(false);
         resolvedRef.current = true;
         return;
-      }
-
-      if (showLoading && mounted) {
-        setLoading(true);
       }
 
       const { data: userData, error } = await supabase
@@ -140,13 +153,13 @@ export const AuthProvider = ({
       setLoading(false);
     };
 
-    // onAuthStateChange fires INITIAL_SESSION first — this is the primary source
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
       if (event === "SIGNED_OUT") {
+        gotAuthEventRef.current = true;
         saveCachedUser(null);
         setUser(null);
         setLoading(false);
@@ -154,25 +167,41 @@ export const AuthProvider = ({
         return;
       }
 
-      if (session) {
-        void resolveWithUser({ user: { id: session.user.id } }, false);
-      } else if (event === "INITIAL_SESSION") {
-        // Definitively no session — redirect
-        resolvedRef.current = true;
-        saveCachedUser(null);
-        if (mounted) {
-          setUser(null);
-          setLoading(false);
+      if (event === "INITIAL_SESSION") {
+        gotAuthEventRef.current = true;
+        if (session) {
+          void resolveWithUser({ user: { id: session.user.id } }, true);
+        } else {
+          // No session on initial load — but only redirect if no cache
+          void resolveWithUser(null, true);
         }
-        navigate(loginPath, { replace: true });
+        return;
+      }
+
+      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+        gotAuthEventRef.current = true;
+        if (session) {
+          void resolveWithUser({ user: { id: session.user.id } }, true);
+        }
+        return;
       }
     });
 
+    // Safety timeout: if no auth event fires within 10 seconds and we have no cache,
+    // redirect to login. If we have cache, keep showing cached state.
+    const safetyTimer = setTimeout(() => {
+      if (!gotAuthEventRef.current && mounted && !hasValidCache) {
+        setLoading(false);
+        navigate(loginPath, { replace: true });
+      }
+    }, 10000);
+
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
-  }, [navigate, requiredPanel, loginPath]);
+  }, [navigate, requiredPanel, loginPath, hasValidCache]);
 
   const signOut = async () => {
     saveCachedUser(null);
