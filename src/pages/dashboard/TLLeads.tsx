@@ -858,17 +858,9 @@ const TLLeads = () => {
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger className="w-full sm:w-44 border-primary/30">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"} ({freshLeads.length})</SelectItem>
-                    <SelectItem value="lead">{isBn ? "লিড (নতুন)" : "Lead (New)"} ({freshLeads.filter(l => !l.agent_type || l.agent_type === "").length})</SelectItem>
-                    <SelectItem value="bronze">{isBn ? "ব্রোঞ্জ" : "Bronze"} ({freshLeads.filter(l => l.agent_type === "bronze").length})</SelectItem>
-                  </SelectContent>
-                </Select>
-
+                {selectedLeads.size === 0 && (
+                  <span className="text-xs text-muted-foreground">{isBn ? `মোট ${freshLeads.length} টি ডাটা` : `Total ${freshLeads.length} data`}</span>
+                )}
                 {selectedLeads.size > 0 && (
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <span className="text-sm text-muted-foreground">{selectedLeads.size} {isBn ? "টি নির্বাচিত" : "selected"}</span>
