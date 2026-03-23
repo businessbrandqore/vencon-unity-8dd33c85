@@ -832,15 +832,16 @@ const TLLeads = () => {
             {renderDataSendSection()}
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => { loadAgents(); loadData(); }} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> {isBn ? "রিফ্রেশ" : "Refresh"}
-              </Button>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                {/* Tier filter */}
+            <CardHeader className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg font-heading">{isBn ? "ফ্রেশ ডাটা — Agent-এ Assign করুন" : "Fresh Data — Assign to Agents"}</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => { loadAgents(); loadData(); }} className="gap-2 w-fit">
+                  <RefreshCw className="h-4 w-4" /> {isBn ? "রিফ্রেশ" : "Refresh"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger className="w-44 border-primary/30">
+                  <SelectTrigger className="w-full sm:w-44 border-primary/30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
