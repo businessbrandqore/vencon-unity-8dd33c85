@@ -1851,6 +1851,7 @@ export type Database = {
           email: string
           father_name: string | null
           father_phone: string | null
+          fcm_token: string | null
           gps_location: string | null
           guardian_type: string | null
           id: string
@@ -1880,6 +1881,7 @@ export type Database = {
           email: string
           father_name?: string | null
           father_phone?: string | null
+          fcm_token?: string | null
           gps_location?: string | null
           guardian_type?: string | null
           id?: string
@@ -1909,6 +1911,7 @@ export type Database = {
           email?: string
           father_name?: string | null
           father_phone?: string | null
+          fcm_token?: string | null
           gps_location?: string | null
           guardian_type?: string | null
           id?: string
