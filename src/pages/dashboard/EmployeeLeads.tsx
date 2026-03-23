@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,6 +120,7 @@ const normalizeWorkflowStatus = (value: string) =>
 export default function EmployeeLeads() {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
+  const isMobile = useIsMobile();
   const isBn = lang === "bn";
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -735,13 +737,206 @@ export default function EmployeeLeads() {
   }
 
   const renderLeadTable = (leadList: LeadRow[]) => {
-    // Fixed columns: #, name, phone, address
-    // Then raw data keys from special_note
-    // Then HR dynamic columns (dropdowns + notes) + call count
     const dropdownCols = dynamicColumns.filter(c => c.type === "dropdown");
     const noteCols = dynamicColumns.filter(c => c.type === "note");
     const totalCols = 4 + rawDataKeys.length + dropdownCols.length + noteCols.length + (waTemplates.length > 0 ? 1 : 0);
 
+    // ── Mobile Card View ──
+    if (isMobile) {
+      if (leadList.length === 0) {
+        return <div className="py-8 text-center text-muted-foreground text-sm">{t("no_leads_empty")}</div>;
+      }
+      return (
+        <div className="space-y-3">
+          {leadList.map((lead, idx) => {
+            const requeueRemaining = getRequeueRemaining(lead);
+            const isRequeued = requeueRemaining !== null && requeueRemaining > 0;
+            const rawData = parseSpecialNote(lead.special_note);
+
+            return (
+              <div
+                key={lead.id}
+                className={cn(
+                  "border border-border rounded-lg p-3 space-y-2.5 bg-card",
+                  isRequeued && "opacity-50 pointer-events-none bg-muted/30"
+                )}
+              >
+                {/* Header row: # + name */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted-foreground">#{idx + 1}</span>
+                  {isRequeued && (
+                    <Badge variant="outline" className="text-orange-400 border-orange-400/50 text-[10px]">
+                      ⏳ {requeueRemaining} {t("minutes_wait")}
+                    </Badge>
+                  )}
+                  {waTemplates.length > 0 && !isRequeued && (
+                    <button
+                      onClick={() => {
+                        setWaCurrentLead(lead);
+                        setWaRecipientPhone(lead.phone || "");
+                        setWaSelectedTemplate("");
+                        setShowWaModal(true);
+                      }}
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Name + Phone */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm truncate">{lead.name || "—"}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-xs text-muted-foreground">{lead.phone || "—"}</span>
+                    {lead.phone && <CopyButton text={lead.phone} />}
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="text-xs text-muted-foreground">
+                  <AddressTooltip address={lead.address} />
+                </div>
+
+                {/* Raw data fields */}
+                {rawDataKeys.length > 0 && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {rawDataKeys.map(key => (
+                      <span key={key}>
+                        <span className="text-muted-foreground">{key}:</span>{" "}
+                        <span className="text-foreground">{rawData[key] || "—"}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Status dropdowns */}
+                {!isRequeued && dropdownCols.map(col => {
+                  const selectedValue = leadStatuses[lead.id] || (col.options.some(o => o.value === (lead.status || "")) ? (lead.status || "") : "");
+                  const selectedOption = col.options.find(o => o.value === selectedValue);
+
+                  return (
+                    <div key={col.id}>
+                      <label className="text-[10px] text-muted-foreground font-medium">{isBn ? (col.name_bn || col.name) : col.name}</label>
+                      <Select value={selectedValue} onValueChange={v => {
+                        setLeadStatuses(p => ({ ...p, [lead.id]: v }));
+                        const ns = v.toLowerCase().replace(/\s+/g, "_");
+                        if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
+                          setCurrentOrderLead(lead);
+                          setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+                          setOrderGiftName(""); setOrderAdvancePayment(0);
+                          setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+                          setOrderUpsell(""); setOrderSuccessRatio("");
+                          const detected = detectLocation(lead.address || "");
+                          setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                          setLocationAutoDetected(!!(detected.district));
+                          setDistrictSearch(""); setThanaSearch("");
+                          setTimeout(() => setShowOrderModal(true), 100);
+                        } else if (ns === "pre_order") {
+                          setCurrentPreOrderLead(lead);
+                          setPreOrderDate(undefined); setPreOrderNote("");
+                          setTimeout(() => setShowPreOrderModal(true), 100);
+                        } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
+                          setCurrentPreOrderConfirmLead(lead);
+                          const detected = detectLocation(lead.address || "");
+                          setPocDistrict(detected.district); setPocThana(detected.thana);
+                          setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                          setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                        } else {
+                          setTimeout(() => { handleLeadSave({ ...lead, __overrideStatus: v } as any); }, 50);
+                        }
+                      }}>
+                        <SelectTrigger className={cn("h-9 text-xs mt-1", selectedOption && getStatusColorClasses(selectedOption.color))}>
+                          {selectedOption ? (
+                            <span className="truncate">{isBn ? (selectedOption.label_bn || selectedOption.label) : selectedOption.label}</span>
+                          ) : (
+                            <SelectValue placeholder={isBn ? (col.name_bn || "স্ট্যাটাস") : col.name} />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {col.options.map(o => (
+                            <SelectItem key={o.value} value={o.value} className={cn("font-medium", getStatusColorClasses(o.color))}>
+                              {isBn ? (o.label_bn || o.label) : o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+
+                {/* Fallback statuses if no dynamic columns */}
+                {!isRequeued && dropdownCols.length === 0 && (() => {
+                  const selectedValue = leadStatuses[lead.id] || (availableStatuses.some(s => s.value === (lead.status || "")) ? (lead.status || "") : "");
+                  const selectedOption = availableStatuses.find(s => s.value === selectedValue);
+
+                  return (
+                    <Select value={selectedValue} onValueChange={v => {
+                      setLeadStatuses(p => ({ ...p, [lead.id]: v }));
+                      const ns = v.toLowerCase().replace(/\s+/g, "_");
+                      if (ns.endsWith("order_confirm") && !ns.includes("pre_order")) {
+                        setCurrentOrderLead(lead);
+                        setOrderAddress(lead.address || ""); setOrderProduct(""); setOrderQty(1); setOrderPrice(0); setOrderNote("");
+                        setOrderGiftName(""); setOrderAdvancePayment(0);
+                        setOrderPaymentMethod(""); setOrderCardName(""); setOrderMedia("");
+                        setOrderUpsell(""); setOrderSuccessRatio("");
+                        const detected = detectLocation(lead.address || "");
+                        setOrderDistrict(detected.district); setOrderThana(detected.thana);
+                        setLocationAutoDetected(!!(detected.district));
+                        setDistrictSearch(""); setThanaSearch("");
+                        setTimeout(() => setShowOrderModal(true), 100);
+                      } else if (ns === "pre_order") {
+                        setCurrentPreOrderLead(lead);
+                        setPreOrderDate(undefined); setPreOrderNote("");
+                        setTimeout(() => setShowPreOrderModal(true), 100);
+                      } else if (ns.includes("pre_order_confirm") || (ns.includes("pre_order") && ns.includes("confirm"))) {
+                        setCurrentPreOrderConfirmLead(lead);
+                        const detected = detectLocation(lead.address || "");
+                        setPocDistrict(detected.district); setPocThana(detected.thana);
+                        setPocAddress(lead.address || ""); setPocProduct(""); setPocDeliveryDate(undefined);
+                        setTimeout(() => setShowPreOrderConfirmModal(true), 100);
+                      } else {
+                        setTimeout(() => { handleLeadSave({ ...lead, __overrideStatus: v } as any); }, 50);
+                      }
+                    }}>
+                      <SelectTrigger className={cn("h-9 text-xs", selectedOption && getStatusColorClasses(selectedOption.color))}>
+                        {selectedOption ? (
+                          <span className="truncate">{isBn ? (selectedOption.label_bn || selectedOption.label) : selectedOption.label}</span>
+                        ) : (
+                          <SelectValue placeholder={t("status")} />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStatuses.map(s => (
+                          <SelectItem key={s.value} value={s.value} className={cn("font-medium", getStatusColorClasses(s.color))}>
+                            {isBn ? (s.label_bn || s.label) : s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
+
+                {/* Note columns */}
+                {noteCols.map(col => (
+                  <div key={col.id}>
+                    <label className="text-[10px] text-muted-foreground font-medium">{isBn ? (col.name_bn || col.name) : col.name}</label>
+                    <Input
+                      className="h-9 text-xs mt-1"
+                      placeholder={isBn ? (col.name_bn || col.name) : col.name}
+                      value={leadNotes[`${lead.id}_${col.id}`] || ""}
+                      onChange={e => setLeadNotes(p => ({ ...p, [`${lead.id}_${col.id}`]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── Desktop Table View ──
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -945,11 +1140,11 @@ export default function EmployeeLeads() {
   return (
     <div className="space-y-4 pb-20">
       <FraudChecker />
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h1 className="font-heading text-lg sm:text-xl flex items-center gap-2">
           <Target className="h-5 w-5 text-[hsl(var(--panel-employee))]" /> {t("lead_sheet_title")}
         </h1>
-        <div className="flex gap-3 text-xs text-muted-foreground">
+        <div className="flex gap-3 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
           <span>{t("sales_ratio")}: <strong className="text-foreground">{salesRatio}%</strong></span>
           <span>{t("receive_ratio")}: <strong className="text-foreground">{receiveRatio}%</strong></span>
           <span>{t("orders_count")}: <strong className="text-foreground">{metrics.orders}</strong></span>
@@ -958,10 +1153,10 @@ export default function EmployeeLeads() {
 
       {/* Filters */}
       {(campaigns.length > 0 || leads.length > 0) && (
-        <div className="flex flex-wrap gap-3 items-center">
-          <Filter className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-wrap gap-2 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
           <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
-            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[140px] sm:w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
               {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -1013,12 +1208,12 @@ export default function EmployeeLeads() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div>
         <Tabs value={activeDataTab} onValueChange={(v) => setActiveDataTab(v as "lead" | "processing")} className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <TabsList>
-              <TabsTrigger value="lead">🎯 {isBn ? "লিড" : "Lead"} ({leadModeLeads.length})</TabsTrigger>
-              <TabsTrigger value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({processingModeLeads.length})</TabsTrigger>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="lead" className="flex-1 sm:flex-none text-xs sm:text-sm">🎯 {isBn ? "লিড" : "Lead"} ({leadModeLeads.length})</TabsTrigger>
+              <TabsTrigger value="processing" className="flex-1 sm:flex-none text-xs sm:text-sm">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({processingModeLeads.length})</TabsTrigger>
             </TabsList>
             {leads.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
@@ -1046,13 +1241,13 @@ export default function EmployeeLeads() {
           <DialogHeader><DialogTitle>{t("order_confirmation")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             {/* Name & Phone */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("name")} *</Label><Input value={currentOrderLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
               <div><Label>{t("phone")} *</Label><Input value={currentOrderLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
 
             {/* District & Thana */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("district")}</Label>
                 <Select value={orderDistrict} onValueChange={v => { setOrderDistrict(v); setOrderThana(""); }}>
@@ -1092,7 +1287,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Product & Gift */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("product_name")} *</Label>
                 <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
@@ -1113,13 +1308,13 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Amount & Advance */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("amount_label")} *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
               <div><Label>{t("advance_payment")}</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
             </div>
 
             {/* Payment Method & Card */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("payment_method")}</Label>
                 <Select value={orderPaymentMethod} onValueChange={setOrderPaymentMethod}>
@@ -1146,7 +1341,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Quantity & Order Media */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
               <div>
                 <Label>{t("order_media")}</Label>
@@ -1165,7 +1360,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Upsell & Success Ratio */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("upsell")}</Label>
                 <Select value={orderUpsell} onValueChange={setOrderUpsell}>
@@ -1239,11 +1434,11 @@ export default function EmployeeLeads() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{t("pre_order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("name")} *</Label><Input value={currentPreOrderConfirmLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
               <div><Label>{t("phone")} *</Label><Input value={currentPreOrderConfirmLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("district")}</Label>
                 <Select value={pocDistrict} onValueChange={v => { setPocDistrict(v); setPocThana(""); }}>
@@ -1268,7 +1463,7 @@ export default function EmployeeLeads() {
               <Label>{t("location")}</Label>
               <Input value={pocAddress} onChange={e => setPocAddress(e.target.value)} className="mt-1" placeholder={t("full_address")} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("product")} *</Label>
                 <Select value={pocProduct} onValueChange={setPocProduct}>
