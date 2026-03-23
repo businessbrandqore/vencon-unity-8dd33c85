@@ -1208,12 +1208,12 @@ export default function EmployeeLeads() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div>
         <Tabs value={activeDataTab} onValueChange={(v) => setActiveDataTab(v as "lead" | "processing")} className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <TabsList>
-              <TabsTrigger value="lead">🎯 {isBn ? "লিড" : "Lead"} ({leadModeLeads.length})</TabsTrigger>
-              <TabsTrigger value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({processingModeLeads.length})</TabsTrigger>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="lead" className="flex-1 sm:flex-none text-xs sm:text-sm">🎯 {isBn ? "লিড" : "Lead"} ({leadModeLeads.length})</TabsTrigger>
+              <TabsTrigger value="processing" className="flex-1 sm:flex-none text-xs sm:text-sm">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({processingModeLeads.length})</TabsTrigger>
             </TabsList>
             {leads.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowDataRequestModal(true)} className="gap-1.5 text-xs">
