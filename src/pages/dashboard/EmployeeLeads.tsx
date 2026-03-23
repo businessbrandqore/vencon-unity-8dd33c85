@@ -1153,10 +1153,10 @@ export default function EmployeeLeads() {
 
       {/* Filters */}
       {(campaigns.length > 0 || leads.length > 0) && (
-        <div className="flex flex-wrap gap-3 items-center">
-          <Filter className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-wrap gap-2 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
           <Select value={filterCampaignId} onValueChange={v => { setFilterCampaignId(v); setFilterWebsite("all"); }}>
-            <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[140px] sm:w-[180px] text-xs"><SelectValue placeholder={isBn ? "ক্যাম্পেইন" : "Campaign"} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{isBn ? "সব ক্যাম্পেইন" : "All Campaigns"}</SelectItem>
               {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
