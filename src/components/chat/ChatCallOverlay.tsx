@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Phone, PhoneOff, PhoneCall, Mic, MicOff } from "lucide-react";
+import { isVenconApp } from "@/components/AndroidBridge";
 
 type CallStatus = "idle" | "calling" | "incoming" | "connected";
 

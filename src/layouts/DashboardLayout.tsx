@@ -51,6 +51,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
       <BirthdayPopup />
       <GlobalCallListener />
       <WarningPopup panel={panel} />
+      <AndroidBridgeSetup />
     </div>
   );
 };
