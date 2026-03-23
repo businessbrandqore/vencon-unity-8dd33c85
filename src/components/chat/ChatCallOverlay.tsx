@@ -318,6 +318,11 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
           setStatus("incoming");
           ringtoneRef.current.play();
 
+          // Notify Android WebView of incoming call
+          if (isVenconApp()) {
+            window.AndroidBridge?.showIncomingCall?.(caller?.name || "Unknown", "");
+          }
+
           // Setup signaling channel for receiving
           setupSignaling(call.id, false);
         }
