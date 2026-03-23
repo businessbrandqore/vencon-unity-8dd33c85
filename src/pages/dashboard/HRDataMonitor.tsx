@@ -1,5 +1,5 @@
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -44,7 +44,7 @@ const HRDataMonitor = () => {
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
-  const [dataMode, setDataMode] = useState<string>("all");
+  const [dataMode, setDataMode] = useState<string>("lead");
   const [activeTab, setActiveTab] = useState("leads");
   const [search, setSearch] = useState("");
 
@@ -60,6 +60,14 @@ const HRDataMonitor = () => {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (!campaigns?.length) return;
+    if (selectedCampaign === "all") {
+      setSelectedCampaign(campaigns[0].id);
+      setSelectedWebsite("all");
+    }
+  }, [campaigns, selectedCampaign]);
 
   // Fetch websites for the selected campaign, filtered by data mode
   const { data: websites } = useQuery({
@@ -93,33 +101,52 @@ const HRDataMonitor = () => {
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
-      if (selectedWebsite !== "all") {
-        const site = websites?.find(w => w.id === selectedWebsite);
-        if (site) q = q.eq("source", site.site_name);
-      }
+      if (dataMode === "lead") q = q.or("import_source.is.null,import_source.neq.processing");
+      if (dataMode === "processing") q = q.eq("import_source", "processing");
+      if (selectedWebsite !== "all") q = q.eq("source", selectedWebsite);
       const { data, error } = await q;
       if (error) throw error;
-      let result = data || [];
-      if (dataMode === "lead") result = result.filter(l => l.import_source !== "processing");
-      if (dataMode === "processing") result = result.filter(l => l.import_source === "processing");
-      return result;
+      return data || [];
     },
   });
 
   // Fetch orders
-  const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["monitor-orders", selectedCampaign],
+  const { data: orders, isLoading: ordersLoading, isFetching: ordersFetching } = useQuery({
+    queryKey: ["monitor-orders", selectedCampaign, activeTab],
+    enabled: activeTab === "orders",
     queryFn: async () => {
+      let leadIds: string[] | null = null;
+      if (selectedCampaign !== "all") {
+        const { data: campaignLeads, error: leadError } = await supabase
+          .from("leads")
+          .select("id")
+          .eq("campaign_id", selectedCampaign)
+          .limit(500);
+        if (leadError) throw leadError;
+        leadIds = (campaignLeads || []).map((lead) => lead.id);
+        if (leadIds.length === 0) return [];
+      }
+
       let q = supabase
         .from("orders")
         .select("id, customer_name, phone, address, product, price, quantity, status, delivery_status, steadfast_consignment_id, created_at, agent_id, tl_id, lead_id")
         .order("created_at", { ascending: false })
         .limit(500);
+      if (leadIds) q = q.in("lead_id", leadIds);
       const { data, error } = await q;
       if (error) throw error;
       return data;
     },
   });
+
+  const { isFetching: leadsFetching } = useQuery({
+    queryKey: ["monitor-leads-fetching-proxy", selectedCampaign, dataMode, selectedWebsite],
+    enabled: false,
+    queryFn: async () => [],
+  });
+
+  const isLeadTableLoading = leadsLoading || leadsFetching;
+  const isOrderTableLoading = ordersLoading || ordersFetching;
 
   // Stats
   const allLeads = leads || [];
@@ -157,7 +184,7 @@ const HRDataMonitor = () => {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Select value={selectedCampaign} onValueChange={handleCampaignChange}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-full sm:w-[220px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
             </SelectTrigger>
             <SelectContent>
@@ -170,24 +197,23 @@ const HRDataMonitor = () => {
             </SelectContent>
           </Select>
           <Select value={dataMode} onValueChange={(val) => { setDataMode(val); setSelectedWebsite("all"); }}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"}</SelectItem>
               <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
               <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
             </SelectContent>
           </Select>
           {websites && websites.length > 0 && (
             <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
                 {websites.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
+                  <SelectItem key={w.id} value={w.site_name}>
                     {w.site_name}
                   </SelectItem>
                 ))}
@@ -226,12 +252,6 @@ const HRDataMonitor = () => {
             <TabsTrigger value="leads" className="text-xs">
               🎯 {isBn ? "সব লিড" : "All Leads"} ({allLeads.length})
             </TabsTrigger>
-            <TabsTrigger value="bronze" className="text-xs">
-              🥉 {isBn ? "ব্রোঞ্জ" : "Bronze"} ({bronzeLeads.length})
-            </TabsTrigger>
-            <TabsTrigger value="silver" className="text-xs">
-              🥈 {isBn ? "সিলভার" : "Silver"} ({silverLeads.length})
-            </TabsTrigger>
             <TabsTrigger value="orders" className="text-xs">
               🛒 {isBn ? "অর্ডার" : "Orders"} ({allOrders.length})
             </TabsTrigger>
@@ -249,22 +269,12 @@ const HRDataMonitor = () => {
 
         {/* All Leads Tab */}
         <TabsContent value="leads">
-          <LeadTable leads={filterBySearch(allLeads)} loading={leadsLoading} isBn={isBn} />
-        </TabsContent>
-
-        {/* Bronze Tab */}
-        <TabsContent value="bronze">
-          <LeadTable leads={filterBySearch(bronzeLeads)} loading={leadsLoading} isBn={isBn} />
-        </TabsContent>
-
-        {/* Silver Tab */}
-        <TabsContent value="silver">
-          <LeadTable leads={filterBySearch(silverLeads)} loading={leadsLoading} isBn={isBn} />
+          <LeadTable leads={filterBySearch(allLeads)} loading={isLeadTableLoading} isBn={isBn} />
         </TabsContent>
 
         {/* Orders Tab */}
         <TabsContent value="orders">
-          <OrderTable orders={filterBySearch(allOrders)} loading={ordersLoading} isBn={isBn} />
+          <OrderTable orders={filterBySearch(allOrders)} loading={isOrderTableLoading} isBn={isBn} />
         </TabsContent>
       </Tabs>
     </div>
