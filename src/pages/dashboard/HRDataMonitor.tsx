@@ -505,6 +505,7 @@ interface OrderRow {
 }
 
 const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: boolean; isBn: boolean }) => {
+  const isMobile = useIsMobile();
   if (loading) return <LoadingSpinner text="লোড হচ্ছে..." size="sm" />;
   if (orders.length === 0)
     return (
@@ -515,6 +516,42 @@ const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: bo
         </CardContent>
       </Card>
     );
+
+  if (isMobile) {
+    return (
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          {orders.map((order, idx) => (
+            <div key={order.id} className="border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm">{order.customer_name || "—"}</span>
+                <span className="text-xs font-semibold text-primary">৳{(order.price || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{order.phone || "—"}</span>
+                {order.phone && <CopyButton text={order.phone} />}
+              </div>
+              <div className="text-xs"><span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span> {order.product || "—"} × {order.quantity || 1}</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className={`text-[10px] ${orderStatusColorMap[order.status || ""] || "bg-muted text-muted-foreground"}`}>
+                  {order.status === "pending_cso" ? (isBn ? "CSO পেন্ডিং" : "Pending CSO") :
+                   order.status === "send_today" ? (isBn ? "আজ পাঠান" : "Send Today") :
+                   order.status === "call_done" ? (isBn ? "কল সম্পন্ন" : "Call Done") :
+                   order.status || "—"}
+                </Badge>
+                <Badge className={`text-[10px] ${orderStatusColorMap[order.delivery_status || ""] || "bg-muted text-muted-foreground"}`}>
+                  {order.delivery_status === "delivered" ? "✅" : order.delivery_status === "returned" ? "↩" : "⏳"} {order.delivery_status || "—"}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground text-right">
+                {order.created_at ? format(new Date(order.created_at), "dd MMM yyyy") : "—"}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
