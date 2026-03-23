@@ -720,7 +720,31 @@ const TLLeads = () => {
     return freshLeads;
   }, [freshLeads, tierFilter]);
 
+  // Parse product/price from special_note JSON
+  const parseProductPrice = useCallback((note: string | null | undefined): { product?: string; price?: string } => {
+    if (!note) return {};
+    try {
+      const parsed = JSON.parse(note);
+      const flat: Record<string, unknown> = {};
+      if (parsed.extra_fields && typeof parsed.extra_fields === "object") {
+        Object.assign(flat, parsed.extra_fields);
+      }
+      Object.assign(flat, parsed);
+      const product = flat.product || flat.product_name || flat.item_name || flat.products || "";
+      const price = flat.price || flat.total || flat.amount || flat.order_total || "";
+      return {
+        product: product ? String(product) : undefined,
+        price: price ? String(price) : undefined,
+      };
+    } catch { return {}; }
+  }, []);
 
+  const hasProductInfo = useMemo(() => {
+    return freshLeads.some(l => {
+      const info = parseProductPrice(l.special_note);
+      return info.product || info.price;
+    });
+  }, [freshLeads, parseProductPrice]);
 
 
   if (!user) return null;
