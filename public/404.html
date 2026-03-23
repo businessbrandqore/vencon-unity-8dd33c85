@@ -72,10 +72,18 @@
     </main>
     <script>
       (function () {
+        // Save the full intended path
         var target = window.location.pathname + window.location.search + window.location.hash;
+        
+        // Only redirect if not already at root
+        if (target === '/' || target === '') return;
+        
         try {
-          sessionStorage.setItem('vencon_spa_redirect', target);
+          // Use localStorage instead of sessionStorage so it survives across navigations
+          localStorage.setItem('vencon_spa_redirect', target);
         } catch (e) {}
+        
+        // Navigate to root - the SPA will restore the path
         window.location.replace('/');
       })();
     </script>
