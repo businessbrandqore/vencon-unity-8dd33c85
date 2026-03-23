@@ -768,7 +768,7 @@ const TLLeads = () => {
             <label className="text-xs font-medium text-muted-foreground">{isBn ? "ক্যাম্পেইন" : "Campaign"}</label>
             <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setDistAgent(""); setSendCount(""); }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} /></SelectTrigger>
-              <SelectContent>{filteredCampaignsByMode.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <SelectContent>{allCampaignOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
