@@ -435,6 +435,20 @@ const TLLeads = () => {
       ...l,
       agent_name: l.users?.name || "—",
     })));
+
+    // Count lead vs processing data for this campaign
+    const [{ count: lc }, { count: pc }] = await Promise.all([
+      supabase.from("leads").select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign).is("assigned_to", null).eq("status", "fresh")
+        .or("agent_type.is.null,agent_type.eq.bronze"),
+      supabase.from("leads").select("id", { count: "exact", head: true })
+        .eq("campaign_id", selectedCampaign).is("assigned_to", null)
+        .eq("agent_type", "silver"),
+    ]);
+    setLeadCount(lc || 0);
+    setProcessingCount(pc || 0);
+
+    setDataLoading(false);
   }, [user, selectedCampaign, campaignMode, getEffectiveTlId]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
