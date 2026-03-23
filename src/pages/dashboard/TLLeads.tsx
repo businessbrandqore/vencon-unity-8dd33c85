@@ -1580,13 +1580,18 @@ const TLLeads = () => {
         </h2>
       </div>
 
-      {/* Top-level Lead / Processing tabs */}
-      <Tabs value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="lead" className="flex-1 sm:flex-none text-xs sm:text-sm">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</TabsTrigger>
-          <TabsTrigger value="processing" className="flex-1 sm:flex-none text-xs sm:text-sm">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Top-level Lead / Processing selector */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <Select value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
+          <SelectTrigger className="w-full sm:w-52 border-primary/30">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</SelectItem>
+            <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Campaign & Website selectors */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
