@@ -9,6 +9,7 @@ import ATLApprovalBanner from "@/components/ATLApprovalBanner";
 import BirthdayPopup from "@/components/BirthdayPopup";
 import GlobalCallListener from "@/components/GlobalCallListener";
 import WarningPopup from "@/components/WarningPopup";
+import AndroidBridgeSetup from "@/components/AndroidBridge";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
