@@ -939,11 +939,18 @@ const TLLeads = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-heading">
+              <CardTitle className="text-base sm:text-lg font-heading">
                 {isBn ? "প্রসেসিং ডাটা — যেকোনো Agent-কে assign করুন" : "Processing Data — Assign to any Agent"}
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {processingLeads.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো প্রসেসিং ডাটা নেই" : "No processing data"}</p>
+                  ) : processingLeads.map((lead, i) => renderLeadCard(lead, i))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -966,6 +973,7 @@ const TLLeads = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         );
