@@ -711,27 +711,18 @@ const TLLeads = () => {
 
   const isProcessing = campaignMode === "processing";
 
-  // Filter campaigns by the active data mode tab
-  const filteredCampaignsByMode = useMemo(() => {
-    return campaigns.filter(c => c.data_mode === activeDataModeTab);
-  }, [campaigns, activeDataModeTab]);
+  // Show all campaigns (not filtered by mode)
+  const allCampaignOptions = campaigns;
 
-  // Auto-select first campaign when mode tab changes
+  // Auto-select first campaign when campaigns load
   useEffect(() => {
-    const filtered = campaigns.filter(c => c.data_mode === activeDataModeTab);
-    if (filtered.length > 0 && !filtered.some(c => c.id === selectedCampaign)) {
-      setSelectedCampaign(filtered[0].id);
-    } else if (filtered.length === 0) {
-      setSelectedCampaign("");
+    if (campaigns.length > 0 && !campaigns.some(c => c.id === selectedCampaign)) {
+      setSelectedCampaign(campaigns[0].id);
     }
-  }, [activeDataModeTab, campaigns]);
+  }, [campaigns]);
 
-
-  const filteredFresh = useMemo(() => {
-    if (tierFilter === "lead") return freshLeads.filter(l => !l.agent_type || l.agent_type === "");
-    if (tierFilter === "bronze") return freshLeads.filter(l => l.agent_type === "bronze");
-    return freshLeads;
-  }, [freshLeads, tierFilter]);
+  // No tier filter needed — show all fresh leads
+  const filteredFresh = freshLeads;
 
   // Parse product/price from special_note JSON
   const parseProductPrice = useCallback((note: string | null | undefined): { product?: string; price?: string } => {
