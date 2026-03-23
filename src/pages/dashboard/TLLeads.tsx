@@ -792,7 +792,7 @@ const TLLeads = () => {
   );
 
   // Mobile card renderer for leads
-  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean; showSpecialNote?: boolean }) => (
+  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean }) => (
     <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -813,11 +813,12 @@ const TLLeads = () => {
         <span>{lead.phone || "—"}</span>
         {lead.phone && <CopyButton text={lead.phone} />}
       </div>
-      {lead.address && <div className="text-xs text-muted-foreground truncate">{lead.address}</div>}
-      {options?.showSpecialNote && specialNoteKeys.map(key => {
-        const val = getSpecialNoteValue(lead, key);
-        return val !== "—" ? <div key={key} className="text-xs"><span className="text-muted-foreground">{key}:</span> {val}</div> : null;
-      })}
+      {lead.address && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="truncate">{lead.address}</span>
+          <CopyButton text={lead.address} />
+        </div>
+      )}
       <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
     </div>
   );
