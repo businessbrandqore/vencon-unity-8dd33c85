@@ -156,16 +156,6 @@ const HRDataMonitor = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Select value={dataMode} onValueChange={(val) => { setDataMode(val); setSelectedWebsite("all"); }}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"}</SelectItem>
-              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
-              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={selectedCampaign} onValueChange={handleCampaignChange}>
             <SelectTrigger className="w-[220px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
@@ -177,6 +167,16 @@ const HRDataMonitor = () => {
                   {c.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={dataMode} onValueChange={(val) => { setDataMode(val); setSelectedWebsite("all"); }}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isBn ? "সব ডাটা" : "All Data"}</SelectItem>
+              <SelectItem value="lead">{isBn ? "লিড" : "Lead"}</SelectItem>
+              <SelectItem value="processing">{isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
             </SelectContent>
           </Select>
           {websites && websites.length > 0 && (
