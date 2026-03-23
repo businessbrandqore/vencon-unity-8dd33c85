@@ -793,36 +793,48 @@ const TLLeads = () => {
   );
 
   // Mobile card renderer for leads
-  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean }) => (
-    <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {options?.showCheckbox && (
-            <Checkbox checked={selectedLeads.has(lead.id)}
-              onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
-          )}
-          <span className="text-xs text-muted-foreground">#{i + 1}</span>
-          {options?.showType && (
-            <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
-              {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
-            </Badge>
+  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean; showProduct?: boolean }) => {
+    const noteInfo = options?.showProduct ? parseProductPrice(lead.special_note) : {};
+    return (
+      <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {options?.showCheckbox && (
+              <Checkbox checked={selectedLeads.has(lead.id)}
+                onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
+            )}
+            <span className="text-xs text-muted-foreground">#{i + 1}</span>
+            {options?.showType && (
+              <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
+                {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
+              </Badge>
+            )}
+          </div>
+          {noteInfo.price && (
+            <span className="text-xs font-semibold text-primary">৳{noteInfo.price}</span>
           )}
         </div>
-      </div>
-      <div className="font-medium text-sm">{lead.name || "—"}</div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{lead.phone || "—"}</span>
-        {lead.phone && <CopyButton text={lead.phone} />}
-      </div>
-      {lead.address && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span className="truncate">{lead.address}</span>
-          <CopyButton text={lead.address} />
+        <div className="font-medium text-sm">{lead.name || "—"}</div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{lead.phone || "—"}</span>
+          {lead.phone && <CopyButton text={lead.phone} />}
         </div>
-      )}
-      <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
-    </div>
-  );
+        {lead.address && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="truncate">{lead.address}</span>
+            <CopyButton text={lead.address} />
+          </div>
+        )}
+        {noteInfo.product && (
+          <div className="text-xs">
+            <span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span>{" "}
+            <span className="text-foreground font-medium">{noteInfo.product}</span>
+          </div>
+        )}
+        <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
+      </div>
+    );
+  };
 
   // Render content based on active section
   const renderContent = () => {
