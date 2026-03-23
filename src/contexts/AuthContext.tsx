@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PanelType, getPanelByType } from "@/lib/panelConfig";
@@ -19,7 +19,28 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-let cachedUser: UserData | null = null;
+
+// Persist cached user in sessionStorage so it survives page refresh within the same tab
+const SESSION_CACHE_KEY = "vencon_auth_cache";
+
+const loadCachedUser = (panel: PanelType): UserData | null => {
+  try {
+    const raw = sessionStorage.getItem(SESSION_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as UserData;
+    return parsed.panel === panel ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCachedUser = (u: UserData | null) => {
+  if (u) {
+    sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(u));
+  } else {
+    sessionStorage.removeItem(SESSION_CACHE_KEY);
+  }
+};
 
 export const AuthProvider = ({
   children,
@@ -32,26 +53,31 @@ export const AuthProvider = ({
   const panelConfig = getPanelByType(requiredPanel);
   const loginPath = panelConfig?.loginPath || "/";
 
-  const hasValidCache = !!cachedUser && cachedUser.panel === requiredPanel;
+  const cachedUser = loadCachedUser(requiredPanel);
+  const hasValidCache = !!cachedUser;
 
-  const [user, setUser] = useState<UserData | null>(hasValidCache ? cachedUser : null);
+  const [user, setUser] = useState<UserData | null>(cachedUser);
   const [loading, setLoading] = useState(!hasValidCache);
+  const resolvedRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
-    let requestId = 0;
+    resolvedRef.current = false;
 
-    const resolveWithUser = async (session: { user: { id: string } } | null, showLoading = false) => {
-      const currentRequest = ++requestId;
+    const resolveWithUser = async (
+      session: { user: { id: string } } | null,
+      showLoading = false
+    ) => {
+      const currentRequest = ++requestIdRef.current;
 
       if (!session) {
-        if (cachedUser && cachedUser.panel === requiredPanel && mounted) {
-          setUser(cachedUser);
-          setLoading(false);
-          return;
+        // Don't redirect if we haven't definitively resolved yet —
+        // onAuthStateChange INITIAL_SESSION is the definitive source
+        if (!resolvedRef.current) {
+          resolvedRef.current = true;
         }
-
-        cachedUser = null;
+        saveCachedUser(null);
         if (mounted) {
           setUser(null);
           setLoading(false);
@@ -60,14 +86,12 @@ export const AuthProvider = ({
         return;
       }
 
-      if (
-        cachedUser &&
-        cachedUser.authId === session.user.id &&
-        cachedUser.panel === requiredPanel &&
-        mounted
-      ) {
-        setUser(cachedUser);
+      // Check sessionStorage cache first for instant render
+      const cached = loadCachedUser(requiredPanel);
+      if (cached && cached.authId === session.user.id && mounted) {
+        setUser(cached);
         setLoading(false);
+        resolvedRef.current = true;
         return;
       }
 
@@ -81,10 +105,10 @@ export const AuthProvider = ({
         .eq("auth_id", session.user.id)
         .single();
 
-      if (!mounted || currentRequest !== requestId) return;
+      if (!mounted || currentRequest !== requestIdRef.current) return;
 
       if (error || !userData) {
-        cachedUser = null;
+        saveCachedUser(null);
         setUser(null);
         setLoading(false);
         void supabase.auth.signOut();
@@ -93,7 +117,7 @@ export const AuthProvider = ({
       }
 
       if (userData.panel !== requiredPanel) {
-        cachedUser = null;
+        saveCachedUser(null);
         setUser(null);
         setLoading(false);
         const correctPanel = getPanelByType(userData.panel as PanelType);
@@ -110,18 +134,20 @@ export const AuthProvider = ({
         role: userData.role,
       };
 
-      cachedUser = mappedUser;
+      saveCachedUser(mappedUser);
+      resolvedRef.current = true;
       setUser(mappedUser);
       setLoading(false);
     };
 
+    // onAuthStateChange fires INITIAL_SESSION first — this is the primary source
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
       if (event === "SIGNED_OUT") {
-        cachedUser = null;
+        saveCachedUser(null);
         setUser(null);
         setLoading(false);
         navigate(loginPath, { replace: true });
@@ -130,26 +156,26 @@ export const AuthProvider = ({
 
       if (session) {
         void resolveWithUser({ user: { id: session.user.id } }, false);
+      } else if (event === "INITIAL_SESSION") {
+        // Definitively no session — redirect
+        resolvedRef.current = true;
+        saveCachedUser(null);
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        navigate(loginPath, { replace: true });
       }
     });
-
-    void (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-      void resolveWithUser(session ? { user: { id: session.user.id } } : null, !hasValidCache);
-    })();
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, requiredPanel, loginPath, hasValidCache]);
+  }, [navigate, requiredPanel, loginPath]);
 
   const signOut = async () => {
-    cachedUser = null;
+    saveCachedUser(null);
     await supabase.auth.signOut();
     navigate(loginPath, { replace: true });
   };
