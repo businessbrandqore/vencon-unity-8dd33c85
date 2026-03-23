@@ -713,21 +713,6 @@ const TLLeads = () => {
     }
   }, [activeDataModeTab, campaigns]);
 
-  // Parse dynamic columns from special_note JSON for fresh leads table
-  const specialNoteKeys = useMemo(() => {
-    const keys = new Set<string>();
-    freshLeads.forEach(l => {
-      if (l.special_note) {
-        try {
-          const parsed = JSON.parse(l.special_note);
-          if (parsed && typeof parsed === "object") {
-            Object.keys(parsed).forEach(k => keys.add(k));
-          }
-        } catch {}
-      }
-    });
-    return Array.from(keys);
-  }, [freshLeads]);
 
   const filteredFresh = useMemo(() => {
     if (tierFilter === "lead") return freshLeads.filter(l => !l.agent_type || l.agent_type === "");
@@ -735,16 +720,8 @@ const TLLeads = () => {
     return freshLeads;
   }, [freshLeads, tierFilter]);
 
-  const getSpecialNoteValue = useCallback((lead: Lead, key: string): string => {
-    if (!lead.special_note) return "—";
-    try {
-      const parsed = JSON.parse(lead.special_note);
-      const val = parsed?.[key];
-      if (val === null || val === undefined) return "—";
-      if (typeof val === "object") return JSON.stringify(val);
-      return String(val);
-    } catch { return "—"; }
-  }, []);
+
+
 
   if (!user) return null;
 
@@ -792,7 +769,7 @@ const TLLeads = () => {
   );
 
   // Mobile card renderer for leads
-  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean; showSpecialNote?: boolean }) => (
+  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean }) => (
     <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -813,11 +790,12 @@ const TLLeads = () => {
         <span>{lead.phone || "—"}</span>
         {lead.phone && <CopyButton text={lead.phone} />}
       </div>
-      {lead.address && <div className="text-xs text-muted-foreground truncate">{lead.address}</div>}
-      {options?.showSpecialNote && specialNoteKeys.map(key => {
-        const val = getSpecialNoteValue(lead, key);
-        return val !== "—" ? <div key={key} className="text-xs"><span className="text-muted-foreground">{key}:</span> {val}</div> : null;
-      })}
+      {lead.address && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="truncate">{lead.address}</span>
+          <CopyButton text={lead.address} />
+        </div>
+      )}
       <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
     </div>
   );
@@ -880,7 +858,7 @@ const TLLeads = () => {
                 <div className="space-y-3">
                   {filteredFresh.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</p>
-                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true, showSpecialNote: true }))}
+                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true }))}
                 </div>
               ) : (
               <div className="overflow-x-auto">
@@ -896,15 +874,12 @@ const TLLeads = () => {
                       <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead>{isBn ? "শহর" : "City"}</TableHead>
-                      {specialNoteKeys.map(key => (
-                        <TableHead key={key} className="text-xs">{key}</TableHead>
-                      ))}
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredFresh.length === 0 ? (
-                      <TableRow><TableCell colSpan={9 + specialNoteKeys.length} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
                     ) : filteredFresh.map((lead, i) => (
                       <TableRow key={lead.id}>
                         <TableCell>
@@ -920,9 +895,6 @@ const TLLeads = () => {
                         <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                         <TableCell>{lead.phone || "—"}</TableCell>
                         <TableCell>{lead.address || "—"}</TableCell>
-                        {specialNoteKeys.map(key => (
-                          <TableCell key={key} className="text-xs max-w-[120px] truncate">{getSpecialNoteValue(lead, key)}</TableCell>
-                        ))}
                         <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
                       </TableRow>
                     ))}
