@@ -910,13 +910,21 @@ const TLLeads = () => {
                       <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead>{isBn ? "শহর" : "City"}</TableHead>
+                      {hasProductInfo && (
+                        <>
+                          <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
+                          <TableHead>{isBn ? "মূল্য" : "Price"}</TableHead>
+                        </>
+                      )}
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredFresh.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
-                    ) : filteredFresh.map((lead, i) => (
+                      <TableRow><TableCell colSpan={hasProductInfo ? 9 : 7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
+                    ) : filteredFresh.map((lead, i) => {
+                      const noteInfo = parseProductPrice(lead.special_note);
+                      return (
                       <TableRow key={lead.id}>
                         <TableCell>
                           <Checkbox checked={selectedLeads.has(lead.id)}
@@ -931,9 +939,16 @@ const TLLeads = () => {
                         <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                         <TableCell>{lead.phone || "—"}</TableCell>
                         <TableCell>{lead.address || "—"}</TableCell>
+                        {hasProductInfo && (
+                          <>
+                            <TableCell className="text-xs font-medium">{noteInfo.product || "—"}</TableCell>
+                            <TableCell className="text-xs font-medium">{noteInfo.price ? `৳${noteInfo.price}` : "—"}</TableCell>
+                          </>
+                        )}
                         <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
