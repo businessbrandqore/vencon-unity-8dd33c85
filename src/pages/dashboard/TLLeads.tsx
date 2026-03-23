@@ -40,7 +40,7 @@ const TLLeads = () => {
   const { t } = useLanguage();
   const { section: urlSection } = useParams<{ section?: string }>();
   const navigate = useNavigate();
-  const isBn = t("vencon") === "VENCON";
+  const isMobile = useIsMobile();
   const { isATL, executeOrRequestApproval } = useATLApproval();
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; data_mode: string }[]>([]);
