@@ -88,29 +88,57 @@ export default function ProfileSettings() {
     if (!file.type.startsWith("image/")) { toast.error("শুধু ছবি আপলোড করুন"); return; }
 
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const filePath = `avatars/${user.id}.${ext}`;
 
-    // Upload to storage
-    const { error: uploadError } = await supabase.storage
-      .from("app-assets")
-      .upload(filePath, file, { upsert: true });
+    try {
+      // Get Cloudinary config from app_settings
+      const { data: cloudinarySettings } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "cloudinary_config")
+        .single();
 
-    if (uploadError) {
+      if (!cloudinarySettings?.value) {
+        toast.error("Cloudinary কনফিগারেশন পাওয়া যায়নি। HR Settings → API থেকে সেটআপ করুন।");
+        setUploading(false);
+        return;
+      }
+
+      const config = cloudinarySettings.value as { cloud_name?: string; upload_preset?: string };
+      if (!config.cloud_name || !config.upload_preset) {
+        toast.error("Cloudinary Cloud Name বা Upload Preset সেট করা নেই।");
+        setUploading(false);
+        return;
+      }
+
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", config.upload_preset);
+      formData.append("folder", "vencon/avatars");
+      formData.append("public_id", `avatar_${user.id}`);
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${config.cloud_name}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        toast.error("ছবি আপলোড করতে সমস্যা হয়েছে");
+        setUploading(false);
+        return;
+      }
+
+      const result = await res.json();
+      const avatarUrl = result.secure_url;
+
+      // Update user record
+      await supabase.from("users").update({ avatar_url: avatarUrl } as any).eq("id", user.id);
+      setProfile((p) => p ? { ...p, avatar_url: avatarUrl } : p);
+      toast.success("প্রোফাইল ছবি আপডেট হয়েছে ✓");
+    } catch {
       toast.error("ছবি আপলোড করতে সমস্যা হয়েছে");
-      setUploading(false);
-      return;
     }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage.from("app-assets").getPublicUrl(filePath);
-    const avatarUrl = urlData.publicUrl + `?t=${Date.now()}`;
-
-    // Update user record
-    await supabase.from("users").update({ avatar_url: avatarUrl } as any).eq("id", user.id);
-    setProfile((p) => p ? { ...p, avatar_url: avatarUrl } : p);
     setUploading(false);
-    toast.success("প্রোফাইল ছবি আপডেট হয়েছে ✓");
   };
 
   if (loading) return <LoadingSpinner text="লোড হচ্ছে..." />;
