@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { isVenconApp } from "@/components/AndroidBridge";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,6 +114,12 @@ const NotificationBell = () => {
         setNotifications((prev) => [newNotif, ...prev].slice(0, 10));
         setUnreadCount((c) => c + 1);
         if (initialLoadDone.current) playNotificationSound(volume);
+
+        // Send chat bubble to Android WebView
+        if (isVenconApp() && newNotif.type === "chat") {
+          const { preview } = parseChatNotification(newNotif.message);
+          window.AndroidBridge?.showChatBubble?.(newNotif.title, preview);
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };

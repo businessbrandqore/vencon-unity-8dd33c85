@@ -67,6 +67,7 @@ import NotFound from "./pages/NotFound";
 import SecretSiteLock from "./pages/SecretSiteLock";
 import { DynamicFavicon } from "./components/DynamicFavicon";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AndroidBridgeSetup from "./components/AndroidBridge";
 
 const queryClient = new QueryClient();
 
