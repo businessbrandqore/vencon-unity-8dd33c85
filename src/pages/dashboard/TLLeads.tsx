@@ -720,7 +720,31 @@ const TLLeads = () => {
     return freshLeads;
   }, [freshLeads, tierFilter]);
 
+  // Parse product/price from special_note JSON
+  const parseProductPrice = useCallback((note: string | null | undefined): { product?: string; price?: string } => {
+    if (!note) return {};
+    try {
+      const parsed = JSON.parse(note);
+      const flat: Record<string, unknown> = {};
+      if (parsed.extra_fields && typeof parsed.extra_fields === "object") {
+        Object.assign(flat, parsed.extra_fields);
+      }
+      Object.assign(flat, parsed);
+      const product = flat.product || flat.product_name || flat.item_name || flat.products || "";
+      const price = flat.price || flat.total || flat.amount || flat.order_total || "";
+      return {
+        product: product ? String(product) : undefined,
+        price: price ? String(price) : undefined,
+      };
+    } catch { return {}; }
+  }, []);
 
+  const hasProductInfo = useMemo(() => {
+    return freshLeads.some(l => {
+      const info = parseProductPrice(l.special_note);
+      return info.product || info.price;
+    });
+  }, [freshLeads, parseProductPrice]);
 
 
   if (!user) return null;
@@ -769,36 +793,48 @@ const TLLeads = () => {
   );
 
   // Mobile card renderer for leads
-  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean }) => (
-    <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {options?.showCheckbox && (
-            <Checkbox checked={selectedLeads.has(lead.id)}
-              onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
-          )}
-          <span className="text-xs text-muted-foreground">#{i + 1}</span>
-          {options?.showType && (
-            <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
-              {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
-            </Badge>
+  const renderLeadCard = (lead: Lead, i: number, options?: { showCheckbox?: boolean; showType?: boolean; showProduct?: boolean }) => {
+    const noteInfo = options?.showProduct ? parseProductPrice(lead.special_note) : {};
+    return (
+      <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {options?.showCheckbox && (
+              <Checkbox checked={selectedLeads.has(lead.id)}
+                onCheckedChange={(v) => { const next = new Set(selectedLeads); v ? next.add(lead.id) : next.delete(lead.id); setSelectedLeads(next); }} />
+            )}
+            <span className="text-xs text-muted-foreground">#{i + 1}</span>
+            {options?.showType && (
+              <Badge variant="outline" className={`text-[10px] ${lead.agent_type === "bronze" ? "border-orange-400 text-orange-500" : "border-blue-400 text-blue-500"}`}>
+                {lead.agent_type === "bronze" ? "Bronze" : "Lead"}
+              </Badge>
+            )}
+          </div>
+          {noteInfo.price && (
+            <span className="text-xs font-semibold text-primary">৳{noteInfo.price}</span>
           )}
         </div>
-      </div>
-      <div className="font-medium text-sm">{lead.name || "—"}</div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{lead.phone || "—"}</span>
-        {lead.phone && <CopyButton text={lead.phone} />}
-      </div>
-      {lead.address && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span className="truncate">{lead.address}</span>
-          <CopyButton text={lead.address} />
+        <div className="font-medium text-sm">{lead.name || "—"}</div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{lead.phone || "—"}</span>
+          {lead.phone && <CopyButton text={lead.phone} />}
         </div>
-      )}
-      <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
-    </div>
-  );
+        {lead.address && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="truncate">{lead.address}</span>
+            <CopyButton text={lead.address} />
+          </div>
+        )}
+        {noteInfo.product && (
+          <div className="text-xs">
+            <span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span>{" "}
+            <span className="text-foreground font-medium">{noteInfo.product}</span>
+          </div>
+        )}
+        <div className="text-xs text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</div>
+      </div>
+    );
+  };
 
   // Render content based on active section
   const renderContent = () => {
@@ -858,7 +894,7 @@ const TLLeads = () => {
                 <div className="space-y-3">
                   {filteredFresh.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</p>
-                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true }))}
+                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true, showProduct: true }))}
                 </div>
               ) : (
               <div className="overflow-x-auto">
@@ -874,13 +910,21 @@ const TLLeads = () => {
                       <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead>{isBn ? "শহর" : "City"}</TableHead>
+                      {hasProductInfo && (
+                        <>
+                          <TableHead>{isBn ? "পণ্য" : "Product"}</TableHead>
+                          <TableHead>{isBn ? "মূল্য" : "Price"}</TableHead>
+                        </>
+                      )}
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredFresh.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
-                    ) : filteredFresh.map((lead, i) => (
+                      <TableRow><TableCell colSpan={hasProductInfo ? 9 : 7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
+                    ) : filteredFresh.map((lead, i) => {
+                      const noteInfo = parseProductPrice(lead.special_note);
+                      return (
                       <TableRow key={lead.id}>
                         <TableCell>
                           <Checkbox checked={selectedLeads.has(lead.id)}
@@ -895,9 +939,16 @@ const TLLeads = () => {
                         <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                         <TableCell>{lead.phone || "—"}</TableCell>
                         <TableCell>{lead.address || "—"}</TableCell>
+                        {hasProductInfo && (
+                          <>
+                            <TableCell className="text-xs font-medium">{noteInfo.product || "—"}</TableCell>
+                            <TableCell className="text-xs font-medium">{noteInfo.price ? `৳${noteInfo.price}` : "—"}</TableCell>
+                          </>
+                        )}
                         <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1529,13 +1580,18 @@ const TLLeads = () => {
         </h2>
       </div>
 
-      {/* Top-level Lead / Processing tabs */}
-      <Tabs value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="lead" className="flex-1 sm:flex-none text-xs sm:text-sm">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</TabsTrigger>
-          <TabsTrigger value="processing" className="flex-1 sm:flex-none text-xs sm:text-sm">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Top-level Lead / Processing selector */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <Select value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
+          <SelectTrigger className="w-full sm:w-52 border-primary/30">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</SelectItem>
+            <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Campaign & Website selectors */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">

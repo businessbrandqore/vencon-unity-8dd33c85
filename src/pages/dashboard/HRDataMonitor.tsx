@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -305,6 +306,7 @@ interface LeadRow {
 }
 
 const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolean; isBn: boolean }) => {
+  const isMobile = useIsMobile();
   if (loading) return <LoadingSpinner text="লোড হচ্ছে..." size="sm" />;
   if (leads.length === 0)
     return (
@@ -320,6 +322,92 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
     const info = parseSpecialNote(l.special_note);
     return info.product || info.price;
   });
+
+  // Parse full extra_fields for HR/SA raw data view
+  const parseFullRawData = (note: string | null | undefined): Record<string, string> => {
+    if (!note) return {};
+    try {
+      const parsed = JSON.parse(note);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const result: Record<string, string> = {};
+        Object.entries(parsed).forEach(([k, v]) => {
+          if (k === "extra_fields" && v && typeof v === "object" && !Array.isArray(v)) {
+            Object.entries(v as Record<string, unknown>).forEach(([ek, ev]) => {
+              if (ev != null && String(ev).trim() !== "") result[ek] = String(ev);
+            });
+            return;
+          }
+          if (v != null && typeof v !== "object") result[k] = String(v);
+        });
+        return result;
+      }
+    } catch {}
+    return {};
+  };
+
+  if (isMobile) {
+    return (
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          {leads.map((lead, idx) => {
+            const noteInfo = parseSpecialNote(lead.special_note);
+            const rawData = parseFullRawData(lead.special_note);
+            const rawKeys = Object.keys(rawData).filter(k => !["product", "product_name", "price", "total", "amount"].includes(k));
+            return (
+              <div key={lead.id} className="border border-border rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">#{idx + 1}</span>
+                  <Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>
+                    {lead.status || "—"}
+                  </Badge>
+                </div>
+                <div className="font-medium text-sm">{lead.name || "—"}</div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{lead.phone || "—"}</span>
+                  {lead.phone && <CopyButton text={lead.phone} />}
+                </div>
+                {lead.address && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="truncate">{lead.address}</span>
+                    <CopyButton text={lead.address} />
+                  </div>
+                )}
+                {(noteInfo.product || noteInfo.price) && (
+                  <div className="flex items-center gap-3 text-xs">
+                    {noteInfo.product && <span><span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span> <span className="font-medium">{noteInfo.product}</span></span>}
+                    {noteInfo.price && <span className="font-semibold text-primary">৳{noteInfo.price}</span>}
+                  </div>
+                )}
+                {lead.agent_type && lead.agent_type !== "processing" && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {lead.agent_type === "bronze" ? "🥉 Bronze" : "🥈 Silver"}
+                  </Badge>
+                )}
+                {/* Full raw data for HR/SA */}
+                {rawKeys.length > 0 && (
+                  <details className="text-xs">
+                    <summary className="text-muted-foreground cursor-pointer hover:text-foreground">{isBn ? "📋 সম্পূর্ণ ডাটা দেখুন" : "📋 View full data"}</summary>
+                    <div className="mt-1.5 p-2 rounded bg-muted/50 space-y-1 break-all">
+                      {rawKeys.map(k => (
+                        <div key={k}>
+                          <span className="text-muted-foreground">{k}:</span>{" "}
+                          <span className="text-foreground">{rawData[k]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{lead.source || "—"}</span>
+                  <span>{lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}</span>
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -417,6 +505,7 @@ interface OrderRow {
 }
 
 const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: boolean; isBn: boolean }) => {
+  const isMobile = useIsMobile();
   if (loading) return <LoadingSpinner text="লোড হচ্ছে..." size="sm" />;
   if (orders.length === 0)
     return (
@@ -427,6 +516,42 @@ const OrderTable = ({ orders, loading, isBn }: { orders: OrderRow[]; loading: bo
         </CardContent>
       </Card>
     );
+
+  if (isMobile) {
+    return (
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          {orders.map((order, idx) => (
+            <div key={order.id} className="border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm">{order.customer_name || "—"}</span>
+                <span className="text-xs font-semibold text-primary">৳{(order.price || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{order.phone || "—"}</span>
+                {order.phone && <CopyButton text={order.phone} />}
+              </div>
+              <div className="text-xs"><span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span> {order.product || "—"} × {order.quantity || 1}</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className={`text-[10px] ${orderStatusColorMap[order.status || ""] || "bg-muted text-muted-foreground"}`}>
+                  {order.status === "pending_cso" ? (isBn ? "CSO পেন্ডিং" : "Pending CSO") :
+                   order.status === "send_today" ? (isBn ? "আজ পাঠান" : "Send Today") :
+                   order.status === "call_done" ? (isBn ? "কল সম্পন্ন" : "Call Done") :
+                   order.status || "—"}
+                </Badge>
+                <Badge className={`text-[10px] ${orderStatusColorMap[order.delivery_status || ""] || "bg-muted text-muted-foreground"}`}>
+                  {order.delivery_status === "delivered" ? "✅" : order.delivery_status === "returned" ? "↩" : "⏳"} {order.delivery_status || "—"}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground text-right">
+                {order.created_at ? format(new Date(order.created_at), "dd MMM yyyy") : "—"}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
