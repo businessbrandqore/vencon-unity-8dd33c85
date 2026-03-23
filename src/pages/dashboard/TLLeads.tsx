@@ -887,7 +887,9 @@ const TLLeads = () => {
               )}
             </CardHeader>
             <CardContent>
-              {isMobile ? (
+              {dataLoading ? (
+                <LoadingSpinner text={isBn ? "ডাটা লোড হচ্ছে..." : "Loading data..."} size="sm" />
+              ) : isMobile ? (
                 <div className="space-y-3">
                   {filteredFresh.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</p>
