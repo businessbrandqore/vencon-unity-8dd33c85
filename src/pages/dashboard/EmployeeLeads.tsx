@@ -794,9 +794,12 @@ export default function EmployeeLeads() {
                 </div>
 
                 {/* Address */}
-                <div className="text-xs text-muted-foreground">
-                  <AddressTooltip address={lead.address} />
-                </div>
+                {lead.address && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="truncate">{lead.address}</span>
+                    <CopyButton text={lead.address} />
+                  </div>
+                )}
 
                 {/* Raw data fields */}
                 {rawDataKeys.length > 0 && (

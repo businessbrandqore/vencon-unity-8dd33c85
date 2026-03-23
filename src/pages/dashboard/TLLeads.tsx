@@ -897,15 +897,12 @@ const TLLeads = () => {
                       <TableHead>{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead>{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead>{isBn ? "শহর" : "City"}</TableHead>
-                      {specialNoteKeys.map(key => (
-                        <TableHead key={key} className="text-xs">{key}</TableHead>
-                      ))}
                       <TableHead>{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredFresh.length === 0 ? (
-                      <TableRow><TableCell colSpan={9 + specialNoteKeys.length} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</TableCell></TableRow>
                     ) : filteredFresh.map((lead, i) => (
                       <TableRow key={lead.id}>
                         <TableCell>
@@ -921,9 +918,6 @@ const TLLeads = () => {
                         <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                         <TableCell>{lead.phone || "—"}</TableCell>
                         <TableCell>{lead.address || "—"}</TableCell>
-                        {specialNoteKeys.map(key => (
-                          <TableCell key={key} className="text-xs max-w-[120px] truncate">{getSpecialNoteValue(lead, key)}</TableCell>
-                        ))}
                         <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</TableCell>
                       </TableRow>
                     ))}
