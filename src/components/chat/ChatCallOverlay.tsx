@@ -360,7 +360,7 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
     };
   }, [currentUserId, setupSignaling, setupPeerConnection]);
 
-  const acceptCall = async () => {
+  const acceptCall = useCallback(async () => {
     if (!callInfo) return;
     ringtoneRef.current.stop();
 
@@ -376,16 +376,26 @@ const ChatCallOverlay = ({ currentUserId, onCallStateChange, outgoingCall, onOut
 
     // Setup peer connection as receiver (will wait for offer via signaling)
     await setupPeerConnection(callInfo.callId, false);
-  };
+  }, [callInfo, onCallStateChange, setupPeerConnection]);
 
-  const rejectCall = async () => {
+  const rejectCall = useCallback(async () => {
     if (!callInfo) return;
     await supabase
       .from("chat_calls")
       .update({ status: "rejected", ended_at: new Date().toISOString() })
       .eq("id", callInfo.callId);
     endCallCleanup();
-  };
+  }, [callInfo, endCallCleanup]);
+
+  // Expose accept/reject to Android bridge
+  useEffect(() => {
+    window.__venconCallAccept = acceptCall;
+    window.__venconCallReject = rejectCall;
+    return () => {
+      delete window.__venconCallAccept;
+      delete window.__venconCallReject;
+    };
+  }, [acceptCall, rejectCall]);
 
   const endCall = async () => {
     if (!callInfo) return;
