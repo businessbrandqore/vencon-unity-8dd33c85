@@ -713,38 +713,8 @@ const TLLeads = () => {
     }
   }, [activeDataModeTab, campaigns]);
 
-  // Parse dynamic columns from special_note JSON for fresh leads table
-  const specialNoteKeys = useMemo(() => {
-    const keys = new Set<string>();
-    freshLeads.forEach(l => {
-      if (l.special_note) {
-        try {
-          const parsed = JSON.parse(l.special_note);
-          if (parsed && typeof parsed === "object") {
-            Object.keys(parsed).forEach(k => keys.add(k));
-          }
-        } catch {}
-      }
-    });
-    return Array.from(keys);
-  }, [freshLeads]);
 
-  const filteredFresh = useMemo(() => {
-    if (tierFilter === "lead") return freshLeads.filter(l => !l.agent_type || l.agent_type === "");
-    if (tierFilter === "bronze") return freshLeads.filter(l => l.agent_type === "bronze");
-    return freshLeads;
-  }, [freshLeads, tierFilter]);
 
-  const getSpecialNoteValue = useCallback((lead: Lead, key: string): string => {
-    if (!lead.special_note) return "—";
-    try {
-      const parsed = JSON.parse(lead.special_note);
-      const val = parsed?.[key];
-      if (val === null || val === undefined) return "—";
-      if (typeof val === "object") return JSON.stringify(val);
-      return String(val);
-    } catch { return "—"; }
-  }, []);
 
   if (!user) return null;
 
