@@ -50,6 +50,9 @@ const TLLeads = () => {
   const [selectedWebsite, setSelectedWebsite] = useState("all");
   const [campaignWebsites, setCampaignWebsites] = useState<{ id: string; site_name: string }[]>([]);
   const [campaignMode, setCampaignMode] = useState<string>("lead");
+  const [dataLoading, setDataLoading] = useState(false);
+  const [leadCount, setLeadCount] = useState(0);
+  const [processingCount, setProcessingCount] = useState(0);
   const [bronzeAgents, setBronzeAgents] = useState<Agent[]>([]);
   const [silverAgents, setSilverAgents] = useState<Agent[]>([]);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
