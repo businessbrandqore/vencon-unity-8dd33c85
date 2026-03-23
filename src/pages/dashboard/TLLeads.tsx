@@ -881,7 +881,7 @@ const TLLeads = () => {
                 <div className="space-y-3">
                   {filteredFresh.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">{isBn ? "কোনো নতুন ডাটা নেই" : "No fresh data"}</p>
-                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true, showSpecialNote: true }))}
+                  ) : filteredFresh.map((lead, i) => renderLeadCard(lead, i, { showCheckbox: true, showType: true }))}
                 </div>
               ) : (
               <div className="overflow-x-auto">
