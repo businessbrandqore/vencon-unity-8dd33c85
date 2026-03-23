@@ -1576,27 +1576,28 @@ const TLLeads = () => {
         </h2>
       </div>
 
-      {/* Campaign → Lead/Processing selectors side by side */}
+      {/* Campaign selector + Lead/Processing count badges */}
       <div className="flex flex-row items-center gap-2 flex-wrap">
         <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
           <SelectTrigger className="w-40 sm:w-52 border-primary/30">
             <SelectValue placeholder={isBn ? "ক্যাম্পেইন নির্বাচন" : "Select Campaign"} />
           </SelectTrigger>
           <SelectContent>
-            {filteredCampaignsByMode.map((c) => (
+            {allCampaignOptions.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={activeDataModeTab} onValueChange={(v) => setActiveDataModeTab(v as "lead" | "processing")}>
-          <SelectTrigger className="w-40 sm:w-48 border-primary/30">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"} ({campaigns.filter(c => c.data_mode === "lead").length})</SelectItem>
-            <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"} ({campaigns.filter(c => c.data_mode === "processing").length})</SelectItem>
-          </SelectContent>
-        </Select>
+        {selectedCampaign && (
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-xs border-blue-400 text-blue-500">
+              🎯 {isBn ? "লিড" : "Lead"}: {leadCount}
+            </Badge>
+            <Badge variant="outline" className="text-xs border-purple-400 text-purple-500">
+              ⚙️ {isBn ? "প্রসেসিং" : "Processing"}: {processingCount}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {renderContent()}
