@@ -1247,7 +1247,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* District & Thana */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("district")}</Label>
                 <Select value={orderDistrict} onValueChange={v => { setOrderDistrict(v); setOrderThana(""); }}>
@@ -1287,7 +1287,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Product & Gift */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("product_name")} *</Label>
                 <Select value={orderProduct} onValueChange={v => { setOrderProduct(v); const p = products.find(pr => pr.product_name === v); if (p) setOrderPrice(p.unit_price || 0); }}>
@@ -1308,13 +1308,13 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Amount & Advance */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("amount_label")} *</Label><Input type="number" value={orderPrice} onChange={e => setOrderPrice(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
               <div><Label>{t("advance_payment")}</Label><Input type="number" value={orderAdvancePayment} onChange={e => setOrderAdvancePayment(Number(e.target.value))} className="mt-1" placeholder="৳" /></div>
             </div>
 
             {/* Payment Method & Card */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("payment_method")}</Label>
                 <Select value={orderPaymentMethod} onValueChange={setOrderPaymentMethod}>
@@ -1341,7 +1341,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Quantity & Order Media */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("quantity")}</Label><Input type="number" min={1} value={orderQty} onChange={e => setOrderQty(Number(e.target.value))} className="mt-1" /></div>
               <div>
                 <Label>{t("order_media")}</Label>
@@ -1360,7 +1360,7 @@ export default function EmployeeLeads() {
             </div>
 
             {/* Upsell & Success Ratio */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("upsell")}</Label>
                 <Select value={orderUpsell} onValueChange={setOrderUpsell}>
@@ -1434,11 +1434,11 @@ export default function EmployeeLeads() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{t("pre_order_confirm_title")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>{t("name")} *</Label><Input value={currentPreOrderConfirmLead?.name || ""} readOnly className="mt-1 bg-muted" /></div>
               <div><Label>{t("phone")} *</Label><Input value={currentPreOrderConfirmLead?.phone || ""} readOnly className="mt-1 bg-muted" /></div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("district")}</Label>
                 <Select value={pocDistrict} onValueChange={v => { setPocDistrict(v); setPocThana(""); }}>
@@ -1463,7 +1463,7 @@ export default function EmployeeLeads() {
               <Label>{t("location")}</Label>
               <Input value={pocAddress} onChange={e => setPocAddress(e.target.value)} className="mt-1" placeholder={t("full_address")} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t("product")} *</Label>
                 <Select value={pocProduct} onValueChange={setPocProduct}>
