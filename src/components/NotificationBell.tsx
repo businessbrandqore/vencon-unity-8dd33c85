@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { isVenconApp } from "@/components/AndroidBridge";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
