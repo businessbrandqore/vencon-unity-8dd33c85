@@ -66,7 +66,7 @@ const TLAnalytics = () => {
 
     const { data: orders } = await ordersQ;
 
-    const allOrders = orders || [];
+    const allOrders = (orders || []).filter(o => o.lead_id && campaignLeadIds.has(o.lead_id));
     const total = allOrders.length;
     const delivered = allOrders.filter(o => o.delivery_status === "delivered").length;
     const cancelled = allOrders.filter(o => o.delivery_status === "cancelled").length;
