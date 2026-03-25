@@ -124,7 +124,7 @@ const DataTracker = () => {
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
   const isATL = user?.role === "Assistant Team Leader";
   const isTL = panel === "tl" && !isBDO;
-  const canAssign = panel === "tl" && !isBDO && !isATL;
+  const canAssign = panel === "tl" && !isBDO;
 
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
