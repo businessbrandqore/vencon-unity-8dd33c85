@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { SetupGate } from "@/components/SetupGate";
+
 import Index from "./pages/Index";
 import PanelLogin from "./pages/PanelLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -84,10 +84,9 @@ const App = () => (
             {/* Secret control panel - outside SetupGate so admin can always access */}
             <Route path="/bq-ctrl-7x9k" element={<SecretSiteLock />} />
             
-            {/* All other routes wrapped in SetupGate */}
+            {/* All other routes */}
             <Route path="*" element={
-              <SetupGate>
-                <Routes>
+              <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/:panel/login" element={<PanelLogin />} />
 
@@ -186,8 +185,7 @@ const App = () => (
                   </Route>
 
                   <Route path="*" element={<NotFound />} />
-                </Routes>
-              </SetupGate>
+              </Routes>
             } />
           </Routes>
         </BrowserRouter>
