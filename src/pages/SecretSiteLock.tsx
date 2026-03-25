@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeSetupVerification } from "@/lib/setupVerification";
 import { Lock, Unlock, Eye, EyeOff, ShieldAlert, MessageSquareWarning, AlertTriangle, Megaphone, Shield, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,9 +55,7 @@ const SecretSiteLock = () => {
   useEffect(() => {
     // Check if this client is already blocked
     const checkBlock = async () => {
-      const { data } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "check_lockout", clientId: getClientId() }
-      });
+      const data = await invokeSetupVerification<{ locked?: boolean; remainText?: string }>({ action: "check_lockout", clientId: getClientId() }, 6000);
       if (data?.locked) {
         setBlocked(true);
         setBlockMessage(`আপনি ৫ বার ভুল পাসওয়ার্ড দিয়েছেন। ${data.remainText} পর আবার চেষ্টা করুন।`);
@@ -69,10 +68,7 @@ const SecretSiteLock = () => {
     if (!accessPassword.trim() || blocked) return;
     setVerifying(true);
     try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "verify", password: accessPassword, clientId: getClientId() }
-      });
-      if (error) throw error;
+      const data = await invokeSetupVerification<{ success?: boolean; blocked?: boolean; error?: string }>({ action: "verify", password: accessPassword, clientId: getClientId() }, 10000);
       if (data?.blocked) {
         setBlocked(true);
         setBlockMessage(data.error);
@@ -95,9 +91,7 @@ const SecretSiteLock = () => {
   const checkLockStatus = async () => {
     setCheckingStatus(true);
     try {
-      const { data } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "check", version: "0" }
-      });
+      const data = await invokeSetupVerification<{ isLocked?: boolean; lockMessage?: string; isSetupDisabled?: boolean }>({ action: "check", version: "0" }, 8000);
       setSiteLocked(!!data?.isLocked);
       setSavedMessage(data?.lockMessage || "");
       setCustomMessage(data?.lockMessage || "");
@@ -132,10 +126,7 @@ const SecretSiteLock = () => {
     setTogglingSetupGate(true);
     try {
       const action = setupGateDisabled ? "enable_setup_gate" : "disable_setup_gate";
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action, password: lockPassword, clientId: getClientId() }
-      });
-      if (error) throw error;
+      const data = await invokeSetupVerification<{ success?: boolean; message?: string; error?: string }>({ action, password: lockPassword, clientId: getClientId() }, 10000);
       if (data?.success) {
         setSetupGateDisabled(!setupGateDisabled);
         toast.success(data.message);
@@ -155,9 +146,7 @@ const SecretSiteLock = () => {
     setSendingWarning(true);
     try {
       // Verify password first
-      const { data: verifyData } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "verify", password: lockPassword, clientId: getClientId() }
-      });
+      const verifyData = await invokeSetupVerification<{ success?: boolean }>({ action: "verify", password: lockPassword, clientId: getClientId() }, 10000);
       if (!verifyData?.success) { toast.error("পাসওয়ার্ড ভুল"); setSendingWarning(false); return; }
 
       const finalMinutes = customDuration
@@ -207,10 +196,7 @@ const SecretSiteLock = () => {
     }
     setLockLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action, password: lockPassword, clientId: getClientId() }
-      });
-      if (error) throw error;
+      const data = await invokeSetupVerification<{ success?: boolean; message?: string; error?: string }>({ action, password: lockPassword, clientId: getClientId() }, 10000);
       if (data?.success) {
         setSiteLocked(action === "lock");
         setLockPassword("");
@@ -232,10 +218,7 @@ const SecretSiteLock = () => {
     }
     setSavingMessage(true);
     try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "set_message", password: lockPassword, customMessage, clientId: getClientId() }
-      });
-      if (error) throw error;
+      const data = await invokeSetupVerification<{ success?: boolean; error?: string }>({ action: "set_message", password: lockPassword, customMessage, clientId: getClientId() }, 10000);
       if (data?.success) {
         setSavedMessage(customMessage);
         toast.success("✓ মেসেজ সেভ হয়েছে");
