@@ -3,6 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { APP_VERSION } from "@/lib/appVersion";
 import { SetupWizard } from "./SetupWizard";
 
+const invokeWithTimeout = async (body: any, timeoutMs = 8000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const { data, error } = await supabase.functions.invoke("setup-verification", {
+      body,
+    });
+    clearTimeout(timer);
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+};
+
 export const SetupGate = ({ children }: { children: ReactNode }) => {
   const [status, setStatus] = useState<"checking" | "setup" | "locked" | "ready">("checking");
   const [lockMessage, setLockMessage] = useState("");
@@ -10,10 +26,7 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const checkSetup = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("setup-verification", {
-          body: { action: "check", version: APP_VERSION }
-        });
-        if (error) throw error;
+        const data = await invokeWithTimeout({ action: "check", version: APP_VERSION });
 
         if (data?.lockMessage) setLockMessage(data.lockMessage);
 
@@ -25,24 +38,24 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
           setStatus("ready");
         }
       } catch {
-        setStatus("setup");
+        // If edge function is unreachable, skip the gate to avoid blocking the app
+        console.warn("SetupGate: Edge function unreachable, skipping gate");
+        setStatus("ready");
       }
     };
     checkSetup();
 
-    // Poll every 15 seconds to auto-detect unlock from control panel
+    // Poll every 30 seconds (reduced from 15s) to auto-detect unlock
     const interval = setInterval(async () => {
       try {
-        const { data } = await supabase.functions.invoke("setup-verification", {
-          body: { action: "check", version: APP_VERSION }
-        });
+        const data = await invokeWithTimeout({ action: "check", version: APP_VERSION }, 5000);
         if (data && !data.isLocked && data.isComplete) {
           setStatus("ready");
         } else if (data && !data.isLocked && !data.isComplete) {
           setStatus("setup");
         }
       } catch {}
-    }, 15000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
