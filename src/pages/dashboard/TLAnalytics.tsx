@@ -52,9 +52,18 @@ const TLAnalytics = () => {
 
     let ordersQ = supabase
       .from("orders")
-      .select("id, agent_id, delivery_status, status")
+      .select("id, agent_id, delivery_status, status, lead_id")
       .gte("created_at", startOfMonth.toISOString());
     if (!isBDO) ordersQ = ordersQ.eq("tl_id", user.id);
+
+    // Filter orders by leads belonging to the selected campaign
+    const { data: campaignLeads } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("campaign_id", selectedCampaign)
+      .limit(1000);
+    const campaignLeadIds = new Set((campaignLeads || []).map(l => l.id));
+
     const { data: orders } = await ordersQ;
 
     const allOrders = orders || [];
