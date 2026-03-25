@@ -225,7 +225,7 @@ const DataTracker = () => {
 
   // ===== PIPELINE COUNTS (lightweight, no data fetch) =====
   const { data: pipelineCounts } = useQuery({
-    queryKey: ["tracker-pipeline-counts", selectedCampaign, dataMode, user?.id, isTL, isATL, atlTlMap],
+    queryKey: ["tracker-pipeline-counts", selectedCampaign, selectedWebsite, dataMode, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
       // Count raw (fresh + unassigned)
       let rawQ = supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "fresh").is("assigned_to", null);
