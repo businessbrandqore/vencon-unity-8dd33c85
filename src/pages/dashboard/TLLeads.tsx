@@ -328,8 +328,12 @@ const TLLeads = () => {
         .is("assigned_to", null)
         .eq("status", "fresh")
         .order("created_at", { ascending: false })
-        .limit(500)
-        .or("agent_type.is.null,agent_type.eq.bronze");
+        .limit(500);
+      if (activeDataMode === "processing") {
+        freshQ = freshQ.eq("agent_type", "silver");
+      } else {
+        freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
+      }
 
       let csoQ = supabase
         .from("orders")
