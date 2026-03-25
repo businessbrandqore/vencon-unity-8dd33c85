@@ -66,7 +66,7 @@ const TLLeads = () => {
   // tierFilter removed — TL sees all fresh data without sub-filter
   // Derive active section from URL param, default to "assign"
   const activeSection = urlSection || "assign";
-  const [activeDataMode, setActiveDataMode] = useState<"lead" | "processing">("lead");
+  const [activeDataMode, setActiveDataMode] = useState<"lead" | "processing">(activeSection === "processing" ? "processing" : "lead");
   const selectedDataMode = activeDataMode;
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
@@ -111,6 +111,24 @@ const TLLeads = () => {
     });
     return map;
   }, [dynamicColumns]);
+
+  const isProcessingTaggedLead = useCallback((lead: Pick<Lead, "agent_type" | "import_source" | "source">) => {
+    const sourceText = `${lead.import_source || ""} ${lead.source || ""}`.toLowerCase();
+    return lead.agent_type === "silver" || sourceText.includes("processing");
+  }, []);
+
+  const matchesDataMode = useCallback((lead: Pick<Lead, "agent_type" | "import_source" | "source">, mode: "lead" | "processing") => {
+    const isProcessing = isProcessingTaggedLead(lead);
+    return mode === "processing" ? isProcessing : !isProcessing;
+  }, [isProcessingTaggedLead]);
+
+  useEffect(() => {
+    if (activeSection === "processing") {
+      setActiveDataMode("processing");
+    } else if (activeSection === "assign") {
+      setActiveDataMode("lead");
+    }
+  }, [activeSection]);
 
   // Sync data send mode with the active lead section
   useEffect(() => {
@@ -278,10 +296,11 @@ const TLLeads = () => {
   useEffect(() => {
     if (!selectedCampaign) return;
     (async () => {
+      const configMode = activeSection === "processing" ? "processing" : campaignMode;
       const { data: configData } = await supabase.from("campaign_data_operations")
         .select("fields_config")
         .eq("campaign_id", selectedCampaign)
-        .eq("data_mode", campaignMode)
+        .eq("data_mode", configMode)
         .maybeSingle();
       if (!configData?.fields_config) { setDynamicColumns([]); return; }
       const configs = configData.fields_config as unknown as RoleColumnConfig[];
@@ -295,7 +314,7 @@ const TLLeads = () => {
       });
       setDynamicColumns(allCols);
     })();
-  }, [selectedCampaign, campaignMode]);
+  }, [selectedCampaign, campaignMode, activeSection]);
 
   const loadAgents = useCallback(async () => {
     if (!user || !selectedCampaign) return;
@@ -329,11 +348,6 @@ const TLLeads = () => {
         .eq("status", "fresh")
         .order("created_at", { ascending: false })
         .limit(500);
-      if (activeDataMode === "processing") {
-        freshQ = freshQ.eq("agent_type", "silver");
-      } else {
-        freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
-      }
 
       let csoQ = supabase
         .from("orders")
@@ -359,17 +373,6 @@ const TLLeads = () => {
         .eq("campaign_id", selectedCampaign)
         .gte("requeue_count", deleteSheetThreshold)
         .order("updated_at", { ascending: false });
-
-      const procQ = activeSection === "processing"
-        ? supabase
-            .from("leads")
-            .select("*")
-            .eq("campaign_id", selectedCampaign)
-            .is("assigned_to", null)
-            .eq("status", "fresh")
-            .eq("agent_type", "silver")
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as any[] });
 
       let silverQ = supabase
         .from("leads")
@@ -399,24 +402,24 @@ const TLLeads = () => {
         .limit(200);
       if (!isBDO) agentQ = agentQ.eq("tl_id", getEffectiveTlId());
 
-      const [freshRes, csoRes, callDoneRes, preRes, delRes, procRes, silverRes, goldenRes, agentRes] = await Promise.all([
+      const [freshRes, csoRes, callDoneRes, preRes, delRes, silverRes, goldenRes, agentRes] = await Promise.all([
         freshQ,
         csoQ,
         callDoneQ,
         preQ,
         delQ,
-        procQ,
         silverQ,
         goldenQ,
         agentQ,
       ]);
 
-      setFreshLeads(freshRes.data || []);
+      const allFreshLeads = (freshRes.data || []) as Lead[];
+      setFreshLeads(allFreshLeads.filter((lead) => matchesDataMode(lead, activeDataMode)));
       setCsoOrders(csoRes.data || []);
       setCallDoneOrders(callDoneRes.data || []);
       setPreOrders(preRes.data || []);
       setDeleteSheetLeads(delRes.data || []);
-      setProcessingLeads(procRes.data || []);
+      setProcessingLeads(allFreshLeads.filter((lead) => matchesDataMode(lead, "processing")));
       setSilverData((silverRes.data || []).map((l) => ({
         id: l.id,
         name: l.name,
@@ -440,7 +443,7 @@ const TLLeads = () => {
     } finally {
       setDataLoading(false);
     }
-  }, [user, selectedCampaign, activeSection, activeDataMode, getEffectiveTlId, isBDO, deleteSheetThreshold]);
+  }, [user, selectedCampaign, activeDataMode, getEffectiveTlId, isBDO, deleteSheetThreshold, matchesDataMode]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
@@ -486,19 +489,14 @@ const TLLeads = () => {
     if (!selectedCampaign) { setAvailableCount(0); return; }
 
     const load = async () => {
-      let q = supabase.from("leads").select("id", { count: "exact", head: true })
+      let q = supabase.from("leads").select("id, agent_type, import_source, source")
         .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null);
       if (!isBDO) q = q.or(`tl_id.eq.${getEffectiveTlId()},tl_id.is.null`);
-      if (distDataMode === "lead") {
-        q = q.or("agent_type.is.null,agent_type.eq.bronze");
-      } else {
-        q = q.eq("agent_type", "silver");
-      }
-      const { count } = await q;
-      setAvailableCount(count || 0);
+      const { data } = await q.limit(1000);
+      setAvailableCount((data || []).filter((lead) => matchesDataMode(lead as Lead, distDataMode)).length);
     };
     load();
-  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId, activeSection, csoOrders]);
+  }, [user?.id, selectedCampaign, distDataMode, isBDO, getEffectiveTlId, activeSection, csoOrders, matchesDataMode]);
 
   // Handle data send
   const handleSendData = async () => {
@@ -536,17 +534,15 @@ const TLLeads = () => {
         return;
       }
 
-      let q = supabase.from("leads").select("id")
+      let q = supabase.from("leads").select("id, agent_type, import_source, source")
         .eq("campaign_id", selectedCampaign).eq("status", "fresh").is("assigned_to", null)
-        .order("created_at", { ascending: true }).limit(count);
+        .order("created_at", { ascending: true }).limit(1000);
       if (!isBDO) q = q.or(`tl_id.eq.${getEffectiveTlId()},tl_id.is.null`);
-      if (distDataMode === "lead") {
-        q = q.or("agent_type.is.null,agent_type.eq.bronze");
-      } else {
-        q = q.eq("agent_type", "silver");
-      }
-      const { data: leadsToAssign, error } = await q;
+      const { data: availableLeads, error } = await q;
       if (error) throw error;
+      const leadsToAssign = (availableLeads || [])
+        .filter((lead: any) => matchesDataMode(lead, distDataMode))
+        .slice(0, count);
       if (!leadsToAssign || leadsToAssign.length === 0) { toast.error(isBn ? "কোনো ডাটা পাওয়া যায়নি" : "No data found"); setSending(false); return; }
 
       const ids = leadsToAssign.map(l => l.id);
@@ -620,7 +616,7 @@ const TLLeads = () => {
       { leadId, agentId, type: "processing" },
       isBn ? "প্রসেসিং ডাটা অ্যাসাইন" : "Processing data assignment",
       async () => {
-        await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+        await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned", agent_type: "silver", tl_id: getEffectiveTlId() }).eq("id", leadId);
         toast.success(isBn ? "Processing data assign হয়েছে" : "Processing data assigned");
       }
     );
@@ -702,15 +698,8 @@ const TLLeads = () => {
 
   // Filter campaigns by active data mode
   const allCampaignOptions = useMemo(() => {
-    // Filter campaigns that have the matching data_mode
-    const filtered = campaigns.filter(c => {
-      const mode = (c.data_mode || "lead").toLowerCase();
-      if (activeDataMode === "processing") return mode.includes("processing");
-      return !mode.includes("processing");
-    });
-    // If no campaigns match the mode filter, show all (fallback)
-    return filtered.length > 0 ? filtered : campaigns;
-  }, [campaigns, activeDataMode]);
+    return campaigns;
+  }, [campaigns]);
 
   // Auto-select first campaign when filtered campaigns change
   useEffect(() => {
