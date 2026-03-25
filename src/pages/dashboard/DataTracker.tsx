@@ -180,6 +180,7 @@ const DataTracker = () => {
   // Helper to build base query with filters
   const applyLeadFilters = (q: any) => {
     if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+    if (selectedWebsite !== "all") q = q.eq("source", selectedWebsite);
     if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
     return q;
   };
@@ -545,7 +546,7 @@ const DataTracker = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setRawPage(1); setAllPage(1); }}>
+          <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setSelectedWebsite("all"); setRawPage(1); setAllPage(1); }}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
             </SelectTrigger>
@@ -558,7 +559,7 @@ const DataTracker = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={dataMode} onValueChange={(v) => { setDataMode(v); setAllPage(1); }}>
+          <Select value={dataMode} onValueChange={(v) => { setDataMode(v); setSelectedWebsite("all"); setAllPage(1); }}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
             </SelectTrigger>
@@ -568,6 +569,19 @@ const DataTracker = () => {
               <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
             </SelectContent>
           </Select>
+          {websiteOptions && websiteOptions.length > 0 && (
+            <Select value={selectedWebsite} onValueChange={(v) => { setSelectedWebsite(v); setRawPage(1); setAllPage(1); }}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                {websiteOptions.map((w: any) => (
+                  <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
