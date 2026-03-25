@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useRef, ReactNode } fro
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PanelType, getPanelByType } from "@/lib/panelConfig";
+import { buildTemporaryAuthUser, fetchAuthUserRecord, fetchUserIdByAuthId, withTimeout } from "@/lib/authResolvers";
 
 interface UserData {
   id: string;
@@ -68,10 +69,7 @@ export const AuthProvider = ({
     resolvedRef.current = false;
     gotAuthEventRef.current = false;
 
-    const resolveWithUser = async (
-      session: { user: { id: string } } | null,
-      isDefinitive: boolean
-    ) => {
+    const resolveWithUser = async (session: { user: any } | null, isDefinitive: boolean) => {
       const currentRequest = ++requestIdRef.current;
 
       if (!session) {
@@ -105,27 +103,46 @@ export const AuthProvider = ({
 
       // Check localStorage cache first for instant render
       const cached = loadCachedUser(requiredPanel);
-      if (cached && cached.authId === session.user.id && mounted) {
+      const hasCachedMatch = !!cached && cached.authId === session.user.id;
+
+      if (hasCachedMatch && mounted) {
         setUser(cached);
         setLoading(false);
         resolvedRef.current = true;
-        return;
       }
 
-      const { data: userData, error } = await supabase
-        .from("users")
-        .select("id, auth_id, name, email, panel, role")
-        .eq("auth_id", session.user.id)
-        .single();
+      let userData = null;
+      let error: unknown = null;
+
+      try {
+        userData = await fetchAuthUserRecord(session.user.id, 6000);
+      } catch (err) {
+        error = err;
+      }
 
       if (!mounted || currentRequest !== requestIdRef.current) return;
 
       if (error || !userData) {
-        saveCachedUser(null);
-        setUser(null);
+        if (hasCachedMatch && cached) return;
+
+        let fallbackUserId = session.user.id;
+        try {
+          const resolvedUserId = await fetchUserIdByAuthId(session.user.id, 2500);
+          if (resolvedUserId) fallbackUserId = resolvedUserId;
+        } catch {}
+
+        const fallbackUser = buildTemporaryAuthUser({
+          authId: session.user.id,
+          email: session.user.email,
+          panel: requiredPanel,
+          userId: fallbackUserId,
+          name: typeof session.user.user_metadata?.name === "string" ? session.user.user_metadata.name : null,
+        });
+
+        saveCachedUser(fallbackUser);
+        setUser(fallbackUser);
         setLoading(false);
-        void supabase.auth.signOut();
-        navigate(loginPath, { replace: true });
+        resolvedRef.current = true;
         return;
       }
 
@@ -170,7 +187,7 @@ export const AuthProvider = ({
       if (event === "INITIAL_SESSION") {
         gotAuthEventRef.current = true;
         if (session) {
-          void resolveWithUser({ user: { id: session.user.id } }, true);
+          void resolveWithUser({ user: session.user }, true);
         } else {
           // No session on initial load — but only redirect if no cache
           void resolveWithUser(null, true);
@@ -181,11 +198,22 @@ export const AuthProvider = ({
       if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
         gotAuthEventRef.current = true;
         if (session) {
-          void resolveWithUser({ user: { id: session.user.id } }, true);
+          void resolveWithUser({ user: session.user }, true);
         }
         return;
       }
     });
+
+    void withTimeout(Promise.resolve(supabase.auth.getSession()), 4000, "getSession")
+      .then(({ data: { session } }) => {
+        if (!mounted || gotAuthEventRef.current) return;
+        gotAuthEventRef.current = true;
+        void resolveWithUser(session ? { user: session.user } : null, true);
+      })
+      .catch(() => {
+        if (!mounted || gotAuthEventRef.current || hasValidCache) return;
+        setLoading(false);
+      });
 
     // Safety timeout: if no auth event fires within 10 seconds and we have no cache,
     // redirect to login. If we have cache, keep showing cached state.

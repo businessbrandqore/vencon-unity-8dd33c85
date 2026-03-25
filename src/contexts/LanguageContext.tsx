@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { translations, Language, toBengaliNum, formatDateBn, formatNumLocale, getRoleName, getStatusName } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchUserIdByAuthId, withTimeout } from "@/lib/authResolvers";
 
 interface LanguageContextType {
   lang: Language;
@@ -27,19 +28,20 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   // Persist to DB when user is logged in (fire-and-forget)
   const persistLangToDb = useCallback(async (newLang: Language) => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await withTimeout(Promise.resolve(supabase.auth.getSession()), 3000, "getSession(language)");
     if (session) {
-      // Get user id from users table
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_id", session.user.id)
-        .single();
-      if (userData) {
-        await supabase
-          .from("users")
-          .update({ preferred_language: newLang } as any)
-          .eq("id", userData.id);
+      const userId = await fetchUserIdByAuthId(session.user.id, 2500).catch(() => null);
+      if (userId) {
+        await withTimeout(
+          Promise.resolve(
+            supabase
+              .from("users")
+              .update({ preferred_language: newLang } as any)
+              .eq("id", userId),
+          ),
+          3000,
+          "update preferred_language",
+        );
       }
     }
   }, []);
@@ -47,13 +49,19 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   // Load preference from DB on mount (when session exists)
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(Promise.resolve(supabase.auth.getSession()), 3000, "getSession(language init)");
       if (session) {
-        const { data } = await supabase
-          .from("users")
-          .select("preferred_language")
-          .eq("auth_id", session.user.id)
-          .single();
+        const { data } = await withTimeout(
+          Promise.resolve(
+            supabase
+              .from("users")
+              .select("preferred_language")
+              .eq("auth_id", session.user.id)
+              .maybeSingle(),
+          ),
+          3000,
+          "load preferred_language",
+        );
         if (data && (data as any).preferred_language) {
           const dbLang = (data as any).preferred_language as Language;
           if (dbLang === "bn" || dbLang === "en") {
@@ -62,7 +70,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
-    })();
+    })().catch(() => undefined);
   }, []);
 
   const toggleLang = useCallback(() => {
