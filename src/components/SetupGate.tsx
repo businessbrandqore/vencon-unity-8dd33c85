@@ -29,8 +29,10 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
     };
     checkSetup();
 
-    // Poll every 30 seconds (reduced from 15s) to auto-detect unlock
+    // Only poll if locked/setup — no polling when ready
     const interval = setInterval(async () => {
+      // Skip polling if already ready — no need to keep hitting the server
+      if (status === "ready") return;
       try {
         const data = await invokeSetupVerification<{ isLocked?: boolean; isComplete?: boolean }>({ action: "check", version: APP_VERSION }, 5000);
         if (data && !data.isLocked && data.isComplete) {
@@ -39,7 +41,7 @@ export const SetupGate = ({ children }: { children: ReactNode }) => {
           setStatus("setup");
         }
       } catch {}
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);

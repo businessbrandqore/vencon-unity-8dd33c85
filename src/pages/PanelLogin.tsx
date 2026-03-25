@@ -70,13 +70,37 @@ const PanelLogin = () => {
     setError("");
     setLoading(true);
     try {
-      const { data: authData, error: authError } = await withTimeout(
-        Promise.resolve(supabase.auth.signInWithPassword({ email, password })),
-        8000,
-        "signInWithPassword",
-      );
+      let authData: any;
+      let authError: any;
+      try {
+        const result = await withTimeout(
+          Promise.resolve(supabase.auth.signInWithPassword({ email, password })),
+          12000,
+          "signInWithPassword",
+        );
+        authData = result.data;
+        authError = result.error;
+      } catch (timeoutErr) {
+        // Network or timeout error — NOT invalid credentials
+        setError("সার্ভারে সমস্যা হচ্ছে। কিছুক্ষণ পর আবার চেষ্টা করুন।");
+        setLoading(false);
+        return;
+      }
 
       if (authError) {
+        // Check if it's a network-level error vs actual invalid credentials
+        const isNetworkError = authError.message?.includes("fetch") ||
+          authError.message?.includes("network") ||
+          authError.message?.includes("timeout") ||
+          authError.status === 0 ||
+          authError.status >= 500;
+
+        if (isNetworkError) {
+          setError("সার্ভারে সমস্যা হচ্ছে। কিছুক্ষণ পর আবার চেষ্টা করুন।");
+          setLoading(false);
+          return;
+        }
+
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
         if (newAttempts >= MAX_ATTEMPTS) {
@@ -117,7 +141,7 @@ const PanelLogin = () => {
       setFlashColor(true);
       setTimeout(() => navigate(panelConfig.dashboardPath), 250);
     } catch {
-      setError(t("invalid_creds"));
+      setError("সার্ভারে সমস্যা হচ্ছে। কিছুক্ষণ পর আবার চেষ্টা করুন।");
       setLoading(false);
     }
   }, [email, password, attempts, lockoutEnd, panel, panelConfig, navigate, t]);
