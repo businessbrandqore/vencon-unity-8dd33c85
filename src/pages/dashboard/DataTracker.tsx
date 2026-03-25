@@ -492,12 +492,29 @@ const DataTracker = () => {
 
   // TL assignment functions
   const assignLead = async (leadId: string, agentId: string, isProcessing: boolean) => {
-    if (isProcessing) {
-      await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+    if (isATL) {
+      // ATL needs TL approval
+      const effectiveTlId = getEffectiveTlId();
+      const { error } = await supabase.from("atl_approvals").insert({
+        atl_id: user!.id,
+        tl_id: effectiveTlId,
+        action_type: "assign_lead",
+        payload: { lead_id: leadId, agent_id: agentId, is_processing: isProcessing },
+        status: "pending",
+      });
+      if (error) {
+        toast.error(isBn ? "অনুরোধ পাঠাতে ব্যর্থ" : "Failed to send request");
+        return;
+      }
+      toast.success(isBn ? "TL-এর কাছে অনুমোদনের অনুরোধ পাঠানো হয়েছে" : "Approval request sent to TL");
     } else {
-      await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+      if (isProcessing) {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+      } else {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+      }
+      toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
     }
-    toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
     setAssignments(prev => { const n = { ...prev }; delete n[leadId]; return n; });
     invalidateAll();
   };
