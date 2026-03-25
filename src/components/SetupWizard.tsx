@@ -34,12 +34,19 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
   useEffect(() => {
     // Check if already blocked
     const checkBlock = async () => {
-      const { data } = await supabase.functions.invoke("setup-verification", {
-        body: { action: "check_lockout", clientId: getClientId() }
-      });
-      if (data?.locked) {
-        setBlocked(true);
-        setBlockMessage(`আপনি ৫ বার ভুল পাসওয়ার্ড দিয়েছেন। ${data.remainText} পর আবার চেষ্টা করুন।`);
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        const { data } = await supabase.functions.invoke("setup-verification", {
+          body: { action: "check_lockout", clientId: getClientId() }
+        });
+        clearTimeout(timer);
+        if (data?.locked) {
+          setBlocked(true);
+          setBlockMessage(`আপনি ৫ বার ভুল পাসওয়ার্ড দিয়েছেন। ${data.remainText} পর আবার চেষ্টা করুন।`);
+        }
+      } catch {
+        // Edge function unreachable — don't block user
       }
     };
     checkBlock();
@@ -53,10 +60,14 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
     }
     setVerifying(true);
     try {
-      const { data, error } = await supabase.functions.invoke("setup-verification", {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const result = await supabase.functions.invoke("setup-verification", {
         body: { action: "verify", password, clientId: getClientId() }
       });
-      if (error) throw error;
+      clearTimeout(timer);
+      if (result.error) throw result.error;
+      const data = result.data;
       if (data?.blocked) {
         setBlocked(true);
         setBlockMessage(data.error);
