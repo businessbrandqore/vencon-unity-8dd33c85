@@ -95,6 +95,9 @@ const HREmployeeNew = () => {
     if (!form.motherName.trim()) return isBn ? "মাতার নাম আবশ্যক" : "Mother's name required";
     if (!form.motherPhone.trim()) return isBn ? "মাতার ফোন আবশ্যক" : "Mother's phone required";
     if (!form.guardianType) return isBn ? "অভিভাবক নির্বাচন আবশ্যক" : "Guardian selection required";
+    if ((form.guardianType === "other" || form.guardianType === "husband") && !form.otherGuardianName.trim()) return isBn ? "অভিভাবকের নাম আবশ্যক" : "Guardian name required";
+    if ((form.guardianType === "other" || form.guardianType === "husband") && !form.otherGuardianPhone.trim()) return isBn ? "অভিভাবকের ফোন আবশ্যক" : "Guardian phone required";
+    if (form.guardianType === "other" && !form.otherGuardianRelation.trim()) return isBn ? "সম্পর্ক আবশ্যক" : "Relationship required";
     if (!form.email.trim()) return isBn ? "ইমেইল আবশ্যক" : "Email required";
     if (!form.password || form.password.length < 6) return isBn ? "পাসওয়ার্ড কমপক্ষে ৬ অক্ষর" : "Password min 6 chars";
     if (!form.role) return isBn ? "রোল নির্বাচন আবশ্যক" : "Role required";
@@ -131,6 +134,9 @@ const HREmployeeNew = () => {
         mother_name: form.motherName.trim(),
         mother_phone: form.motherPhone.trim(),
         guardian_type: form.guardianType,
+        guardian_name: (form.guardianType === "other" || form.guardianType === "husband") ? form.otherGuardianName.trim() : null,
+        guardian_phone: (form.guardianType === "other" || form.guardianType === "husband") ? form.otherGuardianPhone.trim() : null,
+        guardian_relation: form.guardianType === "other" ? form.otherGuardianRelation.trim() : (form.guardianType === "husband" ? "স্বামী" : null),
         date_of_birth: form.dateOfBirth || null,
         off_days: [],
         gps_location: (form.gpsLatitude.trim() && form.gpsLongitude.trim()) ? `${form.gpsLatitude.trim()},${form.gpsLongitude.trim()}` : null,
