@@ -62,6 +62,9 @@ const HREmployeeNew = () => {
     motherName: "",
     motherPhone: "",
     guardianType: "",
+    otherGuardianName: "",
+    otherGuardianPhone: "",
+    otherGuardianRelation: "",
     dateOfBirth: "",
     email: "",
     password: "",
@@ -307,7 +310,29 @@ const HREmployeeNew = () => {
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+          </Select>
+          {(form.guardianType === "other" || form.guardianType === "husband") && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2 p-3 border border-border rounded-md bg-muted/30">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "অভিভাবকের নাম *" : "Guardian Name *"}
+                </label>
+                <Input value={form.otherGuardianName} onChange={(e) => set("otherGuardianName", e.target.value)} className={fieldClass} placeholder={isBn ? "নাম লিখুন" : "Enter name"} />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "অভিভাবকের ফোন *" : "Guardian Phone *"}
+                </label>
+                <Input value={form.otherGuardianPhone} onChange={(e) => set("otherGuardianPhone", e.target.value)} className={fieldClass} placeholder="01XXXXXXXXX" />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  {isBn ? "সম্পর্ক *" : "Relationship *"}
+                </label>
+                <Input value={form.otherGuardianRelation} onChange={(e) => set("otherGuardianRelation", e.target.value)} className={fieldClass} placeholder={isBn ? "যেমন: চাচা, ভাই" : "e.g. Uncle, Brother"} />
+              </div>
+            </div>
+          )}
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground block mb-1">
