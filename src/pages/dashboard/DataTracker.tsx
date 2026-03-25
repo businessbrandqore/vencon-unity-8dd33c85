@@ -676,7 +676,9 @@ const DataTracker = () => {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {isBn ? "📖 শুধুমাত্র পড়ার জন্য — ইউজার থেকে আসা মূল ডাটা, কোনো পরিবর্তন ছাড়া" : "📖 Read-only — original data from users, without any changes"}
+                {canAssign
+                  ? (isBn ? "📤 এজেন্টদের কাছে ডাটা ডিস্ট্রিবিউট করুন" : "📤 Distribute data to agents")
+                  : (isBn ? "📖 শুধুমাত্র পড়ার জন্য — ইউজার থেকে আসা মূল ডাটা" : "📖 Read-only — original data from users")}
               </p>
             </CardHeader>
             <CardContent className="p-0">
