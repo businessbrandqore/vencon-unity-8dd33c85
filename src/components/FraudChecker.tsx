@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShieldCheck, Search, Phone, ChevronUp, ChevronDown, Loader2, ShieldAlert, ShieldX, AlertTriangle, HelpCircle } from "lucide-react";
+import {
+  ShieldCheck, Search, Phone, ChevronUp, ChevronDown, Loader2,
+  ShieldAlert, ShieldX, AlertTriangle, HelpCircle, Database, Globe, MapPin, User, Flag,
+} from "lucide-react";
 
 interface CourierResult {
   courier: string;
@@ -15,12 +18,29 @@ interface CourierResult {
   error?: string;
 }
 
+interface LocalDbResult {
+  total_orders: number;
+  delivered: number;
+  cancelled: number;
+  returned: number;
+  pending: number;
+  total_value: number;
+  addresses: string[];
+  names: string[];
+  first_order: string | null;
+  last_order: string | null;
+  campaigns: string[];
+}
+
 interface FraudData {
   phone: string;
   couriers: Record<string, CourierResult>;
+  courierSummary?: { total: number; success: number; cancel: number; successRate: number };
+  localDb: LocalDbResult;
   totalSummary: { total: number; success: number; cancel: number; successRate: number; cancelRate: number };
   riskLevel: string;
   riskMessage: string;
+  flags?: string[];
 }
 
 interface HistoryOrder {
@@ -97,8 +117,6 @@ const FraudChecker = () => {
     setShowHistory(true);
   };
 
-  
-
   const getRiskLabel = (level: string) => {
     if (level === "safe") return isBn ? "✅ নিরাপদ — পণ্য পাঠানো যাবে" : "✅ Safe to deliver";
     if (level === "moderate") return isBn ? "⚠️ মোটামুটি — সতর্কতার সাথে পাঠান" : "⚠️ Moderate — Send with caution";
@@ -135,9 +153,15 @@ const FraudChecker = () => {
     return "border-red-500/50";
   };
 
+  const getFlagLabel = (flag: string) => {
+    if (flag === "multiple_addresses") return isBn ? "⚠️ একাধিক ঠিকানা ব্যবহার করেছে" : "⚠️ Used multiple addresses";
+    if (flag === "multiple_names") return isBn ? "⚠️ একাধিক নাম ব্যবহার করেছে" : "⚠️ Used multiple names";
+    if (flag === "frequent_returns") return isBn ? "⚠️ ঘনঘন রিটার্ন করেছে" : "⚠️ Frequent returns";
+    return flag;
+  };
+
   return (
     <>
-      {/* Sticky Panel */}
       <div className="sticky top-0 z-30 bg-card border border-border rounded-lg shadow-lg mb-4 overflow-hidden">
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -148,6 +172,10 @@ const FraudChecker = () => {
             <span className="font-heading text-sm font-bold text-foreground">
               {isBn ? "ফ্রড চেকার ও নাম্বার সার্চ" : "Fraud Checker & Number Search"}
             </span>
+            <Badge variant="secondary" className="text-[9px] gap-1">
+              <Globe className="h-2.5 w-2.5" />
+              {isBn ? "কম্বাইন্ড" : "Combined"}
+            </Badge>
           </div>
           {collapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronUp className="h-4 w-4 text-muted-foreground" />}
         </button>
@@ -159,10 +187,12 @@ const FraudChecker = () => {
               <div className="space-y-3">
                 <h3 className="font-heading text-xs font-bold text-foreground flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                  {isBn ? "কুরিয়ার ফ্রড চেকার" : "Courier Fraud Checker"}
+                  {isBn ? "গ্লোবাল ফ্রড চেকার" : "Global Fraud Checker"}
                 </h3>
                 <p className="text-[10px] text-muted-foreground">
-                  {isBn ? "Steadfast, Pathao, RedX থেকে সরাসরি ডেলিভারি হিস্টোরি চেক করুন" : "Check delivery history directly from Steadfast, Pathao, RedX"}
+                  {isBn
+                    ? "কুরিয়ার API + আমাদের সিস্টেমের ডাটা কম্বাইন করে রিস্ক অ্যানালাইসিস"
+                    : "Combined risk analysis from Courier APIs + our local database"}
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -184,7 +214,7 @@ const FraudChecker = () => {
 
                 {fraudResult && (
                   <div className="space-y-3">
-                    {/* Risk Assessment */}
+                    {/* Combined Risk Assessment */}
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary border border-border">
                       {getRiskIcon(fraudResult.riskLevel)}
                       <div className="flex-1">
@@ -194,36 +224,109 @@ const FraudChecker = () => {
                         <div className={`text-xs font-bold ${getRiskColor(fraudResult.riskLevel)}`}>
                           {getRiskLabel(fraudResult.riskLevel)}
                         </div>
+                        <div className="text-[9px] text-muted-foreground mt-0.5">
+                          {isBn ? "কম্বাইন্ড স্কোর (কুরিয়ার + লোকাল ডিবি)" : "Combined score (Courier + Local DB)"}
+                        </div>
                       </div>
                       <div className="text-right text-[10px] text-muted-foreground space-y-0.5">
                         <div>{isBn ? "মোট অর্ডার" : "Total"}: <span className="font-bold text-foreground">{fraudResult.totalSummary.total}</span></div>
-                        <div className="text-green-600">{isBn ? "সফল ডেলিভারি" : "Delivered"}: {fraudResult.totalSummary.success}</div>
-                        <div className="text-red-500">{isBn ? "বাতিল/রিটার্ন" : "Cancelled"}: {fraudResult.totalSummary.cancel}</div>
+                        <div className="text-green-600">{isBn ? "সফল" : "Success"}: {fraudResult.totalSummary.success}</div>
+                        <div className="text-red-500">{isBn ? "বাতিল" : "Cancel"}: {fraudResult.totalSummary.cancel}</div>
                       </div>
                     </div>
 
-                    {/* Individual Courier Results */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {Object.entries(fraudResult.couriers).map(([name, courier]) => {
-                        const rate = courier.total > 0 ? ((courier.success / courier.total) * 100).toFixed(0) : "—";
-                        return (
-                          <div key={name} className={`p-2 rounded border-2 ${getCourierColor(courier)} bg-background text-center space-y-1`}>
-                            <div className="text-[10px] font-bold text-foreground">{name}</div>
-                            {courier.error ? (
-                              <div className="text-[9px] text-muted-foreground">{isBn ? "ত্রুটি" : "Error"}</div>
-                            ) : (
-                              <>
-                                <div className="text-sm font-bold text-foreground">{rate}%</div>
-                                <div className="flex justify-center gap-2 text-[9px]">
-                                  <span className="text-green-600">✓{courier.success}</span>
-                                  <span className="text-muted-foreground">/{courier.total}</span>
-                                  <span className="text-red-500">✗{courier.cancel}</span>
-                                </div>
-                              </>
+                    {/* Flags / Warnings */}
+                    {fraudResult.flags && fraudResult.flags.length > 0 && (
+                      <div className="space-y-1">
+                        {fraudResult.flags.map((flag) => (
+                          <div key={flag} className="flex items-center gap-1.5 text-[10px] text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+                            <Flag className="h-3 w-3 shrink-0" />
+                            {getFlagLabel(flag)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Two-column: Courier API + Local DB */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Courier API Section */}
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          {isBn ? "কুরিয়ার API" : "Courier API"}
+                        </div>
+                        {Object.keys(fraudResult.couriers).length > 0 ? (
+                          Object.entries(fraudResult.couriers).map(([name, courier]) => {
+                            const rate = courier.total > 0 ? ((courier.success / courier.total) * 100).toFixed(0) : "—";
+                            return (
+                              <div key={name} className={`p-1.5 rounded border ${getCourierColor(courier)} bg-background text-center`}>
+                                <div className="text-[9px] font-bold text-foreground">{name}</div>
+                                {courier.error ? (
+                                  <div className="text-[8px] text-muted-foreground truncate">{courier.error}</div>
+                                ) : (
+                                  <>
+                                    <div className="text-xs font-bold text-foreground">{rate}%</div>
+                                    <div className="flex justify-center gap-1.5 text-[8px]">
+                                      <span className="text-green-600">✓{courier.success}</span>
+                                      <span className="text-muted-foreground">/{courier.total}</span>
+                                      <span className="text-red-500">✗{courier.cancel}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-[9px] text-muted-foreground p-2 border border-dashed border-border rounded text-center">
+                            {isBn ? "কুরিয়ার API কনফিগার করা হয়নি" : "No courier APIs configured"}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Local DB Section */}
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                          <Database className="h-3 w-3" />
+                          {isBn ? "আমাদের সিস্টেম" : "Our System"}
+                        </div>
+                        {fraudResult.localDb.total_orders > 0 ? (
+                          <div className="p-2 rounded border border-primary/30 bg-primary/5 space-y-1">
+                            <div className="text-xs font-bold text-foreground text-center">
+                              {fraudResult.localDb.total_orders > 0
+                                ? `${((fraudResult.localDb.delivered / fraudResult.localDb.total_orders) * 100).toFixed(0)}%`
+                                : "—"}
+                            </div>
+                            <div className="flex justify-center gap-1.5 text-[8px]">
+                              <span className="text-green-600">✓{fraudResult.localDb.delivered}</span>
+                              <span className="text-muted-foreground">/{fraudResult.localDb.total_orders}</span>
+                              <span className="text-red-500">✗{fraudResult.localDb.cancelled + fraudResult.localDb.returned}</span>
+                            </div>
+                            <div className="text-[8px] text-muted-foreground text-center">
+                              {isBn ? `মোট: ৳${fraudResult.localDb.total_value}` : `Value: ৳${fraudResult.localDb.total_value}`}
+                            </div>
+
+                            {/* Names used */}
+                            {fraudResult.localDb.names.length > 0 && (
+                              <div className="text-[8px] text-muted-foreground flex items-start gap-1 mt-1">
+                                <User className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                                <span className="truncate">{fraudResult.localDb.names.join(", ")}</span>
+                              </div>
+                            )}
+
+                            {/* Addresses */}
+                            {fraudResult.localDb.addresses.length > 0 && (
+                              <div className="text-[8px] text-muted-foreground flex items-start gap-1">
+                                <MapPin className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                                <span className="truncate">{fraudResult.localDb.addresses[0]}</span>
+                              </div>
                             )}
                           </div>
-                        );
-                      })}
+                        ) : (
+                          <div className="text-[9px] text-muted-foreground p-2 border border-dashed border-border rounded text-center">
+                            {isBn ? "এই নাম্বারে কোনো অর্ডার নেই" : "No orders for this number"}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -274,7 +377,6 @@ const FraudChecker = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Summary Stats */}
             {historyOrders.length > 0 && (() => {
               const delivered = historyOrders.filter(o => o.delivery_status === 'delivered').length;
               const cancelled = historyOrders.filter(o => ['cancelled', 'returned'].includes(o.delivery_status || '')).length;
@@ -306,7 +408,6 @@ const FraudChecker = () => {
               );
             })()}
 
-            {/* Orders */}
             <div>
               <h4 className="font-heading text-sm font-bold text-foreground mb-2">
                 {isBn ? `অর্ডার (${historyOrders.length})` : `Orders (${historyOrders.length})`}
@@ -360,7 +461,6 @@ const FraudChecker = () => {
               )}
             </div>
 
-            {/* Leads */}
             <div>
               <h4 className="font-heading text-sm font-bold text-foreground mb-2">
                 {isBn ? `লিড (${historyLeads.length})` : `Leads (${historyLeads.length})`}
