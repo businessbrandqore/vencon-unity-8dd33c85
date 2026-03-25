@@ -542,7 +542,7 @@ const DataTracker = () => {
             {isBn ? "ডাটা ট্র্যাকার" : "Data Tracker"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {isBn ? "সব ডাটার বর্তমান অবস্থান ও স্ট্যাটাস দেখুন — পেজিনেশন সহ লাখ লাখ ডাটা সাপোর্ট করে" : "Track current position & status — supports millions of records with pagination"}
+            {isBn ? "সব ডাটার বর্তমান অবস্থান ও স্ট্যাটাস দেখুন — রিয়েল-টাইম লাইভ আপডেট" : "Track current position & status — real-time live updates"}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
