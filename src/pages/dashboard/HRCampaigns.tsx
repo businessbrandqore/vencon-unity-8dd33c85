@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Megaphone, Globe, Plus, Copy, Trash2, ExternalLink, ChevronDown, X, Pencil, Save, Ban, AlertTriangle } from "lucide-react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import SteadfastConnector from "@/components/campaign/SteadfastConnector";
 
 interface Campaign {
   id: string;
@@ -762,6 +763,18 @@ const HRCampaigns = () => {
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* SteadFast Connector */}
+              {!editing && detailCampaign.status !== "pending_sa" && (
+                <SteadfastConnector
+                  campaignId={detailCampaign.id}
+                  campaignName={detailCampaign.name}
+                  initialApiKey={(detailCampaign as any).steadfast_api_key || ""}
+                  initialSecretKey={(detailCampaign as any).steadfast_secret_key || ""}
+                  initialConnected={(detailCampaign as any).steadfast_connected || false}
+                  isBn={isBn}
+                />
               )}
 
               {/* Websites */}
