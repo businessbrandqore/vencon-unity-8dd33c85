@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { APP_VERSION } from "@/lib/appVersion";
 import brandQoreLogo from "@/assets/brandqore-logo.jpg";
+import { invokeSetupVerification } from "@/lib/setupVerification";
 import {
   Shield, Zap, FileText, CheckCircle2, Lock, Users,
   BarChart3, MessageSquare, Package, Clock, Eye, AlertTriangle
@@ -35,12 +35,7 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
     // Check if already blocked
     const checkBlock = async () => {
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
-        const { data } = await supabase.functions.invoke("setup-verification", {
-          body: { action: "check_lockout", clientId: getClientId() }
-        });
-        clearTimeout(timer);
+        const data = await invokeSetupVerification<{ locked?: boolean; remainText?: string }>({ action: "check_lockout", clientId: getClientId() }, 6000);
         if (data?.locked) {
           setBlocked(true);
           setBlockMessage(`আপনি ৫ বার ভুল পাসওয়ার্ড দিয়েছেন। ${data.remainText} পর আবার চেষ্টা করুন।`);
@@ -60,14 +55,7 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
     }
     setVerifying(true);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
-      const result = await supabase.functions.invoke("setup-verification", {
-        body: { action: "verify", password, clientId: getClientId() }
-      });
-      clearTimeout(timer);
-      if (result.error) throw result.error;
-      const data = result.data;
+      const data = await invokeSetupVerification<{ success?: boolean; blocked?: boolean; error?: string }>({ action: "verify", password, clientId: getClientId() }, 10000);
       if (data?.blocked) {
         setBlocked(true);
         setBlockMessage(data.error);
@@ -94,9 +82,7 @@ export const SetupWizard = ({ onComplete, mode = "setup", lockMessage = "" }: { 
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
-        supabase.functions.invoke("setup-verification", {
-          body: { action: "complete", version: APP_VERSION }
-        }).then(() => {
+        invokeSetupVerification({ action: "complete", version: APP_VERSION }, 8000).then(() => {
           setTimeout(() => {
             setStep("done");
             setTimeout(onComplete, 2000);
