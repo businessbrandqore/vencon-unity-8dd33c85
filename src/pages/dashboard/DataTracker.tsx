@@ -105,6 +105,7 @@ const DataTracker = () => {
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [dataMode, setDataMode] = useState<string>("all");
+  const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("raw_data");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -136,6 +137,38 @@ const DataTracker = () => {
     debounceRef.current = setTimeout(() => setDebouncedSearch(val), 400);
   }, []);
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  // ===== REALTIME: auto-refresh when leads/orders change =====
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("data-tracker-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tracker-"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tracker-"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pre_orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tracker-"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
+
+  // ===== Fetch websites for filter =====
+  const { data: websiteOptions } = useQuery({
+    queryKey: ["tracker-websites", selectedCampaign, dataMode],
+    queryFn: async () => {
+      let q = supabase.from("campaign_websites").select("id, site_name, campaign_id, data_mode").eq("is_active", true);
+      if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (dataMode === "lead") q = q.eq("data_mode", "lead");
+      if (dataMode === "processing") q = q.eq("data_mode", "processing");
+      const { data } = await q.order("site_name");
+      return data || [];
+    },
+    enabled: !!user,
+  });
 
   const getEffectiveTlId = () => {
     if (!isATL || !user) return user?.id || "";
