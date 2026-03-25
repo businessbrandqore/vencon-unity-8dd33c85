@@ -440,7 +440,7 @@ const TLLeads = () => {
     } finally {
       setDataLoading(false);
     }
-  }, [user, selectedCampaign, activeSection, getEffectiveTlId, isBDO, deleteSheetThreshold]);
+  }, [user, selectedCampaign, activeSection, activeDataMode, getEffectiveTlId, isBDO, deleteSheetThreshold]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
