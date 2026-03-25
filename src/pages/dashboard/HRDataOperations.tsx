@@ -755,13 +755,17 @@ export default function HRDataOperations() {
             কলাম তৈরি করুন, প্রতিটি কলামে মাল্টিপল ভ্যালু/অপশন যোগ করুন
           </p>
         </div>
-        {hasChanges && (
+      </div>
+
+      {/* Sticky Save Button */}
+      {hasChanges && (
+        <div className="sticky top-0 z-40 flex justify-end py-2 px-3 -mx-4 sm:-mx-6 px-4 sm:px-6 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
           <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             <Save className="h-4 w-4 mr-1.5" />
             {saveMutation.isPending ? "সেভ হচ্ছে..." : "সেভ করুন"}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
