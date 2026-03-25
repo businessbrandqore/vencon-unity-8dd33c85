@@ -105,6 +105,7 @@ const DataTracker = () => {
   const isBn = t("vencon") === "VENCON";
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [dataMode, setDataMode] = useState<string>("all");
+  const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("raw_data");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -137,6 +138,38 @@ const DataTracker = () => {
   }, []);
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
+  // ===== REALTIME: auto-refresh when leads/orders change =====
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("data-tracker-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tracker-"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tracker-"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pre_orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tracker-"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
+
+  // ===== Fetch websites for filter =====
+  const { data: websiteOptions } = useQuery({
+    queryKey: ["tracker-websites", selectedCampaign, dataMode],
+    queryFn: async () => {
+      let q = supabase.from("campaign_websites").select("id, site_name, campaign_id, data_mode").eq("is_active", true);
+      if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+      if (dataMode === "lead") q = q.eq("data_mode", "lead");
+      if (dataMode === "processing") q = q.eq("data_mode", "processing");
+      const { data } = await q.order("site_name");
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
   const getEffectiveTlId = () => {
     if (!isATL || !user) return user?.id || "";
     if (selectedCampaign !== "all" && atlTlMap[selectedCampaign]) return atlTlMap[selectedCampaign];
@@ -147,6 +180,7 @@ const DataTracker = () => {
   // Helper to build base query with filters
   const applyLeadFilters = (q: any) => {
     if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
+    if (selectedWebsite !== "all") q = q.eq("source", selectedWebsite);
     if (isTL && user) q = q.eq("tl_id", getEffectiveTlId());
     return q;
   };
@@ -191,7 +225,7 @@ const DataTracker = () => {
 
   // ===== PIPELINE COUNTS (lightweight, no data fetch) =====
   const { data: pipelineCounts } = useQuery({
-    queryKey: ["tracker-pipeline-counts", selectedCampaign, dataMode, user?.id, isTL, isATL, atlTlMap],
+    queryKey: ["tracker-pipeline-counts", selectedCampaign, selectedWebsite, dataMode, user?.id, isTL, isATL, atlTlMap],
     queryFn: async () => {
       // Count raw (fresh + unassigned)
       let rawQ = supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "fresh").is("assigned_to", null);
@@ -242,7 +276,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED RAW DATA =====
   const { data: rawData, isLoading: rawLoading } = useQuery({
-    queryKey: ["tracker-raw", selectedCampaign, rawSubTab, rawPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-raw", selectedCampaign, selectedWebsite, rawSubTab, rawPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (rawPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -285,7 +319,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED SILVER DATA =====
   const { data: silverData, isLoading: silverLoading } = useQuery({
-    queryKey: ["tracker-silver", selectedCampaign, silverPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-silver", selectedCampaign, selectedWebsite, silverPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (silverPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -309,7 +343,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED GOLDEN DATA =====
   const { data: goldenData, isLoading: goldenLoading } = useQuery({
-    queryKey: ["tracker-golden", selectedCampaign, goldenPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-golden", selectedCampaign, selectedWebsite, goldenPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (goldenPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -333,7 +367,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED ALL DATA =====
   const { data: allLeadsData, isLoading: allLeadsLoading } = useQuery({
-    queryKey: ["tracker-all-leads", selectedCampaign, dataMode, allPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-all-leads", selectedCampaign, selectedWebsite, dataMode, allPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (allPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -361,7 +395,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED STATUS CHANGED =====
   const { data: changedData, isLoading: changedLoading } = useQuery({
-    queryKey: ["tracker-changed", selectedCampaign, changedPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-changed", selectedCampaign, selectedWebsite, changedPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (changedPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -387,7 +421,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED ORDERS =====
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
-    queryKey: ["tracker-orders", selectedCampaign, ordersPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-orders", selectedCampaign, selectedWebsite, ordersPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (ordersPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -508,11 +542,11 @@ const DataTracker = () => {
             {isBn ? "ডাটা ট্র্যাকার" : "Data Tracker"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {isBn ? "সব ডাটার বর্তমান অবস্থান ও স্ট্যাটাস দেখুন — পেজিনেশন সহ লাখ লাখ ডাটা সাপোর্ট করে" : "Track current position & status — supports millions of records with pagination"}
+            {isBn ? "সব ডাটার বর্তমান অবস্থান ও স্ট্যাটাস দেখুন — রিয়েল-টাইম লাইভ আপডেট" : "Track current position & status — real-time live updates"}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setRawPage(1); setAllPage(1); }}>
+          <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setSelectedWebsite("all"); setRawPage(1); setAllPage(1); }}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder={isBn ? "সব ক্যাম্পেইন" : "All Campaigns"} />
             </SelectTrigger>
@@ -525,7 +559,7 @@ const DataTracker = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={dataMode} onValueChange={(v) => { setDataMode(v); setAllPage(1); }}>
+          <Select value={dataMode} onValueChange={(v) => { setDataMode(v); setSelectedWebsite("all"); setAllPage(1); }}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
             </SelectTrigger>
@@ -535,6 +569,19 @@ const DataTracker = () => {
               <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
             </SelectContent>
           </Select>
+          {websiteOptions && websiteOptions.length > 0 && (
+            <Select value={selectedWebsite} onValueChange={(v) => { setSelectedWebsite(v); setRawPage(1); setAllPage(1); }}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={isBn ? "সব ওয়েবসাইট" : "All Websites"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isBn ? "সব ওয়েবসাইট" : "All Websites"}</SelectItem>
+                {websiteOptions.map((w: any) => (
+                  <SelectItem key={w.id} value={w.site_name}>{w.site_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
