@@ -10,13 +10,14 @@ import BirthdayPopup from "@/components/BirthdayPopup";
 import GlobalCallListener from "@/components/GlobalCallListener";
 import WarningPopup from "@/components/WarningPopup";
 import AndroidBridgeSetup from "@/components/AndroidBridge";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface DashboardLayoutInnerProps {
   panel: PanelType;
 }
 
 const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const storageKey = `vencon_sidebar_${panel}`;
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -31,6 +32,7 @@ const DashboardLayoutInner = ({ panel }: DashboardLayoutInnerProps) => {
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const closeSidebar = () => setSidebarOpen(false);
 
+  if (loading) return <LoadingSpinner fullPage text="লোড হচ্ছে..." />;
   if (!user) return null;
 
   return (

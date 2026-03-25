@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getPanelByType, PanelType } from "@/lib/panelConfig";
 import { supabase } from "@/integrations/supabase/client";
+import { buildTemporaryAuthUser, fetchUserPanelByAuthId, withTimeout } from "@/lib/authResolvers";
 import LanguageToggle from "@/components/LanguageToggle";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import LoginBackground from "@/components/LoginBackground";
@@ -69,7 +70,12 @@ const PanelLogin = () => {
     setError("");
     setLoading(true);
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error: authError } = await withTimeout(
+        Promise.resolve(supabase.auth.signInWithPassword({ email, password })),
+        8000,
+        "signInWithPassword",
+      );
+
       if (authError) {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
@@ -82,21 +88,32 @@ const PanelLogin = () => {
         setLoading(false);
         return;
       }
-      const { data: userData, error: userError } = await supabase.from("users").select("panel").eq("auth_id", authData.user.id).single();
-      if (userError || !userData) {
-        await supabase.auth.signOut();
-        setError(t("invalid_creds"));
-        setLoading(false);
-        return;
+
+      let resolvedPanel: PanelType | null = null;
+      try {
+        resolvedPanel = await fetchUserPanelByAuthId(authData.user.id, 3000);
+      } catch {
+        resolvedPanel = null;
       }
-      if (userData.panel !== panel) {
+
+      if (resolvedPanel && resolvedPanel !== panel) {
         await supabase.auth.signOut();
-        const correctPanel = getPanelByType(userData.panel as PanelType);
+        const correctPanel = getPanelByType(resolvedPanel);
         setError(t("no_panel_access"));
         setLoading(false);
         if (correctPanel) setTimeout(() => navigate(correctPanel.loginPath), 2000);
         return;
       }
+
+      const optimisticUser = buildTemporaryAuthUser({
+        authId: authData.user.id,
+        email: authData.user.email,
+        panel: (resolvedPanel || (panel as PanelType)),
+        userId: authData.user.id,
+        name: typeof authData.user.user_metadata?.name === "string" ? authData.user.user_metadata.name : null,
+      });
+      localStorage.setItem("vencon_auth_cache", JSON.stringify(optimisticUser));
+
       setFlashColor(true);
       setTimeout(() => navigate(panelConfig.dashboardPath), 250);
     } catch {

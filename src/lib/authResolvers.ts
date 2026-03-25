@@ -37,7 +37,7 @@ export const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, lab
 export const fetchUserPanelByAuthId = async (authId: string, timeoutMs = 3500): Promise<PanelType | null> => {
   try {
     const rpcResult = await withTimeout(
-      supabase.rpc("get_user_panel", { _auth_id: authId }),
+      Promise.resolve(supabase.rpc("get_user_panel", { _auth_id: authId })),
       timeoutMs,
       "get_user_panel",
     );
@@ -46,7 +46,7 @@ export const fetchUserPanelByAuthId = async (authId: string, timeoutMs = 3500): 
     return (rpcResult.data as PanelType | null) ?? null;
   } catch {
     const queryResult = await withTimeout(
-      supabase.from("users").select("panel").eq("auth_id", authId).maybeSingle(),
+      Promise.resolve(supabase.from("users").select("panel").eq("auth_id", authId).maybeSingle()),
       timeoutMs,
       "users.panel lookup",
     );
@@ -59,7 +59,7 @@ export const fetchUserPanelByAuthId = async (authId: string, timeoutMs = 3500): 
 export const fetchUserIdByAuthId = async (authId: string, timeoutMs = 3500): Promise<string | null> => {
   try {
     const rpcResult = await withTimeout(
-      supabase.rpc("get_user_id", { _auth_id: authId }),
+      Promise.resolve(supabase.rpc("get_user_id", { _auth_id: authId })),
       timeoutMs,
       "get_user_id",
     );
@@ -68,7 +68,7 @@ export const fetchUserIdByAuthId = async (authId: string, timeoutMs = 3500): Pro
     return rpcResult.data ?? null;
   } catch {
     const queryResult = await withTimeout(
-      supabase.from("users").select("id").eq("auth_id", authId).maybeSingle(),
+      Promise.resolve(supabase.from("users").select("id").eq("auth_id", authId).maybeSingle()),
       timeoutMs,
       "users.id lookup",
     );
@@ -80,11 +80,13 @@ export const fetchUserIdByAuthId = async (authId: string, timeoutMs = 3500): Pro
 
 export const fetchAuthUserRecord = async (authId: string, timeoutMs = 6000): Promise<AuthUserRecord | null> => {
   const result = await withTimeout(
-    supabase
-      .from("users")
-      .select("id, auth_id, name, email, panel, role")
-      .eq("auth_id", authId)
-      .maybeSingle(),
+    Promise.resolve(
+      supabase
+        .from("users")
+        .select("id, auth_id, name, email, panel, role")
+        .eq("auth_id", authId)
+        .maybeSingle(),
+    ),
     timeoutMs,
     "users profile lookup",
   );
