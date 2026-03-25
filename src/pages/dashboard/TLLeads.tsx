@@ -66,7 +66,8 @@ const TLLeads = () => {
   // tierFilter removed — TL sees all fresh data without sub-filter
   // Derive active section from URL param, default to "assign"
   const activeSection = urlSection || "assign";
-  const selectedDataMode = activeSection === "processing" ? "processing" : "lead";
+  const [activeDataMode, setActiveDataMode] = useState<"lead" | "processing">("lead");
+  const selectedDataMode = activeDataMode;
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
@@ -327,8 +328,12 @@ const TLLeads = () => {
         .is("assigned_to", null)
         .eq("status", "fresh")
         .order("created_at", { ascending: false })
-        .limit(500)
-        .or("agent_type.is.null,agent_type.eq.bronze");
+        .limit(500);
+      if (activeDataMode === "processing") {
+        freshQ = freshQ.eq("agent_type", "silver");
+      } else {
+        freshQ = freshQ.or("agent_type.is.null,agent_type.eq.bronze");
+      }
 
       let csoQ = supabase
         .from("orders")
@@ -435,7 +440,7 @@ const TLLeads = () => {
     } finally {
       setDataLoading(false);
     }
-  }, [user, selectedCampaign, activeSection, getEffectiveTlId, isBDO, deleteSheetThreshold]);
+  }, [user, selectedCampaign, activeSection, activeDataMode, getEffectiveTlId, isBDO, deleteSheetThreshold]);
 
   useEffect(() => { loadAgents(); loadData(); }, [loadAgents, loadData]);
 
@@ -695,15 +700,24 @@ const TLLeads = () => {
     loadData();
   };
 
-  // Show all campaigns (not filtered by mode)
-  const allCampaignOptions = campaigns;
+  // Filter campaigns by active data mode
+  const allCampaignOptions = useMemo(() => {
+    // Filter campaigns that have the matching data_mode
+    const filtered = campaigns.filter(c => {
+      const mode = (c.data_mode || "lead").toLowerCase();
+      if (activeDataMode === "processing") return mode.includes("processing");
+      return !mode.includes("processing");
+    });
+    // If no campaigns match the mode filter, show all (fallback)
+    return filtered.length > 0 ? filtered : campaigns;
+  }, [campaigns, activeDataMode]);
 
-  // Auto-select first campaign when campaigns load
+  // Auto-select first campaign when filtered campaigns change
   useEffect(() => {
-    if (campaigns.length > 0 && !campaigns.some(c => c.id === selectedCampaign)) {
-      setSelectedCampaign(campaigns[0].id);
+    if (allCampaignOptions.length > 0 && !allCampaignOptions.some(c => c.id === selectedCampaign)) {
+      setSelectedCampaign(allCampaignOptions[0].id);
     }
-  }, [campaigns]);
+  }, [allCampaignOptions]);
 
   // No tier filter needed — show all fresh leads
   const filteredFresh = freshLeads;
@@ -747,7 +761,17 @@ const TLLeads = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">{isBn ? "ডাটা মোড" : "Data Mode"}</label>
+            <Select value={activeDataMode} onValueChange={(v) => { setActiveDataMode(v as "lead" | "processing"); setDistAgent(""); setSendCount(""); }}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lead">🎯 {isBn ? "লিড" : "Lead"}</SelectItem>
+                <SelectItem value="processing">⚙️ {isBn ? "প্রসেসিং" : "Processing"}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">{isBn ? "ক্যাম্পেইন" : "Campaign"}</label>
             <Select value={selectedCampaign} onValueChange={(v) => { setSelectedCampaign(v); setDistAgent(""); setSendCount(""); }}>
