@@ -733,7 +733,7 @@ const DataTracker = () => {
                 };
 
                 const dynamicCols = allKeys.length > 0;
-                const colCount = dynamicCols ? allKeys.length + 3 : 6;
+                const colCount = (dynamicCols ? allKeys.length + 3 : 6) + (canAssign ? 1 : 0);
                 const startIdx = (rawPage - 1) * PAGE_SIZE;
 
                 return (
@@ -787,7 +787,30 @@ const DataTracker = () => {
                               )}
                               <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || lead.import_source || "—"}</Badge></TableCell>
                               <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}</TableCell>
-                            </TableRow>
+                              {canAssign && (
+                                <TableCell>
+                                  <div className="flex items-center gap-1.5 min-w-[180px]">
+                                    <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(prev => ({ ...prev, [lead.id]: v }))}>
+                                      <SelectTrigger className="h-7 w-[130px] text-xs">
+                                        <SelectValue placeholder={isBn ? "এজেন্ট" : "Agent"} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {agentList.map((a: any) => (
+                                          <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-xs"
+                                      disabled={!assignments[lead.id]}
+                                      onClick={() => assignLead(lead.id, assignments[lead.id], rawSubTab === "processing")}
+                                    >
+                                      <Send className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
                           ))}
                         </TableBody>
                       </Table>
