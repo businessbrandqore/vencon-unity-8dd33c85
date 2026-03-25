@@ -754,6 +754,7 @@ const DataTracker = () => {
                             )}
                             <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                             <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                            {canAssign && <TableHead className="text-xs">{isBn ? "অ্যাসাইন" : "Assign"}</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
