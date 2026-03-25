@@ -811,6 +811,7 @@ const DataTracker = () => {
                                   </div>
                                 </TableCell>
                               )}
+                            </TableRow>
                           ))}
                         </TableBody>
                       </Table>
