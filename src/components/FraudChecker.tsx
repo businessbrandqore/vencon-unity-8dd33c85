@@ -191,8 +191,8 @@ const FraudChecker = () => {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">
                   {isBn
-                    ? "কুরিয়ার API + আমাদের সিস্টেমের ডাটা কম্বাইন করে রিস্ক অ্যানালাইসিস"
-                    : "Combined risk analysis from Courier APIs + our local database"}
+                    ? "Steadfast/Pathao/RedX — সকল মার্চেন্টের গ্লোবাল ডেলিভারি হিস্টোরি + আমাদের সিস্টেমের ডাটা"
+                    : "Steadfast/Pathao/RedX — Global delivery history across ALL merchants + our system data"}
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -225,7 +225,7 @@ const FraudChecker = () => {
                           {getRiskLabel(fraudResult.riskLevel)}
                         </div>
                         <div className="text-[9px] text-muted-foreground mt-0.5">
-                          {isBn ? "কম্বাইন্ড স্কোর (কুরিয়ার + লোকাল ডিবি)" : "Combined score (Courier + Local DB)"}
+                          {isBn ? "গ্লোবাল স্কোর (সকল মার্চেন্টের ডাটা + আমাদের সিস্টেম)" : "Global score (All merchants + Our system)"}
                         </div>
                       </div>
                       <div className="text-right text-[10px] text-muted-foreground space-y-0.5">
@@ -253,7 +253,7 @@ const FraudChecker = () => {
                       <div className="space-y-1.5">
                         <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
                           <Globe className="h-3 w-3" />
-                          {isBn ? "কুরিয়ার API" : "Courier API"}
+                          {isBn ? "গ্লোবাল (সকল মার্চেন্ট)" : "Global (All Merchants)"}
                         </div>
                         {Object.keys(fraudResult.couriers).length > 0 ? (
                           Object.entries(fraudResult.couriers).map(([name, courier]) => {
