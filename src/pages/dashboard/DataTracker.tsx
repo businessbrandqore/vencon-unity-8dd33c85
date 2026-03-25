@@ -124,7 +124,7 @@ const DataTracker = () => {
   const isBDO = user?.role === "bdo" || user?.role === "business_development_officer" || user?.role === "Business Development And Marketing Manager";
   const isATL = user?.role === "Assistant Team Leader";
   const isTL = panel === "tl" && !isBDO;
-  const canAssign = panel === "tl" && !isBDO && !isATL;
+  const canAssign = panel === "tl" && !isBDO;
 
   const [atlTlMap, setAtlTlMap] = useState<Record<string, string>>({});
 
@@ -492,12 +492,29 @@ const DataTracker = () => {
 
   // TL assignment functions
   const assignLead = async (leadId: string, agentId: string, isProcessing: boolean) => {
-    if (isProcessing) {
-      await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+    if (isATL) {
+      // ATL needs TL approval
+      const effectiveTlId = getEffectiveTlId();
+      const { error } = await supabase.from("atl_approvals").insert({
+        atl_id: user!.id,
+        tl_id: effectiveTlId,
+        action_type: "assign_lead",
+        payload: { lead_id: leadId, agent_id: agentId, is_processing: isProcessing },
+        status: "pending",
+      });
+      if (error) {
+        toast.error(isBn ? "অনুরোধ পাঠাতে ব্যর্থ" : "Failed to send request");
+        return;
+      }
+      toast.success(isBn ? "TL-এর কাছে অনুমোদনের অনুরোধ পাঠানো হয়েছে" : "Approval request sent to TL");
     } else {
-      await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+      if (isProcessing) {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "processing_assigned" }).eq("id", leadId);
+      } else {
+        await supabase.from("leads").update({ assigned_to: agentId, status: "assigned", agent_type: "bronze" }).eq("id", leadId);
+      }
+      toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
     }
-    toast.success(isBn ? "Lead assign করা হয়েছে" : "Lead assigned");
     setAssignments(prev => { const n = { ...prev }; delete n[leadId]; return n; });
     invalidateAll();
   };
@@ -659,7 +676,9 @@ const DataTracker = () => {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {isBn ? "📖 শুধুমাত্র পড়ার জন্য — ইউজার থেকে আসা মূল ডাটা, কোনো পরিবর্তন ছাড়া" : "📖 Read-only — original data from users, without any changes"}
+                {canAssign
+                  ? (isBn ? "📤 এজেন্টদের কাছে ডাটা ডিস্ট্রিবিউট করুন" : "📤 Distribute data to agents")
+                  : (isBn ? "📖 শুধুমাত্র পড়ার জন্য — ইউজার থেকে আসা মূল ডাটা" : "📖 Read-only — original data from users")}
               </p>
             </CardHeader>
             <CardContent className="p-0">
@@ -716,7 +735,7 @@ const DataTracker = () => {
                 };
 
                 const dynamicCols = allKeys.length > 0;
-                const colCount = dynamicCols ? allKeys.length + 3 : 6;
+                const colCount = (dynamicCols ? allKeys.length + 3 : 6) + (canAssign ? 1 : 0);
                 const startIdx = (rawPage - 1) * PAGE_SIZE;
 
                 return (
@@ -737,6 +756,7 @@ const DataTracker = () => {
                             )}
                             <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                             <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
+                            {canAssign && <TableHead className="text-xs">{isBn ? "অ্যাসাইন" : "Assign"}</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -769,6 +789,30 @@ const DataTracker = () => {
                               )}
                               <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || lead.import_source || "—"}</Badge></TableCell>
                               <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}</TableCell>
+                              {canAssign && (
+                                <TableCell>
+                                  <div className="flex items-center gap-1.5 min-w-[180px]">
+                                    <Select value={assignments[lead.id] || ""} onValueChange={(v) => setAssignments(prev => ({ ...prev, [lead.id]: v }))}>
+                                      <SelectTrigger className="h-7 w-[130px] text-xs">
+                                        <SelectValue placeholder={isBn ? "এজেন্ট" : "Agent"} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {agentList.map((a: any) => (
+                                          <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-xs"
+                                      disabled={!assignments[lead.id]}
+                                      onClick={() => assignLead(lead.id, assignments[lead.id], rawSubTab === "processing")}
+                                    >
+                                      <Send className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))}
                         </TableBody>
