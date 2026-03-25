@@ -66,7 +66,8 @@ const TLLeads = () => {
   // tierFilter removed — TL sees all fresh data without sub-filter
   // Derive active section from URL param, default to "assign"
   const activeSection = urlSection || "assign";
-  const selectedDataMode = activeSection === "processing" ? "processing" : "lead";
+  const [activeDataMode, setActiveDataMode] = useState<"lead" | "processing">("lead");
+  const selectedDataMode = activeDataMode;
   // Silver & Golden data
   const [silverData, setSilverData] = useState<SilverGoldenLead[]>([]);
   const [goldenData, setGoldenData] = useState<SilverGoldenLead[]>([]);
@@ -695,15 +696,24 @@ const TLLeads = () => {
     loadData();
   };
 
-  // Show all campaigns (not filtered by mode)
-  const allCampaignOptions = campaigns;
+  // Filter campaigns by active data mode
+  const allCampaignOptions = useMemo(() => {
+    // Filter campaigns that have the matching data_mode
+    const filtered = campaigns.filter(c => {
+      const mode = (c.data_mode || "lead").toLowerCase();
+      if (activeDataMode === "processing") return mode.includes("processing");
+      return !mode.includes("processing");
+    });
+    // If no campaigns match the mode filter, show all (fallback)
+    return filtered.length > 0 ? filtered : campaigns;
+  }, [campaigns, activeDataMode]);
 
-  // Auto-select first campaign when campaigns load
+  // Auto-select first campaign when filtered campaigns change
   useEffect(() => {
-    if (campaigns.length > 0 && !campaigns.some(c => c.id === selectedCampaign)) {
-      setSelectedCampaign(campaigns[0].id);
+    if (allCampaignOptions.length > 0 && !allCampaignOptions.some(c => c.id === selectedCampaign)) {
+      setSelectedCampaign(allCampaignOptions[0].id);
     }
-  }, [campaigns]);
+  }, [allCampaignOptions]);
 
   // No tier filter needed — show all fresh leads
   const filteredFresh = freshLeads;
