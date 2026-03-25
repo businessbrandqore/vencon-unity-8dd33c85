@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     // 1. Fetch order details
     const { data: order, error: orderErr } = await supabase
       .from("orders")
-      .select("id, customer_name, phone, address, price, product, quantity, tl_id, agent_id, warehouse_sent_by")
+      .select("id, customer_name, phone, address, price, product, quantity, tl_id, agent_id, warehouse_sent_by, campaign_id")
       .eq("id", order_id)
       .single();
 
@@ -124,10 +124,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Fetch SteadFast API credentials
-    // Try env vars first
-    let sfApiKey = Deno.env.get("STEADFAST_API_KEY") || "";
-    let sfSecretKey = Deno.env.get("STEADFAST_SECRET_KEY") || "";
+    // 2. Fetch SteadFast API credentials — campaign-specific first
+    let sfApiKey = "";
+    let sfSecretKey = "";
+
+    if (order.campaign_id) {
+      const { data: camp } = await supabase
+        .from("campaigns")
+        .select("steadfast_api_key, steadfast_secret_key, steadfast_connected")
+        .eq("id", order.campaign_id)
+        .single();
+
+      if (camp && (camp as any).steadfast_connected && (camp as any).steadfast_api_key && (camp as any).steadfast_secret_key) {
+        sfApiKey = (camp as any).steadfast_api_key;
+        sfSecretKey = (camp as any).steadfast_secret_key;
+      }
+    }
+
+    // Fallback: env vars
+    if (!sfApiKey || !sfSecretKey) {
+      sfApiKey = Deno.env.get("STEADFAST_API_KEY") || "";
+      sfSecretKey = Deno.env.get("STEADFAST_SECRET_KEY") || "";
+    }
 
     // Fallback: try app_settings api_config (HR saves here)
     if (!sfApiKey || !sfSecretKey) {

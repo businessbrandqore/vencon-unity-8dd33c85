@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     // Fetch all dispatched orders with consignment IDs pending status update
     const { data: orders, error } = await supabase
       .from("orders")
-      .select("id, steadfast_consignment_id, delivery_status, product, quantity, agent_id, tl_id, cs_id")
+      .select("id, steadfast_consignment_id, delivery_status, product, quantity, agent_id, tl_id, cs_id, campaign_id")
       .eq("status", "dispatched")
       .not("steadfast_consignment_id", "is", null)
       .in("delivery_status", ["pending", "in_transit"]);
@@ -56,10 +56,29 @@ Deno.serve(async (req) => {
 
     for (const order of orders) {
       try {
+        // Get campaign-specific credentials if available
+        let orderApiKey = apiKey;
+        let orderSecretKey = secretKey;
+
+        if (order.campaign_id) {
+          const { data: camp } = await supabase
+            .from("campaigns")
+            .select("steadfast_api_key, steadfast_secret_key, steadfast_connected")
+            .eq("id", order.campaign_id)
+            .single();
+
+          if (camp && (camp as any).steadfast_connected && (camp as any).steadfast_api_key) {
+            orderApiKey = (camp as any).steadfast_api_key;
+            orderSecretKey = (camp as any).steadfast_secret_key;
+          }
+        }
+
+        if (!orderApiKey || !orderSecretKey) continue;
+
         const response = await fetch(
           `https://portal.packzy.com/api/v1/status_by_cid/${order.steadfast_consignment_id}`,
           {
-            headers: { "Api-Key": apiKey, "Secret-Key": secretKey },
+            headers: { "Api-Key": orderApiKey, "Secret-Key": orderSecretKey },
           }
         );
 
