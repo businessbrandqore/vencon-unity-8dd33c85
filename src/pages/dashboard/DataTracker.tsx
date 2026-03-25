@@ -276,7 +276,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED RAW DATA =====
   const { data: rawData, isLoading: rawLoading } = useQuery({
-    queryKey: ["tracker-raw", selectedCampaign, rawSubTab, rawPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-raw", selectedCampaign, selectedWebsite, rawSubTab, rawPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (rawPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -319,7 +319,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED SILVER DATA =====
   const { data: silverData, isLoading: silverLoading } = useQuery({
-    queryKey: ["tracker-silver", selectedCampaign, silverPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-silver", selectedCampaign, selectedWebsite, silverPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (silverPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -343,7 +343,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED GOLDEN DATA =====
   const { data: goldenData, isLoading: goldenLoading } = useQuery({
-    queryKey: ["tracker-golden", selectedCampaign, goldenPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-golden", selectedCampaign, selectedWebsite, goldenPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (goldenPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -367,7 +367,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED ALL DATA =====
   const { data: allLeadsData, isLoading: allLeadsLoading } = useQuery({
-    queryKey: ["tracker-all-leads", selectedCampaign, dataMode, allPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-all-leads", selectedCampaign, selectedWebsite, dataMode, allPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (allPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -395,7 +395,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED STATUS CHANGED =====
   const { data: changedData, isLoading: changedLoading } = useQuery({
-    queryKey: ["tracker-changed", selectedCampaign, changedPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-changed", selectedCampaign, selectedWebsite, changedPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (changedPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -421,7 +421,7 @@ const DataTracker = () => {
 
   // ===== PAGINATED ORDERS =====
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
-    queryKey: ["tracker-orders", selectedCampaign, ordersPage, debouncedSearch, user?.id, isTL, atlTlMap],
+    queryKey: ["tracker-orders", selectedCampaign, selectedWebsite, ordersPage, debouncedSearch, user?.id, isTL, atlTlMap],
     queryFn: async () => {
       const from = (ordersPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
