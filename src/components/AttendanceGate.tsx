@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, LogOut, MapPin } from "lucide-react";
+import { Clock, AlertTriangle, LogOut, MapPin, Coffee } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGpsConfig, validateGpsPosition } from "@/hooks/useGpsConfig";
@@ -58,6 +58,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
   const [clockOutMood, setClockOutMood] = useState("");
   const [clockOutNote, setClockOutNote] = useState("");
   const [gpsChecking, setGpsChecking] = useState(false);
+  const [onBreak, setOnBreak] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -86,10 +87,12 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
       setTodayAttendance(data);
       setDeskReportDone(!!data.desk_condition);
       setClockedIn(!!data.clock_in);
+      setOnBreak(!!(data as any).break_start && !(data as any).break_end);
     } else {
       setTodayAttendance(null);
       setDeskReportDone(false);
       setClockedIn(false);
+      setOnBreak(false);
     }
     setLoading(false);
   }, [user]);
@@ -187,6 +190,45 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
     toast.success(earlyOut ? t("check_out_early").replace("{mins}", String(earlyMinutes)).replace("{amt}", String(extraDeduction)) : t("check_out_success"));
   };
 
+  const handleBreakStart = async () => {
+    if (!user || !todayAttendance) return;
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(lang === "bn" ? gpsResult.errorBn! : gpsResult.error!);
+      return;
+    }
+    await supabase.from("attendance").update({ break_start: new Date().toISOString(), break_end: null } as any).eq("id", todayAttendance.id);
+    setOnBreak(true);
+    await loadAttendance();
+    toast.success(lang === "bn" ? "☕ ব্রেক শুরু হয়েছে" : "☕ Break started");
+  };
+
+  const handleBreakEnd = async () => {
+    if (!user || !todayAttendance) return;
+    setGpsChecking(true);
+    const gpsResult = await validateGpsPosition(gpsConfig);
+    setGpsChecking(false);
+    if (!gpsResult.allowed) {
+      toast.error(lang === "bn" ? gpsResult.errorBn! : gpsResult.error!);
+      return;
+    }
+    const now = new Date();
+    const breakStartTime = new Date((todayAttendance as any).break_start);
+    const breakMinutes = Math.ceil((now.getTime() - breakStartTime.getTime()) / 60000);
+    const breakDed = getDeductionAmount(deductionConfig.break_tiers, breakMinutes);
+    const totalDeduction = (Number(todayAttendance.deduction_amount) || 0) + breakDed;
+    await supabase.from("attendance").update({ break_end: now.toISOString(), break_deduction: breakDed, deduction_amount: totalDeduction } as any).eq("id", todayAttendance.id);
+    setOnBreak(false);
+    await loadAttendance();
+    if (breakDed > 0) {
+      toast.success(lang === "bn" ? `ব্রেক শেষ (${breakMinutes} মিনিট) — কর্তন ৳${breakDed}` : `Break ended (${breakMinutes} min) — Deduction ৳${breakDed}`);
+    } else {
+      toast.success(lang === "bn" ? `ব্রেক শেষ (${breakMinutes} মিনিট)` : `Break ended (${breakMinutes} min)`);
+    }
+  };
+
   if (!profile || isWithinShift === null || loading || gpsLoading) {
     return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
   }
@@ -276,9 +318,29 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2 flex-wrap">
+        {/* Break button */}
+        {!todayAttendance?.clock_out && (
+          onBreak ? (
+            <Button variant="outline" onClick={handleBreakEnd} disabled={gpsChecking} className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+              <Coffee className="h-4 w-4 mr-2" />
+              {gpsChecking ? (lang === "bn" ? "📍 যাচাই..." : "📍 Checking...") : (lang === "bn" ? "ব্রেক শেষ" : "End Break")}
+            </Button>
+          ) : !(todayAttendance as any)?.break_start ? (
+            <Button variant="outline" onClick={handleBreakStart} disabled={gpsChecking} className="border-amber-500 text-amber-500 hover:bg-amber-500/10">
+              <Coffee className="h-4 w-4 mr-2" />
+              {gpsChecking ? (lang === "bn" ? "📍 যাচাই..." : "📍 Checking...") : (lang === "bn" ? "ব্রেক শুরু" : "Start Break")}
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              ☕ {lang === "bn" ? "ব্রেক" : "Break"}: {new Date((todayAttendance as any).break_start).toLocaleTimeString(lang === "bn" ? "bn-BD" : "en-US")} — {new Date((todayAttendance as any).break_end).toLocaleTimeString(lang === "bn" ? "bn-BD" : "en-US")}
+              {(todayAttendance as any)?.break_deduction > 0 && <span className="text-destructive ml-1">(৳{(todayAttendance as any).break_deduction})</span>}
+            </span>
+          )
+        )}
+        {/* Clock out button */}
         {!todayAttendance?.clock_out ? (
-          <Button variant="outline" onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }} className="border-destructive text-destructive hover:bg-destructive/10">
+          <Button variant="outline" onClick={() => { setClockOutMood(""); setClockOutNote(""); setShowClockOutModal(true); }} disabled={onBreak} className="border-destructive text-destructive hover:bg-destructive/10">
             <LogOut className="h-4 w-4 mr-2" />{t("check_out")}
           </Button>
         ) : (
