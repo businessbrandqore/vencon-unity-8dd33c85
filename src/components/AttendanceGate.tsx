@@ -87,10 +87,12 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
       setTodayAttendance(data);
       setDeskReportDone(!!data.desk_condition);
       setClockedIn(!!data.clock_in);
+      setOnBreak(!!(data as any).break_start && !(data as any).break_end);
     } else {
       setTodayAttendance(null);
       setDeskReportDone(false);
       setClockedIn(false);
+      setOnBreak(false);
     }
     setLoading(false);
   }, [user]);
