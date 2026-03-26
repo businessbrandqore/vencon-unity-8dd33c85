@@ -42,6 +42,7 @@ export function useDeductionConfig() {
           setConfig({
             late_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.late_checkin_amount) || 33 }],
             early_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.early_checkout_amount) || 33 }],
+            break_tiers: DEFAULT_CONFIG.break_tiers,
           });
         }
       }
