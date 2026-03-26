@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, LogOut, MapPin } from "lucide-react";
+import { Clock, AlertTriangle, LogOut, MapPin, Coffee } from "lucide-react";
 import { useDeductionConfig, getDeductionAmount } from "@/hooks/useDeductionConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGpsConfig, validateGpsPosition } from "@/hooks/useGpsConfig";
@@ -58,6 +58,7 @@ export default function AttendanceGate({ children }: AttendanceGateProps) {
   const [clockOutMood, setClockOutMood] = useState("");
   const [clockOutNote, setClockOutNote] = useState("");
   const [gpsChecking, setGpsChecking] = useState(false);
+  const [onBreak, setOnBreak] = useState(false);
 
   useEffect(() => {
     if (!user) return;
