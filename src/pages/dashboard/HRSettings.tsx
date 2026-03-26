@@ -80,6 +80,7 @@ interface DeductionTier {
 interface DeductionSettings {
   late_tiers: DeductionTier[];
   early_tiers: DeductionTier[];
+  break_tiers: DeductionTier[];
 }
 
 const DEFAULT_DEDUCTION: DeductionSettings = {
@@ -94,6 +95,11 @@ const DEFAULT_DEDUCTION: DeductionSettings = {
     { min_minutes: 16, max_minutes: 30, amount: 33 },
     { min_minutes: 31, max_minutes: 60, amount: 50 },
     { min_minutes: 61, max_minutes: 9999, amount: 100 },
+  ],
+  break_tiers: [
+    { min_minutes: 31, max_minutes: 45, amount: 20 },
+    { min_minutes: 46, max_minutes: 60, amount: 33 },
+    { min_minutes: 61, max_minutes: 9999, amount: 50 },
   ],
 };
 
@@ -223,11 +229,16 @@ const HRSettings = () => {
       } else if (row.key === "attendance_deduction_config") {
         const val = row.value as any;
         if (val?.late_tiers && val?.early_tiers) {
-          setDeduction(val);
+          setDeduction({
+            late_tiers: val.late_tiers,
+            early_tiers: val.early_tiers,
+            break_tiers: val.break_tiers || DEFAULT_DEDUCTION.break_tiers,
+          });
         } else if (val?.late_checkin_amount) {
           setDeduction({
             late_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.late_checkin_amount) || 33 }],
             early_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: Number(val.early_checkout_amount) || 33 }],
+            break_tiers: DEFAULT_DEDUCTION.break_tiers,
           });
         }
       } else if (row.key === "cloudinary_config") {
@@ -399,7 +410,7 @@ const HRSettings = () => {
   const set = (key: keyof Settings, value: string) => setSettings((prev) => ({ ...prev, [key]: value }));
 
   // Deduction tier management
-  const updateTier = (type: "late_tiers" | "early_tiers", index: number, field: keyof DeductionTier, value: number) => {
+  const updateTier = (type: "late_tiers" | "early_tiers" | "break_tiers", index: number, field: keyof DeductionTier, value: number) => {
     setDeduction(prev => {
       const tiers = [...prev[type]];
       tiers[index] = { ...tiers[index], [field]: value };
@@ -407,7 +418,7 @@ const HRSettings = () => {
     });
   };
 
-  const addTier = (type: "late_tiers" | "early_tiers") => {
+  const addTier = (type: "late_tiers" | "early_tiers" | "break_tiers") => {
     setDeduction(prev => {
       const tiers = [...prev[type]];
       const lastMax = tiers.length > 0 ? tiers[tiers.length - 1].max_minutes + 1 : 1;
@@ -416,7 +427,7 @@ const HRSettings = () => {
     });
   };
 
-  const removeTier = (type: "late_tiers" | "early_tiers", index: number) => {
+  const removeTier = (type: "late_tiers" | "early_tiers" | "break_tiers", index: number) => {
     setDeduction(prev => {
       const tiers = prev[type].filter((_, i) => i !== index);
       return { ...prev, [type]: tiers };
@@ -431,7 +442,7 @@ const HRSettings = () => {
 
   const fieldClass = "bg-background border-border text-foreground";
 
-  const renderTierTable = (type: "late_tiers" | "early_tiers", title: string) => (
+  const renderTierTable = (type: "late_tiers" | "early_tiers" | "break_tiers", title: string) => (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-body text-xs font-bold text-foreground">{title}</h4>
@@ -899,6 +910,7 @@ const HRSettings = () => {
 
             {renderTierTable("late_tiers", isBn ? "দেরিতে চেক ইন কর্তন" : "Late Check-In Deduction")}
             {renderTierTable("early_tiers", isBn ? "আগে চেক আউট কর্তন" : "Early Check-Out Deduction")}
+            {renderTierTable("break_tiers", isBn ? "অতিরিক্ত ব্রেক কর্তন" : "Overtime Break Deduction")}
 
             <button onClick={saveDeduction} disabled={saving} className="px-4 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: BLUE }}>
               {isBn ? "সংরক্ষণ" : "Save"}
