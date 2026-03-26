@@ -10,11 +10,13 @@ export interface DeductionTier {
 export interface DeductionConfig {
   late_tiers: DeductionTier[];
   early_tiers: DeductionTier[];
+  break_tiers: DeductionTier[];
 }
 
 const DEFAULT_CONFIG: DeductionConfig = {
   late_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: 33 }],
   early_tiers: [{ min_minutes: 1, max_minutes: 9999, amount: 33 }],
+  break_tiers: [{ min_minutes: 31, max_minutes: 9999, amount: 20 }],
 };
 
 export function useDeductionConfig() {
@@ -30,7 +32,11 @@ export function useDeductionConfig() {
       if (data?.value) {
         const val = data.value as any;
         if (val?.late_tiers && val?.early_tiers) {
-          setConfig(val);
+          setConfig({
+            late_tiers: val.late_tiers,
+            early_tiers: val.early_tiers,
+            break_tiers: val.break_tiers || DEFAULT_CONFIG.break_tiers,
+          });
         } else if (val?.late_checkin_amount) {
           // Legacy format
           setConfig({
