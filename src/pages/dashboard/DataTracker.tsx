@@ -755,6 +755,7 @@ const DataTracker = () => {
                                 <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
                               </>
                             )}
+                            <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                             <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                             <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
                             {canAssign && <TableHead className="text-xs">{isBn ? "অ্যাসাইন" : "Assign"}</TableHead>}
@@ -788,6 +789,9 @@ const DataTracker = () => {
                                   </TableCell>
                                 </>
                               )}
+                              <TableCell className="min-w-[120px]">
+                                <LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} />
+                              </TableCell>
                               <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || lead.import_source || "—"}</Badge></TableCell>
                               <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}</TableCell>
                               {canAssign && (
