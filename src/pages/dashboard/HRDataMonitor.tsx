@@ -19,6 +19,7 @@ import {
 import { format } from "date-fns";
 import CopyButton from "@/components/ui/CopyButton";
 import AddressTooltip from "@/components/ui/AddressTooltip";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 const statusColorMap: Record<string, string> = {
   fresh: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -97,7 +98,7 @@ const HRDataMonitor = () => {
     queryFn: async () => {
       let q = supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
@@ -313,6 +314,11 @@ interface LeadRow {
   source?: string | null;
   created_at?: string | null;
   special_note?: string | null;
+  fraud_total?: number | null;
+  fraud_success?: number | null;
+  fraud_cancel?: number | null;
+  fraud_check_error?: string | null;
+  fraud_checked_at?: string | null;
 }
 
 const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolean; isBn: boolean }) => {
@@ -382,6 +388,7 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                     <CopyButton text={lead.address} />
                   </div>
                 )}
+                <LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} />
                 {(noteInfo.product || noteInfo.price) && (
                   <div className="flex items-center gap-3 text-xs">
                     {noteInfo.product && <span><span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span> <span className="font-medium">{noteInfo.product}</span></span>}
@@ -436,6 +443,7 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                     <TableHead className="text-xs">{isBn ? "মূল্য" : "Price"}</TableHead>
                   </>
                 )}
+                <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "টাইপ" : "Type"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
@@ -473,6 +481,9 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                         <TableCell className="text-xs font-medium">{noteInfo.price ? `৳${noteInfo.price}` : "—"}</TableCell>
                       </>
                     )}
+                    <TableCell className="min-w-[120px]">
+                      <LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} />
+                    </TableCell>
                     <TableCell>
                       {lead.agent_type && lead.agent_type !== "processing" ? (
                         <Badge variant="outline" className="text-[10px]">

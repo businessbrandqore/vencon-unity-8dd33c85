@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Search, Database, Users, Target, ShoppingCart, Package } from "lucide-react";
+import CopyButton from "@/components/ui/CopyButton";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 type TabKey = "leads" | "orders" | "employees" | "inventory";
 
@@ -69,7 +71,7 @@ const SAAllData = () => {
     });
 
     if (tab === "leads") {
-      let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at").order("created_at", { ascending: false }).limit(200);
       if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       if (websiteFilter !== "all") {
@@ -249,6 +251,7 @@ const SAAllData = () => {
                   <tr className="border-b border-border bg-secondary/30">
                     <th className="px-4 py-3 font-heading text-[10px] tracking-wider text-muted-foreground uppercase">{isBn ? "নাম" : "Name"}</th>
                     <th className="px-4 py-3 font-heading text-[10px] tracking-wider text-muted-foreground uppercase">{isBn ? "ফোন" : "Phone"}</th>
+                    <th className="px-4 py-3 font-heading text-[10px] tracking-wider text-muted-foreground uppercase">{isBn ? "রেশিও" : "Ratio"}</th>
                     <th className="px-4 py-3 font-heading text-[10px] tracking-wider text-muted-foreground uppercase">{isBn ? "স্ট্যাটাস" : "Status"}</th>
                     <th className="px-4 py-3 font-heading text-[10px] tracking-wider text-muted-foreground uppercase">{isBn ? "ধরন" : "Type"}</th>
                     <th className="px-4 py-3 font-heading text-[10px] tracking-wider text-muted-foreground uppercase">{isBn ? "সোর্স" : "Source"}</th>
@@ -257,11 +260,19 @@ const SAAllData = () => {
                 </thead>
                 <tbody>
                   {filtered(leads).length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-8 text-sm text-muted-foreground">{isBn ? "কোনো ডাটা নেই" : "No data"}</td></tr>
+                    <tr><td colSpan={7} className="text-center py-8 text-sm text-muted-foreground">{isBn ? "কোনো ডাটা নেই" : "No data"}</td></tr>
                   ) : filtered(leads).map((l) => (
                     <tr key={l.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                       <td className="px-4 py-2.5 font-body text-xs text-foreground">{l.name || "—"}</td>
-                      <td className="px-4 py-2.5 font-body text-xs text-muted-foreground">{l.phone || "—"}</td>
+                      <td className="px-4 py-2.5 font-body text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <span>{l.phone || "—"}</span>
+                          {l.phone && <CopyButton text={l.phone} />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 min-w-[120px]">
+                        <LeadRatioBar total={l.fraud_total} success={l.fraud_success} cancel={l.fraud_cancel} error={l.fraud_check_error} checkedAt={l.fraud_checked_at} />
+                      </td>
                       <td className="px-4 py-2.5">{statusBadge(l.status)}</td>
                       <td className="px-4 py-2.5 font-body text-xs text-muted-foreground">{l.agent_type || "—"}</td>
                       <td className="px-4 py-2.5 font-body text-xs text-muted-foreground">{l.source || "—"}</td>

@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import CopyButton from "@/components/ui/CopyButton";
 import AddressTooltip from "@/components/ui/AddressTooltip";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 const PAGE_SIZE = 50;
 
@@ -296,7 +297,7 @@ const DataTracker = () => {
 
       // Data query
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, status, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note")
+        .select("id, name, phone, address, status, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("status", "fresh").is("assigned_to", null)
         .order("created_at", { ascending: false })
         .range(from, to);
@@ -329,7 +330,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("agent_type", "silver").order("created_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
       if (debouncedSearch) dataQ = dataQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
@@ -353,7 +354,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("agent_type", "golden").order("created_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
       if (debouncedSearch) dataQ = dataQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
@@ -379,7 +380,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time, special_note")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time, special_note, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .order("created_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
       if (dataMode === "lead") dataQ = dataQ.neq("source", "processing").neq("import_source", "processing");
@@ -406,7 +407,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, status, called_time, assigned_to, updated_at, campaign_id, tl_id, agent_type, source, import_source")
+        .select("id, name, phone, address, status, called_time, assigned_to, updated_at, campaign_id, tl_id, agent_type, source, import_source, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .neq("status", "fresh").not("assigned_to", "is", null)
         .order("updated_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
@@ -754,6 +755,7 @@ const DataTracker = () => {
                                 <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
                               </>
                             )}
+                            <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                             <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                             <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
                             {canAssign && <TableHead className="text-xs">{isBn ? "অ্যাসাইন" : "Assign"}</TableHead>}
@@ -787,6 +789,9 @@ const DataTracker = () => {
                                   </TableCell>
                                 </>
                               )}
+                              <TableCell className="min-w-[120px]">
+                                <LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} />
+                              </TableCell>
                               <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || lead.import_source || "—"}</Badge></TableCell>
                               <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM HH:mm") : "—"}</TableCell>
                               {canAssign && (
@@ -843,19 +848,21 @@ const DataTracker = () => {
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {silverLoading ? <LoadingRow cols={6} /> : (silverData?.data || []).length === 0 ? (
-                      <EmptyRow cols={6} msg={isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"} />
+                    {silverLoading ? <LoadingRow cols={7} /> : (silverData?.data || []).length === 0 ? (
+                      <EmptyRow cols={7} msg={isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"} />
                     ) : (silverData?.data || []).map((lead: any, i: number) => (
                       <TableRow key={lead.id}>
                         <TableCell className="text-xs text-muted-foreground">{(silverPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                         <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
                         <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[150px]"><AddressTooltip address={lead.address} /></TableCell>
+                        <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                         <TableCell><Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>{lead.status || "—"}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}</TableCell>
                       </TableRow>
@@ -885,19 +892,21 @@ const DataTracker = () => {
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {goldenLoading ? <LoadingRow cols={6} /> : (goldenData?.data || []).length === 0 ? (
-                      <EmptyRow cols={6} msg={isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data"} />
+                    {goldenLoading ? <LoadingRow cols={7} /> : (goldenData?.data || []).length === 0 ? (
+                      <EmptyRow cols={7} msg={isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data"} />
                     ) : (goldenData?.data || []).map((lead: any, i: number) => (
                       <TableRow key={lead.id}>
                         <TableCell className="text-xs text-muted-foreground">{(goldenPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                         <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
                         <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[150px]"><AddressTooltip address={lead.address} /></TableCell>
+                        <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || "—"}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}</TableCell>
                       </TableRow>
@@ -921,6 +930,7 @@ const DataTracker = () => {
                       <TableHead className="text-xs">#</TableHead>
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "টাইপ" : "Type"}</TableHead>
                       <TableHead className="text-xs">📍 {isBn ? "বর্তমান অবস্থান" : "Current Position"}</TableHead>
@@ -928,15 +938,16 @@ const DataTracker = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allLeadsLoading ? <LoadingRow cols={7} /> : (allLeadsData?.data || []).length === 0 ? (
-                      <EmptyRow cols={7} msg={isBn ? "কোনো ডাটা নেই" : "No data found"} />
+                    {allLeadsLoading ? <LoadingRow cols={8} /> : (allLeadsData?.data || []).length === 0 ? (
+                      <EmptyRow cols={8} msg={isBn ? "কোনো ডাটা নেই" : "No data found"} />
                     ) : (allLeadsData?.data || []).map((lead: any, i: number) => {
                       const pos = getLeadPosition(lead, isBn);
                       return (
                         <TableRow key={lead.id}>
                           <TableCell className="text-xs text-muted-foreground">{(allPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                           <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
-                          <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                          <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
+                          <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                           <TableCell><Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>{lead.status || "—"}</Badge></TableCell>
                           <TableCell>
                             {lead.agent_type ? (
@@ -969,6 +980,7 @@ const DataTracker = () => {
                       <TableHead className="text-xs">#</TableHead>
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "কল সংখ্যা" : "Calls"}</TableHead>
                       <TableHead className="text-xs">📍 {isBn ? "বর্তমান অবস্থান" : "Current Position"}</TableHead>
@@ -976,15 +988,16 @@ const DataTracker = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {changedLoading ? <LoadingRow cols={7} /> : (changedData?.data || []).length === 0 ? (
-                      <EmptyRow cols={7} msg={isBn ? "কোনো স্ট্যাটাস পরিবর্তিত ডাটা নেই" : "No status-changed data"} />
+                    {changedLoading ? <LoadingRow cols={8} /> : (changedData?.data || []).length === 0 ? (
+                      <EmptyRow cols={8} msg={isBn ? "কোনো স্ট্যাটাস পরিবর্তিত ডাটা নেই" : "No status-changed data"} />
                     ) : (changedData?.data || []).map((lead: any, i: number) => {
                       const pos = getLeadPosition(lead, isBn);
                       return (
                         <TableRow key={lead.id}>
                           <TableCell className="text-xs text-muted-foreground">{(changedPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                           <TableCell className="text-sm font-medium">{lead.name || "—"}</TableCell>
-                          <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                          <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
+                          <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                           <TableCell><Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>{lead.status || "—"}</Badge></TableCell>
                           <TableCell className="text-sm text-center">{lead.called_time || 0}</TableCell>
                           <TableCell><Badge className={`text-[10px] ${pos.color}`}>📍 {pos.label}</Badge></TableCell>
@@ -1027,7 +1040,7 @@ const DataTracker = () => {
                         <TableRow key={order.id}>
                           <TableCell className="text-xs text-muted-foreground">{(ordersPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                           <TableCell className="text-sm font-medium">{order.customer_name || "—"}</TableCell>
-                          <TableCell className="text-sm">{order.phone || "—"}</TableCell>
+                          <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{order.phone || "—"}</span>{order.phone && <CopyButton text={order.phone} />}</div></TableCell>
                           <TableCell className="text-sm">{order.product || "—"}</TableCell>
                           <TableCell className="text-sm font-medium">৳{(order.price || 0).toLocaleString()}</TableCell>
                           <TableCell><Badge className={`text-[10px] ${pos.color}`}>📍 {pos.label}</Badge></TableCell>
