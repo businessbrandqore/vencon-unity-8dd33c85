@@ -1129,6 +1129,11 @@ export type Database = {
           called_time: number | null
           campaign_id: string | null
           created_at: string | null
+          fraud_cancel: number | null
+          fraud_check_error: string | null
+          fraud_checked_at: string | null
+          fraud_success: number | null
+          fraud_total: number | null
           id: string
           import_source: string | null
           is_spam: boolean
@@ -1142,6 +1147,7 @@ export type Database = {
           spam_transferred_at: string | null
           special_note: string | null
           status: string | null
+          success_ratio: number | null
           tl_id: string | null
           updated_at: string | null
         }
@@ -1153,6 +1159,11 @@ export type Database = {
           called_time?: number | null
           campaign_id?: string | null
           created_at?: string | null
+          fraud_cancel?: number | null
+          fraud_check_error?: string | null
+          fraud_checked_at?: string | null
+          fraud_success?: number | null
+          fraud_total?: number | null
           id?: string
           import_source?: string | null
           is_spam?: boolean
@@ -1166,6 +1177,7 @@ export type Database = {
           spam_transferred_at?: string | null
           special_note?: string | null
           status?: string | null
+          success_ratio?: number | null
           tl_id?: string | null
           updated_at?: string | null
         }
@@ -1177,6 +1189,11 @@ export type Database = {
           called_time?: number | null
           campaign_id?: string | null
           created_at?: string | null
+          fraud_cancel?: number | null
+          fraud_check_error?: string | null
+          fraud_checked_at?: string | null
+          fraud_success?: number | null
+          fraud_total?: number | null
           id?: string
           import_source?: string | null
           is_spam?: boolean
@@ -1190,6 +1207,7 @@ export type Database = {
           spam_transferred_at?: string | null
           special_note?: string | null
           status?: string | null
+          success_ratio?: number | null
           tl_id?: string | null
           updated_at?: string | null
         }
