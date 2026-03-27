@@ -808,6 +808,15 @@ export default function EmployeeLeads() {
                   </div>
                 )}
 
+                {/* Fraud Ratio */}
+                <LeadRatioBar
+                  total={lead.fraud_total}
+                  success={lead.fraud_success}
+                  cancel={lead.fraud_cancel}
+                  error={lead.fraud_check_error}
+                  checkedAt={lead.fraud_checked_at}
+                />
+
                 {/* Raw data fields */}
                 {rawDataKeys.length > 0 && (
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
@@ -956,6 +965,7 @@ export default function EmployeeLeads() {
               <th className="py-2 px-2 text-left">{t("customer")}</th>
               <th className="py-2 px-2 text-left">{t("phone")}</th>
               <th className="py-2 px-2 text-left">{t("address")}</th>
+              <th className="py-2 px-2 text-left whitespace-nowrap">রেশিও</th>
               {rawDataKeys.map(key => (
                 <th key={key} className="py-2 px-2 text-left whitespace-nowrap">{key}</th>
               ))}
