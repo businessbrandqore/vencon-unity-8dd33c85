@@ -1000,6 +1000,15 @@ export default function EmployeeLeads() {
                   <td className="py-2 px-2 max-w-[150px]">
                     <AddressTooltip address={lead.address} />
                   </td>
+                  <td className="py-2 px-2 min-w-[120px]">
+                    <LeadRatioBar
+                      total={lead.fraud_total}
+                      success={lead.fraud_success}
+                      cancel={lead.fraud_cancel}
+                      error={lead.fraud_check_error}
+                      checkedAt={lead.fraud_checked_at}
+                    />
+                  </td>
                   {rawDataKeys.map(key => (
                     <td key={key} className="py-2 px-2 max-w-[150px] truncate">{rawData[key] || "—"}</td>
                   ))}
