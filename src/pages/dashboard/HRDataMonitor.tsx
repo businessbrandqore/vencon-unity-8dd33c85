@@ -314,6 +314,11 @@ interface LeadRow {
   source?: string | null;
   created_at?: string | null;
   special_note?: string | null;
+  fraud_total?: number | null;
+  fraud_success?: number | null;
+  fraud_cancel?: number | null;
+  fraud_check_error?: string | null;
+  fraud_checked_at?: string | null;
 }
 
 const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolean; isBn: boolean }) => {
