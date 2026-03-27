@@ -19,6 +19,7 @@ import {
 import { format } from "date-fns";
 import CopyButton from "@/components/ui/CopyButton";
 import AddressTooltip from "@/components/ui/AddressTooltip";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 const statusColorMap: Record<string, string> = {
   fresh: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -97,7 +98,7 @@ const HRDataMonitor = () => {
     queryFn: async () => {
       let q = supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .order("created_at", { ascending: false })
         .limit(500);
       if (selectedCampaign !== "all") q = q.eq("campaign_id", selectedCampaign);
