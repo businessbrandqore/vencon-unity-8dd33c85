@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { ShieldBan, RotateCcw, Trash2, Forward, Clock, Filter, Calendar } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import CopyButton from "@/components/ui/CopyButton";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 interface SpamLead {
   id: string;
