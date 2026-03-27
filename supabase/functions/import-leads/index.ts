@@ -404,13 +404,19 @@ Deno.serve(async (req) => {
         tl_id: autoTlId,
       };
 
-      const { error: insertError } = await supabase.from("leads").insert(leadRow);
+      const { data: insertedLead, error: insertError } = await supabase.from("leads").insert(leadRow).select("id").single();
 
-      if (!insertError) {
+      if (!insertError && insertedLead) {
         imported++;
+        // Auto fraud check via Steadfast API (non-blocking)
+        if (phoneClean) {
+          autoFraudCheck(supabase, insertedLead.id, phoneClean, campaignId).catch(err =>
+            console.error("[fraud-check] Error:", err)
+          );
+        }
       } else {
         console.error("Insert error:", insertError);
-        failures.push(insertError.message || "Insert failed");
+        failures.push(insertError?.message || "Insert failed");
       }
     }
 
