@@ -848,19 +848,21 @@ const DataTracker = () => {
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {silverLoading ? <LoadingRow cols={6} /> : (silverData?.data || []).length === 0 ? (
-                      <EmptyRow cols={6} msg={isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"} />
+                    {silverLoading ? <LoadingRow cols={7} /> : (silverData?.data || []).length === 0 ? (
+                      <EmptyRow cols={7} msg={isBn ? "কোনো সিলভার ডাটা নেই" : "No silver data"} />
                     ) : (silverData?.data || []).map((lead: any, i: number) => (
                       <TableRow key={lead.id}>
                         <TableCell className="text-xs text-muted-foreground">{(silverPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                         <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
                         <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[150px]"><AddressTooltip address={lead.address} /></TableCell>
+                        <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                         <TableCell><Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>{lead.status || "—"}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}</TableCell>
                       </TableRow>
@@ -890,19 +892,21 @@ const DataTracker = () => {
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ঠিকানা" : "Address"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {goldenLoading ? <LoadingRow cols={6} /> : (goldenData?.data || []).length === 0 ? (
-                      <EmptyRow cols={6} msg={isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data"} />
+                    {goldenLoading ? <LoadingRow cols={7} /> : (goldenData?.data || []).length === 0 ? (
+                      <EmptyRow cols={7} msg={isBn ? "কোনো গোল্ডেন ডাটা নেই" : "No golden data"} />
                     ) : (goldenData?.data || []).map((lead: any, i: number) => (
                       <TableRow key={lead.id}>
                         <TableCell className="text-xs text-muted-foreground">{(goldenPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                         <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
                         <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[150px]"><AddressTooltip address={lead.address} /></TableCell>
+                        <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{lead.source || "—"}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy") : "—"}</TableCell>
                       </TableRow>
@@ -926,6 +930,7 @@ const DataTracker = () => {
                       <TableHead className="text-xs">#</TableHead>
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "টাইপ" : "Type"}</TableHead>
                       <TableHead className="text-xs">📍 {isBn ? "বর্তমান অবস্থান" : "Current Position"}</TableHead>
@@ -933,15 +938,16 @@ const DataTracker = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allLeadsLoading ? <LoadingRow cols={7} /> : (allLeadsData?.data || []).length === 0 ? (
-                      <EmptyRow cols={7} msg={isBn ? "কোনো ডাটা নেই" : "No data found"} />
+                    {allLeadsLoading ? <LoadingRow cols={8} /> : (allLeadsData?.data || []).length === 0 ? (
+                      <EmptyRow cols={8} msg={isBn ? "কোনো ডাটা নেই" : "No data found"} />
                     ) : (allLeadsData?.data || []).map((lead: any, i: number) => {
                       const pos = getLeadPosition(lead, isBn);
                       return (
                         <TableRow key={lead.id}>
                           <TableCell className="text-xs text-muted-foreground">{(allPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                           <TableCell className="text-sm font-medium"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{lead.name || "—"}</div></TableCell>
-                          <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                          <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
+                          <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                           <TableCell><Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>{lead.status || "—"}</Badge></TableCell>
                           <TableCell>
                             {lead.agent_type ? (
@@ -974,6 +980,7 @@ const DataTracker = () => {
                       <TableHead className="text-xs">#</TableHead>
                       <TableHead className="text-xs">{isBn ? "নাম" : "Name"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "ফোন" : "Phone"}</TableHead>
+                      <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "স্ট্যাটাস" : "Status"}</TableHead>
                       <TableHead className="text-xs">{isBn ? "কল সংখ্যা" : "Calls"}</TableHead>
                       <TableHead className="text-xs">📍 {isBn ? "বর্তমান অবস্থান" : "Current Position"}</TableHead>
@@ -981,15 +988,16 @@ const DataTracker = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {changedLoading ? <LoadingRow cols={7} /> : (changedData?.data || []).length === 0 ? (
-                      <EmptyRow cols={7} msg={isBn ? "কোনো স্ট্যাটাস পরিবর্তিত ডাটা নেই" : "No status-changed data"} />
+                    {changedLoading ? <LoadingRow cols={8} /> : (changedData?.data || []).length === 0 ? (
+                      <EmptyRow cols={8} msg={isBn ? "কোনো স্ট্যাটাস পরিবর্তিত ডাটা নেই" : "No status-changed data"} />
                     ) : (changedData?.data || []).map((lead: any, i: number) => {
                       const pos = getLeadPosition(lead, isBn);
                       return (
                         <TableRow key={lead.id}>
                           <TableCell className="text-xs text-muted-foreground">{(changedPage - 1) * PAGE_SIZE + i + 1}</TableCell>
                           <TableCell className="text-sm font-medium">{lead.name || "—"}</TableCell>
-                          <TableCell className="text-sm">{lead.phone || "—"}</TableCell>
+                          <TableCell className="text-sm"><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
+                          <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                           <TableCell><Badge className={`text-[10px] ${statusColorMap[lead.status || ""] || "bg-muted text-muted-foreground"}`}>{lead.status || "—"}</Badge></TableCell>
                           <TableCell className="text-sm text-center">{lead.called_time || 0}</TableCell>
                           <TableCell><Badge className={`text-[10px] ${pos.color}`}>📍 {pos.label}</Badge></TableCell>
