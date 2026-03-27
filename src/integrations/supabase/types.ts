@@ -435,6 +435,9 @@ export type Database = {
           name: string
           start_date: string | null
           status: string | null
+          steadfast_api_key: string | null
+          steadfast_connected: boolean | null
+          steadfast_secret_key: string | null
           updated_at: string | null
           webhook_secret: string | null
         }
@@ -449,6 +452,9 @@ export type Database = {
           name: string
           start_date?: string | null
           status?: string | null
+          steadfast_api_key?: string | null
+          steadfast_connected?: boolean | null
+          steadfast_secret_key?: string | null
           updated_at?: string | null
           webhook_secret?: string | null
         }
@@ -463,6 +469,9 @@ export type Database = {
           name?: string
           start_date?: string | null
           status?: string | null
+          steadfast_api_key?: string | null
+          steadfast_connected?: boolean | null
+          steadfast_secret_key?: string | null
           updated_at?: string | null
           webhook_secret?: string | null
         }
