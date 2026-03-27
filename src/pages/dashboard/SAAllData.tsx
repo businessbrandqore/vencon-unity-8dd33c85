@@ -69,7 +69,7 @@ const SAAllData = () => {
     });
 
     if (tab === "leads") {
-      let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("leads").select("id, name, phone, status, agent_type, campaign_id, created_at, source, import_source, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at").order("created_at", { ascending: false }).limit(200);
       if (campaignFilter !== "all") q = q.eq("campaign_id", campaignFilter);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       if (websiteFilter !== "all") {
