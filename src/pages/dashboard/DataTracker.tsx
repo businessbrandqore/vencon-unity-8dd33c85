@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import CopyButton from "@/components/ui/CopyButton";
 import AddressTooltip from "@/components/ui/AddressTooltip";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 const PAGE_SIZE = 50;
 
@@ -296,7 +297,7 @@ const DataTracker = () => {
 
       // Data query
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, status, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note")
+        .select("id, name, phone, address, status, source, import_source, campaign_id, created_at, assigned_to, tl_id, special_note, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("status", "fresh").is("assigned_to", null)
         .order("created_at", { ascending: false })
         .range(from, to);
@@ -379,7 +380,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time, special_note")
+        .select("id, name, phone, address, status, agent_type, source, import_source, campaign_id, created_at, assigned_to, tl_id, updated_at, called_time, special_note, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .order("created_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
       if (dataMode === "lead") dataQ = dataQ.neq("source", "processing").neq("import_source", "processing");
@@ -406,7 +407,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, status, called_time, assigned_to, updated_at, campaign_id, tl_id, agent_type, source, import_source")
+        .select("id, name, phone, address, status, called_time, assigned_to, updated_at, campaign_id, tl_id, agent_type, source, import_source, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .neq("status", "fresh").not("assigned_to", "is", null)
         .order("updated_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
