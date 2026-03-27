@@ -31,6 +31,11 @@ interface SpamLead {
   spam_transferred_at?: string | null;
   spam_original_agent?: string | null;
   original_agent_name?: string;
+  fraud_total?: number | null;
+  fraud_success?: number | null;
+  fraud_cancel?: number | null;
+  fraud_check_error?: string | null;
+  fraud_checked_at?: string | null;
 }
 
 // Helper to determine lead mode from import_source
