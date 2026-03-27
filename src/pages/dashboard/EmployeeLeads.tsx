@@ -23,6 +23,7 @@ import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 import FraudChecker from "@/components/FraudChecker";
 import CopyButton from "@/components/ui/CopyButton";
 import AddressTooltip from "@/components/ui/AddressTooltip";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 interface LeadRow {
   id: string;
