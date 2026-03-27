@@ -383,6 +383,7 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                     <CopyButton text={lead.address} />
                   </div>
                 )}
+                <LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} />
                 {(noteInfo.product || noteInfo.price) && (
                   <div className="flex items-center gap-3 text-xs">
                     {noteInfo.product && <span><span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span> <span className="font-medium">{noteInfo.product}</span></span>}
