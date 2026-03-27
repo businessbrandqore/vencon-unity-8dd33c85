@@ -65,7 +65,7 @@ export default function SpamLeads() {
       // Agent: load own spam leads (not yet transferred)
       const { data: ownData } = await supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at")
+        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("assigned_to", user.id)
         .eq("is_spam", true)
         .is("spam_transferred_at", null)
@@ -76,7 +76,7 @@ export default function SpamLeads() {
       // TL/ATL: load transferred spam leads (spam_transferred_at IS NOT NULL, tl_id = me)
       const { data: transferred } = await supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at, spam_original_agent")
+        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at, spam_original_agent, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("is_spam", true)
         .not("spam_transferred_at", "is", null)
         .order("spam_transferred_at", { ascending: false });
@@ -99,7 +99,7 @@ export default function SpamLeads() {
       // Also load own spam (if TL/ATL has own spam leads)
       const { data: ownData } = await supabase
         .from("leads")
-        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at")
+        .select("id, name, phone, address, status, agent_type, updated_at, assigned_to, campaign_id, import_source, source, spam_transferred_at, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("assigned_to", user.id)
         .eq("is_spam", true)
         .is("spam_transferred_at", null)
