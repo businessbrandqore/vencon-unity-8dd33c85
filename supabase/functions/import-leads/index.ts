@@ -7,6 +7,118 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Auto fraud check using Steadfast API (campaign-specific or global)
+async function autoFraudCheck(
+  supabase: ReturnType<typeof createClient>,
+  leadId: string,
+  phone: string,
+  campaignId: string
+) {
+  try {
+    // Normalize phone: remove leading 0 for Steadfast (they want 01XXXXXXXXX format)
+    let cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.startsWith("880")) cleanPhone = "0" + cleanPhone.slice(3);
+    if (!cleanPhone.startsWith("0")) cleanPhone = "0" + cleanPhone;
+
+    // Get Steadfast API keys: first from campaign, then from global config
+    let apiKey: string | null = null;
+    let secretKey: string | null = null;
+
+    // Try campaign-specific keys first
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("steadfast_api_key, steadfast_secret_key")
+      .eq("id", campaignId)
+      .maybeSingle();
+
+    if (campaign?.steadfast_api_key && campaign?.steadfast_secret_key) {
+      apiKey = campaign.steadfast_api_key;
+      secretKey = campaign.steadfast_secret_key;
+    } else {
+      // Fallback to global config
+      const { data: settings } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "fraud_checker_config")
+        .maybeSingle();
+
+      const config = settings?.value as Record<string, string> | null;
+      if (config?.steadfast_api_key && config?.steadfast_secret_key) {
+        apiKey = config.steadfast_api_key;
+        secretKey = config.steadfast_secret_key;
+      }
+    }
+
+    if (!apiKey || !secretKey) {
+      await supabase.from("leads").update({
+        fraud_check_error: "Steadfast API Key কনফিগার করা নেই (ক্যাম্পেইন বা গ্লোবাল)",
+        fraud_checked_at: new Date().toISOString(),
+      }).eq("id", leadId);
+      return;
+    }
+
+    // Try packzy.com first, then steadfast.com.bd
+    const urls = [
+      `https://portal.packzy.com/api/v1/fraud_check/${cleanPhone}`,
+      `https://portal.steadfast.com.bd/api/v1/fraud_check/${cleanPhone}`,
+    ];
+
+    let result: { total: number; success: number; cancel: number } | null = null;
+    let lastError = "";
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Api-Key": apiKey,
+            "Secret-Key": secretKey,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          lastError = `HTTP ${res.status} from ${new URL(url).hostname}`;
+          continue;
+        }
+
+        const data = await res.json();
+        result = {
+          total: data.Total_parcels ?? data.total_parcels ?? data.total ?? 0,
+          success: data.total_delivered ?? data.delivered ?? 0,
+          cancel: data.total_cancelled ?? data.cancelled ?? 0,
+        };
+        break;
+      } catch (err) {
+        lastError = `${new URL(url).hostname}: ${(err as Error).message}`;
+      }
+    }
+
+    if (result) {
+      const ratio = result.total > 0 ? Math.round((result.success / result.total) * 100 * 100) / 100 : null;
+      await supabase.from("leads").update({
+        success_ratio: ratio,
+        fraud_total: result.total,
+        fraud_success: result.success,
+        fraud_cancel: result.cancel,
+        fraud_check_error: null,
+        fraud_checked_at: new Date().toISOString(),
+      }).eq("id", leadId);
+    } else {
+      await supabase.from("leads").update({
+        fraud_check_error: lastError || "সকল সার্ভারে রিকোয়েস্ট ব্যর্থ",
+        fraud_checked_at: new Date().toISOString(),
+      }).eq("id", leadId);
+    }
+  } catch (err) {
+    console.error("[autoFraudCheck] Unexpected error:", err);
+    await supabase.from("leads").update({
+      fraud_check_error: `সিস্টেম ত্রুটি: ${(err as Error).message}`,
+      fraud_checked_at: new Date().toISOString(),
+    }).eq("id", leadId);
+  }
+}
+
 // Auto-detect field names dynamically
 function findField(obj: Record<string, unknown>, patterns: string[]): string {
   // Exact match first
