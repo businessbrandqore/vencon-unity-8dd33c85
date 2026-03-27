@@ -19,9 +19,10 @@ import { Send, RefreshCw } from "lucide-react";
 import FraudChecker from "@/components/FraudChecker";
 import CopyButton from "@/components/ui/CopyButton";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 interface Agent { id: string; name: string; }
-interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; campaign_id?: string | null; source?: string | null; import_source?: string | null; }
+interface Lead { id: string; name: string | null; phone: string | null; address: string | null; created_at: string | null; status: string | null; requeue_count: number | null; updated_at: string | null; special_note?: string | null; assigned_to?: string | null; called_time?: number | null; agent_type?: string | null; campaign_id?: string | null; source?: string | null; import_source?: string | null; success_ratio?: number | null; fraud_total?: number | null; fraud_success?: number | null; fraud_cancel?: number | null; fraud_check_error?: string | null; fraud_checked_at?: string | null; }
 interface Order { id: string; customer_name: string | null; phone: string | null; product: string | null; agent_id: string | null; created_at: string | null; status: string | null; cs_note: string | null; cs_rating: string | null; agent?: { name: string }; }
 interface PreOrder { id: string; lead_id: string | null; scheduled_date: string | null; agent_id: string | null; note: string | null; status: string | null; lead?: { name: string | null; phone: string | null; }; agent?: { name: string; }; }
 interface SilverGoldenLead { id: string; name: string | null; phone: string | null; address: string | null; source: string | null; created_at: string | null; product?: string | null; price?: number | null; }
