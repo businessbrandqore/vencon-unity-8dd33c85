@@ -443,6 +443,7 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                     <TableHead className="text-xs">{isBn ? "মূল্য" : "Price"}</TableHead>
                   </>
                 )}
+                <TableHead className="text-xs">{isBn ? "রেশিও" : "Ratio"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "টাইপ" : "Type"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "সোর্স" : "Source"}</TableHead>
                 <TableHead className="text-xs">{isBn ? "তারিখ" : "Date"}</TableHead>
@@ -480,6 +481,9 @@ const LeadTable = ({ leads, loading, isBn }: { leads: LeadRow[]; loading: boolea
                         <TableCell className="text-xs font-medium">{noteInfo.price ? `৳${noteInfo.price}` : "—"}</TableCell>
                       </>
                     )}
+                    <TableCell className="min-w-[120px]">
+                      <LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} />
+                    </TableCell>
                     <TableCell>
                       {lead.agent_type && lead.agent_type !== "processing" ? (
                         <Badge variant="outline" className="text-[10px]">
