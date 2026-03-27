@@ -39,6 +39,12 @@ interface LeadRow {
   tl_id: string | null;
   created_at: string | null;
   import_source: string | null;
+  success_ratio: number | null;
+  fraud_total: number | null;
+  fraud_success: number | null;
+  fraud_cancel: number | null;
+  fraud_check_error: string | null;
+  fraud_checked_at: string | null;
 }
 
 interface InventoryItem {
