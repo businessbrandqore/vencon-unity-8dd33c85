@@ -330,7 +330,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("agent_type", "silver").order("created_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
       if (debouncedSearch) dataQ = dataQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
@@ -354,7 +354,7 @@ const DataTracker = () => {
       if (debouncedSearch) countQ = countQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
 
       let dataQ = supabase.from("leads")
-        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status")
+        .select("id, name, phone, address, source, created_at, campaign_id, agent_type, assigned_to, status, fraud_total, fraud_success, fraud_cancel, fraud_check_error, fraud_checked_at")
         .eq("agent_type", "golden").order("created_at", { ascending: false }).range(from, to);
       dataQ = applyLeadFilters(dataQ);
       if (debouncedSearch) dataQ = dataQ.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`);
