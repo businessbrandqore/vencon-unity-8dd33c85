@@ -99,6 +99,9 @@ export type Database = {
       }
       attendance: {
         Row: {
+          break_deduction: number | null
+          break_end: string | null
+          break_start: string | null
           clock_in: string | null
           clock_out: string | null
           date: string
@@ -116,6 +119,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          break_deduction?: number | null
+          break_end?: string | null
+          break_start?: string | null
           clock_in?: string | null
           clock_out?: string | null
           date: string
@@ -133,6 +139,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          break_deduction?: number | null
+          break_end?: string | null
+          break_start?: string | null
           clock_in?: string | null
           clock_out?: string | null
           date?: string
@@ -1862,6 +1871,9 @@ export type Database = {
           father_phone: string | null
           fcm_token: string | null
           gps_location: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          guardian_relation: string | null
           guardian_type: string | null
           id: string
           is_active: boolean | null
@@ -1892,6 +1904,9 @@ export type Database = {
           father_phone?: string | null
           fcm_token?: string | null
           gps_location?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relation?: string | null
           guardian_type?: string | null
           id?: string
           is_active?: boolean | null
@@ -1922,6 +1937,9 @@ export type Database = {
           father_phone?: string | null
           fcm_token?: string | null
           gps_location?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relation?: string | null
           guardian_type?: string | null
           id?: string
           is_active?: boolean | null
