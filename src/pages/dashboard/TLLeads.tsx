@@ -827,6 +827,13 @@ const TLLeads = () => {
             <CopyButton text={lead.address} />
           </div>
         )}
+        <LeadRatioBar
+          total={lead.fraud_total ?? null}
+          success={lead.fraud_success ?? null}
+          cancel={lead.fraud_cancel ?? null}
+          error={lead.fraud_check_error ?? null}
+          checkedAt={lead.fraud_checked_at ?? null}
+        />
         {noteInfo.product && (
           <div className="text-xs">
             <span className="text-muted-foreground">{isBn ? "পণ্য:" : "Product:"}</span>{" "}
