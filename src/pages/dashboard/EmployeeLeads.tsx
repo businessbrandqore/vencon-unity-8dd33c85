@@ -23,6 +23,7 @@ import { BD_DISTRICTS, detectLocation } from "@/lib/bdLocations";
 import FraudChecker from "@/components/FraudChecker";
 import CopyButton from "@/components/ui/CopyButton";
 import AddressTooltip from "@/components/ui/AddressTooltip";
+import LeadRatioBar from "@/components/LeadRatioBar";
 
 interface LeadRow {
   id: string;
@@ -39,6 +40,12 @@ interface LeadRow {
   tl_id: string | null;
   created_at: string | null;
   import_source: string | null;
+  success_ratio: number | null;
+  fraud_total: number | null;
+  fraud_success: number | null;
+  fraud_cancel: number | null;
+  fraud_check_error: string | null;
+  fraud_checked_at: string | null;
 }
 
 interface InventoryItem {
@@ -801,6 +808,15 @@ export default function EmployeeLeads() {
                   </div>
                 )}
 
+                {/* Fraud Ratio */}
+                <LeadRatioBar
+                  total={lead.fraud_total}
+                  success={lead.fraud_success}
+                  cancel={lead.fraud_cancel}
+                  error={lead.fraud_check_error}
+                  checkedAt={lead.fraud_checked_at}
+                />
+
                 {/* Raw data fields */}
                 {rawDataKeys.length > 0 && (
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
@@ -949,6 +965,7 @@ export default function EmployeeLeads() {
               <th className="py-2 px-2 text-left">{t("customer")}</th>
               <th className="py-2 px-2 text-left">{t("phone")}</th>
               <th className="py-2 px-2 text-left">{t("address")}</th>
+              <th className="py-2 px-2 text-left whitespace-nowrap">রেশিও</th>
               {rawDataKeys.map(key => (
                 <th key={key} className="py-2 px-2 text-left whitespace-nowrap">{key}</th>
               ))}
@@ -982,6 +999,15 @@ export default function EmployeeLeads() {
                   </td>
                   <td className="py-2 px-2 max-w-[150px]">
                     <AddressTooltip address={lead.address} />
+                  </td>
+                  <td className="py-2 px-2 min-w-[120px]">
+                    <LeadRatioBar
+                      total={lead.fraud_total}
+                      success={lead.fraud_success}
+                      cancel={lead.fraud_cancel}
+                      error={lead.fraud_check_error}
+                      checkedAt={lead.fraud_checked_at}
+                    />
                   </td>
                   {rawDataKeys.map(key => (
                     <td key={key} className="py-2 px-2 max-w-[150px] truncate">{rawData[key] || "—"}</td>
