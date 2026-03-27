@@ -294,6 +294,7 @@ export default function SpamLeads() {
                       <TableHead>নাম</TableHead>
                       <TableHead>ফোন</TableHead>
                       <TableHead>ঠিকানা</TableHead>
+                      <TableHead>রেশিও</TableHead>
                       <TableHead>ওয়েবসাইট</TableHead>
                       <TableHead>মোড</TableHead>
                       <TableHead>ট্রান্সফার তারিখ</TableHead>
@@ -309,8 +310,9 @@ export default function SpamLeads() {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                        <TableCell>{lead.phone || "—"}</TableCell>
+                        <TableCell><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
                         <TableCell className="max-w-[180px] truncate">{lead.address || "—"}</TableCell>
+                        <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                         <TableCell className="text-xs">{lead.source || "—"}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px]">
@@ -358,6 +360,7 @@ export default function SpamLeads() {
                     <TableHead>নাম</TableHead>
                     <TableHead>ফোন</TableHead>
                     <TableHead>ঠিকানা</TableHead>
+                    <TableHead>রেশিও</TableHead>
                     {!isTLOrATL && <TableHead>সময় বাকি</TableHead>}
                     <TableHead className="text-right">অ্যাকশন</TableHead>
                   </TableRow>
@@ -366,8 +369,9 @@ export default function SpamLeads() {
                   {filteredMyLeads.map(lead => (
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                      <TableCell>{lead.phone || "—"}</TableCell>
+                      <TableCell><div className="flex items-center gap-1"><span>{lead.phone || "—"}</span>{lead.phone && <CopyButton text={lead.phone} />}</div></TableCell>
                       <TableCell className="max-w-[200px] truncate">{lead.address || "—"}</TableCell>
+                      <TableCell className="min-w-[120px]"><LeadRatioBar total={lead.fraud_total} success={lead.fraud_success} cancel={lead.fraud_cancel} error={lead.fraud_check_error} checkedAt={lead.fraud_checked_at} /></TableCell>
                       {!isTLOrATL && (
                         <TableCell>
                           <span className="text-xs text-destructive flex items-center gap-1">
